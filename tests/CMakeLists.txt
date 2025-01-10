@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.5)
+
+set(PROJECT_NAME "test")
+project(${PROJECT_NAME})
+
+# Need to have absolute dirs so we cannot use '../' to get the engine directory here!
+get_filename_component(PARENT_DIR ../ ABSOLUTE)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
+
+include_directories(
+    "src"
+    ${PARENT_DIR}
+)
+
+file(GLOB SRC_FILES
+    "src/*.cpp"
+)
+
+add_executable(${PROJECT_NAME} ${SRC_FILES})
+target_link_libraries(${PROJECT_NAME} "${PARENT_DIR}/build/libplatypus.so")
