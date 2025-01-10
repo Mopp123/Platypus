@@ -6,6 +6,8 @@ project(${PROJECT_NAME})
 
 # -g to to use gdb debugger
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
+# For our vim setup's YCM plugin to work
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(
     "platypus"
