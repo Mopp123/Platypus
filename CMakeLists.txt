@@ -4,16 +4,34 @@ set(PROJECT_NAME "platypus")
 
 project(${PROJECT_NAME})
 
+
+if(${BUILD_TARGET} MATCHES "desktop")
+    message("Selected desktop build target")
+elseif(${BUILD_TARGET} MATCHES "web")
+    message(FATAL_ERROR "Web build not supported yet!")
+else()
+    message(FATAL_ERROR "No build target specified!")
+endif()
+
+
 # -g to to use gdb debugger
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
 # For our vim setup's YCM plugin to work
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(
-    "platypus"
+    ${PROJECT_SOURCE_DIR}
+    "dependencies/glfw/include"
 )
 
 file(GLOB SRC_FILES
     platypus/core/*.cpp
+    platypus/core/platform/${BUILD_TARGET}/*.cpp
 )
+
+# TODO: Some flag to build looking all libs from current dir for "shipping"
+add_library(glfw SHARED IMPORTED)
+set_property(TARGET glfw PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/dependencies/glfw/build/src/libglfw.so.3.5")
+
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw)

@@ -11,13 +11,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(
-    "src"
-    ${PARENT_DIR}
+    "${PARENT_DIR}"
+    "${PARENT_DIR}/dependencies/glfw/include"
 )
 
 file(GLOB SRC_FILES
     "src/*.cpp"
 )
 
+add_library(platypus SHARED IMPORTED)
+set_property(TARGET platypus PROPERTY IMPORTED_LOCATION "${PARENT_DIR}/build/libplatypus.so")
+
 add_executable(${PROJECT_NAME} ${SRC_FILES})
-target_link_libraries(${PROJECT_NAME} "${PARENT_DIR}/build/libplatypus.so")
+target_link_libraries(${PROJECT_NAME} PUBLIC platypus)
