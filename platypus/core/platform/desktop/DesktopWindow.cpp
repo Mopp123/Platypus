@@ -84,9 +84,4 @@ namespace platypus
     {
         return _pImpl->pGLFWwindow;
     }
-
-    void* Window::getImpl()
-    {
-        return _pImpl;
-    }
 }

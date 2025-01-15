@@ -31,6 +31,5 @@ namespace platypus
         inline int getHeight() const { return _height; }
 
         void* getWindowHandle();
-        void* getImpl();
     };
 }

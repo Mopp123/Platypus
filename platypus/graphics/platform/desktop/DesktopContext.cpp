@@ -5,7 +5,6 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <cstring>
-#include <vulkan/vulkan_core.h>
 
 #include "platypus/core/Debug.h"
 #include "platypus/Common.h"
@@ -13,14 +12,29 @@
 
 namespace platypus
 {
+    enum QueueFamilyFlagBits
+    {
+        QUEUE_FAMILY_NONE = 0x0,
+        QUEUE_FAMILY_GRAPHICS = 0x1,
+        QUEUE_FAMILY_PRESENT = 0x2,
+    };
+
+    struct QueueFamilyIndices
+    {
+        uint32_t graphicsFamily;
+        uint32_t presentFamily;
+        uint32_t queueFlags = QueueFamilyFlagBits::QUEUE_FAMILY_NONE;
+    };
+
     struct ContextImpl
     {
         VkInstance instance;
         #ifdef PLATYPUS_DEBUG
             VkDebugUtilsMessengerEXT debugMessenger;
         #endif
-            VkPhysicalDevice physicalDevice;
-            VkDevice device;
+        VkPhysicalDevice physicalDevice;
+        VkDevice device;
+        VkQueue graphicsQueue;
     };
 
 
@@ -102,7 +116,11 @@ namespace platypus
     }
 
 
-    static VkInstance create_instance(const char* appName)
+    static VkInstance create_instance(
+        const char* appName,
+        const std::vector<const char*>& extensions,
+        const std::vector<const char*>& layers
+    )
     {
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -116,10 +134,9 @@ namespace platypus
         instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instanceCreateInfo.pApplicationInfo = &appInfo;
 
-        // Extensions
-        std::vector<const char*> requiredExtensions = get_required_extensions();
+        // Check extensions
         std::vector<const char*> unavailableExtensions;
-        if (!check_extension_availability(requiredExtensions, unavailableExtensions))
+        if (!check_extension_availability(extensions, unavailableExtensions))
         {
             std::string unavailableListStr;
             for (size_t i = 0; i < unavailableExtensions.size(); ++i)
@@ -131,13 +148,12 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        instanceCreateInfo.enabledExtensionCount = requiredExtensions.size();
-        instanceCreateInfo.ppEnabledExtensionNames = requiredExtensions.data();
+        instanceCreateInfo.enabledExtensionCount = extensions.size();
+        instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
 
-        // Layers
-        std::vector<const char*> requiredLayers = get_required_layers();
+        // Check layers
         std::vector<const char*> unavailableLayers;
-        if (!check_layer_availability(requiredLayers, unavailableLayers))
+        if (!check_layer_availability(layers, unavailableLayers))
         {
             std::string unavailableListStr;
             for (size_t i = 0; i < unavailableLayers.size(); ++i)
@@ -149,8 +165,8 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        instanceCreateInfo.enabledLayerCount = requiredLayers.size();
-        instanceCreateInfo.ppEnabledLayerNames = requiredLayers.data();
+        instanceCreateInfo.enabledLayerCount = layers.size();
+        instanceCreateInfo.ppEnabledLayerNames = layers.data();
 
         VkInstance instance;
         VkResult createInstanceResult = vkCreateInstance(
@@ -162,7 +178,7 @@ namespace platypus
         {
             const std::string resultStr(string_VkResult(createInstanceResult));
             Debug::log(
-                "@Context::Context "
+                "@create_instance "
                 "Failed to create VkInstance! VkResult: " + resultStr
             );
             PLATYPUS_ASSERT(false);
@@ -259,26 +275,36 @@ namespace platypus
     #endif
 
 
+    static QueueFamilyIndices find_queue_families(VkPhysicalDevice physicalDevice)
+    {
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+        QueueFamilyIndices result;
+        int index = 0;
+        for (const VkQueueFamilyProperties& queueFamilyProperties : queueFamilies)
+        {
+            if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                result.queueFlags |= QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
+                result.graphicsFamily = index;
+            }
+            ++index;
+        }
+        return result;
+    }
+
     static bool is_device_adequate(VkPhysicalDevice physicalDevice)
     {
         // TODO:
         //  * Have some device limit requirements and check those here
         //  from VkPhysicalDeviceProperties
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-        if (queueFamilyCount == 0)
-            return false;
+        QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice);
+        uint32_t requiredFlags = QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
 
-        std::vector<VkQueueFamilyProperties> queueFamilies;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-        for (const VkQueueFamilyProperties& queueFamilyProperties : queueFamilies)
-        {
-
-        }
-        return false;
+        return (queueFamilyIndices.queueFlags & requiredFlags) == requiredFlags;
     }
-
 
     VkPhysicalDevice auto_pick_physical_device(VkInstance instance)
     {
@@ -311,21 +337,99 @@ namespace platypus
             Debug::log("    " + deviceNameStr);
             Debug::log("        type: " + deviceTypeStr);
             Debug::log("        api version: " + std::to_string(properties.apiVersion));
+
+            if (is_device_adequate(physicalDevice))
+            {
+                Debug::log("Picked device: " + deviceNameStr);
+                return physicalDevice;
+            }
         }
+        Debug::log(
+            "@auto_pick_physical_device "
+            "Failed to find suitable physical device",
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
         return physicalDevices[0];
+    }
+
+
+    static VkDevice create_device(
+        VkPhysicalDevice physicalDevice,
+        const std::vector<const char*>& enabledLayers,
+        VkQueue* pGraphicsQueue
+    )
+    {
+        QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice);
+
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+        float queuePriority = 1.0f;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+
+        VkPhysicalDeviceFeatures physicalDeviceFeatures{};
+
+        VkDeviceCreateInfo deviceCreateInfo{};
+        deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        deviceCreateInfo.queueCreateInfoCount = 1;
+        deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+        deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
+
+        deviceCreateInfo.enabledExtensionCount = 0;
+
+        deviceCreateInfo.enabledLayerCount = enabledLayers.size();
+        deviceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+
+        VkDevice device;
+        VkResult createDeviceResult = vkCreateDevice(
+            physicalDevice,
+            &deviceCreateInfo,
+            nullptr,
+            &device
+        );
+        if (createDeviceResult != VK_SUCCESS)
+        {
+            const std::string resultStr(string_VkResult(createDeviceResult));
+            Debug::log(
+                "@create_device "
+                "Failed to create VkDevice! VkResult: " + resultStr
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily, 0, pGraphicsQueue);
+
+        return device;
     }
 
 
     Context::Context(const char* appName)
     {
         _pImpl = new ContextImpl;
-        _pImpl->instance = create_instance(appName);
+
+        std::vector<const char*> requiredInstanceExtensions = get_required_extensions();
+        std::vector<const char*> requiredLayers = get_required_layers();
+
+        _pImpl->instance = create_instance(
+            appName,
+            requiredInstanceExtensions,
+            requiredLayers
+        );
 
         #ifdef PLATYPUS_DEBUG
             _pImpl->debugMessenger = create_debug_messenger(_pImpl->instance);
         #endif
 
         _pImpl->physicalDevice = auto_pick_physical_device(_pImpl->instance);
+        // NOTE: Not sure if should actually give queues as ptrs to ptrs here?
+        // Not tested does this actually work...
+        _pImpl->device = create_device(
+            _pImpl->physicalDevice,
+            requiredLayers,
+            &_pImpl->graphicsQueue
+        );
 
         Debug::log("Graphics Context created");
     }
@@ -334,6 +438,8 @@ namespace platypus
     {
         if (_pImpl->instance)
         {
+            vkDestroyDevice(_pImpl->device, nullptr);
+
             #ifdef PLATYPUS_DEBUG
                 if (_pImpl->debugMessenger)
                 {
