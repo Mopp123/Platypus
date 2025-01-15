@@ -64,7 +64,7 @@ namespace platypus
         _pImpl = new WindowImpl;
         _pImpl->pGLFWwindow = pGLFWwindow;
 
-        Debug::log("Window created!");
+        Debug::log("Window created");
     }
 
     Window::~Window()
@@ -83,5 +83,10 @@ namespace platypus
     void* Window::getWindowHandle()
     {
         return _pImpl->pGLFWwindow;
+    }
+
+    void* Window::getImpl()
+    {
+        return _pImpl;
     }
 }

@@ -19,6 +19,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
 # For our vim setup's YCM plugin to work
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+add_compile_definitions(PLATYPUS_DEBUG=1)
+
 include_directories(
     ${PROJECT_SOURCE_DIR}
     "dependencies/glfw/include"
