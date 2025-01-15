@@ -15,7 +15,7 @@ namespace platypus
     ) :
         _window(name, width, height, resizable, fullscreen),
         _inputManager(&_window),
-        _context(name.c_str())
+        _context(name.c_str(), &_window)
     {
         if (s_pInstance)
         {
