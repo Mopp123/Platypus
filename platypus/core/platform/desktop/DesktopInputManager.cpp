@@ -145,7 +145,7 @@ namespace platypus
         // In web gl our coords are flipped because framebuffer coords
         // -> flip to have y increase downwards
         // TODO: Make this rather be swapchain extent?
-        const int windowHeight = Application::get_instance()->getWindow()->getHeight();
+        const int windowHeight = Application::get_instance()->getWindow().getHeight();
 
         int mx = (int)x;
         int my = windowHeight - (int)y;

@@ -27,11 +27,15 @@ include_directories(
 file(GLOB SRC_FILES
     platypus/core/*.cpp
     platypus/core/platform/${BUILD_TARGET}/*.cpp
+    platypus/graphics/platform/${BUILD_TARGET}/*.cpp
 )
+
+add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 # TODO: Some flag to build looking all libs from current dir for "shipping"
 add_library(glfw SHARED IMPORTED)
 set_property(TARGET glfw PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/dependencies/glfw/build/src/libglfw.so.3.5")
 
-add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
+find_package(Vulkan REQUIRED)
+target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} glfw Vulkan::Vulkan)

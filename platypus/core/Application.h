@@ -2,6 +2,7 @@
 
 #include "Window.h"
 #include "InputManager.h"
+#include "platypus/graphics/Context.h"
 
 
 namespace platypus
@@ -11,11 +12,18 @@ namespace platypus
     private:
         static Application* s_pInstance;
 
-        Window* _pWindow = nullptr;
-        InputManager* _pInputManager = nullptr;
+        Window _window;
+        InputManager _inputManager;
+        Context _context;
 
     public:
-        Application(Window* pWindow, InputManager* pInputManager);
+        Application(
+            const std::string& name,
+            int width,
+            int height,
+            bool resizable,
+            bool fullscreen
+        );
         Application(const Application&) = delete;
         ~Application();
 
@@ -23,7 +31,7 @@ namespace platypus
 
         static Application* get_instance();
 
-        inline const Window* getWindow() const { return _pWindow; }
-        inline const InputManager* getInputManager() const { return _pInputManager; }
+        inline const Window& getWindow() const { return _window; }
+        inline const InputManager& getInputManager() const { return _inputManager; }
     };
 }

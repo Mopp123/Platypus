@@ -17,11 +17,11 @@ namespace platypus
 
     public:
         Window(
+            const std::string& title,
             int width,
             int height,
             bool resizable,
-            bool fullscreen,
-            const std::string& title
+            bool fullscreen
         );
         ~Window();
 

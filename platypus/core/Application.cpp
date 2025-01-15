@@ -6,9 +6,16 @@ namespace platypus
 {
     Application* Application::s_pInstance = nullptr;
 
-    Application::Application(Window* pWindow, InputManager* pInputManager) :
-        _pWindow(pWindow),
-        _pInputManager(pInputManager)
+    Application::Application(
+        const std::string& name,
+        int width,
+        int height,
+        bool resizable,
+        bool fullscreen
+    ) :
+        _window(name, width, height, resizable, fullscreen),
+        _inputManager(&_window),
+        _context(name.c_str())
     {
         if (s_pInstance)
         {
@@ -28,9 +35,9 @@ namespace platypus
 
     void Application::run()
     {
-        while (!_pWindow->isCloseRequested())
+        while (!_window.isCloseRequested())
         {
-            _pInputManager->pollEvents();
+            _inputManager.pollEvents();
         }
     }
 

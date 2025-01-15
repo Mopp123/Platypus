@@ -12,11 +12,11 @@ namespace platypus
 
 
     Window::Window(
+        const std::string& title,
         int width,
         int height,
         bool resizable,
-        bool fullscreen,
-        const std::string& title
+        bool fullscreen
     ) :
         _width(width),
         _height(height)
@@ -36,8 +36,7 @@ namespace platypus
         }
         glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
         glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-
-        //glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
         // TODO: Fullscreen support?
         GLFWwindow* pGLFWwindow = glfwCreateWindow(
@@ -61,9 +60,6 @@ namespace platypus
             glfwTerminate();
             PLATYPUS_ASSERT(false);
         }
-
-        glfwSwapInterval(0);
-        glfwMakeContextCurrent(pGLFWwindow);
 
         _pImpl = new WindowImpl;
         _pImpl->pGLFWwindow = pGLFWwindow;
