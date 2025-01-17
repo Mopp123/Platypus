@@ -30,6 +30,8 @@ namespace platypus
         inline int getWidth() const { return _width; }
         inline int getHeight() const { return _height; }
 
-        void* getWindowHandle();
+        WindowImpl* getImpl();
+
+        void getSurfaceExtent(int* pWidth, int* pHeight);
     };
 }

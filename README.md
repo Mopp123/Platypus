@@ -15,4 +15,4 @@ sudo apt install spirv-tools
 Also using glslc for compiling shaders.
 Didn't want to add it as submodule for now.
 You can get the unofficial binaries from here: https://github.com/google/shaderc/blob/main/downloads.md
-Copy the files into /usr/local/bin
+Copy the file bin/glslc into /usr/local/bin (Not sure do you need other files for now...)

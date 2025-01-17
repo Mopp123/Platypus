@@ -6,10 +6,12 @@
 namespace platypus
 {
     struct ContextImpl;
+    class Swapchain;
 
     class Context
     {
     private:
+        friend class Swapchain;
         ContextImpl* _pImpl = nullptr;
 
     public:

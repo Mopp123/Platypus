@@ -1,16 +1,11 @@
 #include "platypus/core/Window.h"
+#include "DesktopWindow.h"
 #include "platypus/core/Debug.h"
 #include <GLFW/glfw3.h>
 
 
 namespace platypus
 {
-    struct WindowImpl
-    {
-        GLFWwindow* pGLFWwindow = nullptr;
-    };
-
-
     Window::Window(
         const std::string& title,
         int width,
@@ -80,8 +75,13 @@ namespace platypus
         return (bool)glfwWindowShouldClose(_pImpl->pGLFWwindow);
     }
 
-    void* Window::getWindowHandle()
+    WindowImpl* Window::getImpl()
     {
-        return _pImpl->pGLFWwindow;
+        return _pImpl;
+    }
+
+    void Window::getSurfaceExtent(int* pWidth, int* pHeight)
+    {
+        glfwGetFramebufferSize(_pImpl->pGLFWwindow, pWidth, pHeight);
     }
 }

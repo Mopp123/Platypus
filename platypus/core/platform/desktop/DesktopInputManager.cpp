@@ -1,6 +1,7 @@
 #include "platypus/core/InputManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
+#include "DesktopWindow.h"
 #include <GLFW/glfw3.h>
 
 
@@ -168,7 +169,7 @@ namespace platypus
 
     InputManager::InputManager(Window* pWindow)
     {
-        GLFWwindow* pGLFWwindow = (GLFWwindow*)pWindow->getWindowHandle();
+        GLFWwindow* pGLFWwindow = pWindow->getImpl()->pGLFWwindow;
         glfwSetWindowUserPointer(pGLFWwindow, this);
 
         glfwSetKeyCallback(pGLFWwindow, key_callback);

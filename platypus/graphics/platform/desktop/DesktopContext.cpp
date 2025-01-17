@@ -1,6 +1,6 @@
 #include "platypus/graphics/Context.h"
+#include "platypus/graphics/platform/desktop/DesktopContext.h"
 
-#include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -9,39 +9,12 @@
 
 #include "platypus/core/Debug.h"
 #include "platypus/Common.h"
+#include "platypus/core/platform/desktop/DesktopWindow.h"
 
 
 namespace platypus
 {
-    enum QueueFamilyFlagBits
-    {
-        QUEUE_FAMILY_NONE = 0x0,
-        QUEUE_FAMILY_GRAPHICS = 0x1,
-        QUEUE_FAMILY_PRESENT = 0x2,
-    };
-
-    struct QueueFamilyIndices
-    {
-        uint32_t graphicsFamily;
-        uint32_t presentFamily;
-        uint32_t queueFlags = QueueFamilyFlagBits::QUEUE_FAMILY_NONE;
-    };
-
-    struct ContextImpl
-    {
-        VkInstance instance;
-        #ifdef PLATYPUS_DEBUG
-            VkDebugUtilsMessengerEXT debugMessenger;
-        #endif
-        VkSurfaceKHR surface;
-        VkPhysicalDevice physicalDevice;
-        VkDevice device;
-        VkQueue graphicsQueue;
-        VkQueue presentQueue;
-    };
-
-
-    static std::vector<const char*> get_required_extensions()
+    static std::vector<const char*> get_required_instance_extensions()
     {
         std::vector<const char*> requiredExtensions;
 
@@ -57,7 +30,26 @@ namespace platypus
     }
 
 
-    static bool check_extension_availability(
+    static std::vector<const char*> get_required_device_extensions()
+    {
+        const std::vector<const char*> requiredExtensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+        return requiredExtensions;
+    }
+
+
+    static std::vector<const char*> get_required_layers()
+    {
+        std::vector<const char*> requiredLayers;
+        #ifdef PLATYPUS_DEBUG
+            requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
+        #endif
+        return requiredLayers;
+    }
+
+
+    static bool check_instance_extension_availability(
         const std::vector<const char*>& extensions,
         std::vector<const char*>& outUnavailable
     )
@@ -84,13 +76,31 @@ namespace platypus
     }
 
 
-    static std::vector<const char*> get_required_layers()
+    static bool check_device_extension_availability(
+        VkPhysicalDevice physicalDevice,
+        const std::vector<const char*>& extensions,
+        std::vector<const char*>& outUnavailable
+    )
     {
-        std::vector<const char*> requiredLayers;
-        #ifdef PLATYPUS_DEBUG
-            requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
-        #endif
-        return requiredLayers;
+        uint32_t availableExtensionCount = 0;
+        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, nullptr);
+        std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
+        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, availableExtensions.data());
+        for (size_t i = 0; i < extensions.size(); ++i)
+        {
+            bool found = false;
+            for (const VkExtensionProperties& availableExtension : availableExtensions)
+            {
+                if (strcmp(extensions[i], availableExtension.extensionName) == 0)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                outUnavailable.push_back(extensions[i]);
+        }
+        return outUnavailable.empty();
     }
 
 
@@ -139,7 +149,7 @@ namespace platypus
 
         // Check extensions
         std::vector<const char*> unavailableExtensions;
-        if (!check_extension_availability(extensions, unavailableExtensions))
+        if (!check_instance_extension_availability(extensions, unavailableExtensions))
         {
             std::string unavailableListStr;
             for (size_t i = 0; i < unavailableExtensions.size(); ++i)
@@ -281,7 +291,12 @@ namespace platypus
     static VkSurfaceKHR create_window_surface(VkInstance instance, Window* pWindow)
     {
         VkSurfaceKHR surface;
-        VkResult result = glfwCreateWindowSurface(instance, (GLFWwindow*)pWindow->getWindowHandle(), nullptr, &surface);
+        VkResult result = glfwCreateWindowSurface(
+            instance,
+            pWindow->getImpl()->pGLFWwindow,
+            nullptr,
+            &surface
+        );
         if (result != VK_SUCCESS)
         {
             std::string resultStr(string_VkResult(result));
@@ -296,7 +311,7 @@ namespace platypus
     }
 
 
-    static QueueFamilyIndices find_queue_families(
+    static ContextImpl::QueueFamilyIndices find_queue_families(
         VkPhysicalDevice physicalDevice,
         VkSurfaceKHR surface
     )
@@ -305,20 +320,20 @@ namespace platypus
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-        QueueFamilyIndices result;
+        ContextImpl::QueueFamilyIndices result;
         int index = 0;
         for (const VkQueueFamilyProperties& queueFamilyProperties : queueFamilies)
         {
             if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
-                result.queueFlags |= QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
+                result.queueFlags |= ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
                 result.graphicsFamily = index;
             }
             VkBool32 presentSupport = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &presentSupport);
             if (presentSupport)
             {
-                result.queueFlags |= QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
+                result.queueFlags |= ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
                 result.presentFamily = index;
             }
             ++index;
@@ -326,15 +341,51 @@ namespace platypus
         return result;
     }
 
+    static ContextImpl::SwapchainSupportDetails query_swapchain_support_details(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR surface
+    )
+    {
+        ContextImpl::SwapchainSupportDetails details{};
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.surfaceCapabilities);
+
+        uint32_t formatCount = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+        details.surfaceFormats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.surfaceFormats.data());
+
+        uint32_t presentModes = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, nullptr);
+        details.presentModes.resize(presentModes);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, details.presentModes.data());
+
+        return details;
+    };
+
     static bool is_device_adequate(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
     {
         // TODO:
         //  * Have some device limit requirements and check those here
         //  from VkPhysicalDeviceProperties
-        QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
-        uint32_t requiredFlags = QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS | QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
+        //  * Some logging telling why device not adequate
+        ContextImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
+        uint32_t requiredFlags = ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS | ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
 
-        return (queueFamilyIndices.queueFlags & requiredFlags) == requiredFlags;
+        std::vector<const char*> requiredDeviceExtensions = get_required_device_extensions();
+        std::vector<const char*> unavailableExtensions;
+        bool supportsSwapchain = check_device_extension_availability(
+            physicalDevice,
+            requiredDeviceExtensions,
+            unavailableExtensions
+        );
+
+        ContextImpl::SwapchainSupportDetails swapchainSupportDetails = query_swapchain_support_details(
+            physicalDevice,
+            surface
+        );
+        bool swapchainDetailsAdequate = !swapchainSupportDetails.surfaceFormats.empty() && !swapchainSupportDetails.presentModes.empty();
+
+        return ((queueFamilyIndices.queueFlags & requiredFlags) == requiredFlags) && supportsSwapchain && swapchainDetailsAdequate;
     }
 
     VkPhysicalDevice auto_pick_physical_device(VkInstance instance, VkSurfaceKHR surface)
@@ -388,12 +439,13 @@ namespace platypus
     static VkDevice create_device(
         VkPhysicalDevice physicalDevice,
         VkSurfaceKHR surface,
+        const std::vector<const char*>& extensions,
         const std::vector<const char*>& enabledLayers,
         VkQueue* pGraphicsQueue,
         VkQueue* pPresentQueue
     )
     {
-        QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
+        ContextImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
         // It's possible that the chosen device has queue family supporting both graphics and
         // presentation so figure that out..
         std::set<uint32_t> uniqueQueueFamilies = { queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily };
@@ -418,7 +470,8 @@ namespace platypus
         deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
         deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
 
-        deviceCreateInfo.enabledExtensionCount = 0;
+        deviceCreateInfo.enabledExtensionCount = (uint32_t)extensions.size();
+        deviceCreateInfo.ppEnabledExtensionNames = extensions.data();
 
         deviceCreateInfo.enabledLayerCount = enabledLayers.size();
         deviceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
@@ -449,33 +502,50 @@ namespace platypus
 
     Context::Context(const char* appName, Window* pWindow)
     {
-        _pImpl = new ContextImpl;
-
-        std::vector<const char*> requiredInstanceExtensions = get_required_extensions();
+        std::vector<const char*> requiredInstanceExtensions = get_required_instance_extensions();
+        std::vector<const char*> requiredDeviceExtensions = get_required_device_extensions();
         std::vector<const char*> requiredLayers = get_required_layers();
 
-        _pImpl->instance = create_instance(
+        VkInstance instance = create_instance(
             appName,
             requiredInstanceExtensions,
             requiredLayers
         );
 
         #ifdef PLATYPUS_DEBUG
-            _pImpl->debugMessenger = create_debug_messenger(_pImpl->instance);
+            VkDebugUtilsMessengerEXT debugMessenger = create_debug_messenger(instance);
         #endif
 
-        _pImpl->surface = create_window_surface(_pImpl->instance, pWindow);
+        VkSurfaceKHR surface = create_window_surface(instance, pWindow);
 
-        _pImpl->physicalDevice = auto_pick_physical_device(_pImpl->instance, _pImpl->surface);
+        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(instance, surface);
+        ContextImpl::QueueFamilyIndices deviceQueueFamilyIndices = find_queue_families(selectedPhysicalDevice, surface);
+        ContextImpl::SwapchainSupportDetails swapchainDetails = query_swapchain_support_details(selectedPhysicalDevice, surface);
         // NOTE: Not sure if should actually give queues as ptrs to ptrs here?
         // Not tested does this actually work...
-        _pImpl->device = create_device(
-            _pImpl->physicalDevice,
-            _pImpl->surface,
+        VkQueue graphicsQueue;
+        VkQueue presentQueue;
+        VkDevice device = create_device(
+            selectedPhysicalDevice,
+            surface,
+            requiredDeviceExtensions,
             requiredLayers,
-            &_pImpl->graphicsQueue,
-            &_pImpl->presentQueue
+            &graphicsQueue,
+            &presentQueue
         );
+
+        _pImpl = new ContextImpl;
+        _pImpl->instance = instance;
+        #ifdef PLATYPUS_DEBUG
+            _pImpl->debugMessenger = debugMessenger;
+        #endif
+        _pImpl->surface = surface;
+        _pImpl->physicalDevice = selectedPhysicalDevice;
+        _pImpl->device = device;
+        _pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
+        _pImpl->graphicsQueue = graphicsQueue;
+        _pImpl->presentQueue = presentQueue;
+        _pImpl->deviceSwapchainSupportDetails = swapchainDetails;
 
         Debug::log("Graphics Context created");
     }

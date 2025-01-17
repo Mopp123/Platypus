@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "platypus/graphics/Swapchain.h"
 #include "Debug.h"
 
 
@@ -15,7 +16,8 @@ namespace platypus
     ) :
         _window(name, width, height, resizable, fullscreen),
         _inputManager(&_window),
-        _context(name.c_str(), &_window)
+        _context(name.c_str(), &_window),
+        _swapchain(_window, _context)
     {
         if (s_pInstance)
         {
