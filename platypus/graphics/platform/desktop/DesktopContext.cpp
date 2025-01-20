@@ -104,7 +104,7 @@ namespace platypus
     }
 
 
-    bool check_layer_availability(const std::vector<const char*>& layers, std::vector<const char*>& outUnavailable)
+    static bool check_layer_availability(const std::vector<const char*>& layers, std::vector<const char*>& outUnavailable)
     {
         uint32_t availableLayerCount = 0;
         vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
@@ -500,6 +500,8 @@ namespace platypus
     }
 
 
+    ContextImpl* Context::s_pImpl = nullptr;
+
     Context::Context(const char* appName, Window* pWindow)
     {
         std::vector<const char*> requiredInstanceExtensions = get_required_instance_extensions();
@@ -534,34 +536,48 @@ namespace platypus
             &presentQueue
         );
 
-        _pImpl = new ContextImpl;
-        _pImpl->instance = instance;
+        s_pImpl = new ContextImpl;
+        s_pImpl->instance = instance;
         #ifdef PLATYPUS_DEBUG
-            _pImpl->debugMessenger = debugMessenger;
+            s_pImpl->debugMessenger = debugMessenger;
         #endif
-        _pImpl->surface = surface;
-        _pImpl->physicalDevice = selectedPhysicalDevice;
-        _pImpl->device = device;
-        _pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
-        _pImpl->graphicsQueue = graphicsQueue;
-        _pImpl->presentQueue = presentQueue;
-        _pImpl->deviceSwapchainSupportDetails = swapchainDetails;
+        s_pImpl->surface = surface;
+        s_pImpl->physicalDevice = selectedPhysicalDevice;
+        s_pImpl->device = device;
+        s_pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
+        s_pImpl->graphicsQueue = graphicsQueue;
+        s_pImpl->presentQueue = presentQueue;
+        s_pImpl->deviceSwapchainSupportDetails = swapchainDetails;
 
         Debug::log("Graphics Context created");
     }
 
     Context::~Context()
     {
-        if (_pImpl->instance)
+        if (s_pImpl->instance)
         {
-            vkDestroyDevice(_pImpl->device, nullptr);
-            vkDestroySurfaceKHR(_pImpl->instance, _pImpl->surface, nullptr);
+            vkDestroyDevice(s_pImpl->device, nullptr);
+            vkDestroySurfaceKHR(s_pImpl->instance, s_pImpl->surface, nullptr);
             #ifdef PLATYPUS_DEBUG
-                if (_pImpl->debugMessenger)
-                    destroy_vk_debug_messenger(_pImpl->instance, _pImpl->debugMessenger, nullptr);
+                if (s_pImpl->debugMessenger)
+                    destroy_vk_debug_messenger(s_pImpl->instance, s_pImpl->debugMessenger, nullptr);
             #endif
-            vkDestroyInstance(_pImpl->instance, nullptr);
+            vkDestroyInstance(s_pImpl->instance, nullptr);
         }
-        delete _pImpl;
+        delete s_pImpl;
+    }
+
+    const ContextImpl * const Context::get_pimpl()
+    {
+        if (!s_pImpl)
+        {
+            Debug::log(
+                "@Context::get_pimpl "
+                "Context implementation was nullptr! Make sure you created Context before accessing it.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return s_pImpl;
     }
 }

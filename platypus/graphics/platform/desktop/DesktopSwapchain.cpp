@@ -10,7 +10,7 @@
 
 namespace platypus
 {
-    VkSurfaceFormatKHR select_surface_format(const std::vector<VkSurfaceFormatKHR>& surfaceFormats)
+    static VkSurfaceFormatKHR select_surface_format(const std::vector<VkSurfaceFormatKHR>& surfaceFormats)
     {
         for (const VkSurfaceFormatKHR& surfaceFormat : surfaceFormats)
         {
@@ -20,7 +20,7 @@ namespace platypus
         return surfaceFormats[0];
     }
 
-    VkPresentModeKHR select_present_mode(const std::vector<VkPresentModeKHR>& presentModes)
+    static VkPresentModeKHR select_present_mode(const std::vector<VkPresentModeKHR>& presentModes)
     {
         for (const VkPresentModeKHR& mode : presentModes)
         {
@@ -30,7 +30,7 @@ namespace platypus
         return VK_PRESENT_MODE_FIFO_KHR;
     }
 
-    VkExtent2D select_extent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities, Window& window)
+    static VkExtent2D select_extent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities, Window& window)
     {
         int widthI = 0;
         int heightI = 0;
@@ -41,11 +41,57 @@ namespace platypus
         return extent;
     }
 
+    static std::vector<VkImageView> create_image_views(
+        VkDevice device,
+        const std::vector<VkImage>& images,
+        VkFormat format
+    )
+    {
+        std::vector<VkImageView> imageViews(images.size());
+        for (size_t i = 0; i < images.size(); ++i)
+        {
+            const VkImage& image = images[i];
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.image = image;
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = format;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
 
-    Swapchain::Swapchain(Window& window, Context& context)
+            VkResult createResult = vkCreateImageView(
+                device,
+                &createInfo,
+                nullptr,
+                &imageViews[i]
+            );
+            if (createResult != VK_SUCCESS)
+            {
+                const std::string errStr(string_VkResult(createResult));
+                Debug::log(
+                    "@create_image_views "
+                    "Failed to create image view for swapchain at index: " + std::to_string(i) + " "
+                    "VkResult: " + errStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+        return imageViews;
+    }
+
+
+    Swapchain::Swapchain(Window& window)
     {
         _pImpl = new SwapchainImpl;
-        create(window, context);
+        create(window);
     }
 
     Swapchain::~Swapchain()
@@ -54,9 +100,9 @@ namespace platypus
         delete _pImpl;
     }
 
-    void Swapchain::create(Window& window, Context& context)
+    void Swapchain::create(Window& window)
     {
-        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = context._pImpl->deviceSwapchainSupportDetails;
+        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = Context::get_pimpl()->deviceSwapchainSupportDetails;
         const VkSurfaceCapabilitiesKHR& surfaceCapabilities = swapchainSupportDetails.surfaceCapabilities;
         VkSurfaceFormatKHR selectedFormat = select_surface_format(swapchainSupportDetails.surfaceFormats);
         VkPresentModeKHR selectedPresentMode = select_present_mode(swapchainSupportDetails.presentModes);
@@ -69,7 +115,7 @@ namespace platypus
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = context._pImpl->surface;
+        createInfo.surface = Context::get_pimpl()->surface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = selectedFormat.format;
         createInfo.imageColorSpace = selectedFormat.colorSpace;
@@ -77,7 +123,7 @@ namespace platypus
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = context._pImpl->deviceQueueFamilyIndices;
+        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = Context::get_pimpl()->deviceQueueFamilyIndices;
         uint32_t usedIndices[2] = { deviceQueueFamilyIndices.graphicsFamily, deviceQueueFamilyIndices.presentFamily };
 
         if (usedIndices[0] == usedIndices[1])
@@ -103,8 +149,9 @@ namespace platypus
         // NOTE: Used when dealing with recreating swapchain due to window resizing, or something else!
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
+        VkDevice device = Context::get_pimpl()->device;
         VkSwapchainKHR swapchain;
-        VkResult createResult = vkCreateSwapchainKHR(context._pImpl->device, &createInfo, nullptr, &swapchain);
+        VkResult createResult = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
         if (createResult != VK_SUCCESS)
         {
             std::string errStr(string_VkResult(createResult));
@@ -117,13 +164,15 @@ namespace platypus
         }
 
         uint32_t createdImageCount = 0;
-        vkGetSwapchainImagesKHR(context._pImpl->device, swapchain, &createdImageCount, nullptr);
+        vkGetSwapchainImagesKHR(device, swapchain, &createdImageCount, nullptr);
         std::vector<VkImage> createdImages(createdImageCount);
-        vkGetSwapchainImagesKHR(context._pImpl->device, swapchain, &createdImageCount, createdImages.data());
+        vkGetSwapchainImagesKHR(device, swapchain, &createdImageCount, createdImages.data());
 
         _pImpl->swapchain = swapchain;
         _pImpl->extent = selectedExtent;
+        _pImpl->imageFormat = selectedFormat.format;
         _pImpl->images = createdImages;
+        _pImpl->imageViews = create_image_views(device, createdImages, selectedFormat.format);
 
         Debug::log("Swapchain created");
     }
@@ -131,7 +180,9 @@ namespace platypus
     void Swapchain::destroy()
     {
         // NOTE: Not sure is this the best way to throw the device around...
-        Context& context = Application::get_instance()->getContext();
-        vkDestroySwapchainKHR(context._pImpl->device, _pImpl->swapchain, nullptr);
+        VkDevice device = Context::get_pimpl()->device;
+        for (VkImageView imageView :  _pImpl->imageViews)
+            vkDestroyImageView(device, imageView, nullptr);
+        vkDestroySwapchainKHR(device, _pImpl->swapchain, nullptr);
     }
 }

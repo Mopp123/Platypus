@@ -2,6 +2,8 @@
 #include "platypus/graphics/Swapchain.h"
 #include "Debug.h"
 
+#include "platypus/graphics/Buffers.h"
+
 
 namespace platypus
 {
@@ -17,7 +19,7 @@ namespace platypus
         _window(name, width, height, resizable, fullscreen),
         _inputManager(&_window),
         _context(name.c_str(), &_window),
-        _swapchain(_window, _context)
+        _swapchain(_window)
     {
         if (s_pInstance)
         {
@@ -29,6 +31,16 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         s_pInstance = this;
+
+        // JUST TESTING HERE!
+        VertexBufferLayout testLayout(
+            {
+                { 0, ShaderDataType::Float2 },
+                { 1, ShaderDataType::Float2 }
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        );
     }
 
     Application::~Application()

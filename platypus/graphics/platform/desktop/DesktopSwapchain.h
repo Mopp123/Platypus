@@ -10,6 +10,8 @@ namespace platypus
     {
         VkSwapchainKHR swapchain;
         VkExtent2D extent;
+        VkFormat imageFormat;
         std::vector<VkImage> images;
+        std::vector<VkImageView> imageViews;
     };
 }

@@ -14,10 +14,10 @@ namespace platypus
         SwapchainImpl* _pImpl = nullptr;
 
     public:
-        Swapchain(Window& window, Context& context);
+        Swapchain(Window& window);
         ~Swapchain();
 
-        void create(Window& window, Context& context);
+        void create(Window& window);
         void destroy();
     };
 }

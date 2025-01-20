@@ -37,6 +37,5 @@ namespace platypus
 
         inline const Window& getWindow() const { return _window; }
         inline const InputManager& getInputManager() const { return _inputManager; }
-        inline Context& getContext() { return _context; }
     };
 }
