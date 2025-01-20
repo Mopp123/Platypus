@@ -40,5 +40,7 @@ add_library(glfw SHARED IMPORTED)
 set_property(TARGET glfw PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/dependencies/glfw/build/src/libglfw.so.3.5")
 
 find_package(Vulkan REQUIRED)
-target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} glfw Vulkan::Vulkan)
+set(VMA_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/dependencies/VulkanMemoryAllocator/include")
+target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS} ${VMA_INCLUDE_DIR})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)

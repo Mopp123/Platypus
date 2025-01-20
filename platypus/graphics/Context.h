@@ -8,12 +8,14 @@ namespace platypus
     struct ContextImpl;
     class Swapchain;
     class Shader;
+    class Buffer;
 
     class Context
     {
     private:
         friend class Swapchain;
         friend class Shader;
+        friend class Buffer;
         static ContextImpl* s_pImpl;
 
     public:

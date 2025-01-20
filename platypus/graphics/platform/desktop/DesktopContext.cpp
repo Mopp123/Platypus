@@ -499,6 +499,33 @@ namespace platypus
         return device;
     }
 
+    static VmaAllocator create_allocator(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        VkInstance instance
+    )
+    {
+        VmaAllocatorCreateInfo createInfo{};
+        createInfo.flags = 0;
+        createInfo.physicalDevice = physicalDevice;
+        createInfo.device = device;
+        createInfo.instance = instance;
+        createInfo.vulkanApiVersion = VK_API_VERSION_1_0;
+        //createInfo.pHeapSizeLimit = nullptr;
+        VmaAllocator vmaAllocator;
+        VkResult createResult = vmaCreateAllocator(&createInfo, &vmaAllocator);
+        if (createResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(createResult));
+            Debug::log(
+                "@create_allocator "
+                "Failed to create VmaAllocator! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return vmaAllocator;
+    }
 
     ContextImpl* Context::s_pImpl = nullptr;
 
@@ -536,6 +563,12 @@ namespace platypus
             &presentQueue
         );
 
+        VmaAllocator vmaAllocator = create_allocator(
+            selectedPhysicalDevice,
+            device,
+            instance
+        );
+
         s_pImpl = new ContextImpl;
         s_pImpl->instance = instance;
         #ifdef PLATYPUS_DEBUG
@@ -544,6 +577,7 @@ namespace platypus
         s_pImpl->surface = surface;
         s_pImpl->physicalDevice = selectedPhysicalDevice;
         s_pImpl->device = device;
+        s_pImpl->vmaAllocator = vmaAllocator;
         s_pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
         s_pImpl->graphicsQueue = graphicsQueue;
         s_pImpl->presentQueue = presentQueue;
@@ -556,6 +590,7 @@ namespace platypus
     {
         if (s_pImpl->instance)
         {
+            vmaDestroyAllocator(s_pImpl->vmaAllocator);
             vkDestroyDevice(s_pImpl->device, nullptr);
             vkDestroySurfaceKHR(s_pImpl->instance, s_pImpl->surface, nullptr);
             #ifdef PLATYPUS_DEBUG

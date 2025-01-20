@@ -9,6 +9,8 @@ namespace platypus
 {
     Application* Application::s_pInstance = nullptr;
 
+    static Buffer* s_pTestBuffer = nullptr;
+
     Application::Application(
         const std::string& name,
         int width,
@@ -32,14 +34,17 @@ namespace platypus
         }
         s_pInstance = this;
 
-        // JUST TESTING HERE!
-        VertexBufferLayout testLayout(
-            {
-                { 0, ShaderDataType::Float2 },
-                { 1, ShaderDataType::Float2 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-            0
+        // TESTING!
+        std::vector<float> buf = {
+            1, 2, 3, 4
+        };
+        s_pTestBuffer = new Buffer(
+            buf.data(),
+            sizeof(float),
+            buf.size(),
+            BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
     }
 
@@ -53,6 +58,8 @@ namespace platypus
         {
             _inputManager.pollEvents();
         }
+
+        delete s_pTestBuffer;
     }
 
     Application* Application::get_instance()

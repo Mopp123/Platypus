@@ -127,8 +127,8 @@ namespace platypus
             void* data,
             size_t elementSize,
             size_t dataLength,
-            uint32_t bufferUsageFlags,
-            BufferUpdateFrequency bufferUpdateFrequency,
+            uint32_t usageFlags,
+            BufferUpdateFrequency updateFrequency,
             bool saveDataHostSide = false
         );
         Buffer(const Buffer&) = delete;

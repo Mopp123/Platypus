@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 #include <vector>
 
 
@@ -36,6 +37,7 @@ namespace platypus
         VkSurfaceKHR surface;
         VkPhysicalDevice physicalDevice;
         VkDevice device;
+        VmaAllocator vmaAllocator;
         QueueFamilyIndices deviceQueueFamilyIndices;
         VkQueue graphicsQueue;
         VkQueue presentQueue;

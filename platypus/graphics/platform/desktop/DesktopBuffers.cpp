@@ -1,6 +1,9 @@
 #include "platypus/graphics/Buffers.h"
 #include "DesktopBuffers.h"
+#include "platypus/graphics/Context.h"
+#include "DesktopContext.h"
 #include "platypus/core/Debug.h"
+#include <vulkan/vk_enum_string_helper.h>
 
 
 namespace platypus
@@ -28,6 +31,19 @@ namespace platypus
         case ShaderDataType::Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
         default: return VK_FORMAT_R32_SFLOAT;
         }
+    }
+
+    // NOTE: This is ment to convert a SINGLE flag into a SINGLE VkBufferUsageFlag
+    VkBufferUsageFlags to_vk_buffer_usage_flags(uint32_t flags)
+    {
+        VkBufferUsageFlags vkFlags = 0;
+        if (flags & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT)
+            vkFlags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        if (flags & BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT)
+            vkFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        if (flags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+            vkFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        return vkFlags;
     }
 
     size_t get_shader_datatype_size(ShaderDataType type)
@@ -128,18 +144,62 @@ namespace platypus
     }
 
 
+    // TODO: Optimizations:
+    // * staging buffers
     Buffer::Buffer(
         void* data,
         size_t elementSize,
         size_t dataLength,
-        uint32_t bufferUsageFlags,
-        BufferUpdateFrequency bufferUpdateFrequency,
+        uint32_t usageFlags,
+        BufferUpdateFrequency updateFrequency,
         bool saveDataHostSide
-    )
+    ) :
+        _dataElemSize(elementSize),
+        _dataLength(dataLength),
+        _bufferUsageFlags(usageFlags),
+        _updateFrequency(updateFrequency)
     {
+        VkBufferCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        createInfo.size = getTotalSize();
+        createInfo.usage = to_vk_buffer_usage_flags(_bufferUsageFlags);
+        createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VmaAllocationCreateInfo allocInfo{};
+        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+        VkBuffer buffer = VK_NULL_HANDLE;
+        VmaAllocation vmaAllocation = VK_NULL_HANDLE;
+        VkResult createResult = vmaCreateBuffer(
+            Context::get_pimpl()->vmaAllocator,
+            &createInfo,
+            &allocInfo,
+            &buffer,
+            &vmaAllocation,
+            nullptr
+        );
+        if (createResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(createResult));
+            Debug::log(
+                "@Buffer::Buffer "
+                "Failed to create buffer(vmaCreateBuffer)! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        _pImpl = new BufferImpl{ buffer, vmaAllocation };
     }
 
     Buffer::~Buffer()
     {
+        if (_pImpl)
+        {
+            vmaDestroyBuffer(
+                Context::get_pimpl()->vmaAllocator,
+                _pImpl->handle,
+                _pImpl->vmaAllocation
+            );
+        }
     }
 }
