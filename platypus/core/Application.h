@@ -5,6 +5,10 @@
 #include "platypus/graphics/Context.h"
 #include "platypus/graphics/Swapchain.h"
 
+#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Pipeline.h"
+
 
 namespace platypus
 {
@@ -16,9 +20,16 @@ namespace platypus
         Window _window;
         InputManager _inputManager;
         Context _context;
+
+        // TESTING BELOW
         // NOTE: All rendering related stuff should probably contained somewhere else / in some "main renderer"
         // thing...
         Swapchain _swapchain;
+
+        Shader* pTestVertexShader = nullptr;
+        Shader* pTestFragmentShader = nullptr;
+
+        Pipeline testPipeline;
 
     public:
         Application(

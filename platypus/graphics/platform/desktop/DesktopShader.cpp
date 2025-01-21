@@ -4,7 +4,6 @@
 #include "platypus/core/Debug.h"
 #include "platypus/utils/FileUtils.h"
 #include <vulkan/vk_enum_string_helper.h>
-#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -55,5 +54,19 @@ namespace platypus
         vkDestroyShaderModule(Context::get_pimpl()->device, _pImpl->shaderModule, nullptr);
         if (_pImpl)
             delete _pImpl;
+    }
+
+
+    VkPipelineShaderStageCreateInfo get_pipeline_shader_stage_create_info(
+        const Shader& shader,
+        const ShaderImpl * const pImpl
+    )
+    {
+        VkPipelineShaderStageCreateInfo shaderStageCreateInfo{};
+        shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        shaderStageCreateInfo.stage = shader.getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
+        shaderStageCreateInfo.module = pImpl->shaderModule;
+        shaderStageCreateInfo.pName = "main";
+        return shaderStageCreateInfo;
     }
 }

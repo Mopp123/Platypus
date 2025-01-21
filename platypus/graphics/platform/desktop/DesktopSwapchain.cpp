@@ -342,9 +342,14 @@ namespace platypus
         _renderPass.destroy();
         for (VkFramebuffer framebuffer : _pImpl->framebuffers)
             vkDestroyFramebuffer(device, framebuffer, nullptr);
-        for (VkImageView imageView :  _pImpl->imageViews)
+        _pImpl->framebuffers.clear();
+
+        for (VkImageView imageView : _pImpl->imageViews)
             vkDestroyImageView(device, imageView, nullptr);
+        _pImpl->imageViews.clear();
+
         vkDestroySwapchainKHR(device, _pImpl->handle, nullptr);
+        _pImpl->handle = VK_NULL_HANDLE;
     }
 
     AcquireSwapchainImageResult Swapchain::acquireImage(uint32_t* pOutImageIndex)
@@ -388,5 +393,10 @@ namespace platypus
             Debug::MessageType::PLATYPUS_ERROR
         );
         return AcquireSwapchainImageResult::ERROR;
+    }
+
+    Extent2D Swapchain::getExtent() const
+    {
+        return { _pImpl->extent.width, _pImpl->extent.height };
     }
 }

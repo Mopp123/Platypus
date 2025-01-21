@@ -3,6 +3,7 @@
 #include "Context.h"
 #include "platypus/core/Window.h"
 #include "RenderPass.h"
+#include <platypus/Common.h>
 
 
 namespace platypus
@@ -32,5 +33,9 @@ namespace platypus
         void destroy();
 
         AcquireSwapchainImageResult acquireImage(uint32_t* pOutImageIndex);
+
+        Extent2D getExtent() const;
+
+        inline const RenderPass& getRenderPass() const { return _renderPass; }
     };
 }

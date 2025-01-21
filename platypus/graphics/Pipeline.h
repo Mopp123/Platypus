@@ -3,12 +3,12 @@
 #include <cstdint>
 #include <vector>
 #include "Shader.h"
+#include "Buffers.h"
+#include "RenderPass.h"
 
 
 namespace platypus
 {
-    struct PipelineImpl;
-
     // *Put this here just to get rid of VkRect2D
     struct Rect2D
     {
@@ -55,6 +55,7 @@ namespace platypus
     };
 
 
+    struct PipelineImpl;
     class Pipeline
     {
     private:
@@ -65,10 +66,13 @@ namespace platypus
         ~Pipeline();
 
         void create(
+            const RenderPass& renderPass,
             const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-            const std::vector<DescriptorSetLayout>& descriptorLayouts,
-            const Shader* pVertexShader, const Shader* pFragmentShader,
-            float viewportWidth, float viewportHeight,
+            //const std::vector<DescriptorSetLayout>& descriptorLayouts,
+            const Shader& vertexShader,
+            const Shader& fragmentShader,
+            float viewportWidth,
+            float viewportHeight,
             const Rect2D viewportScissor,
             CullMode cullMode,
             FrontFace frontFace,

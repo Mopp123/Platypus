@@ -61,12 +61,14 @@ namespace platypus
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
 
+    class Pipeline;
 
     struct VertexBufferElementImpl;
     class VertexBufferElement
     {
     private:
         friend class VertexBufferLayout;
+        friend class Pipeline;
         VertexBufferElementImpl* _pImpl = nullptr;
         uint32_t _location = 0;
         ShaderDataType _type = ShaderDataType::Float;
@@ -86,6 +88,7 @@ namespace platypus
     class VertexBufferLayout
     {
     private:
+        friend class Pipeline;
         VertexBufferLayoutImpl* _pImpl = nullptr;
         std::vector<VertexBufferElement> _elements;
         VertexInputRate _inputRate = VertexInputRate::VERTEX_INPUT_RATE_VERTEX;

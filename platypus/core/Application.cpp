@@ -46,6 +46,38 @@ namespace platypus
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
             false
         );
+        VertexBufferLayout vbLayout = {
+            {
+                { 0, ShaderDataType::Float4 }
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
+
+        pTestVertexShader = new Shader("assets/shaders/TestVertexShader.spv", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT);
+        pTestFragmentShader = new Shader("assets/shaders/TestFragmentShader.spv", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT);
+
+        Extent2D swapchainExtent = _swapchain.getExtent();
+        testPipeline.create(
+            _swapchain.getRenderPass(),
+            { vbLayout },
+            //const std::vector<DescriptorSetLayout>& descriptorLayouts,
+            *pTestVertexShader,
+            *pTestFragmentShader,
+            swapchainExtent.width,
+            swapchainExtent.height,
+            {
+                 0, 0, swapchainExtent.width, swapchainExtent.height
+            },
+            CullMode::CULL_MODE_NONE,
+            FRONT_FACE_COUNTER_CLOCKWISE,
+            false, // enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
+            false, // enable color blending
+            0, // push constants size
+            0 // push constants stage flags
+        );
+
     }
 
     Application::~Application()
@@ -59,7 +91,10 @@ namespace platypus
             _inputManager.pollEvents();
         }
 
+        testPipeline.destroy();
         delete s_pTestBuffer;
+        delete pTestVertexShader;
+        delete pTestFragmentShader;
     }
 
     Application* Application::get_instance()

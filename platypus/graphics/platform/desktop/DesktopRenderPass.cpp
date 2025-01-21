@@ -125,5 +125,6 @@ namespace platypus
     void RenderPass::destroy()
     {
         vkDestroyRenderPass(Context::get_pimpl()->device, _pImpl->handle, nullptr);
+        _pImpl->handle = VK_NULL_HANDLE;
     }
 }

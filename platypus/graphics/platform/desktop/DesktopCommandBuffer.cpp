@@ -36,6 +36,7 @@ namespace platypus
             1,
             &_pImpl->handle
         );
+        _pImpl->handle = VK_NULL_HANDLE;
     }
 
 

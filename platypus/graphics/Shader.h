@@ -6,8 +6,6 @@
 
 namespace platypus
 {
-    struct ShaderImpl;
-
     enum ShaderStageFlagBits
     {
         SHADER_STAGE_NONE = 0,
@@ -25,9 +23,13 @@ namespace platypus
     };
 
 
+    class Pipeline;
+
+    struct ShaderImpl;
     class Shader
     {
     private:
+        friend class Pipeline;
         ShaderImpl* _pImpl = nullptr;
         ShaderStageFlagBits _stage = ShaderStageFlagBits::SHADER_STAGE_NONE;
 
