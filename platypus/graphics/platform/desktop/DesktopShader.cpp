@@ -9,7 +9,7 @@
 
 namespace platypus
 {
-    Shader::Shader(const std::string& filepath,ShaderStageFlagBits stage) :
+    Shader::Shader(const std::string& filepath, ShaderStageFlagBits stage) :
         _stage(stage)
     {
         std::vector<char> source = load_file(filepath);

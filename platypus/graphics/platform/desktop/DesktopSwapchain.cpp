@@ -1,6 +1,7 @@
 #include "platypus/graphics/Swapchain.h"
 #include "DesktopSwapchain.h"
 #include "DesktopContext.h"
+#include "DesktopRenderPass.h"
 #include "platypus/core/platform/desktop/DesktopWindow.h"
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
@@ -88,6 +89,129 @@ namespace platypus
     }
 
 
+    static std::vector<VkFramebuffer> create_framebuffers(
+        VkDevice device,
+        const std::vector<VkImageView>& imageViews,
+        VkRenderPass renderPass,
+        VkExtent2D surfaceExtent
+    )
+    {
+        std::vector<VkFramebuffer> framebuffers(imageViews.size());
+        for (size_t i = 0; i < framebuffers.size(); ++i)
+        {
+            VkImageView attachments[] =
+            {
+                imageViews[i]/*,
+                _depthTexture->getVkImageView()*/
+            };
+
+            VkFramebufferCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            createInfo.renderPass = renderPass;
+            createInfo.attachmentCount = 1; //2;
+            createInfo.pAttachments = attachments;
+            createInfo.width = surfaceExtent.width;
+            createInfo.height = surfaceExtent.height;
+            createInfo.layers = 1;
+
+            VkResult createResult = vkCreateFramebuffer(
+                device,
+                &createInfo,
+                nullptr,
+                &framebuffers[i]
+            );
+            if (createResult != VK_SUCCESS)
+            {
+                const std::string errStr(string_VkResult(createResult));
+                Debug::log(
+                    "@create_framebuffers "
+                    "Failed to create framebuffers for Swapchain! VkResult: " + errStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+        return framebuffers;
+    }
+
+
+    static void create_sync_objects(
+        VkDevice device,
+        std::vector<VkSemaphore>& outImageAvailableSemaphores,
+        std::vector<VkSemaphore>& outRenderFinishedSemaphores,
+        std::vector<VkFence>& outInFlightFences,
+        std::vector<VkFence>& outInFlightImages,
+        size_t swapchainImageCount,
+        size_t maxFramesInFlight
+    )
+    {
+        outImageAvailableSemaphores.resize(maxFramesInFlight);
+        outRenderFinishedSemaphores.resize(maxFramesInFlight);
+        outInFlightFences.resize(maxFramesInFlight);
+
+        outInFlightImages.resize(swapchainImageCount, VK_NULL_HANDLE);
+
+        VkSemaphoreCreateInfo semaphoreCreateInfo{};
+        semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fenceCreateInfo{};
+        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for (size_t i = 0; i < maxFramesInFlight; ++i)
+        {
+            VkResult imageAvailableSemaphoreResult = vkCreateSemaphore(
+                device,
+                &semaphoreCreateInfo,
+                nullptr,
+                &outImageAvailableSemaphores[i]
+            );
+            VkResult renderFinishedSemaphoreResult = vkCreateSemaphore(
+                device,
+                &semaphoreCreateInfo,
+                nullptr,
+                &outRenderFinishedSemaphores[i]
+            );
+            VkResult fenceResult = vkCreateFence(
+                device,
+                &fenceCreateInfo,
+                nullptr,
+                &outInFlightFences[i]
+            );
+            if (imageAvailableSemaphoreResult != VK_SUCCESS)
+            {
+                std::string errStr(string_VkResult(imageAvailableSemaphoreResult));
+                Debug::log(
+                    "@create_sync_objects "
+                    "Failed to create 'imageAvailableSemaphore'! VkResult: " + errStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (renderFinishedSemaphoreResult != VK_SUCCESS)
+            {
+                std::string errStr(string_VkResult(renderFinishedSemaphoreResult));
+                Debug::log(
+                    "@create_sync_objects "
+                    "Failed to create 'renderFinishedSemaphore'! VkResult: " + errStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (fenceResult != VK_SUCCESS)
+            {
+                std::string errStr(string_VkResult(renderFinishedSemaphoreResult));
+                Debug::log(
+                    "@create_sync_objects "
+                    "Failed to create 'inFlightFence'! VkResult: " + errStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+    }
+
+
     Swapchain::Swapchain(Window& window)
     {
         _pImpl = new SwapchainImpl;
@@ -168,11 +292,29 @@ namespace platypus
         std::vector<VkImage> createdImages(createdImageCount);
         vkGetSwapchainImagesKHR(device, swapchain, &createdImageCount, createdImages.data());
 
-        _pImpl->swapchain = swapchain;
+        _pImpl->handle = swapchain;
         _pImpl->extent = selectedExtent;
         _pImpl->imageFormat = selectedFormat.format;
         _pImpl->images = createdImages;
         _pImpl->imageViews = create_image_views(device, createdImages, selectedFormat.format);
+
+        _renderPass.create(*this);
+        _pImpl->framebuffers = create_framebuffers(
+            device,
+            _pImpl->imageViews,
+            _renderPass._pImpl->handle,
+            selectedExtent
+        );
+
+        create_sync_objects(
+            device,
+            _pImpl->imageAvailableSemaphores,
+            _pImpl->renderFinishedSemaphores,
+            _pImpl->inFlightFences,
+            _pImpl->inFlightImages,
+            _pImpl->images.size(),
+            _pImpl->maxFramesInFlight
+        );
 
         Debug::log("Swapchain created");
     }
@@ -181,8 +323,70 @@ namespace platypus
     {
         // NOTE: Not sure is this the best way to throw the device around...
         VkDevice device = Context::get_pimpl()->device;
+
+        for (size_t i = 0; i < _pImpl->maxFramesInFlight; ++i)
+        {
+            vkDestroySemaphore(device, _pImpl->imageAvailableSemaphores[i], nullptr);
+            vkDestroySemaphore(device, _pImpl->renderFinishedSemaphores[i], nullptr);
+            vkDestroyFence(device, _pImpl->inFlightFences[i], nullptr);
+
+            _pImpl->imageAvailableSemaphores[i] = VK_NULL_HANDLE;
+            _pImpl->renderFinishedSemaphores[i] = VK_NULL_HANDLE;
+            _pImpl->inFlightFences[i] = VK_NULL_HANDLE;
+        }
+        _pImpl->imageAvailableSemaphores.clear();
+        _pImpl->renderFinishedSemaphores.clear();
+        _pImpl->inFlightFences.clear();
+        _pImpl->inFlightImages.clear();
+
+        _renderPass.destroy();
+        for (VkFramebuffer framebuffer : _pImpl->framebuffers)
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
         for (VkImageView imageView :  _pImpl->imageViews)
             vkDestroyImageView(device, imageView, nullptr);
-        vkDestroySwapchainKHR(device, _pImpl->swapchain, nullptr);
+        vkDestroySwapchainKHR(device, _pImpl->handle, nullptr);
+    }
+
+    AcquireSwapchainImageResult Swapchain::acquireImage(uint32_t* pOutImageIndex)
+    {
+        VkDevice device = Context::get_pimpl()->device;
+        vkWaitForFences(
+            device,
+            1,
+            &_pImpl->inFlightFences[_pImpl->currentFrame],
+            VK_TRUE,
+            UINT64_MAX
+        );
+
+        VkResult result = vkAcquireNextImageKHR(
+            device,
+            _pImpl->handle,
+            UINT64_MAX,
+            _pImpl->imageAvailableSemaphores[_pImpl->currentFrame],
+            VK_NULL_HANDLE,
+            pOutImageIndex
+        );
+
+        if (result == VK_SUCCESS)
+        {
+            return AcquireSwapchainImageResult::SUCCESS;
+        }
+        else if (result == VK_SUBOPTIMAL_KHR)
+        {
+            Debug::log("@Swapchain::acquireImage VK_SUBOPTIMAL_KHR", Debug::MessageType::PLATYPUS_WARNING);
+            return AcquireSwapchainImageResult::SUCCESS;
+        }
+        else if (result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            Debug::log("@Swapchain::acquireImage VK_ERROR_OUT_OF_DATE_KHR", Debug::MessageType::PLATYPUS_WARNING);
+            return AcquireSwapchainImageResult::RESIZE_REQUIRED;
+        }
+        const std::string errStr(string_VkResult(result));
+        Debug::log(
+            "@Swapchain::acquireImage "
+            "Failed to acquire image! VkResult: " + errStr,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        return AcquireSwapchainImageResult::ERROR;
     }
 }
