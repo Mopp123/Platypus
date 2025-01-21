@@ -9,14 +9,14 @@
 
 namespace platypus
 {
-    CommandBuffer::CommandBuffer(CommandPool& poolRef) :
-        _poolRef(poolRef)
+    CommandBuffer::CommandBuffer(CommandPool* pPool) :
+        _pPool(pPool)
     {
         _pImpl = new CommandBufferImpl;
     }
 
     CommandBuffer::CommandBuffer(const CommandBuffer& other) :
-        _poolRef(other._poolRef)
+        _pPool(other._pPool)
     {
         _pImpl = new CommandBufferImpl;
         _pImpl->handle = other._pImpl->handle;
@@ -32,7 +32,7 @@ namespace platypus
     {
         vkFreeCommandBuffers(
             Context::get_pimpl()->device,
-            _poolRef._pImpl->handle,
+            _pPool->_pImpl->handle,
             1,
             &_pImpl->handle
         );
@@ -70,6 +70,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
+        _pImpl = new CommandPoolImpl;
+        _pImpl->handle = commandPool;
+
         Debug::log("Command pool created");
     }
 
@@ -81,6 +84,7 @@ namespace platypus
             _pImpl->handle,
             nullptr
         );
+        delete _pImpl;
     }
 
     std::vector<CommandBuffer> CommandPool::allocCommandBuffers(
@@ -116,7 +120,7 @@ namespace platypus
 
         for (uint32_t i = 0; i < count; ++i)
         {
-            CommandBuffer buffer(*this);
+            CommandBuffer buffer(this);
             buffer._pImpl->handle = bufferHandles[i];
             buffers.push_back(buffer);
         }

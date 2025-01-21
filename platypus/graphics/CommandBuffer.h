@@ -20,13 +20,15 @@ namespace  platypus
     {
     private:
         friend class CommandPool;
-        CommandPool& _poolRef;
-
+        CommandPool* _pPool = nullptr;
         CommandBufferImpl* _pImpl = nullptr;
 
-        CommandBuffer(CommandPool& poolRef);
+    public:
+        CommandBuffer() = default;
+        CommandBuffer(CommandPool* pPool);
         CommandBuffer(const CommandBuffer& other);
         ~CommandBuffer();
+
         void free();
     };
 
