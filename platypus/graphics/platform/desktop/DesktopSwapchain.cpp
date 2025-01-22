@@ -287,10 +287,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        uint32_t createdImageCount = 0;
-        vkGetSwapchainImagesKHR(device, swapchain, &createdImageCount, nullptr);
-        std::vector<VkImage> createdImages(createdImageCount);
-        vkGetSwapchainImagesKHR(device, swapchain, &createdImageCount, createdImages.data());
+        vkGetSwapchainImagesKHR(device, swapchain, &_imageCount, nullptr);
+        std::vector<VkImage> createdImages(_imageCount);
+        vkGetSwapchainImagesKHR(device, swapchain, &_imageCount, createdImages.data());
 
         _pImpl->handle = swapchain;
         _pImpl->extent = selectedExtent;
@@ -347,6 +346,8 @@ namespace platypus
         for (VkImageView imageView : _pImpl->imageViews)
             vkDestroyImageView(device, imageView, nullptr);
         _pImpl->imageViews.clear();
+
+        _imageCount = 0;
 
         vkDestroySwapchainKHR(device, _pImpl->handle, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;
@@ -422,6 +423,14 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_WARNING
             );
         }
+        // NOTE: Not sure should we change this here if presenting fails!
+        // TODO: Test this when handling resizing!
+        _pImpl->currentFrame = (_pImpl->currentFrame + 1) % _pImpl->maxFramesInFlight;
+    }
+
+    size_t Swapchain::getMaxFramesInFlight() const
+    {
+        return _pImpl->maxFramesInFlight;
     }
 
     Extent2D Swapchain::getExtent() const

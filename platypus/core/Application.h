@@ -8,6 +8,9 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Shader.h"
 #include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/CommandBuffer.h"
+
+#include "platypus/graphics/renderers/MasterRenderer.h"
 
 
 namespace platypus
@@ -25,11 +28,8 @@ namespace platypus
         // NOTE: All rendering related stuff should probably contained somewhere else / in some "main renderer"
         // thing...
         Swapchain _swapchain;
-
-        Shader* pTestVertexShader = nullptr;
-        Shader* pTestFragmentShader = nullptr;
-
-        Pipeline testPipeline;
+        CommandPool _commandPool;
+        MasterRenderer _masterRenderer;
 
     public:
         Application(

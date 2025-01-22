@@ -29,6 +29,10 @@ namespace platypus
         // TODO: Completely separate class for "Device" handling Device specific stuff like this
         void submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame);
 
+        // *On vulkan side we need to wait for device operations to finish before freeing resources used
+        // by these operations
+        void waitForOperations();
+
         static const ContextImpl * const get_pimpl();
     };
 }

@@ -665,4 +665,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
     }
+
+    void Context::waitForOperations()
+    {
+        vkDeviceWaitIdle(s_pImpl->device);
+    }
 }

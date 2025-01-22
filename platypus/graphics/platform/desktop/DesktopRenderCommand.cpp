@@ -46,5 +46,16 @@ namespace platypus
         {
             vkCmdEndRenderPass(cmdBuf.getPImpl()->handle);
         }
+
+        void exec_secondary_command_buffers(
+            const CommandBuffer& primary,
+            const std::vector<CommandBuffer>& secondaries
+        )
+        {
+            std::vector<VkCommandBuffer> secondaryHandles(secondaries.size());
+            for (size_t i = 0; i < secondaries.size(); ++i)
+                secondaryHandles[i] = secondaries[i].getPImpl()->handle;
+            vkCmdExecuteCommands(primary.getPImpl()->handle, (uint32_t)secondaryHandles.size(), secondaryHandles.data());
+        }
     }
 }

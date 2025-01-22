@@ -20,5 +20,10 @@ namespace platypus
             const Vector4f& clearColor
         );
         void end_render_pass(const CommandBuffer& cmdBuf);
+
+        void exec_secondary_command_buffers(
+            const CommandBuffer& primary,
+            const std::vector<CommandBuffer>& secondaries
+        );
     }
 }
