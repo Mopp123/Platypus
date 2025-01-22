@@ -3,16 +3,12 @@
 
 namespace platypus
 {
-    struct RenderPassImpl;
-
     class Swapchain;
-    class Pipeline;
 
+    struct RenderPassImpl;
     class RenderPass
     {
     private:
-        friend class Swapchain;
-        friend class Pipeline;
         RenderPassImpl* _pImpl = nullptr;
 
     public:
@@ -21,5 +17,7 @@ namespace platypus
 
         void create(const Swapchain& swapchain);
         void destroy();
+
+        inline const RenderPassImpl* getPImpl() const { return _pImpl; }
     };
 }

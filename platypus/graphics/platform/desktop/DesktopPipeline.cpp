@@ -266,7 +266,7 @@ namespace platypus
         pipelineCreateInfo.pDynamicState = nullptr; // not used atm!
         pipelineCreateInfo.layout = pipelineLayout;
 
-        pipelineCreateInfo.renderPass = renderPass._pImpl->handle;
+        pipelineCreateInfo.renderPass = renderPass.getPImpl()->handle;
         pipelineCreateInfo.subpass = 0;
 
         pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;

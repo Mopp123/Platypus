@@ -89,6 +89,12 @@ namespace platypus
         while (!_window.isCloseRequested())
         {
             _inputManager.pollEvents();
+            /*
+            _swapchain.acquireImage();
+            CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer();
+            _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, frame);
+            _swapchain.present(frame);
+            */
         }
 
         testPipeline.destroy();

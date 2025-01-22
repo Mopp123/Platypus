@@ -10,6 +10,10 @@
 #include "platypus/core/Debug.h"
 #include "platypus/Common.h"
 #include "platypus/core/platform/desktop/DesktopWindow.h"
+#include "platypus/graphics/Swapchain.h"
+#include "platypus/graphics/platform/desktop/DesktopSwapchain.h"
+#include "platypus/graphics/CommandBuffer.h"
+#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 
 
 namespace platypus
@@ -614,5 +618,51 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         return s_pImpl;
+    }
+
+    void Context::submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame)
+    {
+        SwapchainImpl* pSwapchainImpl = swapchain._pImpl;
+        uint32_t imageIndex = swapchain.getCurrentImageIndex();
+        // check if prev frame is using this image
+        if (pSwapchainImpl->inFlightImages[imageIndex] != VK_NULL_HANDLE)
+            vkWaitForFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightImages[imageIndex], VK_TRUE, UINT64_MAX);
+
+        // mark this img to be now used by this frame
+        pSwapchainImpl->inFlightImages[imageIndex] = pSwapchainImpl->inFlightFences[frame];
+
+        VkSemaphore waitSemaphores[] = { pSwapchainImpl->imageAvailableSemaphores[frame] };
+        VkSemaphore signalSemaphores[] = { pSwapchainImpl->renderFinishedSemaphores[frame] };
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitStages;
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmdBuf._pImpl->handle;
+
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalSemaphores;
+
+        vkResetFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
+        VkResult submitResult = vkQueueSubmit(
+            s_pImpl->graphicsQueue,
+            1,
+            &submitInfo,
+            pSwapchainImpl->inFlightFences[frame]
+        );
+        if (submitResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(submitResult));
+            Debug::log(
+                "@Context::submitPrimaryCommandBuffer "
+                "Failed to submit command buffer to graphics queue! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
     }
 }

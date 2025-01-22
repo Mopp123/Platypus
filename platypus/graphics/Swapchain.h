@@ -20,10 +20,14 @@ namespace platypus
     class Swapchain
     {
     private:
+        friend class Context;
         friend class RenderPass;
         SwapchainImpl* _pImpl = nullptr;
 
         RenderPass _renderPass;
+
+        // The latest image's index got using acquireImage
+        uint32_t _currentImageIndex = 0;
 
     public:
         Swapchain(Window& window);
@@ -32,10 +36,13 @@ namespace platypus
         void create(Window& window);
         void destroy();
 
-        AcquireSwapchainImageResult acquireImage(uint32_t* pOutImageIndex);
+        AcquireSwapchainImageResult acquireImage();
+
+        void present(size_t frame);
 
         Extent2D getExtent() const;
-
         inline const RenderPass& getRenderPass() const { return _renderPass; }
+        inline uint32_t getCurrentImageIndex() const { return _currentImageIndex; }
+        inline const SwapchainImpl* getPImpl() const { return _pImpl; }
     };
 }

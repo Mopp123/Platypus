@@ -302,7 +302,7 @@ namespace platypus
         _pImpl->framebuffers = create_framebuffers(
             device,
             _pImpl->imageViews,
-            _renderPass._pImpl->handle,
+            _renderPass.getPImpl()->handle,
             selectedExtent
         );
 
@@ -352,7 +352,7 @@ namespace platypus
         _pImpl->handle = VK_NULL_HANDLE;
     }
 
-    AcquireSwapchainImageResult Swapchain::acquireImage(uint32_t* pOutImageIndex)
+    AcquireSwapchainImageResult Swapchain::acquireImage()
     {
         VkDevice device = Context::get_pimpl()->device;
         vkWaitForFences(
@@ -369,7 +369,7 @@ namespace platypus
             UINT64_MAX,
             _pImpl->imageAvailableSemaphores[_pImpl->currentFrame],
             VK_NULL_HANDLE,
-            pOutImageIndex
+            &_currentImageIndex
         );
 
         if (result == VK_SUCCESS)
@@ -393,6 +393,35 @@ namespace platypus
             Debug::MessageType::PLATYPUS_ERROR
         );
         return AcquireSwapchainImageResult::ERROR;
+    }
+
+    void Swapchain::present(size_t frame)
+    {
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        VkSemaphore signalSemaphores[] = { _pImpl->renderFinishedSemaphores[frame] };
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = signalSemaphores;
+
+        VkSwapchainKHR swapchains[] = { _pImpl->handle };
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapchains;
+
+        presentInfo.pImageIndices = &_currentImageIndex;
+
+        VkResult result = vkQueuePresentKHR(Context::get_pimpl()->presentQueue, &presentInfo);
+
+        // JUST TEMP SOLUTION TO HANDLE WINDOW MINIMIZATION
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        {
+            Debug::log(
+                "@Swapchain::present "
+                "Unable to present. Window may have been resized. "
+                "Resize handling not yet implemented!",
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
     }
 
     Extent2D Swapchain::getExtent() const

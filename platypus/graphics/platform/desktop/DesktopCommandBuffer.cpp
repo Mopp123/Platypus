@@ -2,21 +2,23 @@
 #include "DesktopCommandBuffer.h"
 #include "platypus/graphics/Context.h"
 #include "DesktopContext.h"
+#include "DesktopRenderPass.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
-#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
 {
-    CommandBuffer::CommandBuffer(CommandPool* pPool) :
-        _pPool(pPool)
+    CommandBuffer::CommandBuffer(CommandPool* pPool, CommandBufferLevel level) :
+        _pPool(pPool),
+        _level(level)
     {
         _pImpl = new CommandBufferImpl;
     }
 
     CommandBuffer::CommandBuffer(const CommandBuffer& other) :
-        _pPool(other._pPool)
+        _pPool(other._pPool),
+        _level(other._level)
     {
         _pImpl = new CommandBufferImpl;
         _pImpl->handle = other._pImpl->handle;
@@ -37,6 +39,50 @@ namespace platypus
             &_pImpl->handle
         );
         _pImpl->handle = VK_NULL_HANDLE;
+    }
+
+    void CommandBuffer::begin(const RenderPass& renderPass)
+    {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        if (_level == CommandBufferLevel::SECONDARY_COMMAND_BUFFER)
+        {
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+
+            VkCommandBufferInheritanceInfo inheritanceInfo{};
+            inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+            inheritanceInfo.renderPass = renderPass.getPImpl()->handle;
+            inheritanceInfo.subpass = 0;
+            beginInfo.pInheritanceInfo = &inheritanceInfo;
+        }
+        VkResult beginResult = vkBeginCommandBuffer(_pImpl->handle, &beginInfo);
+        if (beginResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(beginResult));
+            const std::string typeStr = _level == CommandBufferLevel::PRIMARY_COMMAND_BUFFER ? "primary" : "secondary";
+            Debug::log(
+                "@CommandBuffer::begin "
+                "Failed to begin " + typeStr + " command buffer! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+    }
+
+    void CommandBuffer::end()
+    {
+        VkResult endResult = vkEndCommandBuffer(_pImpl->handle);
+        if (endResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(endResult));
+            const std::string typeStr = _level == CommandBufferLevel::PRIMARY_COMMAND_BUFFER ? "primary" : "secondary";
+            Debug::log(
+                "@CommandBuffer::end "
+                "Failed to end " + typeStr + " command buffer! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
     }
 
 
@@ -121,7 +167,7 @@ namespace platypus
 
         for (uint32_t i = 0; i < count; ++i)
         {
-            CommandBuffer buffer(this);
+            CommandBuffer buffer(this, level);
             buffer._pImpl->handle = bufferHandles[i];
             buffers.push_back(buffer);
         }

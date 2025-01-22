@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cstdint>
+#include "RenderPass.h"
 
 
 namespace  platypus
@@ -13,23 +14,33 @@ namespace  platypus
     };
 
 
+    class Context;
     class CommandPool;
 
     struct CommandBufferImpl;
     class CommandBuffer
     {
     private:
+        friend class Context;
         friend class CommandPool;
         CommandPool* _pPool = nullptr;
         CommandBufferImpl* _pImpl = nullptr;
+        CommandBufferLevel _level;
 
     public:
         CommandBuffer() = default;
-        CommandBuffer(CommandPool* pPool);
+        CommandBuffer(CommandPool* pPool, CommandBufferLevel level);
         CommandBuffer(const CommandBuffer& other);
         ~CommandBuffer();
 
         void free();
+
+        void begin(const RenderPass& renderPass);
+        void end();
+
+        // Need to access this in RenderCommand implementations which I want to keep just as functions,
+        // so can't just declare a friend for CommandBuffer
+        inline const CommandBufferImpl* getPImpl() const { return _pImpl; }
     };
 
 
