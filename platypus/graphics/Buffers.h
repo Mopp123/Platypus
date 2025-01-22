@@ -21,7 +21,7 @@ namespace platypus
         Float3,
         Float4,
 
-        // NOTE: Only used by opengl
+        // NOTE: Only used by opengl(?)
         Mat4
     };
 

@@ -42,9 +42,9 @@ namespace platypus
             );
         }
 
-        void end_render_pass(const CommandBuffer& cmdBuf)
+        void end_render_pass(const CommandBuffer& commandBuffer)
         {
-            vkCmdEndRenderPass(cmdBuf.getPImpl()->handle);
+            vkCmdEndRenderPass(commandBuffer.getPImpl()->handle);
         }
 
         void exec_secondary_command_buffers(
