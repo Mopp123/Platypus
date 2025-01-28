@@ -30,8 +30,7 @@ namespace platypus
         // TODO: Implement!
         void bind_pipeline(
             const CommandBuffer& commandBuffer,
-            const Pipeline& pipeline,
-            PipelineBindPoint bindPoint
+            const Pipeline& pipeline
         );
 
         // NOTE: Implement!
@@ -67,8 +66,7 @@ namespace platypus
         // ->There could probably be a better way
         void bind_index_buffer(
             const CommandBuffer& commandBuffer,
-            const Buffer* indexBuffer,
-            IndexType indexType
+            const Buffer* indexBuffer
         );
 
         void draw_indexed(

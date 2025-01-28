@@ -84,5 +84,7 @@ namespace platypus
         );
 
         void destroy();
+
+        inline PipelineImpl* getImpl() const { return _pImpl; }
     };
 }

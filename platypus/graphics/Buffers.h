@@ -115,7 +115,7 @@ namespace platypus
     {
     private:
         BufferImpl* _pImpl = nullptr;
-        void* _data = nullptr;
+        void* _pData = nullptr;
         size_t _dataElemSize = 0; // size of a single entry in data
         size_t _dataLength = 0; // number of elements in the data
         uint32_t _bufferUsageFlags = 0;
@@ -127,7 +127,7 @@ namespace platypus
         // *NOTE! "Data" gets just copied here! Ownership of the data doesn't get transferred here!
         // (This is to accomplish RAII(and resource lifetimes to be tied to objects' lifetimes) and copying to work correctly)
         Buffer(
-            void* data,
+            void* pData,
             size_t elementSize,
             size_t dataLength,
             uint32_t usageFlags,
@@ -137,11 +137,13 @@ namespace platypus
         Buffer(const Buffer&) = delete;
         ~Buffer();
 
-        inline const void* getData() const { return _data; }
+        inline const void* getData() const { return _pData; }
         inline size_t getDataElemSize() const { return _dataElemSize; }
         inline size_t getDataLength() const { return _dataLength; }
         inline uint32_t getBufferUsage() const { return _bufferUsageFlags; }
         inline size_t getTotalSize() const { return _dataElemSize * _dataLength; }
         inline BufferUpdateFrequency getUpdateFrequency() const { return _updateFrequency; }
+
+        inline BufferImpl* getImpl() const { return _pImpl; }
     };
 }

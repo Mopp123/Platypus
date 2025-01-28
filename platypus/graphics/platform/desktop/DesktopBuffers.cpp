@@ -3,29 +3,33 @@
 #include "platypus/graphics/Context.h"
 #include "DesktopContext.h"
 #include "platypus/core/Debug.h"
+#include <cstring>
 #include <vulkan/vk_enum_string_helper.h>
 
 
 namespace platypus
 {
-    static VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate inputRate)
+    VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate inputRate)
     {
         switch (inputRate)
         {
-            case VERTEX_INPUT_RATE_VERTEX: return VK_VERTEX_INPUT_RATE_VERTEX;
+            case VERTEX_INPUT_RATE_VERTEX:   return VK_VERTEX_INPUT_RATE_VERTEX;
             case VERTEX_INPUT_RATE_INSTANCE: return VK_VERTEX_INPUT_RATE_INSTANCE;
             default:
-                Debug::log("@to_vk_vertex_input_rate invalid value for inputRate", Debug::MessageType::PLATYPUS_ERROR);
-                PLATYPUS_ASSERT(false);
-                return VK_VERTEX_INPUT_RATE_VERTEX;
+                Debug::log(
+                    "@to_vk_vertex_input_rate invalid value for inputRate",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
         };
+        PLATYPUS_ASSERT(false);
+        return VK_VERTEX_INPUT_RATE_VERTEX;
     }
 
     VkFormat to_vk_format_from_shader_datatype(ShaderDataType type)
     {
         switch (type)
         {
-        case ShaderDataType::Float: return VK_FORMAT_R32_SFLOAT;
+        case ShaderDataType::Float:  return VK_FORMAT_R32_SFLOAT;
         case ShaderDataType::Float2: return VK_FORMAT_R32G32_SFLOAT;
         case ShaderDataType::Float3: return VK_FORMAT_R32G32B32_SFLOAT;
         case ShaderDataType::Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -50,7 +54,7 @@ namespace platypus
     {
         switch (type)
         {
-        case ShaderDataType::Float: return sizeof(float);
+        case ShaderDataType::Float:  return sizeof(float);
         case ShaderDataType::Float2: return sizeof(float) * 2;
         case ShaderDataType::Float3: return sizeof(float) * 3;
         case ShaderDataType::Float4: return sizeof(float) * 4;
@@ -62,12 +66,30 @@ namespace platypus
     {
         switch (type)
         {
-        case ShaderDataType::Float: return 1;
+        case ShaderDataType::Float:  return 1;
         case ShaderDataType::Float2: return 2;
         case ShaderDataType::Float3: return 3;
         case ShaderDataType::Float4: return 4;
         default: return 0;
         }
+    }
+
+    VkIndexType to_vk_index_type(size_t bufferElementSize)
+    {
+        switch (bufferElementSize)
+        {
+            case sizeof(uint16_t): return VK_INDEX_TYPE_UINT16;
+            case sizeof(uint32_t): return VK_INDEX_TYPE_UINT32;
+            default:
+                Debug::log(
+                    "@to_vk_index_type "
+                    "Unsupported element size(" + std::to_string(bufferElementSize) + ") "
+                    "for index buffer. Allowed element sizes for index buffers are sizes of uint16_t and uint32_t",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+        }
+        PLATYPUS_ASSERT(false);
+        return VK_INDEX_TYPE_UINT16;
     }
 
 
@@ -147,7 +169,7 @@ namespace platypus
     // TODO: Optimizations:
     // * staging buffers
     Buffer::Buffer(
-        void* data,
+        void* pData,
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
@@ -167,6 +189,10 @@ namespace platypus
 
         VmaAllocationCreateInfo allocInfo{};
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+        // ATM JUST TESTING WRITING DIRECTLY
+        allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
@@ -188,6 +214,19 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
+
+        // ATM JUST TESTING WRITING DIRECTLY!
+        _pData = calloc(dataLength, elementSize);
+        memcpy(_pData, pData, elementSize * dataLength);
+
+        VmaAllocationInfo allocatedInfo;
+        vmaGetAllocationInfo(
+            Context::get_pimpl()->vmaAllocator,
+            vmaAllocation,
+            &allocatedInfo
+        );
+        memcpy(allocatedInfo.pMappedData, _pData, getTotalSize());
+
         _pImpl = new BufferImpl{ buffer, vmaAllocation };
     }
 
@@ -201,5 +240,7 @@ namespace platypus
                 _pImpl->vmaAllocation
             );
         }
+        if (_pData)
+            free(_pData);
     }
 }

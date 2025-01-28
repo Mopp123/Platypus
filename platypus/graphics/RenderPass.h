@@ -18,6 +18,6 @@ namespace platypus
         void create(const Swapchain& swapchain);
         void destroy();
 
-        inline const RenderPassImpl* getPImpl() const { return _pImpl; }
+        inline const RenderPassImpl* getImpl() const { return _pImpl; }
     };
 }

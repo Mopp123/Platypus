@@ -23,6 +23,9 @@ namespace platypus
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
 
+        float _viewportWidth = 0.0f;
+        float _viewportHeight = 0.0f;
+
     public:
         TestRenderer(CommandPool& commandPool);
         ~TestRenderer();

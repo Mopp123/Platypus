@@ -51,7 +51,7 @@ namespace platypus
 
             VkCommandBufferInheritanceInfo inheritanceInfo{};
             inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-            inheritanceInfo.renderPass = renderPass.getPImpl()->handle;
+            inheritanceInfo.renderPass = renderPass.getImpl()->handle;
             inheritanceInfo.subpass = 0;
             beginInfo.pInheritanceInfo = &inheritanceInfo;
         }

@@ -30,6 +30,7 @@ namespace platypus
 
         // The latest image's index got using acquireImage
         uint32_t _currentImageIndex = 0;
+        size_t _currentFrame = 0;
 
     public:
         Swapchain(Window& window);
@@ -47,6 +48,7 @@ namespace platypus
         inline const RenderPass& getRenderPass() const { return _renderPass; }
         inline uint32_t getImageCount() const { return _imageCount; }
         inline uint32_t getCurrentImageIndex() const { return _currentImageIndex; }
-        inline const SwapchainImpl* getPImpl() const { return _pImpl; }
+        inline size_t getCurrentFrame() const { return _currentFrame; }
+        inline const SwapchainImpl* getImpl() const { return _pImpl; }
     };
 }

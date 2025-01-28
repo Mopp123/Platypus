@@ -1,5 +1,6 @@
 #include "TestRenderer.h"
 #include "platypus/core/Debug.h"
+#include "platypus/graphics/RenderCommand.h"
 #include <string>
 
 
@@ -13,7 +14,7 @@ namespace platypus
         // NOTE: Not sure can buffers exist through the whole lifetime of the app...
 
         // TESTING!
-        float s = 10.0f;
+        float s = 0.5f;
         std::vector<float> positions = {
             -s, -s,
             -s, s,
@@ -21,8 +22,8 @@ namespace platypus
             s, -s
         };
         std::vector<uint32_t> indices = {
-            0, 1, 3,
-            3, 1, 2
+            0, 1, 2,
+            2, 3, 0
         };
 
         _pVertexBuffer = new Buffer(
@@ -52,7 +53,10 @@ namespace platypus
 
     void TestRenderer::allocCommandBuffers(uint32_t count)
     {
-        _commandBuffers = _commandPoolRef.allocCommandBuffers(count, CommandBufferLevel::SECONDARY_COMMAND_BUFFER);
+        _commandBuffers = _commandPoolRef.allocCommandBuffers(
+            count,
+            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
+        );
     }
 
     void TestRenderer::freeCommandBuffers()
@@ -68,10 +72,12 @@ namespace platypus
         float viewportHeight
     )
     {
+        _viewportWidth = viewportWidth;
+        _viewportHeight = viewportHeight;
 
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float3 }
+                { 0, ShaderDataType::Float2 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -101,6 +107,7 @@ namespace platypus
 
     void TestRenderer::destroyPipeline()
     {
+        _pipeline.destroy();
     }
 
     const CommandBuffer& TestRenderer::recordCommandBuffer(
@@ -123,6 +130,15 @@ namespace platypus
 
         CommandBuffer& currentCommandBuffer = _commandBuffers[frame];
         currentCommandBuffer.begin(renderPass);
+
+        render::set_viewport(currentCommandBuffer, 0, 0, _viewportWidth, _viewportHeight, 0.0f, 1.0f);
+        Rect2D scissor = { 0, 0, (uint32_t)_viewportWidth, (uint32_t)_viewportHeight };
+        render::set_scissor(currentCommandBuffer, scissor);
+
+        render::bind_pipeline(currentCommandBuffer, _pipeline);
+        render::bind_vertex_buffers(currentCommandBuffer, { _pVertexBuffer });
+        render::bind_index_buffer(currentCommandBuffer, _pIndexBuffer);
+        render::draw_indexed(currentCommandBuffer, (uint32_t)_pIndexBuffer->getDataLength(), 1);
 
         currentCommandBuffer.end();
 

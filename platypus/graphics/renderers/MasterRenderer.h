@@ -20,10 +20,14 @@ namespace platypus
         ~MasterRenderer();
 
         void createPipelines(const Swapchain& swapchain);
+        void destroyPipelines();
 
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
 
+        void cleanUp();
+
         const CommandBuffer& recordCommandBuffer(const Swapchain& swapchain, size_t frame);
+
     };
 }

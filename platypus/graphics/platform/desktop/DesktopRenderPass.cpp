@@ -62,7 +62,7 @@ namespace platypus
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 
         /*
         VkAttachmentReference depthAttachmentRef{};
@@ -76,16 +76,13 @@ namespace platypus
         subpassDescription.pColorAttachments = &colorAttachmentRef;
         //subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
 
-        /*
         VkSubpassDependency subPassDependency{};
         subPassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         subPassDependency.dstSubpass = 0;
-        subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
+        subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
         subPassDependency.srcAccessMask = 0; // no fukin idea what this is..
-        subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        */
+        subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         //VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription, depthAttachmentDescription };
         VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription };
 
@@ -96,8 +93,8 @@ namespace platypus
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
 
-        createInfo.dependencyCount = 0;//1;
-        //createInfo.pDependencies = &subPassDependency;
+        createInfo.dependencyCount = 1;
+        createInfo.pDependencies = &subPassDependency;
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(

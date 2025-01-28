@@ -301,7 +301,7 @@ namespace platypus
         _pImpl->framebuffers = create_framebuffers(
             device,
             _pImpl->imageViews,
-            _renderPass.getPImpl()->handle,
+            _renderPass.getImpl()->handle,
             selectedExtent
         );
 
@@ -359,7 +359,7 @@ namespace platypus
         vkWaitForFences(
             device,
             1,
-            &_pImpl->inFlightFences[_pImpl->currentFrame],
+            &_pImpl->inFlightFences[_currentFrame],
             VK_TRUE,
             UINT64_MAX
         );
@@ -368,7 +368,7 @@ namespace platypus
             device,
             _pImpl->handle,
             UINT64_MAX,
-            _pImpl->imageAvailableSemaphores[_pImpl->currentFrame],
+            _pImpl->imageAvailableSemaphores[_currentFrame],
             VK_NULL_HANDLE,
             &_currentImageIndex
         );
@@ -425,7 +425,7 @@ namespace platypus
         }
         // NOTE: Not sure should we change this here if presenting fails!
         // TODO: Test this when handling resizing!
-        _pImpl->currentFrame = (_pImpl->currentFrame + 1) % _pImpl->maxFramesInFlight;
+        _currentFrame = (_currentFrame + 1) % _pImpl->maxFramesInFlight;
     }
 
     size_t Swapchain::getMaxFramesInFlight() const

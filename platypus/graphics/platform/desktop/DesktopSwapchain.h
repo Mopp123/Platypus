@@ -19,7 +19,6 @@ namespace platypus
         std::vector<VkSemaphore> renderFinishedSemaphores;
         std::vector<VkFence> inFlightFences;
         std::vector<VkFence> inFlightImages;
-        size_t currentFrame = 0;
         const size_t maxFramesInFlight = 2;
     };
 }

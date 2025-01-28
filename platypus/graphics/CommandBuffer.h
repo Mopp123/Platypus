@@ -40,7 +40,7 @@ namespace  platypus
 
         // Need to access this in RenderCommand implementations which I want to keep just as functions,
         // so can't just declare a friend for CommandBuffer
-        inline const CommandBufferImpl* getPImpl() const { return _pImpl; }
+        inline const CommandBufferImpl* getImpl() const { return _pImpl; }
     };
 
 

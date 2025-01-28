@@ -21,6 +21,11 @@ namespace platypus
         _testRenderer.createPipeline(swapchain.getRenderPass(), swapchainExtent.width, swapchainExtent.height);
     }
 
+    void MasterRenderer::destroyPipelines()
+    {
+        _testRenderer.destroyPipeline();
+    }
+
     void MasterRenderer::allocCommandBuffers(uint32_t count)
     {
         _primaryCommandBuffers = _commandPoolRef.allocCommandBuffers(count, CommandBufferLevel::PRIMARY_COMMAND_BUFFER);
@@ -34,6 +39,12 @@ namespace platypus
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
         _primaryCommandBuffers.clear();
+    }
+
+    void MasterRenderer::cleanUp()
+    {
+        destroyPipelines();
+        freeCommandBuffers();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer(const Swapchain& swapchain, size_t frame)
@@ -65,7 +76,7 @@ namespace platypus
                 _testRenderer.recordCommandBuffer(swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
-                frame
+                swapchain.getCurrentImageIndex() // NOTE: no idea why not "frame"
             )
         );
 

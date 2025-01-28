@@ -74,18 +74,15 @@ namespace platypus
             else
             {
                 const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, s_currentFrame);
-                _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, s_currentFrame);
-                _swapchain.present(s_currentFrame);
+                _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, _swapchain.getCurrentFrame());
+                _swapchain.present(_swapchain.getCurrentFrame());
 
                 s_currentFrame = (s_currentFrame + 1) % s_framesInFlight;
             }
         }
         _context.waitForOperations();
 
-        testPipeline.destroy();
-        delete pTestVertexShader;
-        delete pTestFragmentShader;
-        _masterRenderer.freeCommandBuffers();
+        _masterRenderer.cleanUp();
     }
 
     Application* Application::get_instance()
