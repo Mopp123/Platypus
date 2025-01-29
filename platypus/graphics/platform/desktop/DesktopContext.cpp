@@ -258,7 +258,19 @@ namespace platypus
                     engineMsgType
                 );
                 if (engineMsgType == Debug::MessageType::PLATYPUS_ERROR)
-                    PLATYPUS_ASSERT(false);
+                {
+                    // Apparently there was something (probably?) wrong when recreating swapchain
+                    // due to validation layer getting surface capabilities' extent few pixels wrong from
+                    // the one we get from glfwGetFramebufferSize(...)
+                    if (strcmp(pCallbackData->pMessageIdName, "VUID-VkSwapchainCreateInfoKHR-imageExtent-01274") != 0)
+                        PLATYPUS_ASSERT(false);
+                    else
+                        Debug::log(
+                            "@Vulkan Validation Layer: NOTE! "
+                            "Error assert was skipped due to swapchain extent validation issue!",
+                            Debug::MessageType::PLATYPUS_WARNING
+                        );
+                }
             }
             return VK_FALSE;
         }
@@ -669,5 +681,13 @@ namespace platypus
     void Context::waitForOperations()
     {
         vkDeviceWaitIdle(s_pImpl->device);
+    }
+
+    void Context::handleWindowResize()
+    {
+        s_pImpl->deviceSwapchainSupportDetails = query_swapchain_support_details(
+            s_pImpl->physicalDevice,
+            s_pImpl->surface
+        );
     }
 }

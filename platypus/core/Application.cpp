@@ -17,7 +17,7 @@ namespace platypus
         bool fullscreen
     ) :
         _window(name, width, height, resizable, fullscreen),
-        _inputManager(&_window),
+        _inputManager(_window),
         _context(name.c_str(), &_window),
         _swapchain(_window),
         // NOTE: Not sure is CommanPool created at this point -> fucks up master renderer creation if not!
@@ -51,38 +51,59 @@ namespace platypus
         {
             _inputManager.pollEvents();
 
-            // NOTE: Below should probably be done somewhere else...
-            AcquireSwapchainImageResult result = _swapchain.acquireImage();
-            if (result == AcquireSwapchainImageResult::ERROR)
+            if (_window.resized())
             {
-                Debug::log(
-                    "@Application::run "
-                    "Failed to acquire swapchain image!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            else if (result == AcquireSwapchainImageResult::RESIZE_REQUIRED)
-            {
-                Debug::log(
-                    "@Application::run "
-                    "Failed to acquire swapchain image! "
-                    "Window resize may have happened. Currently this isn't handled!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
+                handleResize();
             }
             else
             {
-                const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, s_currentFrame);
-                _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, _swapchain.getCurrentFrame());
-                _swapchain.present(_swapchain.getCurrentFrame());
+                // NOTE: Below should probably be done somewhere else...
+                SwapchainResult result = _swapchain.acquireImage();
+                if (result == SwapchainResult::ERROR)
+                {
+                    Debug::log(
+                        "@Application::run "
+                        "Failed to acquire swapchain image!",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+                else if (result == SwapchainResult::RESIZE_REQUIRED)
+                {
+                    handleResize();
+                }
+                else
+                {
+                    const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, s_currentFrame);
+                    _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, _swapchain.getCurrentFrame());
 
-                s_currentFrame = (s_currentFrame + 1) % s_framesInFlight;
+                    // present may also tell us to recreate swapchain!
+                    if (_swapchain.present(_swapchain.getCurrentFrame()) == SwapchainResult::RESIZE_REQUIRED)
+                        handleResize();
+
+                    s_currentFrame = (s_currentFrame + 1) % s_framesInFlight;
+                }
             }
         }
         _context.waitForOperations();
 
         _masterRenderer.cleanUp();
+    }
+
+    void Application::handleResize()
+    {
+        _context.waitForOperations();
+        if (!_window.isMinimized())
+        {
+            _context.handleWindowResize();
+            _swapchain.recreate(_window);
+            _masterRenderer.handleWindowResize(_swapchain);
+            _window._resized = false;
+        }
+        else
+        {
+            _inputManager.waitEvents();
+        }
     }
 
     Application* Application::get_instance()

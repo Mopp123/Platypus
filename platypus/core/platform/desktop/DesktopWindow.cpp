@@ -75,13 +75,13 @@ namespace platypus
         return (bool)glfwWindowShouldClose(_pImpl->pGLFWwindow);
     }
 
-    WindowImpl* Window::getImpl()
-    {
-        return _pImpl;
-    }
-
     void Window::getSurfaceExtent(int* pWidth, int* pHeight)
     {
         glfwGetFramebufferSize(_pImpl->pGLFWwindow, pWidth, pHeight);
+    }
+
+    WindowImpl* Window::getImpl()
+    {
+        return _pImpl;
     }
 }

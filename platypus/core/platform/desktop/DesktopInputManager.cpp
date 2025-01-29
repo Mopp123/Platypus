@@ -146,10 +146,11 @@ namespace platypus
         // In web gl our coords are flipped because framebuffer coords
         // -> flip to have y increase downwards
         // TODO: Make this rather be swapchain extent?
-        const int windowHeight = Application::get_instance()->getWindow().getHeight();
+        //const int windowHeight = Application::get_instance()->getWindow().getHeight();
+        //int my = windowHeight - (int)y;
 
         int mx = (int)x;
-        int my = windowHeight - (int)y;
+        int my = (int)y;
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
     }
@@ -162,14 +163,22 @@ namespace platypus
 
     void framebuffer_resize_callback(GLFWwindow* pGLFWwindow, int width, int height)
     {
-        Debug::log("PROCESS WINDOW RESIZE EVENT: NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         pInputManager->processWindowResizeEvents(width, height);
     }
 
-    InputManager::InputManager(Window* pWindow)
+
+    void InputManager::WindowResizedEvent::func(int w, int h)
     {
-        GLFWwindow* pGLFWwindow = pWindow->getImpl()->pGLFWwindow;
+        windowRef._width = w;
+        windowRef._height = h;
+        windowRef._resized = true;
+    }
+
+
+    InputManager::InputManager(Window& windowRef)
+    {
+        GLFWwindow* pGLFWwindow = windowRef.getImpl()->pGLFWwindow;
         glfwSetWindowUserPointer(pGLFWwindow, this);
 
         glfwSetKeyCallback(pGLFWwindow, key_callback);
@@ -177,8 +186,10 @@ namespace platypus
         glfwSetMouseButtonCallback(pGLFWwindow, mouse_button_callback);
         glfwSetCursorPosCallback(pGLFWwindow, cursor_pos_callback);
         glfwSetScrollCallback(pGLFWwindow, scroll_callback);
-
         glfwSetFramebufferSizeCallback(pGLFWwindow, framebuffer_resize_callback);
+
+        // TODO: Some persistent events mechanic! This gets deleted on scene switch!
+        addWindowResizeEvent(new WindowResizedEvent(windowRef));
     }
 
     InputManager::~InputManager()
@@ -191,4 +202,8 @@ namespace platypus
         glfwPollEvents();
     }
 
+    void InputManager::waitEvents()
+    {
+        glfwWaitEvents();
+    }
 }

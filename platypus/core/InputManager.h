@@ -30,6 +30,14 @@ namespace platypus
         int _mouseX = 0;
         int _mouseY = 0;
 
+        class WindowResizedEvent : public WindowResizeEvent
+        {
+        public:
+            Window& windowRef;
+            WindowResizedEvent(Window& windowRef) : windowRef(windowRef) {};
+            virtual void func(int w, int h);
+        };
+
     public:
         // Mainly for testing purposes!
         // To check immediate key and mouse down instead of having to always have some inputEvent
@@ -37,7 +45,7 @@ namespace platypus
         std::unordered_map<MouseButtonName, bool> _mouseDown;
 
     public:
-        InputManager(Window* pWindow);
+        InputManager(Window& windowRef);
         InputManager(const InputManager&) = delete;
         ~InputManager();
 
@@ -61,6 +69,7 @@ namespace platypus
         bool isMouseButtonDown(MouseButtonName button) const;
 
         void pollEvents();
+        void waitEvents();
 
         inline void setMousePos(int x, int y) { _mouseX = x; _mouseY = y; }
         inline int getMouseX() const { return _mouseX; }

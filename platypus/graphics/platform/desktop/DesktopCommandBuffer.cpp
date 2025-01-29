@@ -9,7 +9,7 @@
 
 namespace platypus
 {
-    CommandBuffer::CommandBuffer(CommandPool* pPool, CommandBufferLevel level) :
+    CommandBuffer::CommandBuffer(const CommandPool* pPool, CommandBufferLevel level) :
         _pPool(pPool),
         _level(level)
     {
@@ -85,6 +85,53 @@ namespace platypus
         }
     }
 
+    void CommandBuffer::beginSingleUse()
+    {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        VkResult beginResult = vkBeginCommandBuffer(_pImpl->handle, &beginInfo);
+        if (beginResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(beginResult));
+            Debug::log(
+                "@CommandBuffer::beginSingleUse "
+                "Failed to begin single use command buffer! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+    }
+
+    void CommandBuffer::finishSingleUse()
+    {
+        VkCommandBuffer handle = _pImpl->handle;
+        VkResult endResult = vkEndCommandBuffer(handle);
+        if (endResult != VK_SUCCESS)
+        {
+            const std::string errStr(string_VkResult(endResult));
+            Debug::log(
+                "@CommandBuffer::finishSingleUse "
+                "Failed to end single use command buffer! VkResult: " + errStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &handle;
+
+        VkQueue graphicsQueue = Context::get_pimpl()->graphicsQueue;
+
+        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(graphicsQueue);
+
+        free();
+    }
+
 
     CommandPool::CommandPool()
     {
@@ -137,7 +184,7 @@ namespace platypus
     std::vector<CommandBuffer> CommandPool::allocCommandBuffers(
         uint32_t count,
         CommandBufferLevel level
-    )
+    ) const
     {
         std::vector<VkCommandBuffer> bufferHandles(count);
         std::vector<CommandBuffer> buffers;

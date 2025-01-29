@@ -33,6 +33,9 @@ namespace platypus
         // by these operations
         void waitForOperations();
 
+        // *On vulkan, required to re query swapchain support details to recreate swapchain
+        void handleWindowResize();
+
         static const ContextImpl * const get_pimpl();
     };
 }

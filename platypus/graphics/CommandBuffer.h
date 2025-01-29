@@ -23,13 +23,13 @@ namespace  platypus
     private:
         friend class Context;
         friend class CommandPool;
-        CommandPool* _pPool = nullptr;
+        const CommandPool* _pPool = nullptr;
         CommandBufferImpl* _pImpl = nullptr;
         CommandBufferLevel _level;
 
     public:
         CommandBuffer() = default;
-        CommandBuffer(CommandPool* pPool, CommandBufferLevel level);
+        CommandBuffer(const CommandPool* pPool, CommandBufferLevel level);
         CommandBuffer(const CommandBuffer& other);
         ~CommandBuffer();
 
@@ -37,6 +37,9 @@ namespace  platypus
 
         void begin(const RenderPass& renderPass);
         void end();
+
+        void beginSingleUse();
+        void finishSingleUse();
 
         // Need to access this in RenderCommand implementations which I want to keep just as functions,
         // so can't just declare a friend for CommandBuffer
@@ -58,6 +61,6 @@ namespace  platypus
         std::vector<CommandBuffer> allocCommandBuffers(
             uint32_t count,
             CommandBufferLevel level
-        );
+        ) const;
     };
 }

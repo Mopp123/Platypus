@@ -47,6 +47,13 @@ namespace platypus
         freeCommandBuffers();
     }
 
+    void MasterRenderer::handleWindowResize(const Swapchain& swapchain)
+    {
+        cleanUp();
+        allocCommandBuffers(swapchain.getImageCount());
+        createPipelines(swapchain);
+    }
+
     const CommandBuffer& MasterRenderer::recordCommandBuffer(const Swapchain& swapchain, size_t frame)
     {
         if (frame >= _primaryCommandBuffers.size())
@@ -76,7 +83,7 @@ namespace platypus
                 _testRenderer.recordCommandBuffer(swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
-                swapchain.getCurrentImageIndex() // NOTE: no idea why not "frame"
+                frame // NOTE: no idea should this be the "frame index" or "image index"
             )
         );
 

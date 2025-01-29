@@ -5,6 +5,7 @@
 #include "DesktopCommandBuffer.h"
 #include "DesktopPipeline.h"
 #include "DesktopBuffers.h"
+#include "platypus/core/Debug.h"
 #include <vulkan/vulkan.h>
 
 
@@ -27,7 +28,7 @@ namespace platypus
             beginInfo.framebuffer = swapchain.getImpl()->framebuffers[swapchain.getCurrentImageIndex()];
 
             VkClearValue clearColorValue{};
-            clearColorValue.color = { clearColor.r, clearColor.g, clearColor.b, clearColor.a }; // NOTE: Not sure about the ycm syntax error here? might be gaslighting?:D
+            clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }}; // NOTE: Not sure about the ycm syntax error here? might be gaslighting?:D
 
             // TODO: add another clear value, clearing depthStencil (cannot reside in the same VkClearValue!)
             beginInfo.clearValueCount = 1;
@@ -148,6 +149,20 @@ namespace platypus
                 0,
                 to_vk_index_type(indexBuffer->getDataElemSize())
             );
+        }
+
+        // TODO: Implement!
+        void push_constants(
+            CommandBuffer* pCmdBuf,
+            ShaderStageFlagBits shaderStageFlags,
+            uint32_t offset,
+            uint32_t size,
+            const void* pValues,
+            std::vector<UniformInfo> glUniformInfo // Only used on opengl side
+        )
+        {
+            Debug::log("@render::push_constants Not implemented!", Debug::MessageType::PLATYPUS_ERROR);
+            PLATYPUS_ASSERT(false);
         }
 
         void draw_indexed(

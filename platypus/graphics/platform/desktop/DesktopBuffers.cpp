@@ -1,7 +1,9 @@
 #include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 #include "DesktopBuffers.h"
 #include "platypus/graphics/Context.h"
 #include "DesktopContext.h"
+#include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 #include <cstring>
 #include <vulkan/vk_enum_string_helper.h>
@@ -9,6 +11,28 @@
 
 namespace platypus
 {
+    static void copy_buffer(const CommandPool& commandPool, Buffer* source, Buffer* destination)
+    {
+        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(1, CommandBufferLevel::PRIMARY_COMMAND_BUFFER)[0];
+
+        commandBuffer.beginSingleUse();
+
+        VkBufferCopy copyRegion;
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = source->getDataElemSize() * source->getDataLength();
+
+        vkCmdCopyBuffer(
+            commandBuffer.getImpl()->handle,
+            source->getImpl()->handle,
+            destination->getImpl()->handle,
+            1,
+            &copyRegion
+        );
+
+        commandBuffer.finishSingleUse();
+    }
+
     VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate inputRate)
     {
         switch (inputRate)
@@ -37,7 +61,6 @@ namespace platypus
         }
     }
 
-    // NOTE: This is ment to convert a SINGLE flag into a SINGLE VkBufferUsageFlag
     VkBufferUsageFlags to_vk_buffer_usage_flags(uint32_t flags)
     {
         VkBufferUsageFlags vkFlags = 0;
@@ -47,6 +70,10 @@ namespace platypus
             vkFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         if (flags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
             vkFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        if (flags & BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT)
+            vkFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        if (flags & BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT)
+            vkFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         return vkFlags;
     }
 
@@ -166,21 +193,39 @@ namespace platypus
     }
 
 
-    // TODO: Optimizations:
-    // * staging buffers
+    // NOTE:
+    //  * "elementSize" single element's size in "data buffer"
+    //  * "dataLength" number of "elements" in the "data buffer" (NOT total size)
+    //  * "Data" gets just copied here! Ownership of the data doesn't get transferred here!
+    //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
+    //  and destroy staging buffer!
     Buffer::Buffer(
+        const CommandPool& commandPool,
         void* pData,
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
-        BufferUpdateFrequency updateFrequency,
-        bool saveDataHostSide
+        BufferUpdateFrequency updateFrequency
     ) :
         _dataElemSize(elementSize),
         _dataLength(dataLength),
         _bufferUsageFlags(usageFlags),
         _updateFrequency(updateFrequency)
     {
+        bool useStaging = usageFlags & BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT;
+        Buffer* pStagingBuffer = nullptr;
+        if (useStaging)
+        {
+            pStagingBuffer = new Buffer(
+                commandPool,
+                pData,
+                elementSize,
+                dataLength,
+                BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            );
+        }
+
         VkBufferCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         createInfo.size = getTotalSize();
@@ -188,11 +233,21 @@ namespace platypus
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VmaAllocationCreateInfo allocInfo{};
-        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
-        // ATM JUST TESTING WRITING DIRECTLY
-        allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        if (!useStaging)
+        {
+            // NOTE: Even if want to have host visible and coherent, we may not want to have this buffer
+            // be mapped all the time?
+            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        }
+        else
+        {
+            allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            allocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        }
 
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
@@ -215,19 +270,23 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        // ATM JUST TESTING WRITING DIRECTLY!
-        _pData = calloc(dataLength, elementSize);
-        memcpy(_pData, pData, elementSize * dataLength);
-
-        VmaAllocationInfo allocatedInfo;
-        vmaGetAllocationInfo(
-            Context::get_pimpl()->vmaAllocator,
-            vmaAllocation,
-            &allocatedInfo
-        );
-        memcpy(allocatedInfo.pMappedData, _pData, getTotalSize());
-
         _pImpl = new BufferImpl{ buffer, vmaAllocation };
+
+        if (!useStaging)
+        {
+            VmaAllocationInfo allocatedInfo;
+            vmaGetAllocationInfo(
+                Context::get_pimpl()->vmaAllocator,
+                vmaAllocation,
+                &allocatedInfo
+            );
+            memcpy(allocatedInfo.pMappedData, pData, getTotalSize());
+        }
+        else
+        {
+            copy_buffer(commandPool, pStagingBuffer, this);
+            delete pStagingBuffer;
+        }
     }
 
     Buffer::~Buffer()
@@ -242,5 +301,28 @@ namespace platypus
         }
         if (_pData)
             free(_pData);
+    }
+
+    void Buffer::update(void* pData, size_t dataSize)
+    {
+        if (dataSize > getTotalSize())
+        {
+            Debug::log(
+                "@Buffer::update "
+                "provided data size(" + std::to_string(dataSize) + ") too big! "
+                "Buffer size is " + std::to_string(getTotalSize()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        VmaAllocationInfo allocatedInfo;
+        vmaGetAllocationInfo(
+            Context::get_pimpl()->vmaAllocator,
+            _pImpl->vmaAllocation,
+            &allocatedInfo
+        );
+        memcpy(allocatedInfo.pMappedData, pData, dataSize);
     }
 }

@@ -4,6 +4,7 @@
 #include "platypus/utils/Maths.h"
 #include "CommandBuffer.h"
 #include "Pipeline.h"
+#include "Descriptors.h"
 
 
 namespace platypus
@@ -27,15 +28,13 @@ namespace platypus
             const std::vector<CommandBuffer>& secondaries
         );
 
-        // TODO: Implement!
         void bind_pipeline(
             const CommandBuffer& commandBuffer,
             const Pipeline& pipeline
         );
 
-        // NOTE: Implement!
-        // NOTE: Not sure should this be called before bind_pipeline?
-        //  -> earlier I called this before and don't remember the reason. Might be bullshit...
+        // NOTE: With Vulkan, if dynamic state not set for pipeline this needs to be called
+        // BEFORE BINDING THE PIPELINE!
         void set_viewport(
             const CommandBuffer& commandBuffer,
             float viewportX,
@@ -46,14 +45,11 @@ namespace platypus
             float viewportMaxDepth = 1.0f
         );
 
-        // NOTE: Implement!
-        // NOTE: Not sure is this required for rendering. Put here because of vulkan
         void set_scissor(
             const CommandBuffer& commandBuffer,
             Rect2D scissor
         );
 
-        // NOTE: Implement!
         // NOTE: Not sure should we pass buffers as ptrs here.
         // ->There could probably be a better way
         void bind_vertex_buffers(
@@ -61,12 +57,21 @@ namespace platypus
             const std::vector<Buffer*>& vertexBuffers
         );
 
-        // NOTE: Implement!
         // NOTE: Not sure should we pass buffers as ptrs here.
         // ->There could probably be a better way
         void bind_index_buffer(
             const CommandBuffer& commandBuffer,
             const Buffer* indexBuffer
+        );
+
+        // TODO: Implement!
+        void push_constants(
+            CommandBuffer* pCmdBuf,
+            ShaderStageFlagBits shaderStageFlags,
+            uint32_t offset,
+            uint32_t size,
+            const void* pValues,
+            std::vector<UniformInfo> glUniformInfo // Only used on opengl side
         );
 
         void draw_indexed(

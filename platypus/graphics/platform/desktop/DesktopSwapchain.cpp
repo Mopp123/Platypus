@@ -33,13 +33,20 @@ namespace platypus
 
     static VkExtent2D select_extent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities, Window& window)
     {
-        int widthI = 0;
-        int heightI = 0;
-        window.getSurfaceExtent(&widthI, &heightI);
-        VkExtent2D extent = { (uint32_t)widthI, (uint32_t)heightI };
-        extent.width = std::clamp(extent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
-        extent.height = std::clamp(extent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
-        return extent;
+        if (surfaceCapabilities.currentExtent.width != UINT32_MAX)
+        {
+            return surfaceCapabilities.currentExtent;
+        }
+        else
+        {
+            int widthI = 0;
+            int heightI = 0;
+            window.getSurfaceExtent(&widthI, &heightI);
+            VkExtent2D extent = { (uint32_t)widthI, (uint32_t)heightI };
+            extent.width = std::clamp(extent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+            extent.height = std::clamp(extent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+            return extent;
+        }
     }
 
     static std::vector<VkImageView> create_image_views(
@@ -353,7 +360,13 @@ namespace platypus
         _pImpl->handle = VK_NULL_HANDLE;
     }
 
-    AcquireSwapchainImageResult Swapchain::acquireImage()
+    void Swapchain::recreate(Window& window)
+    {
+        destroy();
+        create(window);
+    }
+
+    SwapchainResult Swapchain::acquireImage()
     {
         VkDevice device = Context::get_pimpl()->device;
         vkWaitForFences(
@@ -375,17 +388,17 @@ namespace platypus
 
         if (result == VK_SUCCESS)
         {
-            return AcquireSwapchainImageResult::SUCCESS;
+            return SwapchainResult::SUCCESS;
         }
         else if (result == VK_SUBOPTIMAL_KHR)
         {
             Debug::log("@Swapchain::acquireImage VK_SUBOPTIMAL_KHR", Debug::MessageType::PLATYPUS_WARNING);
-            return AcquireSwapchainImageResult::SUCCESS;
+            return SwapchainResult::SUCCESS;
         }
         else if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             Debug::log("@Swapchain::acquireImage VK_ERROR_OUT_OF_DATE_KHR", Debug::MessageType::PLATYPUS_WARNING);
-            return AcquireSwapchainImageResult::RESIZE_REQUIRED;
+            return SwapchainResult::RESIZE_REQUIRED;
         }
         const std::string errStr(string_VkResult(result));
         Debug::log(
@@ -393,10 +406,10 @@ namespace platypus
             "Failed to acquire image! VkResult: " + errStr,
             Debug::MessageType::PLATYPUS_ERROR
         );
-        return AcquireSwapchainImageResult::ERROR;
+        return SwapchainResult::ERROR;
     }
 
-    void Swapchain::present(size_t frame)
+    SwapchainResult Swapchain::present(size_t frame)
     {
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -411,11 +424,16 @@ namespace platypus
 
         presentInfo.pImageIndices = &_currentImageIndex;
 
-        VkResult result = vkQueuePresentKHR(Context::get_pimpl()->presentQueue, &presentInfo);
+        VkResult presentResult = vkQueuePresentKHR(Context::get_pimpl()->presentQueue, &presentInfo);
+        SwapchainResult retResult = SwapchainResult::ERROR;
 
-        // JUST TEMP SOLUTION TO HANDLE WINDOW MINIMIZATION
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        if (presentResult == VK_SUCCESS)
         {
+            retResult = SwapchainResult::SUCCESS;
+        }
+        else if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
+        {
+            retResult = SwapchainResult::RESIZE_REQUIRED;
             Debug::log(
                 "@Swapchain::present "
                 "Unable to present. Window may have been resized. "
@@ -426,6 +444,8 @@ namespace platypus
         // NOTE: Not sure should we change this here if presenting fails!
         // TODO: Test this when handling resizing!
         _currentFrame = (_currentFrame + 1) % _pImpl->maxFramesInFlight;
+
+        return retResult;
     }
 
     size_t Swapchain::getMaxFramesInFlight() const

@@ -14,4 +14,5 @@ namespace platypus
     {
         VkCommandPool handle = VK_NULL_HANDLE;
     };
+
 }

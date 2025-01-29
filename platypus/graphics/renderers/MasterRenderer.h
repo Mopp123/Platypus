@@ -26,8 +26,8 @@ namespace platypus
         void freeCommandBuffers();
 
         void cleanUp();
+        void handleWindowResize(const Swapchain& swapchain);
 
         const CommandBuffer& recordCommandBuffer(const Swapchain& swapchain, size_t frame);
-
     };
 }

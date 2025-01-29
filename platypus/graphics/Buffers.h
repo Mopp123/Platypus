@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
+#include "CommandBuffer.h"
 
 
 namespace platypus
@@ -38,7 +39,9 @@ namespace platypus
         BUFFER_USAGE_NONE = 0x0,
         BUFFER_USAGE_VERTEX_BUFFER_BIT = 0x1,
         BUFFER_USAGE_INDEX_BUFFER_BIT = 0x2,
-        BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x4
+        BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x4,
+        BUFFER_USAGE_TRANSFER_SRC_BIT = 0x8,
+        BUFFER_USAGE_TRANSFER_DST_BIT = 0x10
     };
 
 
@@ -115,6 +118,7 @@ namespace platypus
     {
     private:
         BufferImpl* _pImpl = nullptr;
+        // NOTE: On OpenGL side, we need to save the _pData "on host side" to get "descriptor sets" working
         void* _pData = nullptr;
         size_t _dataElemSize = 0; // size of a single entry in data
         size_t _dataLength = 0; // number of elements in the data
@@ -122,20 +126,24 @@ namespace platypus
         BufferUpdateFrequency _updateFrequency;
 
     public:
-        // *NOTE! "elementSize" single element's size in "data buffer"
-        // *NOTE! "dataLength" number of "elements" in the "data buffer" (NOT total size)
-        // *NOTE! "Data" gets just copied here! Ownership of the data doesn't get transferred here!
-        // (This is to accomplish RAII(and resource lifetimes to be tied to objects' lifetimes) and copying to work correctly)
+        // NOTE:
+        //  * "elementSize" single element's size in "data buffer"
+        //  * "dataLength" number of "elements" in the "data buffer" (NOT total size)
+        //  * "Data" gets just copied here! Ownership of the data doesn't get transferred here!
+        //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
+        //  and destroy staging buffer
         Buffer(
+            const CommandPool& commandPool,
             void* pData,
             size_t elementSize,
             size_t dataLength,
             uint32_t usageFlags,
-            BufferUpdateFrequency updateFrequency,
-            bool saveDataHostSide = false
+            BufferUpdateFrequency updateFrequency
         );
         Buffer(const Buffer&) = delete;
         ~Buffer();
+
+        void update(void* pData, size_t dataSize);
 
         inline const void* getData() const { return _pData; }
         inline size_t getDataElemSize() const { return _dataElemSize; }

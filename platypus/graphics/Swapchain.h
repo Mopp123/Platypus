@@ -10,7 +10,7 @@ namespace platypus
 {
     struct SwapchainImpl;
 
-    enum class AcquireSwapchainImageResult
+    enum class SwapchainResult
     {
         ERROR,
         RESIZE_REQUIRED,
@@ -38,10 +38,10 @@ namespace platypus
 
         void create(Window& window);
         void destroy();
+        void recreate(Window& window);
 
-        AcquireSwapchainImageResult acquireImage();
-
-        void present(size_t frame);
+        SwapchainResult acquireImage();
+        SwapchainResult present(size_t frame);
 
         size_t getMaxFramesInFlight() const;
         Extent2D getExtent() const;

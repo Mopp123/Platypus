@@ -44,9 +44,13 @@ namespace platypus
 
         void run();
 
+        void handleResize();
+
         static Application* get_instance();
 
         inline const Window& getWindow() const { return _window; }
         inline const InputManager& getInputManager() const { return _inputManager; }
+        inline const Context& getContext() const { return _context; }
+        inline const CommandPool& getCommandPool() const { return _commandPool; }
     };
 }

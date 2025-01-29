@@ -2,6 +2,7 @@
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
 #include <string>
+#include <cmath>
 
 
 namespace platypus
@@ -15,33 +16,34 @@ namespace platypus
 
         // TESTING!
         float s = 0.5f;
-        std::vector<float> positions = {
-            -s, -s,
-            -s, s,
-            s, s,
-            s, -s
+        std::vector<float> vertexData = {
+            -s, -s, 1.0f, 0.0f, 0.0f,
+            -s, s,  0.0f, 1.0f, 0.0f,
+            s, s,   1.0f, 0.0f, 1.0f,
+            s, -s,  1.0f, 1.0f, 0.0f
         };
+
         std::vector<uint32_t> indices = {
             0, 1, 2,
             2, 3, 0
         };
 
         _pVertexBuffer = new Buffer(
-            positions.data(),
+            _commandPoolRef,
+            vertexData.data(),
             sizeof(float),
-            positions.size(),
-            BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
-            false
+            vertexData.size(),
+            BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
         );
 
         _pIndexBuffer = new Buffer(
+            _commandPoolRef,
             indices.data(),
             sizeof(uint32_t),
             indices.size(),
-            BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
-            false
+            BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
         );
     }
 
@@ -77,12 +79,12 @@ namespace platypus
 
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float2 }
+                { 0, ShaderDataType::Float2 },
+                { 1, ShaderDataType::Float3 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
         };
-
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
