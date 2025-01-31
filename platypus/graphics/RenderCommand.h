@@ -29,7 +29,7 @@ namespace platypus
         );
 
         void bind_pipeline(
-            const CommandBuffer& commandBuffer,
+            CommandBuffer& commandBuffer,
             const Pipeline& pipeline
         );
 
@@ -66,12 +66,12 @@ namespace platypus
 
         // TODO: Implement!
         void push_constants(
-            CommandBuffer* pCmdBuf,
+            CommandBuffer& commandBuffer,
             ShaderStageFlagBits shaderStageFlags,
             uint32_t offset,
             uint32_t size,
             const void* pValues,
-            std::vector<UniformInfo> glUniformInfo // Only used on opengl side
+            std::vector<UniformInfo> glUniformInfo // Only used on opengl side NOTE: Why this passed by value!?
         );
 
         void draw_indexed(

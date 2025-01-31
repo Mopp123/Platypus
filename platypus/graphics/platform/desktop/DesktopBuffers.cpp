@@ -101,6 +101,26 @@ namespace platypus
         }
     }
 
+    VkShaderStageFlags to_vk_shader_stage_flags(uint32_t shaderStageFlags)
+    {
+        switch (shaderStageFlags)
+        {
+            case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_VERTEX_BIT;
+            case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+            default:
+                Debug::log(
+                    "@to_vk_shader_stage_flags "
+                    "Invalid shaderStageFlags: " + std::to_string(shaderStageFlags) + " "
+                    "Available flag bits are currently: "
+                    "VK_SHADER_STAGE_VERTEX_BIT, "
+                    "VK_SHADER_STAGE_FRAGMENT_BIT",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+        }
+        return 0;
+    }
+
     VkIndexType to_vk_index_type(size_t bufferElementSize)
     {
         switch (bufferElementSize)

@@ -102,8 +102,8 @@ namespace platypus
             false, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
             false, // enable color blending
-            0, // push constants size
-            0 // push constants' stage flags
+            sizeof(Vector2f), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
     }
 
@@ -112,6 +112,8 @@ namespace platypus
         _pipeline.destroy();
     }
 
+    static float s_TEST_value = 0.0f;
+    static float s_TEST_anim = 0.0f;
     const CommandBuffer& TestRenderer::recordCommandBuffer(
         const RenderPass& renderPass,
         uint32_t viewportWidth,
@@ -130,6 +132,11 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
+        // TEST animate using push constants
+        s_TEST_value += 0.01f;
+        s_TEST_anim = std::sin(s_TEST_value) - 0.5f;
+        Vector2f pushConstantVal(s_TEST_anim, 0.0f);
+
         CommandBuffer& currentCommandBuffer = _commandBuffers[frame];
         currentCommandBuffer.begin(renderPass);
 
@@ -138,6 +145,16 @@ namespace platypus
         render::set_scissor(currentCommandBuffer, scissor);
 
         render::bind_pipeline(currentCommandBuffer, _pipeline);
+
+        render::push_constants(
+            currentCommandBuffer,
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(Vector2f),
+            &pushConstantVal,
+            {{ 0, ShaderDataType::Float2 }}
+        );
+
         render::bind_vertex_buffers(currentCommandBuffer, { _pVertexBuffer });
         render::bind_index_buffer(currentCommandBuffer, _pIndexBuffer);
         render::draw_indexed(currentCommandBuffer, (uint32_t)_pIndexBuffer->getDataLength(), 1);

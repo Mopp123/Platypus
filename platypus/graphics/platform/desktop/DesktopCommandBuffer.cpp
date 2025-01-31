@@ -71,6 +71,8 @@ namespace platypus
 
     void CommandBuffer::end()
     {
+        if (_pImpl->pipelineLayout != VK_NULL_HANDLE)
+            _pImpl->pipelineLayout = VK_NULL_HANDLE;
         VkResult endResult = vkEndCommandBuffer(_pImpl->handle);
         if (endResult != VK_SUCCESS)
         {

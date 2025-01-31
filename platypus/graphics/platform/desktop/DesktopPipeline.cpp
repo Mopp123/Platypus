@@ -205,16 +205,19 @@ namespace platypus
         //----------------
         VkPipelineLayoutCreateInfo layoutCreateInfo{};
         layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        /*
+
+        // TODO: Descriptors
         // *Uniforms:
-        layoutCreateInfo.setLayoutCount = (uint32_t)descriptorLayouts.size();
+        //layoutCreateInfo.setLayoutCount = (uint32_t)descriptorLayouts.size();
         // *Combine the VkDescriptorLayouts from the descriptor layouts into a single contiguous container
+        /*
         std::vector<VkDescriptorSetLayout> vkDescSetLayouts;
         for (int i = 0; i < descriptorLayouts.size(); ++i)
         {
             VkDescriptorSetLayout vkLayout = descriptorLayouts[i].getVkDescriptorSetLayout();
             vkDescSetLayouts.push_back(vkLayout);
         }
+        */
         // *Push constants:
         VkPushConstantRange pushConstantRange{};
 
@@ -222,15 +225,15 @@ namespace platypus
         {
             pushConstantRange.offset = 0;
             pushConstantRange.size = pushConstantSize;
-            pushConstantRange.stageFlags = pushConstantStageFlags;
+            VkShaderStageFlags vkPushConstantStageFlags = to_vk_shader_stage_flags(pushConstantStageFlags);
+            pushConstantRange.stageFlags = vkPushConstantStageFlags;
 
             layoutCreateInfo.pushConstantRangeCount = 1; // allow just 1 range atm..
             layoutCreateInfo.pPushConstantRanges = &pushConstantRange;
         }
 
         // Assign these both..
-        layoutCreateInfo.pSetLayouts = vkDescSetLayouts.data();
-        */
+        //layoutCreateInfo.pSetLayouts = vkDescSetLayouts.data();
 
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkResult createPipelineLayoutResult = vkCreatePipelineLayout(

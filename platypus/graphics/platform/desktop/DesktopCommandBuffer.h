@@ -8,6 +8,7 @@ namespace platypus
     struct CommandBufferImpl
     {
         VkCommandBuffer handle = VK_NULL_HANDLE;
+        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     };
 
     struct CommandPoolImpl

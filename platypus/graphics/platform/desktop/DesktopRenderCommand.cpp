@@ -66,10 +66,24 @@ namespace platypus
         }
 
         void bind_pipeline(
-            const CommandBuffer& commandBuffer,
+            CommandBuffer& commandBuffer,
             const Pipeline& pipeline
         )
         {
+            CommandBufferImpl* pCommandBufferImpl = commandBuffer.getImpl();
+            #ifdef PLATYPUS_DEBUG
+            if (commandBuffer.getImpl()->pipelineLayout != VK_NULL_HANDLE)
+            {
+                Debug::log(
+                    "@bind_pipeline "
+                    "Command buffer's pipeline layout was already assigned. "
+                    "Make sure to end the command buffer at some point after beginning it!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            pCommandBufferImpl->pipelineLayout = pipeline.getImpl()->layout;
             vkCmdBindPipeline(
                 commandBuffer.getImpl()->handle,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -153,7 +167,7 @@ namespace platypus
 
         // TODO: Implement!
         void push_constants(
-            CommandBuffer* pCmdBuf,
+            CommandBuffer& commandBuffer,
             ShaderStageFlagBits shaderStageFlags,
             uint32_t offset,
             uint32_t size,
@@ -161,8 +175,26 @@ namespace platypus
             std::vector<UniformInfo> glUniformInfo // Only used on opengl side
         )
         {
-            Debug::log("@render::push_constants Not implemented!", Debug::MessageType::PLATYPUS_ERROR);
-            PLATYPUS_ASSERT(false);
+            #ifdef PLATYPUS_DEBUG
+            if (commandBuffer.getImpl()->pipelineLayout == VK_NULL_HANDLE)
+            {
+                Debug::log(
+                    "@push_constants "
+                    "command buffer's pipeline layout wasn't assigned! "
+                    "Make sure you have called bind_pipeline(...) before calling this!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            vkCmdPushConstants(
+                commandBuffer.getImpl()->handle,
+                commandBuffer.getImpl()->pipelineLayout,
+                to_vk_shader_stage_flags(shaderStageFlags),
+                offset,
+                size,
+                pValues
+            );
         }
 
         void draw_indexed(
