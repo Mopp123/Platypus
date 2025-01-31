@@ -8,6 +8,40 @@
 
 namespace platypus
 {
+    VkPipelineShaderStageCreateInfo get_pipeline_shader_stage_create_info(
+        const Shader& shader,
+        const ShaderImpl * const pImpl
+    )
+    {
+        VkPipelineShaderStageCreateInfo shaderStageCreateInfo{};
+        shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        shaderStageCreateInfo.stage = shader.getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
+        shaderStageCreateInfo.module = pImpl->shaderModule;
+        shaderStageCreateInfo.pName = "main";
+        return shaderStageCreateInfo;
+    }
+
+
+    VkShaderStageFlags to_vk_shader_stage_flags(uint32_t shaderStageFlags)
+    {
+        switch (shaderStageFlags)
+        {
+            case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_VERTEX_BIT;
+            case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+            default:
+                Debug::log(
+                    "@to_vk_shader_stage_flags "
+                    "Invalid shaderStageFlags: " + std::to_string(shaderStageFlags) + " "
+                    "Available flag bits are currently: "
+                    "VK_SHADER_STAGE_VERTEX_BIT, "
+                    "VK_SHADER_STAGE_FRAGMENT_BIT",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+        }
+        return 0;
+    }
+
     Shader::Shader(const std::string& filepath, ShaderStageFlagBits stage) :
         _stage(stage)
     {
@@ -54,40 +88,5 @@ namespace platypus
         vkDestroyShaderModule(Context::get_impl()->device, _pImpl->shaderModule, nullptr);
         if (_pImpl)
             delete _pImpl;
-    }
-
-
-    VkPipelineShaderStageCreateInfo get_pipeline_shader_stage_create_info(
-        const Shader& shader,
-        const ShaderImpl * const pImpl
-    )
-    {
-        VkPipelineShaderStageCreateInfo shaderStageCreateInfo{};
-        shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shaderStageCreateInfo.stage = shader.getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
-        shaderStageCreateInfo.module = pImpl->shaderModule;
-        shaderStageCreateInfo.pName = "main";
-        return shaderStageCreateInfo;
-    }
-
-
-    VkShaderStageFlags to_vk_shader_stage_flags(uint32_t shaderStageFlags)
-    {
-        switch (shaderStageFlags)
-        {
-            case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_VERTEX_BIT;
-            case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
-            default:
-                Debug::log(
-                    "@to_vk_shader_stage_flags "
-                    "Invalid shaderStageFlags: " + std::to_string(shaderStageFlags) + " "
-                    "Available flag bits are currently: "
-                    "VK_SHADER_STAGE_VERTEX_BIT, "
-                    "VK_SHADER_STAGE_FRAGMENT_BIT",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-        }
-        return 0;
     }
 }

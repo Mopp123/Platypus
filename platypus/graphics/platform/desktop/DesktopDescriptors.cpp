@@ -99,4 +99,18 @@ namespace platypus
         if (_pImpl)
             delete _pImpl;
     }
+
+    // "types" tells what types of descriptors will be created
+    // "typeCounts" tells how many descriptors of specific type will be created
+    DescriptorPool::DescriptorPool(
+        const std::vector<DescriptorType>& types,
+        const std::vector<uint32_t>& typeCounts,
+        uint32_t maxDescriptorSets
+    )
+    {
+    }
+
+    DescriptorPool::~DescriptorPool()
+    {
+    }
 }

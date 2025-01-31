@@ -133,7 +133,7 @@ namespace platypus
         }
 
         // TEST animate using push constants
-        s_TEST_value += 0.01f;
+        s_TEST_value += 0.001f;
         s_TEST_anim = std::sin(s_TEST_value) - 0.5f;
         Vector2f pushConstantVal(s_TEST_anim, 0.0f);
 

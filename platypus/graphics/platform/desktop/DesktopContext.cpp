@@ -642,22 +642,19 @@ namespace platypus
 
         // mark this img to be now used by this frame
         pSwapchainImpl->inFlightImages[imageIndex] = pSwapchainImpl->inFlightFences[frame];
-
-        VkSemaphore waitSemaphores[] = { pSwapchainImpl->imageAvailableSemaphores[frame] };
-        VkSemaphore signalSemaphores[] = { pSwapchainImpl->renderFinishedSemaphores[frame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitSemaphores = &pSwapchainImpl->imageAvailableSemaphores[frame];
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdBuf._pImpl->handle;
 
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        submitInfo.pSignalSemaphores = &pSwapchainImpl->renderFinishedSemaphores[frame];
 
         vkResetFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
         VkResult submitResult = vkQueueSubmit(

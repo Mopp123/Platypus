@@ -34,7 +34,7 @@ namespace platypus
         }
         s_pInstance = this;
 
-        _masterRenderer.allocCommandBuffers(_swapchain.getImageCount());
+        _masterRenderer.allocCommandBuffers(_swapchain.getMaxFramesInFlight());
         _masterRenderer.createPipelines(_swapchain);
     }
 
@@ -43,7 +43,7 @@ namespace platypus
     }
 
     static size_t s_framesInFlight;
-    static size_t s_currentFrame = 0;
+    //static size_t s_currentFrame = 0;
     void Application::run()
     {
         s_framesInFlight = _swapchain.getMaxFramesInFlight();
@@ -51,38 +51,27 @@ namespace platypus
         {
             _inputManager.pollEvents();
 
-            if (_window.resized())
+            // NOTE: Below should probably be done somewhere else...
+            SwapchainResult result = _swapchain.acquireImage();
+            if (result == SwapchainResult::ERROR)
             {
-                handleResize();
+                Debug::log(
+                    "@Application::run "
+                    "Failed to acquire swapchain image!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
             }
             else
             {
-                // NOTE: Below should probably be done somewhere else...
-                SwapchainResult result = _swapchain.acquireImage();
-                if (result == SwapchainResult::ERROR)
-                {
-                    Debug::log(
-                        "@Application::run "
-                        "Failed to acquire swapchain image!",
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                }
-                else if (result == SwapchainResult::RESIZE_REQUIRED)
-                {
+                const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, _swapchain.getCurrentFrame());
+                _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, _swapchain.getCurrentFrame());
+
+                // present may also tell us to recreate swapchain!
+                if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || _window.resized())
                     handleResize();
-                }
-                else
-                {
-                    const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, s_currentFrame);
-                    _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, s_currentFrame);
 
-                    // present may also tell us to recreate swapchain!
-                    if (_swapchain.present(_swapchain.getCurrentFrame()) == SwapchainResult::RESIZE_REQUIRED)
-                        handleResize();
-
-                    s_currentFrame = (s_currentFrame + 1) % s_framesInFlight;
-                }
+                //s_currentFrame = (s_currentFrame + 1) % s_framesInFlight;
             }
         }
         _context.waitForOperations();

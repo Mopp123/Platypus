@@ -16,5 +16,10 @@ namespace platypus
         VkDescriptorSet handle = VK_NULL_HANDLE;
     };
 
+    struct DescriptorPoolImpl
+    {
+        VkDescriptorPool handle = VK_NULL_HANDLE;
+    };
+
     VkDescriptorType to_vk_descriptor_type(const DescriptorType& type);
 }

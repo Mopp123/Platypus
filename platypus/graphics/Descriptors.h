@@ -146,4 +146,22 @@ namespace platypus
         //inline const std::vector<const Texture*>& getTextures() const { return _pTextures; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
     };
+
+
+    struct DescriptorPoolImpl;
+    class DescriptorPool
+    {
+    private:
+        DescriptorPoolImpl* _pImpl = nullptr;
+
+    public:
+        // "types" tells what types of descriptors will be created
+        // "typeCounts" tells how many descriptors of specific type will be created
+        DescriptorPool(
+            const std::vector<DescriptorType>& types,
+            const std::vector<uint32_t>& typeCounts,
+            uint32_t maxDescriptorSets
+        );
+        ~DescriptorPool();
+    };
 }

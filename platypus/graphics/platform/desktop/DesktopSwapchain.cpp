@@ -7,6 +7,8 @@
 #include "platypus/core/Application.h"
 #include <algorithm>
 #include <vulkan/vk_enum_string_helper.h>
+#include <map>
+#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -21,13 +23,22 @@ namespace platypus
         return surfaceFormats[0];
     }
 
+    // NOTE: On at least some Linux, VK_PRESENT_MODE_FIFO_KHR on windowed mode stutters and tears for
+    // some reason and VK_PRESENT_MODE_IMMEDIATE_KHR seems to work a lot better...
+    // -> Some window manager issue?
     static VkPresentModeKHR select_present_mode(const std::vector<VkPresentModeKHR>& presentModes)
     {
-        for (const VkPresentModeKHR& mode : presentModes)
+        if (std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_MAILBOX_KHR) != presentModes.end())
         {
-            if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
-                return mode;
+            Debug::log("Selected VK_PRESENT_MODE_MAILBOX_KHR for swapchain");
+            return VK_PRESENT_MODE_MAILBOX_KHR;
         }
+        else if (std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end())
+        {
+            Debug::log("Selected VK_PRESENT_MODE_IMMEDIATE_KHR for swapchain");
+            return VK_PRESENT_MODE_IMMEDIATE_KHR;
+        }
+        Debug::log("Selected VK_PRESENT_MODE_FIFO_KHR for swapchain");
         return VK_PRESENT_MODE_FIFO_KHR;
     }
 
@@ -298,11 +309,15 @@ namespace platypus
         std::vector<VkImage> createdImages(_imageCount);
         vkGetSwapchainImagesKHR(device, swapchain, &_imageCount, createdImages.data());
 
+        Debug::log("___TEST___SWAPCHAIN IMAGE COUNT = " + std::to_string(_imageCount));
+
         _pImpl->handle = swapchain;
         _pImpl->extent = selectedExtent;
         _pImpl->imageFormat = selectedFormat.format;
         _pImpl->images = createdImages;
         _pImpl->imageViews = create_image_views(device, createdImages, selectedFormat.format);
+        _pImpl->maxFramesInFlight = _imageCount - 1;
+        Debug::log("___TEST___SWAPCHAIN MAX FRAMES IN FLIGHT = " + std::to_string(_pImpl->maxFramesInFlight));
 
         _renderPass.create(*this);
         _pImpl->framebuffers = create_framebuffers(
@@ -409,14 +424,14 @@ namespace platypus
         return SwapchainResult::ERROR;
     }
 
-    SwapchainResult Swapchain::present(size_t frame)
+    SwapchainResult Swapchain::present()
     {
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-        VkSemaphore signalSemaphores[] = { _pImpl->renderFinishedSemaphores[frame] };
+        //VkSemaphore signalSemaphores[] = { _pImpl->renderFinishedSemaphores[_currentFrame] };
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.pWaitSemaphores = &_pImpl->renderFinishedSemaphores[_currentFrame];//signalSemaphores;
 
         VkSwapchainKHR swapchains[] = { _pImpl->handle };
         presentInfo.swapchainCount = 1;
@@ -441,11 +456,13 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_WARNING
             );
         }
-        // NOTE: Not sure should we change this here if presenting fails!
-        // TODO: Test this when handling resizing!
-        _currentFrame = (_currentFrame + 1) % _pImpl->maxFramesInFlight;
-
+        advanceFrame();
         return retResult;
+    }
+
+    void Swapchain::advanceFrame()
+    {
+        _currentFrame = (_currentFrame + 1) % _pImpl->maxFramesInFlight;
     }
 
     size_t Swapchain::getMaxFramesInFlight() const

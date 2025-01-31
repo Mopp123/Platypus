@@ -41,7 +41,8 @@ namespace platypus
         void recreate(Window& window);
 
         SwapchainResult acquireImage();
-        SwapchainResult present(size_t frame);
+        SwapchainResult present();
+        void advanceFrame();
 
         size_t getMaxFramesInFlight() const;
         Extent2D getExtent() const;
