@@ -618,12 +618,12 @@ namespace platypus
         delete s_pImpl;
     }
 
-    const ContextImpl * const Context::get_pimpl()
+    const ContextImpl * const Context::get_impl()
     {
         if (!s_pImpl)
         {
             Debug::log(
-                "@Context::get_pimpl "
+                "@Context::get_impl "
                 "Context implementation was nullptr! Make sure you created Context before accessing it.",
                 Debug::MessageType::PLATYPUS_ERROR
             );

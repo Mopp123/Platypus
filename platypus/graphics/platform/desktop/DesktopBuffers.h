@@ -31,6 +31,5 @@ namespace platypus
     VkBufferUsageFlags to_vk_buffer_usage_flags(uint32_t flags);
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
-    VkShaderStageFlags to_vk_shader_stage_flags(uint32_t shaderStageFlags);
     VkIndexType to_vk_index_type(size_t bufferElementSize);
 }

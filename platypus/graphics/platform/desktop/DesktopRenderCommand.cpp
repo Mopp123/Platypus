@@ -5,6 +5,7 @@
 #include "DesktopCommandBuffer.h"
 #include "DesktopPipeline.h"
 #include "DesktopBuffers.h"
+#include "DesktopShader.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vulkan.h>
 

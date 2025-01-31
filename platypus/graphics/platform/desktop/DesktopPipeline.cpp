@@ -237,7 +237,7 @@ namespace platypus
 
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkResult createPipelineLayoutResult = vkCreatePipelineLayout(
-            Context::get_pimpl()->device,
+            Context::get_impl()->device,
             &layoutCreateInfo,
             nullptr,
             &pipelineLayout
@@ -277,7 +277,7 @@ namespace platypus
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkResult createResult = vkCreateGraphicsPipelines(
-            Context::get_pimpl()->device,
+            Context::get_impl()->device,
             VK_NULL_HANDLE,
             1,
             &pipelineCreateInfo,
@@ -304,7 +304,7 @@ namespace platypus
 
     void Pipeline::destroy()
     {
-        VkDevice device = Context::get_pimpl()->device;
+        VkDevice device = Context::get_impl()->device;
         vkDestroyPipeline(device, _pImpl->handle, nullptr);
         vkDestroyPipelineLayout(device, _pImpl->layout, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;

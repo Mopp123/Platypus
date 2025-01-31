@@ -15,4 +15,6 @@ namespace platypus
         const Shader& shader,
         const ShaderImpl * const pImpl
     );
+
+    VkShaderStageFlags to_vk_shader_stage_flags(uint32_t shaderStageFlags);
 }

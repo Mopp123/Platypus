@@ -75,7 +75,7 @@ namespace platypus
                 else
                 {
                     const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, s_currentFrame);
-                    _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, _swapchain.getCurrentFrame());
+                    _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, s_currentFrame);
 
                     // present may also tell us to recreate swapchain!
                     if (_swapchain.present(_swapchain.getCurrentFrame()) == SwapchainResult::RESIZE_REQUIRED)

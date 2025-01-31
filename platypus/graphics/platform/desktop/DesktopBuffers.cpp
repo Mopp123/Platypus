@@ -101,26 +101,6 @@ namespace platypus
         }
     }
 
-    VkShaderStageFlags to_vk_shader_stage_flags(uint32_t shaderStageFlags)
-    {
-        switch (shaderStageFlags)
-        {
-            case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_VERTEX_BIT;
-            case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
-            default:
-                Debug::log(
-                    "@to_vk_shader_stage_flags "
-                    "Invalid shaderStageFlags: " + std::to_string(shaderStageFlags) + " "
-                    "Available flag bits are currently: "
-                    "VK_SHADER_STAGE_VERTEX_BIT, "
-                    "VK_SHADER_STAGE_FRAGMENT_BIT",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-        }
-        return 0;
-    }
-
     VkIndexType to_vk_index_type(size_t bufferElementSize)
     {
         switch (bufferElementSize)
@@ -272,7 +252,7 @@ namespace platypus
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createResult = vmaCreateBuffer(
-            Context::get_pimpl()->vmaAllocator,
+            Context::get_impl()->vmaAllocator,
             &createInfo,
             &allocInfo,
             &buffer,
@@ -296,7 +276,7 @@ namespace platypus
         {
             VmaAllocationInfo allocatedInfo;
             vmaGetAllocationInfo(
-                Context::get_pimpl()->vmaAllocator,
+                Context::get_impl()->vmaAllocator,
                 vmaAllocation,
                 &allocatedInfo
             );
@@ -314,7 +294,7 @@ namespace platypus
         if (_pImpl)
         {
             vmaDestroyBuffer(
-                Context::get_pimpl()->vmaAllocator,
+                Context::get_impl()->vmaAllocator,
                 _pImpl->handle,
                 _pImpl->vmaAllocation
             );
@@ -339,7 +319,7 @@ namespace platypus
 
         VmaAllocationInfo allocatedInfo;
         vmaGetAllocationInfo(
-            Context::get_pimpl()->vmaAllocator,
+            Context::get_impl()->vmaAllocator,
             _pImpl->vmaAllocation,
             &allocatedInfo
         );

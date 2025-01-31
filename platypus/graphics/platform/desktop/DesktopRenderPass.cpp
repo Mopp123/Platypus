@@ -98,7 +98,7 @@ namespace platypus
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(
-            Context::get_pimpl()->device,
+            Context::get_impl()->device,
             &createInfo,
             nullptr,
             &renderPass
@@ -121,7 +121,7 @@ namespace platypus
 
     void RenderPass::destroy()
     {
-        vkDestroyRenderPass(Context::get_pimpl()->device, _pImpl->handle, nullptr);
+        vkDestroyRenderPass(Context::get_impl()->device, _pImpl->handle, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;
     }
 }

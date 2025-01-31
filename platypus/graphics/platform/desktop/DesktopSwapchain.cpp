@@ -233,7 +233,7 @@ namespace platypus
 
     void Swapchain::create(Window& window)
     {
-        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = Context::get_pimpl()->deviceSwapchainSupportDetails;
+        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = Context::get_impl()->deviceSwapchainSupportDetails;
         const VkSurfaceCapabilitiesKHR& surfaceCapabilities = swapchainSupportDetails.surfaceCapabilities;
         VkSurfaceFormatKHR selectedFormat = select_surface_format(swapchainSupportDetails.surfaceFormats);
         VkPresentModeKHR selectedPresentMode = select_present_mode(swapchainSupportDetails.presentModes);
@@ -246,7 +246,7 @@ namespace platypus
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = Context::get_pimpl()->surface;
+        createInfo.surface = Context::get_impl()->surface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = selectedFormat.format;
         createInfo.imageColorSpace = selectedFormat.colorSpace;
@@ -254,7 +254,7 @@ namespace platypus
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = Context::get_pimpl()->deviceQueueFamilyIndices;
+        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = Context::get_impl()->deviceQueueFamilyIndices;
         uint32_t usedIndices[2] = { deviceQueueFamilyIndices.graphicsFamily, deviceQueueFamilyIndices.presentFamily };
 
         if (usedIndices[0] == usedIndices[1])
@@ -280,7 +280,7 @@ namespace platypus
         // NOTE: Used when dealing with recreating swapchain due to window resizing, or something else!
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        VkDevice device = Context::get_pimpl()->device;
+        VkDevice device = Context::get_impl()->device;
         VkSwapchainKHR swapchain;
         VkResult createResult = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
         if (createResult != VK_SUCCESS)
@@ -328,7 +328,7 @@ namespace platypus
     void Swapchain::destroy()
     {
         // NOTE: Not sure is this the best way to throw the device around...
-        VkDevice device = Context::get_pimpl()->device;
+        VkDevice device = Context::get_impl()->device;
 
         for (size_t i = 0; i < _pImpl->maxFramesInFlight; ++i)
         {
@@ -368,7 +368,7 @@ namespace platypus
 
     SwapchainResult Swapchain::acquireImage()
     {
-        VkDevice device = Context::get_pimpl()->device;
+        VkDevice device = Context::get_impl()->device;
         vkWaitForFences(
             device,
             1,
@@ -424,7 +424,7 @@ namespace platypus
 
         presentInfo.pImageIndices = &_currentImageIndex;
 
-        VkResult presentResult = vkQueuePresentKHR(Context::get_pimpl()->presentQueue, &presentInfo);
+        VkResult presentResult = vkQueuePresentKHR(Context::get_impl()->presentQueue, &presentInfo);
         SwapchainResult retResult = SwapchainResult::ERROR;
 
         if (presentResult == VK_SUCCESS)
