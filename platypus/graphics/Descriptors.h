@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Buffers.h"
+#include "Swapchain.h"
 
 
 namespace platypus
@@ -104,20 +105,28 @@ namespace platypus
     };
 
 
+    class DescriptorPool;
+
     struct DescriptorSetImpl;
     class DescriptorSet
     {
     private:
+        friend class DescriptorPool;
         DescriptorSetImpl* _pImpl = nullptr;
-        const DescriptorSetLayout& _layoutRef;
+        const DescriptorSetLayout* _pLayout;
         std::vector<const Buffer*> _pBuffers;
         //std::vector<const Texture*> _pTextures;
 
     public:
+        DescriptorSet() = default;
+
         DescriptorSet(
-            const DescriptorSetLayout& layout,
-            std::vector<const Buffer*> pBuffers
+            const DescriptorSetLayout* pLayout,
+            const std::vector<const Buffer*>& pBuffers
         );
+
+        DescriptorSet(const DescriptorSet& other);
+        DescriptorSet& operator=(DescriptorSet&& other);
 
         /*
         DescriptorSet(
@@ -141,7 +150,7 @@ namespace platypus
 
         ~DescriptorSet();
 
-        inline const DescriptorSetLayout& getLayout() const { return _layoutRef; }
+        inline const DescriptorSetLayout* getLayout() const { return _pLayout; }
         inline const std::vector<const Buffer*>& getBuffers() const { return _pBuffers; }
         //inline const std::vector<const Texture*>& getTextures() const { return _pTextures; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
@@ -155,13 +164,13 @@ namespace platypus
         DescriptorPoolImpl* _pImpl = nullptr;
 
     public:
-        // "types" tells what types of descriptors will be created
-        // "typeCounts" tells how many descriptors of specific type will be created
-        DescriptorPool(
-            const std::vector<DescriptorType>& types,
-            const std::vector<uint32_t>& typeCounts,
-            uint32_t maxDescriptorSets
-        );
+        DescriptorPool(const Swapchain& swapchain);
         ~DescriptorPool();
+
+        // Buffer has to be provided for each binding in the layout!
+        DescriptorSet createDescriptorSet(
+            const DescriptorSetLayout* pLayout,
+            const std::vector<const Buffer*>& buffers
+        );
     };
 }

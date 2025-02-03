@@ -2,6 +2,7 @@
 
 #include "platypus/graphics/CommandBuffer.h"
 #include "platypus/graphics/Swapchain.h"
+#include "platypus/graphics/Descriptors.h"
 #include "TestRenderer.h"
 
 
@@ -16,7 +17,11 @@ namespace platypus
         TestRenderer _testRenderer;
 
     public:
-        MasterRenderer(CommandPool& commandPool);
+        MasterRenderer(
+            const Swapchain& swapchain,
+            CommandPool& commandPool,
+            DescriptorPool& descriptorPool
+        );
         ~MasterRenderer();
 
         void createPipelines(const Swapchain& swapchain);

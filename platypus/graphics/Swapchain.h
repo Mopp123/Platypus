@@ -42,7 +42,6 @@ namespace platypus
 
         SwapchainResult acquireImage();
         SwapchainResult present();
-        void advanceFrame();
 
         size_t getMaxFramesInFlight() const;
         Extent2D getExtent() const;

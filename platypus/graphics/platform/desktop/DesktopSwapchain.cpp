@@ -309,15 +309,12 @@ namespace platypus
         std::vector<VkImage> createdImages(_imageCount);
         vkGetSwapchainImagesKHR(device, swapchain, &_imageCount, createdImages.data());
 
-        Debug::log("___TEST___SWAPCHAIN IMAGE COUNT = " + std::to_string(_imageCount));
-
         _pImpl->handle = swapchain;
         _pImpl->extent = selectedExtent;
         _pImpl->imageFormat = selectedFormat.format;
         _pImpl->images = createdImages;
         _pImpl->imageViews = create_image_views(device, createdImages, selectedFormat.format);
         _pImpl->maxFramesInFlight = _imageCount - 1;
-        Debug::log("___TEST___SWAPCHAIN MAX FRAMES IN FLIGHT = " + std::to_string(_pImpl->maxFramesInFlight));
 
         _renderPass.create(*this);
         _pImpl->framebuffers = create_framebuffers(
@@ -429,7 +426,6 @@ namespace platypus
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-        //VkSemaphore signalSemaphores[] = { _pImpl->renderFinishedSemaphores[_currentFrame] };
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = &_pImpl->renderFinishedSemaphores[_currentFrame];//signalSemaphores;
 
@@ -456,13 +452,8 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_WARNING
             );
         }
-        advanceFrame();
-        return retResult;
-    }
-
-    void Swapchain::advanceFrame()
-    {
         _currentFrame = (_currentFrame + 1) % _pImpl->maxFramesInFlight;
+        return retResult;
     }
 
     size_t Swapchain::getMaxFramesInFlight() const

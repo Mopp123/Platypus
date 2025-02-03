@@ -5,9 +5,13 @@
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(CommandPool& commandPool) :
+    MasterRenderer::MasterRenderer(
+        const Swapchain& swapchain,
+        CommandPool& commandPool,
+        DescriptorPool& descriptorPool
+    ) :
         _commandPoolRef(commandPool),
-        _testRenderer(commandPool)
+        _testRenderer(swapchain, commandPool, descriptorPool)
     {
     }
 

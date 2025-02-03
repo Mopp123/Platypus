@@ -20,8 +20,9 @@ namespace platypus
         _inputManager(_window),
         _context(name.c_str(), &_window),
         _swapchain(_window),
+        _descriptorPool(_swapchain),
         // NOTE: Not sure is CommanPool created at this point -> fucks up master renderer creation if not!
-        _masterRenderer(_commandPool)
+        _masterRenderer(_swapchain, _commandPool, _descriptorPool)
     {
         if (s_pInstance)
         {
@@ -42,16 +43,13 @@ namespace platypus
     {
     }
 
-    static size_t s_framesInFlight;
-    //static size_t s_currentFrame = 0;
     void Application::run()
     {
-        s_framesInFlight = _swapchain.getMaxFramesInFlight();
         while (!_window.isCloseRequested())
         {
             _inputManager.pollEvents();
 
-            // NOTE: Below should probably be done somewhere else...
+            // NOTE: Below should probably be done somewhere else...?
             SwapchainResult result = _swapchain.acquireImage();
             if (result == SwapchainResult::ERROR)
             {
@@ -62,6 +60,10 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
             }
+            else if (result == SwapchainResult::RESIZE_REQUIRED)
+            {
+                handleResize();
+            }
             else
             {
                 const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, _swapchain.getCurrentFrame());
@@ -70,8 +72,6 @@ namespace platypus
                 // present may also tell us to recreate swapchain!
                 if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || _window.resized())
                     handleResize();
-
-                //s_currentFrame = (s_currentFrame + 1) % s_framesInFlight;
             }
         }
         _context.waitForOperations();

@@ -7,7 +7,11 @@
 
 namespace platypus
 {
-    TestRenderer::TestRenderer(CommandPool& commandPool) :
+    TestRenderer::TestRenderer(
+        const Swapchain& swapchain,
+        CommandPool& commandPool,
+        DescriptorPool& descriptorPool
+    ) :
         _commandPoolRef(commandPool),
         _vertexShader("assets/shaders/TestVertexShader.spv", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
         _fragmentShader("assets/shaders/TestFragmentShader.spv", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
@@ -17,10 +21,10 @@ namespace platypus
         // TESTING!
         float s = 0.5f;
         std::vector<float> vertexData = {
-            -s, -s, 1.0f, 0.0f, 0.0f,
-            -s, s,  0.0f, 1.0f, 0.0f,
-            s, s,   1.0f, 0.0f, 1.0f,
-            s, -s,  1.0f, 1.0f, 0.0f
+            -s, -s,
+            -s, s,
+            s, s,
+            s, -s
         };
 
         std::vector<uint32_t> indices = {
@@ -45,10 +49,46 @@ namespace platypus
             BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
         );
+
+        // Testing ubos
+        Vector4f testUboData(1, 0, 0, 1);
+
+        // WARNING! Probably shouldn't create desc set layouts like this!
+        _pTestDescriptorSetLayout = new DescriptorSetLayout(
+            {
+                { 0, 1, DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, { {0, ShaderDataType::Float} }}
+            }
+        );
+
+        for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
+        {
+            Buffer* pUniformBuffer = new Buffer(
+                _commandPoolRef,
+                &testUboData,
+                sizeof(Vector4f),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+            );
+            _testUniformBuffer.push_back(pUniformBuffer);
+
+            _testDescriptorSets.push_back(
+                descriptorPool.createDescriptorSet(
+                    _pTestDescriptorSetLayout,
+                    { pUniformBuffer }
+                )
+            );
+        }
     }
 
     TestRenderer::~TestRenderer()
     {
+        for (Buffer* pUniformBuffer : _testUniformBuffer)
+            delete pUniformBuffer;
+        _testUniformBuffer.clear();
+
+        delete _pTestDescriptorSetLayout;
+
         delete _pVertexBuffer;
         delete _pIndexBuffer;
     }
@@ -79,19 +119,20 @@ namespace platypus
 
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float2 },
-                { 1, ShaderDataType::Float3 }
+                { 0, ShaderDataType::Float2 }/*,
+                { 1, ShaderDataType::Float3 }*/
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout };
+        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = { _pTestDescriptorSetLayout };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
         _pipeline.create(
             renderPass,
             vertexBufferLayouts,
-            //const std::vector<DescriptorSetLayout>& descriptorLayouts,
+            descriptorSetLayouts,
             _vertexShader,
             _fragmentShader,
             viewportWidth,
@@ -153,6 +194,14 @@ namespace platypus
             sizeof(Vector2f),
             &pushConstantVal,
             {{ 0, ShaderDataType::Float2 }}
+        );
+
+        // NOTE: Atm just testing here! quite inefficient to alloc this vector again and again every frame!
+        // TODO: Optimize!
+        std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame] };
+        render::bind_descriptor_sets(
+            currentCommandBuffer,
+            descriptorSetsToBind
         );
 
         render::bind_vertex_buffers(currentCommandBuffer, { _pVertexBuffer });

@@ -6,6 +6,7 @@
 #include "DesktopPipeline.h"
 #include "DesktopBuffers.h"
 #include "DesktopShader.h"
+#include "DesktopDescriptors.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vulkan.h>
 
@@ -195,6 +196,40 @@ namespace platypus
                 offset,
                 size,
                 pValues
+            );
+        }
+
+        void bind_descriptor_sets(
+            CommandBuffer& commandBuffer,
+            const std::vector<DescriptorSet>& descriptorSets
+        )
+        {
+            #ifdef PLATYPUS_DEBUG
+            if (commandBuffer.getImpl()->pipelineLayout == VK_NULL_HANDLE)
+            {
+                Debug::log(
+                    "@bind_descriptor_sets "
+                    "command buffer's pipeline layout wasn't assigned! "
+                    "Make sure you have called bind_pipeline(...) before calling this!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            const uint32_t descriptorSetCount = (uint32_t)descriptorSets.size();
+            std::vector<VkDescriptorSet> handles(descriptorSetCount);
+            for (size_t i = 0; i < descriptorSets.size(); ++i)
+                handles[i] = descriptorSets[i].getImpl()->handle;
+
+            vkCmdBindDescriptorSets(
+                commandBuffer.getImpl()->handle,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                commandBuffer.getImpl()->pipelineLayout,
+                0,
+                descriptorSetCount,
+                handles.data(),
+                0,
+                nullptr
             );
         }
 

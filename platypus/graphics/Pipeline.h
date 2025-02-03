@@ -5,6 +5,7 @@
 #include "Shader.h"
 #include "Buffers.h"
 #include "RenderPass.h"
+#include "Descriptors.h"
 
 
 namespace platypus
@@ -68,7 +69,7 @@ namespace platypus
         void create(
             const RenderPass& renderPass,
             const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-            //const std::vector<DescriptorSetLayout>& descriptorLayouts,
+            const std::vector<const DescriptorSetLayout*>& descriptorLayouts,
             const Shader& vertexShader,
             const Shader& fragmentShader,
             float viewportWidth,

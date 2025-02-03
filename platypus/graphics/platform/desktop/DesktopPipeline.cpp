@@ -7,9 +7,9 @@
 #include "DesktopContext.h"
 #include "platypus/core/Debug.h"
 #include "DesktopRenderPass.h"
+#include "DesktopDescriptors.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
-#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -56,7 +56,7 @@ namespace platypus
     void Pipeline::create(
         const RenderPass& renderPass,
         const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-        //const std::vector<DescriptorSetLayout>& descriptorLayouts,
+        const std::vector<const DescriptorSetLayout*>& descriptorLayouts,
         const Shader& vertexShader,
         const Shader& fragmentShader,
         float viewportWidth,
@@ -208,16 +208,11 @@ namespace platypus
 
         // TODO: Descriptors
         // *Uniforms:
-        //layoutCreateInfo.setLayoutCount = (uint32_t)descriptorLayouts.size();
+        layoutCreateInfo.setLayoutCount = (uint32_t)descriptorLayouts.size();
         // *Combine the VkDescriptorLayouts from the descriptor layouts into a single contiguous container
-        /*
         std::vector<VkDescriptorSetLayout> vkDescSetLayouts;
         for (int i = 0; i < descriptorLayouts.size(); ++i)
-        {
-            VkDescriptorSetLayout vkLayout = descriptorLayouts[i].getVkDescriptorSetLayout();
-            vkDescSetLayouts.push_back(vkLayout);
-        }
-        */
+            vkDescSetLayouts.push_back(descriptorLayouts[i]->getImpl()->handle);
         // *Push constants:
         VkPushConstantRange pushConstantRange{};
 
@@ -233,7 +228,7 @@ namespace platypus
         }
 
         // Assign these both..
-        //layoutCreateInfo.pSetLayouts = vkDescSetLayouts.data();
+        layoutCreateInfo.pSetLayouts = vkDescSetLayouts.data();
 
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkResult createPipelineLayoutResult = vkCreatePipelineLayout(

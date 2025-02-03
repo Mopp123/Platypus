@@ -74,6 +74,11 @@ namespace platypus
             std::vector<UniformInfo> glUniformInfo // Only used on opengl side NOTE: Why this passed by value!?
         );
 
+        void bind_descriptor_sets(
+            CommandBuffer& commandBuffer,
+            const std::vector<DescriptorSet>& descriptorSets
+        );
+
         void draw_indexed(
             const CommandBuffer& commandBuffer,
             uint32_t count,

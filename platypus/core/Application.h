@@ -9,6 +9,7 @@
 #include "platypus/graphics/Shader.h"
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/CommandBuffer.h"
+#include "platypus/graphics/Descriptors.h"
 
 #include "platypus/graphics/renderers/MasterRenderer.h"
 
@@ -29,6 +30,7 @@ namespace platypus
         // thing...
         Swapchain _swapchain;
         CommandPool _commandPool;
+        DescriptorPool _descriptorPool;
         MasterRenderer _masterRenderer;
 
     public:

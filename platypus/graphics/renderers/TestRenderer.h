@@ -5,6 +5,7 @@
 #include "platypus/graphics/Shader.h"
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Descriptors.h"
 #include <cstdlib>
 
 
@@ -23,11 +24,19 @@ namespace platypus
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
 
+        std::vector<Buffer*> _testUniformBuffer;
+        DescriptorSetLayout* _pTestDescriptorSetLayout;
+        std::vector<DescriptorSet> _testDescriptorSets;
+
         float _viewportWidth = 0.0f;
         float _viewportHeight = 0.0f;
 
     public:
-        TestRenderer(CommandPool& commandPool);
+        TestRenderer(
+            const Swapchain& swapchain,
+            CommandPool& commandPool,
+            DescriptorPool& descriptorPool
+        );
         ~TestRenderer();
 
         void allocCommandBuffers(uint32_t count);
