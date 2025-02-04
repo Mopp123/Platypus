@@ -28,10 +28,14 @@ include_directories(
 
 file(GLOB SRC_FILES
     platypus/core/*.cpp
-    platypus/utils/*.cpp
     platypus/core/platform/${BUILD_TARGET}/*.cpp
-    platypus/graphics/platform/${BUILD_TARGET}/*.cpp
 
+    platypus/ecs/components/*.cpp
+    platypus/utils/*.cpp
+
+    platypus/assets/*.cpp
+
+    platypus/graphics/platform/${BUILD_TARGET}/*.cpp
     platypus/graphics/renderers/*.cpp
 )
 

@@ -14,7 +14,8 @@ namespace platypus
         int width,
         int height,
         bool resizable,
-        bool fullscreen
+        bool fullscreen,
+        Scene* pInitialScene
     ) :
         _window(name, width, height, resizable, fullscreen),
         _inputManager(_window),
@@ -37,6 +38,8 @@ namespace platypus
 
         _masterRenderer.allocCommandBuffers(_swapchain.getMaxFramesInFlight());
         _masterRenderer.createPipelines(_swapchain);
+
+        _sceneManager.assignNextScene(pInitialScene);
     }
 
     Application::~Application()
@@ -48,6 +51,8 @@ namespace platypus
         while (!_window.isCloseRequested())
         {
             _inputManager.pollEvents();
+
+            _sceneManager.update();
 
             // NOTE: Below should probably be done somewhere else...?
             SwapchainResult result = _swapchain.acquireImage();
@@ -73,6 +78,8 @@ namespace platypus
                 if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || _window.resized())
                     handleResize();
             }
+
+            _sceneManager.handleSceneSwitching();
         }
         _context.waitForOperations();
 

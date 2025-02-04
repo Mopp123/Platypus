@@ -73,17 +73,26 @@ namespace platypus
         _pImpl->handle = handle;
     }
 
+    DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayout& other) :
+        _bindings(other._bindings)
+    {
+        _pImpl = new DescriptorSetLayoutImpl;
+        _pImpl->handle = other._pImpl->handle;
+    }
+
     DescriptorSetLayout::~DescriptorSetLayout()
     {
         if(_pImpl)
-        {
-            vkDestroyDescriptorSetLayout(
-                Context::get_impl()->device,
-                _pImpl->handle,
-                nullptr
-            );
             delete _pImpl;
-        }
+    }
+
+    void DescriptorSetLayout::destroy()
+    {
+        vkDestroyDescriptorSetLayout(
+            Context::get_impl()->device,
+            _pImpl->handle,
+            nullptr
+        );
     }
 
 

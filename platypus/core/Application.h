@@ -13,6 +13,9 @@
 
 #include "platypus/graphics/renderers/MasterRenderer.h"
 
+#include "SceneManager.h"
+#include "platypus/assets/AssetManager.h"
+
 
 namespace platypus
 {
@@ -23,6 +26,8 @@ namespace platypus
 
         Window _window;
         InputManager _inputManager;
+        SceneManager _sceneManager;
+        AssetManager _assetManager;
         Context _context;
 
         // TESTING BELOW
@@ -39,7 +44,8 @@ namespace platypus
             int width,
             int height,
             bool resizable,
-            bool fullscreen
+            bool fullscreen,
+            Scene* pInitialScene
         );
         Application(const Application&) = delete;
         ~Application();
@@ -51,8 +57,10 @@ namespace platypus
         static Application* get_instance();
 
         inline const Window& getWindow() const { return _window; }
-        inline const InputManager& getInputManager() const { return _inputManager; }
-        inline const Context& getContext() const { return _context; }
+        inline InputManager& getInputManager() { return _inputManager; }
+        inline SceneManager& getSceneManager() { return _sceneManager; }
+        inline AssetManager& getAssetManager() { return _assetManager; }
+        inline Context& getContext() { return _context; }
         inline const CommandPool& getCommandPool() const { return _commandPool; }
     };
 }

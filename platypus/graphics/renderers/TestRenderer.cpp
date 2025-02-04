@@ -14,7 +14,19 @@ namespace platypus
     ) :
         _commandPoolRef(commandPool),
         _vertexShader("assets/shaders/TestVertexShader.spv", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("assets/shaders/TestFragmentShader.spv", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
+        _fragmentShader("assets/shaders/TestFragmentShader.spv", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+
+        _testDescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                    { { 1, ShaderDataType::Mat4 } }
+                }
+            }
+        )
     {
         // NOTE: Not sure can buffers exist through the whole lifetime of the app...
 
@@ -57,19 +69,6 @@ namespace platypus
             { { 0, 1, 0 }, 0.0f }
         );
 
-        // WARNING! Probably shouldn't create desc set layouts like this!
-        _pTestDescriptorSetLayout = new DescriptorSetLayout(
-            {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                    { { 1, ShaderDataType::Mat4 } }
-                }
-            }
-        );
-
         for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
         {
             Buffer* pUniformBuffer = new Buffer(
@@ -84,7 +83,7 @@ namespace platypus
 
             _testDescriptorSets.push_back(
                 descriptorPool.createDescriptorSet(
-                    _pTestDescriptorSetLayout,
+                    &_testDescriptorSetLayout,
                     { pUniformBuffer }
                 )
             );
@@ -97,7 +96,7 @@ namespace platypus
             delete pUniformBuffer;
         _testUniformBuffer.clear();
 
-        delete _pTestDescriptorSetLayout;
+        _testDescriptorSetLayout.destroy();
 
         delete _pVertexBuffer;
         delete _pIndexBuffer;
@@ -136,7 +135,7 @@ namespace platypus
             0
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = { _pTestDescriptorSetLayout };
+        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = { &_testDescriptorSetLayout };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
         _pipeline.create(

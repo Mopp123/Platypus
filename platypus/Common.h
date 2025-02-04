@@ -4,6 +4,10 @@
 
 #define PLATYPUS_ENGINE_NAME "Platypus"
 
+// PE stands for Platypus Engine
+#define PE_byte char
+
+
 namespace platypus
 {
     struct Extent2D

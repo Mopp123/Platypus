@@ -165,18 +165,12 @@ namespace platypus
     {
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         pInputManager->processWindowResizeEvents(width, height);
+        pInputManager->handleWindowResizeEvent(width, height);
     }
 
 
-    void InputManager::WindowResizedEvent::func(int w, int h)
-    {
-        windowRef._width = w;
-        windowRef._height = h;
-        windowRef._resized = true;
-    }
-
-
-    InputManager::InputManager(Window& windowRef)
+    InputManager::InputManager(Window& windowRef) :
+        _windowRef(windowRef)
     {
         GLFWwindow* pGLFWwindow = windowRef.getImpl()->pGLFWwindow;
         glfwSetWindowUserPointer(pGLFWwindow, this);
@@ -187,14 +181,18 @@ namespace platypus
         glfwSetCursorPosCallback(pGLFWwindow, cursor_pos_callback);
         glfwSetScrollCallback(pGLFWwindow, scroll_callback);
         glfwSetFramebufferSizeCallback(pGLFWwindow, framebuffer_resize_callback);
-
-        // TODO: Some persistent events mechanic! This gets deleted on scene switch!
-        addWindowResizeEvent(new WindowResizedEvent(windowRef));
     }
 
     InputManager::~InputManager()
     {
         destroyEvents();
+    }
+
+    void InputManager::handleWindowResizeEvent(int width, int height)
+    {
+        _windowRef._width = width;
+        _windowRef._height = height;
+        _windowRef._resized = true;
     }
 
     void InputManager::pollEvents()

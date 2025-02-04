@@ -30,13 +30,7 @@ namespace platypus
         int _mouseX = 0;
         int _mouseY = 0;
 
-        class WindowResizedEvent : public WindowResizeEvent
-        {
-        public:
-            Window& windowRef;
-            WindowResizedEvent(Window& windowRef) : windowRef(windowRef) {};
-            virtual void func(int w, int h);
-        };
+        Window& _windowRef;
 
     public:
         // Mainly for testing purposes!
@@ -48,6 +42,10 @@ namespace platypus
         InputManager(Window& windowRef);
         InputManager(const InputManager&) = delete;
         ~InputManager();
+
+        // Needed to have some way to handle window resizing outside of regular events.
+        // Sets new window dimensions and flags it as resized.
+        void handleWindowResizeEvent(int width, int height);
 
         void addKeyEvent(KeyEvent* ev);
         void addMouseButtonEvent(MouseButtonEvent* ev);

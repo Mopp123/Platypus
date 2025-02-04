@@ -27,7 +27,7 @@ namespace platypus
 
         std::vector<Buffer*> _testUniformBuffer;
 
-        DescriptorSetLayout* _pTestDescriptorSetLayout;
+        DescriptorSetLayout _testDescriptorSetLayout;
         std::vector<DescriptorSet> _testDescriptorSets;
 
         float _viewportWidth = 0.0f;
