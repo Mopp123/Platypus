@@ -19,12 +19,12 @@ namespace platypus
         // NOTE: Not sure can buffers exist through the whole lifetime of the app...
 
         // TESTING!
-        float s = 0.5f;
+        float s = 1.0f;
         std::vector<float> vertexData = {
-            -s, -s,
-            -s, s,
-            s, s,
-            s, -s
+            -s, -s,     1, 0, 0,
+            -s, s,      0, 1, 0,
+            s, s,       1, 0, 1,
+            s, -s,      1, 1, 0
         };
 
         std::vector<uint32_t> indices = {
@@ -51,12 +51,22 @@ namespace platypus
         );
 
         // Testing ubos
-        Vector4f testUboData(1, 0, 0, 1);
+        Matrix4f transformationMatrix = create_transformation_matrix(
+            { 0, 0, 0 },
+            { 1, 1, 1 },
+            { { 0, 1, 0 }, 0.0f }
+        );
 
         // WARNING! Probably shouldn't create desc set layouts like this!
         _pTestDescriptorSetLayout = new DescriptorSetLayout(
             {
-                { 0, 1, DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, { {0, ShaderDataType::Float} }}
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                    { { 1, ShaderDataType::Mat4 } }
+                }
             }
         );
 
@@ -64,8 +74,8 @@ namespace platypus
         {
             Buffer* pUniformBuffer = new Buffer(
                 _commandPoolRef,
-                &testUboData,
-                sizeof(Vector4f),
+                &transformationMatrix,
+                sizeof(Matrix4f),
                 1,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
@@ -119,8 +129,8 @@ namespace platypus
 
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float2 }/*,
-                { 1, ShaderDataType::Float3 }*/
+                { 0, ShaderDataType::Float2 },
+                { 1, ShaderDataType::Float3 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -143,7 +153,7 @@ namespace platypus
             false, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
             false, // enable color blending
-            sizeof(Vector2f), // push constants size
+            sizeof(Matrix4f), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
     }
@@ -159,6 +169,7 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
+        const Matrix4f& projectionMatrix,
         size_t frame
     )
     {
@@ -173,11 +184,6 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        // TEST animate using push constants
-        s_TEST_value += 0.001f;
-        s_TEST_anim = std::sin(s_TEST_value) - 0.5f;
-        Vector2f pushConstantVal(s_TEST_anim, 0.0f);
-
         CommandBuffer& currentCommandBuffer = _commandBuffers[frame];
         currentCommandBuffer.begin(renderPass);
 
@@ -187,15 +193,29 @@ namespace platypus
 
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
+        //Debug::log("___TEST___using proj mat:");
+        //Debug::log(projectionMatrix.toString());
+
         render::push_constants(
             currentCommandBuffer,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
             0,
-            sizeof(Vector2f),
-            &pushConstantVal,
-            {{ 0, ShaderDataType::Float2 }}
+            sizeof(Matrix4f),
+            &projectionMatrix,
+            {
+                { 0, ShaderDataType::Mat4 }
+            }
         );
 
+
+        //s_TEST_value += 0.01f;
+        Matrix4f transformationMatrix = create_transformation_matrix(
+            { 0, 1.0f, -5.0f },
+            { 10, 10, 10 },
+            { { 1, 0, 0 }, 1.57f }
+        );
+
+        _testUniformBuffer[frame]->update(&transformationMatrix, sizeof(Matrix4f));
         // NOTE: Atm just testing here! quite inefficient to alloc this vector again and again every frame!
         // TODO: Optimize!
         std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame] };

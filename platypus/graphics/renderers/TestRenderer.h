@@ -6,6 +6,7 @@
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
+#include "platypus/utils/Maths.h"
 #include <cstdlib>
 
 
@@ -25,6 +26,7 @@ namespace platypus
         Buffer* _pIndexBuffer = nullptr;
 
         std::vector<Buffer*> _testUniformBuffer;
+
         DescriptorSetLayout* _pTestDescriptorSetLayout;
         std::vector<DescriptorSet> _testDescriptorSets;
 
@@ -53,6 +55,7 @@ namespace platypus
             const RenderPass& renderPass,
             uint32_t viewportWidth,
             uint32_t viewportHeight,
+            const Matrix4f& projectionMatrix,
             size_t frame
         );
     };

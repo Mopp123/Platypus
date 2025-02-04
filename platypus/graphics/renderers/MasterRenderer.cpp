@@ -1,6 +1,7 @@
 #include "MasterRenderer.h"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
+#include "platypus/utils/Maths.h"
 
 
 namespace platypus
@@ -82,11 +83,30 @@ namespace platypus
         // TODO: Figure out some nice way to optimize this!
         std::vector<CommandBuffer> secondaryCommandBuffers;
 
+        // TESTING projection matrices
+        /*
+        Matrix4f projectionMatrix = create_orthographic_projection_matrix(
+            -1.0f,
+            1.0f,
+            -1.0f,
+            1.0f,
+            0.1f,
+            1000.0f
+        );*/
+        Matrix4f projectionMatrix = create_perspective_projection_matrix(
+            800.0f / 600.0f,
+            1.3f,
+            0.1f,
+            100.0f
+        );
+
         const Extent2D swapchainExtent = swapchain.getExtent();
         secondaryCommandBuffers.push_back(
-                _testRenderer.recordCommandBuffer(swapchain.getRenderPass(),
+            _testRenderer.recordCommandBuffer(
+                swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
+                projectionMatrix,
                 frame // NOTE: no idea should this be the "frame index" or "image index"
             )
         );
