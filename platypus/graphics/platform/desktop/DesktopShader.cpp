@@ -63,7 +63,7 @@ namespace platypus
 
         VkShaderModule shaderModule;
         VkResult createResult = vkCreateShaderModule(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             &createInfo,
             nullptr,
             &shaderModule
@@ -85,7 +85,7 @@ namespace platypus
 
     Shader::~Shader()
     {
-        vkDestroyShaderModule(Context::get_impl()->device, _pImpl->shaderModule, nullptr);
+        vkDestroyShaderModule(Context::get_instance()->getImpl()->device, _pImpl->shaderModule, nullptr);
         if (_pImpl)
             delete _pImpl;
     }

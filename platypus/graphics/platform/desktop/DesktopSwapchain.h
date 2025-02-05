@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 #include <vector>
 
 
@@ -13,6 +14,12 @@ namespace platypus
         VkFormat imageFormat;
         std::vector<VkImage> images;
         std::vector<VkImageView> imageViews;
+
+        VkFormat depthImageFormat;
+        VkImage depthImage;
+        VkImageView depthImageView;
+        VmaAllocation depthImageAllocation;
+
         std::vector<VkFramebuffer> framebuffers;
 
         std::vector<VkSemaphore> imageAvailableSemaphores;

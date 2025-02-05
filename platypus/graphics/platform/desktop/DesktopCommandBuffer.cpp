@@ -33,7 +33,7 @@ namespace platypus
     void CommandBuffer::free()
     {
         vkFreeCommandBuffers(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             _pPool->_pImpl->handle,
             1,
             &_pImpl->handle
@@ -126,7 +126,7 @@ namespace platypus
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &handle;
 
-        VkQueue graphicsQueue = Context::get_impl()->graphicsQueue;
+        VkQueue graphicsQueue = Context::get_instance()->getImpl()->graphicsQueue;
 
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(graphicsQueue);
@@ -137,7 +137,7 @@ namespace platypus
 
     CommandPool::CommandPool()
     {
-        const ContextImpl * const pContextImpl = Context::get_impl();
+        const ContextImpl * const pContextImpl = Context::get_instance()->getImpl();
 
         VkCommandPoolCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -176,7 +176,7 @@ namespace platypus
     {
         // NOTE: All command buffers allocated from this pool should be freed at this point?
         vkDestroyCommandPool(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             _pImpl->handle,
             nullptr
         );
@@ -198,7 +198,7 @@ namespace platypus
         allocInfo.commandBufferCount = count;
 
         VkResult allocResult = vkAllocateCommandBuffers(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             &allocInfo,
             bufferHandles.data()
         );

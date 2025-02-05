@@ -8,7 +8,6 @@
 namespace platypus
 {
     static size_t s_TEST_MAX_ENTITIES = 100;
-    static size_t s_TEST_MIN_ALIGNMENT = 256;
     TestRenderer::TestRenderer(
         const Swapchain& swapchain,
         CommandPool& commandPool,
@@ -31,24 +30,15 @@ namespace platypus
         )
     {
 
-        // Testing ubos
-        /*
-        Matrix4f transformationMatrix = create_transformation_matrix(
-            { 0, 0, 0 },
-            { { 0, 1, 0 }, 0.0f },
-            { 1, 1, 1 }
-        );
-        std::vector<Matrix4f> uniformBufferData(s_TEST_MAX_ENTITIES, transformationMatrix);
-        */
-        s_TEST_MIN_ALIGNMENT = s_TEST_MIN_ALIGNMENT >= sizeof(Matrix4f) ? s_TEST_MIN_ALIGNMENT : sizeof(Matrix4f);
-        std::vector<PE_byte> uniformBufferData(s_TEST_MAX_ENTITIES * s_TEST_MIN_ALIGNMENT, 0);
+        size_t uniformBufferElementSize = get_dynamic_uniform_buffer_element_size(sizeof(Matrix4f));
+        std::vector<Matrix4f> uniformBufferData(s_TEST_MAX_ENTITIES);
         for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
         {
             Buffer* pUniformBuffer = new Buffer(
                 _commandPoolRef,
                 uniformBufferData.data(),
-                s_TEST_MIN_ALIGNMENT,
-                uniformBufferData.size() / s_TEST_MIN_ALIGNMENT,
+                uniformBufferElementSize,
+                uniformBufferData.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
             );
@@ -119,8 +109,8 @@ namespace platypus
             viewportScissor,
             CullMode::CULL_MODE_NONE,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            false, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
             false, // enable color blending
             sizeof(Matrix4f), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
@@ -171,9 +161,6 @@ namespace platypus
 
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
-        //Debug::log("___TEST___using proj mat:");
-        //Debug::log(projectionMatrix.toString());
-
         render::push_constants(
             currentCommandBuffer,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
@@ -202,11 +189,12 @@ namespace platypus
                 descriptorSetsToBind,
                 descriptorSetOffsets
             );
-            uniformBufferOffset += s_TEST_MIN_ALIGNMENT;
 
             render::bind_vertex_buffers(currentCommandBuffer, { renderData.pVertexBuffer });
             render::bind_index_buffer(currentCommandBuffer, renderData.pIndexBuffer);
             render::draw_indexed(currentCommandBuffer, (uint32_t)renderData.pIndexBuffer->getDataLength(), 1);
+
+            uniformBufferOffset += _testUniformBuffer[frame]->getDataElemSize();
         }
 
         currentCommandBuffer.end();

@@ -53,7 +53,7 @@ namespace platypus
 
         VkDescriptorSetLayout handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateDescriptorSetLayout(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -90,7 +90,7 @@ namespace platypus
     void DescriptorSetLayout::destroy()
     {
         vkDestroyDescriptorSetLayout(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             _pImpl->handle,
             nullptr
         );
@@ -159,7 +159,7 @@ namespace platypus
 
         VkDescriptorPool handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateDescriptorPool(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -185,7 +185,7 @@ namespace platypus
         if (_pImpl)
         {
             vkDestroyDescriptorPool(
-                Context::get_impl()->device,
+                Context::get_instance()->getImpl()->device,
                 _pImpl->handle,
                 nullptr
             );
@@ -219,7 +219,7 @@ namespace platypus
         allocInfo.pSetLayouts = &pLayout->getImpl()->handle;
 
         VkDescriptorSet descriptorSetHandle;
-        VkDevice device = Context::get_impl()->device;
+        VkDevice device = Context::get_instance()->getImpl()->device;
         VkResult allocResult = vkAllocateDescriptorSets(
             device,
             &allocInfo,
@@ -243,7 +243,11 @@ namespace platypus
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = pBuffer->getImpl()->handle;
             bufferInfo.offset = 0;
-            bufferInfo.range = pBuffer->getDataElemSize();//pBuffer->getTotalSize();
+            // NOTE: range was pBuffer->getTotalSize() earlier because didn't use "dynamic uniform buffers"
+            // -> meaning large buffer used with dynamic offsets instead of whole buffer when binding
+            // descriptor sets! -> And range being the element size should make sence for all cases
+            //  -> YOU JUST NEED TO BE CAREFUL THAT YOU PROVIDE THE CORRECT ELEMENT SIZE!
+            bufferInfo.range = pBuffer->getDataElemSize();
             bufferInfos.push_back(bufferInfo);
 
             const DescriptorSetLayoutBinding& binding = bindings[i];

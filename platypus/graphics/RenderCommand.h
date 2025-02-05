@@ -19,7 +19,8 @@ namespace platypus
         void begin_render_pass(
             const CommandBuffer& primaryCmdBuf,
             const Swapchain& swapchain,
-            const Vector4f& clearColor
+            const Vector4f& clearColor,
+            bool clearDepthBuffer
         );
         void end_render_pass(const CommandBuffer& commandBuffer);
 

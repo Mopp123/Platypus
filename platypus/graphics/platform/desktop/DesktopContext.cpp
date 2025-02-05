@@ -404,7 +404,11 @@ namespace platypus
         return ((queueFamilyIndices.queueFlags & requiredFlags) == requiredFlags) && supportsSwapchain && swapchainDetailsAdequate;
     }
 
-    VkPhysicalDevice auto_pick_physical_device(VkInstance instance, VkSurfaceKHR surface)
+    static VkPhysicalDevice auto_pick_physical_device(
+        VkInstance instance,
+        VkSurfaceKHR surface,
+        size_t& outMinUniformBufferOffsetAlignment
+    )
     {
         uint32_t physicalDeviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
@@ -439,8 +443,7 @@ namespace platypus
             if (is_device_adequate(physicalDevice, surface))
             {
                 Debug::log("Picked device: " + deviceNameStr);
-                // TESTING
-                Debug::log("___TEST___minUniformBufferOffsetAlignment: " + std::to_string(properties.limits.minUniformBufferOffsetAlignment));
+                outMinUniformBufferOffsetAlignment = properties.limits.minUniformBufferOffsetAlignment;
                 return physicalDevice;
             }
         }
@@ -545,8 +548,7 @@ namespace platypus
         return vmaAllocator;
     }
 
-    ContextImpl* Context::s_pImpl = nullptr;
-
+    Context* Context::s_pInstance = nullptr;
     Context::Context(const char* appName, Window* pWindow)
     {
         std::vector<const char*> requiredInstanceExtensions = get_required_instance_extensions();
@@ -565,7 +567,7 @@ namespace platypus
 
         VkSurfaceKHR surface = create_window_surface(instance, pWindow);
 
-        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(instance, surface);
+        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(instance, surface, _minUniformBufferOffsetAlignment);
         ContextImpl::QueueFamilyIndices deviceQueueFamilyIndices = find_queue_families(selectedPhysicalDevice, surface);
         ContextImpl::SwapchainSupportDetails swapchainDetails = query_swapchain_support_details(selectedPhysicalDevice, surface);
         // NOTE: Not sure if should actually give queues as ptrs to ptrs here?
@@ -587,51 +589,39 @@ namespace platypus
             instance
         );
 
-        s_pImpl = new ContextImpl;
-        s_pImpl->instance = instance;
+        _pImpl = new ContextImpl;
+        _pImpl->instance = instance;
         #ifdef PLATYPUS_DEBUG
-            s_pImpl->debugMessenger = debugMessenger;
+            _pImpl->debugMessenger = debugMessenger;
         #endif
-        s_pImpl->surface = surface;
-        s_pImpl->physicalDevice = selectedPhysicalDevice;
-        s_pImpl->device = device;
-        s_pImpl->vmaAllocator = vmaAllocator;
-        s_pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
-        s_pImpl->graphicsQueue = graphicsQueue;
-        s_pImpl->presentQueue = presentQueue;
-        s_pImpl->deviceSwapchainSupportDetails = swapchainDetails;
+        _pImpl->surface = surface;
+        _pImpl->physicalDevice = selectedPhysicalDevice;
+        _pImpl->device = device;
+        _pImpl->vmaAllocator = vmaAllocator;
+        _pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
+        _pImpl->graphicsQueue = graphicsQueue;
+        _pImpl->presentQueue = presentQueue;
+        _pImpl->deviceSwapchainSupportDetails = swapchainDetails;
+
+        s_pInstance = this;
 
         Debug::log("Graphics Context created");
     }
 
     Context::~Context()
     {
-        if (s_pImpl->instance)
+        if (_pImpl->instance)
         {
-            vmaDestroyAllocator(s_pImpl->vmaAllocator);
-            vkDestroyDevice(s_pImpl->device, nullptr);
-            vkDestroySurfaceKHR(s_pImpl->instance, s_pImpl->surface, nullptr);
+            vmaDestroyAllocator(_pImpl->vmaAllocator);
+            vkDestroyDevice(_pImpl->device, nullptr);
+            vkDestroySurfaceKHR(_pImpl->instance, _pImpl->surface, nullptr);
             #ifdef PLATYPUS_DEBUG
-                if (s_pImpl->debugMessenger)
-                    destroy_vk_debug_messenger(s_pImpl->instance, s_pImpl->debugMessenger, nullptr);
+                if (_pImpl->debugMessenger)
+                    destroy_vk_debug_messenger(_pImpl->instance, _pImpl->debugMessenger, nullptr);
             #endif
-            vkDestroyInstance(s_pImpl->instance, nullptr);
+            vkDestroyInstance(_pImpl->instance, nullptr);
         }
-        delete s_pImpl;
-    }
-
-    const ContextImpl * const Context::get_impl()
-    {
-        if (!s_pImpl)
-        {
-            Debug::log(
-                "@Context::get_impl "
-                "Context implementation was nullptr! Make sure you created Context before accessing it.",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        return s_pImpl;
+        delete _pImpl;
     }
 
     void Context::submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame)
@@ -640,7 +630,7 @@ namespace platypus
         uint32_t imageIndex = swapchain.getCurrentImageIndex();
         // check if prev frame is using this image
         if (pSwapchainImpl->inFlightImages[imageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightImages[imageIndex], VK_TRUE, UINT64_MAX);
+            vkWaitForFences(_pImpl->device, 1, &pSwapchainImpl->inFlightImages[imageIndex], VK_TRUE, UINT64_MAX);
 
         // mark this img to be now used by this frame
         pSwapchainImpl->inFlightImages[imageIndex] = pSwapchainImpl->inFlightFences[frame];
@@ -658,9 +648,9 @@ namespace platypus
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &pSwapchainImpl->renderFinishedSemaphores[frame];
 
-        vkResetFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
+        vkResetFences(_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
         VkResult submitResult = vkQueueSubmit(
-            s_pImpl->graphicsQueue,
+            _pImpl->graphicsQueue,
             1,
             &submitInfo,
             pSwapchainImpl->inFlightFences[frame]
@@ -679,14 +669,29 @@ namespace platypus
 
     void Context::waitForOperations()
     {
-        vkDeviceWaitIdle(s_pImpl->device);
+        vkDeviceWaitIdle(_pImpl->device);
     }
 
     void Context::handleWindowResize()
     {
-        s_pImpl->deviceSwapchainSupportDetails = query_swapchain_support_details(
-            s_pImpl->physicalDevice,
-            s_pImpl->surface
+        _pImpl->deviceSwapchainSupportDetails = query_swapchain_support_details(
+            _pImpl->physicalDevice,
+            _pImpl->surface
         );
+    }
+
+    Context* Context::get_instance()
+    {
+        if (!s_pInstance)
+        {
+            Debug::log(
+                "@Context::get_instance "
+                "Context instance was nullptr!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return s_pInstance;
     }
 }

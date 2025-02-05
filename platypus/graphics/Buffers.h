@@ -63,6 +63,11 @@ namespace platypus
 
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
+    // On Vulkan side this returns required actual size for inputted requestSize
+    // satisfying the minUniformBufferOffsetAlignment requirement.
+    //  -> In other words, returns a multiple of the requirement
+    // On OpenGL this returns the inputted requestSize
+    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize);
 
     class Pipeline;
 

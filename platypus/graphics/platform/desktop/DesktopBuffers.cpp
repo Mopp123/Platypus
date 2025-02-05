@@ -101,6 +101,13 @@ namespace platypus
         }
     }
 
+    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
+    {
+        size_t alignRequirement = Context::get_instance()->getMinUniformBufferOffsetAlignment();
+        size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
+        return  alignRequirement * (diff + 1);
+    }
+
     VkIndexType to_vk_index_type(size_t bufferElementSize)
     {
         switch (bufferElementSize)
@@ -249,10 +256,11 @@ namespace platypus
             allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
 
+        VmaAllocator vmaAllocator = Context::get_instance()->getImpl()->vmaAllocator;
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createResult = vmaCreateBuffer(
-            Context::get_impl()->vmaAllocator,
+            vmaAllocator,
             &createInfo,
             &allocInfo,
             &buffer,
@@ -276,7 +284,7 @@ namespace platypus
         {
             VmaAllocationInfo allocatedInfo;
             vmaGetAllocationInfo(
-                Context::get_impl()->vmaAllocator,
+                vmaAllocator,
                 vmaAllocation,
                 &allocatedInfo
             );
@@ -294,7 +302,7 @@ namespace platypus
         if (_pImpl)
         {
             vmaDestroyBuffer(
-                Context::get_impl()->vmaAllocator,
+                Context::get_instance()->getImpl()->vmaAllocator,
                 _pImpl->handle,
                 _pImpl->vmaAllocation
             );
@@ -319,7 +327,7 @@ namespace platypus
 
         VmaAllocationInfo allocatedInfo;
         vmaGetAllocationInfo(
-            Context::get_impl()->vmaAllocator,
+            Context::get_instance()->getImpl()->vmaAllocator,
             _pImpl->vmaAllocation,
             &allocatedInfo
         );
@@ -342,7 +350,7 @@ namespace platypus
 
         VmaAllocationInfo allocatedInfo;
         vmaGetAllocationInfo(
-            Context::get_impl()->vmaAllocator,
+            Context::get_instance()->getImpl()->vmaAllocator,
             _pImpl->vmaAllocation,
             &allocatedInfo
         );

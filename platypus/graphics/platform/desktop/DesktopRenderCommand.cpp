@@ -21,7 +21,8 @@ namespace platypus
         void begin_render_pass(
             const CommandBuffer& primaryCmdBuf,
             const Swapchain& swapchain,
-            const Vector4f& clearColor
+            const Vector4f& clearColor,
+            bool clearDepthBuffer
         )
         {
             VkRenderPassBeginInfo beginInfo{};
@@ -30,11 +31,20 @@ namespace platypus
             beginInfo.framebuffer = swapchain.getImpl()->framebuffers[swapchain.getCurrentImageIndex()];
 
             VkClearValue clearColorValue{};
-            clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }}; // NOTE: Not sure about the ycm syntax error here? might be gaslighting?:D
-
-            // TODO: add another clear value, clearing depthStencil (cannot reside in the same VkClearValue!)
-            beginInfo.clearValueCount = 1;
-            beginInfo.pClearValues = &clearColorValue;
+            clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
+            if (clearDepthBuffer)
+            {
+                VkClearValue clearDepthStencilValue{};
+                clearDepthStencilValue.depthStencil = { 1.0f, 0 };
+                beginInfo.clearValueCount = 2;
+                VkClearValue clearValues[2] = { clearColorValue, clearDepthStencilValue };
+                beginInfo.pClearValues = clearValues;
+            }
+            else
+            {
+                beginInfo.clearValueCount = 1;
+                beginInfo.pClearValues = &clearColorValue;
+            }
 
             beginInfo.renderArea.offset = { 0, 0 };
             Extent2D swapchainExtent = swapchain.getExtent();

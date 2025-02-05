@@ -15,7 +15,7 @@ TestScene::~TestScene()
     Debug::log("___TEST___destroyed test scene!");
 }
 
-static void create_test_entity(
+static entityID_t create_test_entity(
     Scene* pScene,
     const Mesh* pMesh,
     const Vector3f& position,
@@ -34,6 +34,7 @@ static void create_test_entity(
         testEntity,
         pMesh->getID()
     );
+    return testEntity;
 }
 
 void TestScene::init()
@@ -59,22 +60,31 @@ void TestScene::init()
     create_test_entity(
         this,
         pMesh,
-        { 1.0f, 0, -2.0f },
+        { 0.5f, 0, -1.5f },
         { { 0, 1, 0 }, 0 },
         { 0.5f, 0.5f, 0.5f }
     );
 
-    create_test_entity(
+    testEntity = create_test_entity(
         this,
         pMesh,
-        { -1.0f, 0, -2.0f },
+        { 0.0f, 0, -2.0f },
         { { 0, 0, 1 }, 0.785f },
-        { 0.4f, 0.4f, 0.4f }
+        { 0.5f, 0.5f, 0.5f }
     );
 
     Debug::log("___TEST___initialized test scene!");
 }
 
+static float s_TEST_value = 0.0f;
 void TestScene::update()
 {
+    s_TEST_value += 0.0001f;
+    Matrix4f newMatrix = create_transformation_matrix(
+        { 0.0f, 0, -2.0f },
+        { { 0, 0, 1 }, s_TEST_value },
+        { 0.4f, 0.4f, 0.4f }
+    );
+    Transform* pTransform = (Transform*)getComponent(testEntity, ComponentType::COMPONENT_TYPE_TRANSFORM);
+    pTransform->globalMatrix = newMatrix;
 }

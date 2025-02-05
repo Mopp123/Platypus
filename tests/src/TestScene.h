@@ -8,6 +8,8 @@
 class TestScene : public platypus::Scene
 {
 public:
+    entityID_t testEntity = NULL_ENTITY_ID;
+
     TestScene();
     ~TestScene();
     virtual void init();

@@ -60,10 +60,39 @@ namespace platypus
         }
     }
 
+    static VkFormat get_supported_depth_image_format(VkPhysicalDevice physicalDevice)
+    {
+        std::vector<VkFormat> desiredFormats =
+        {
+            VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D32_SFLOAT_S8_UINT,
+            VK_FORMAT_D24_UNORM_S8_UINT
+        };
+        VkFormatFeatureFlags featureFlags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        for (VkFormat format : desiredFormats)
+        {
+            VkFormatProperties properties;
+            vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);
+            // NOTE: Atm assuming to use VkImageTiling = VK_IMAGE_TILING_OPTIMAL!
+            if ((properties.optimalTilingFeatures & featureFlags) == featureFlags)
+            {
+                return format;
+            }
+        }
+        Debug::log(
+            "@get_supported_depth_image_format "
+            "Failed to find suitable depth image format!",
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return desiredFormats[0];
+    }
+
     static std::vector<VkImageView> create_image_views(
         VkDevice device,
         const std::vector<VkImage>& images,
-        VkFormat format
+        VkFormat format,
+        VkImageAspectFlags aspectFlags
     )
     {
         std::vector<VkImageView> imageViews(images.size());
@@ -79,7 +108,7 @@ namespace platypus
             createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.aspectMask = aspectFlags;
             createInfo.subresourceRange.baseMipLevel = 0;
             createInfo.subresourceRange.levelCount = 1;
             createInfo.subresourceRange.baseArrayLayer = 0;
@@ -97,6 +126,7 @@ namespace platypus
                 Debug::log(
                     "@create_image_views "
                     "Failed to create image view for swapchain at index: " + std::to_string(i) + " "
+                    "using aspect flag: " + std::to_string(aspectFlags) + " "
                     "VkResult: " + errStr,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -106,10 +136,73 @@ namespace platypus
         return imageViews;
     }
 
+    static void create_depth_texture(
+        VkDevice device,
+        VkPhysicalDevice physicalDevice,
+        VkExtent2D surfaceExtent,
+        VmaAllocator allocator,
+        VkFormat* outImageFormat,
+        VkImage* outImage,
+        VkImageView* outImageView,
+        VmaAllocation* outAllocation
+    )
+    {
+        VkFormat format = get_supported_depth_image_format(physicalDevice);
+        *outImageFormat = format;
+
+        VkImageCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        createInfo.imageType = VK_IMAGE_TYPE_2D;
+        createInfo.extent.width = surfaceExtent.width;
+        createInfo.extent.height = surfaceExtent.height;
+        createInfo.extent.depth = 1; // Wasn't sure is depth put to 1 in the param, so thats why...
+        createInfo.mipLevels = 1;
+        createInfo.arrayLayers = 1;
+        createInfo.format = format;
+        createInfo.tiling = VK_IMAGE_TILING_OPTIMAL; // TODO: Make this modifyable and make sure the used tiling is supported!
+        createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VmaAllocationCreateInfo allocCreateInfo{};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+        allocCreateInfo.priority = 1.0f;
+
+        VkResult createImageResult = vmaCreateImage(
+            allocator,
+            &createInfo,
+            &allocCreateInfo,
+            outImage,
+            outAllocation,
+            nullptr
+        );
+        if (createImageResult != VK_SUCCESS)
+        {
+            const std::string resultStr(string_VkResult(createImageResult));
+            Debug::log(
+                "@create_depth_textures "
+                "Failed to create depth image for swapchain! VkResult: " + resultStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        std::vector<VkImageView> imageViews = create_image_views(
+            device,
+            { *outImage },
+            format,
+            VK_IMAGE_ASPECT_DEPTH_BIT
+        );
+        *outImageView = imageViews[0];
+    }
 
     static std::vector<VkFramebuffer> create_framebuffers(
         VkDevice device,
         const std::vector<VkImageView>& imageViews,
+        VkImageView depthImageView,
         VkRenderPass renderPass,
         VkExtent2D surfaceExtent
     )
@@ -119,14 +212,14 @@ namespace platypus
         {
             VkImageView attachments[] =
             {
-                imageViews[i]/*,
-                _depthTexture->getVkImageView()*/
+                imageViews[i],
+                depthImageView
             };
 
             VkFramebufferCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             createInfo.renderPass = renderPass;
-            createInfo.attachmentCount = 1; //2;
+            createInfo.attachmentCount = 2;
             createInfo.pAttachments = attachments;
             createInfo.width = surfaceExtent.width;
             createInfo.height = surfaceExtent.height;
@@ -244,7 +337,8 @@ namespace platypus
 
     void Swapchain::create(Window& window)
     {
-        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = Context::get_impl()->deviceSwapchainSupportDetails;
+        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = pContextImpl->deviceSwapchainSupportDetails;
         const VkSurfaceCapabilitiesKHR& surfaceCapabilities = swapchainSupportDetails.surfaceCapabilities;
         VkSurfaceFormatKHR selectedFormat = select_surface_format(swapchainSupportDetails.surfaceFormats);
         VkPresentModeKHR selectedPresentMode = select_present_mode(swapchainSupportDetails.presentModes);
@@ -257,7 +351,7 @@ namespace platypus
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = Context::get_impl()->surface;
+        createInfo.surface = pContextImpl->surface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = selectedFormat.format;
         createInfo.imageColorSpace = selectedFormat.colorSpace;
@@ -265,7 +359,7 @@ namespace platypus
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = Context::get_impl()->deviceQueueFamilyIndices;
+        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = pContextImpl->deviceQueueFamilyIndices;
         uint32_t usedIndices[2] = { deviceQueueFamilyIndices.graphicsFamily, deviceQueueFamilyIndices.presentFamily };
 
         if (usedIndices[0] == usedIndices[1])
@@ -291,7 +385,7 @@ namespace platypus
         // NOTE: Used when dealing with recreating swapchain due to window resizing, or something else!
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        VkDevice device = Context::get_impl()->device;
+        VkDevice device = pContextImpl->device;
         VkSwapchainKHR swapchain;
         VkResult createResult = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
         if (createResult != VK_SUCCESS)
@@ -313,13 +407,31 @@ namespace platypus
         _pImpl->extent = selectedExtent;
         _pImpl->imageFormat = selectedFormat.format;
         _pImpl->images = createdImages;
-        _pImpl->imageViews = create_image_views(device, createdImages, selectedFormat.format);
+        _pImpl->imageViews = create_image_views(
+            device,
+            createdImages,
+            selectedFormat.format,
+            VK_IMAGE_ASPECT_COLOR_BIT
+        );
         _pImpl->maxFramesInFlight = _imageCount - 1;
 
+        create_depth_texture(
+            device,
+            pContextImpl->physicalDevice,
+            selectedExtent,
+            pContextImpl->vmaAllocator,
+            &_pImpl->depthImageFormat,
+            &_pImpl->depthImage,
+            &_pImpl->depthImageView,
+            &_pImpl->depthImageAllocation
+        );
+
         _renderPass.create(*this);
+
         _pImpl->framebuffers = create_framebuffers(
             device,
             _pImpl->imageViews,
+            _pImpl->depthImageView,
             _renderPass.getImpl()->handle,
             selectedExtent
         );
@@ -340,7 +452,8 @@ namespace platypus
     void Swapchain::destroy()
     {
         // NOTE: Not sure is this the best way to throw the device around...
-        VkDevice device = Context::get_impl()->device;
+        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+        VkDevice device = pContextImpl->device;
 
         for (size_t i = 0; i < _pImpl->maxFramesInFlight; ++i)
         {
@@ -356,6 +469,13 @@ namespace platypus
         _pImpl->renderFinishedSemaphores.clear();
         _pImpl->inFlightFences.clear();
         _pImpl->inFlightImages.clear();
+
+        vkDestroyImageView(device, _pImpl->depthImageView, nullptr);
+        vmaDestroyImage(
+            pContextImpl->vmaAllocator,
+            _pImpl->depthImage,
+            _pImpl->depthImageAllocation
+        );
 
         _renderPass.destroy();
         for (VkFramebuffer framebuffer : _pImpl->framebuffers)
@@ -380,7 +500,7 @@ namespace platypus
 
     SwapchainResult Swapchain::acquireImage()
     {
-        VkDevice device = Context::get_impl()->device;
+        VkDevice device = Context::get_instance()->getImpl()->device;
         vkWaitForFences(
             device,
             1,
@@ -435,7 +555,7 @@ namespace platypus
 
         presentInfo.pImageIndices = &_currentImageIndex;
 
-        VkResult presentResult = vkQueuePresentKHR(Context::get_impl()->presentQueue, &presentInfo);
+        VkResult presentResult = vkQueuePresentKHR(Context::get_instance()->getImpl()->presentQueue, &presentInfo);
         SwapchainResult retResult = SwapchainResult::ERROR;
 
         if (presentResult == VK_SUCCESS)

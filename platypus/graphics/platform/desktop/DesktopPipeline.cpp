@@ -10,6 +10,7 @@
 #include "DesktopDescriptors.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -39,6 +40,29 @@ namespace platypus
         }
         return VK_FRONT_FACE_COUNTER_CLOCKWISE;
     }
+
+
+    static VkCompareOp to_vk_depth_compare_op(DepthCompareOperation op)
+    {
+        switch (op)
+        {
+            case COMPARE_OP_NEVER:              return VK_COMPARE_OP_NEVER;
+            case COMPARE_OP_LESS:               return VK_COMPARE_OP_LESS;
+            case COMPARE_OP_EQUAL:              return VK_COMPARE_OP_EQUAL;
+            case COMPARE_OP_LESS_OR_EQUAL:      return VK_COMPARE_OP_LESS_OR_EQUAL;
+            case COMPARE_OP_GREATER:            return VK_COMPARE_OP_GREATER;
+            case COMPARE_OP_NOT_EQUAL:          return VK_COMPARE_OP_NOT_EQUAL;
+            case COMPARE_OP_GREATER_OR_EQUAL:   return VK_COMPARE_OP_GREATER_OR_EQUAL;
+            case COMPARE_OP_ALWAYS:             return VK_COMPARE_OP_ALWAYS;
+            default:
+                Debug::log(
+                    "@to_vk_depth_compare_op Invalid operation: " + std::to_string(op),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+        }
+        return VK_COMPARE_OP_NEVER;
+    }
+
 
     Pipeline::Pipeline()
     {
@@ -71,6 +95,7 @@ namespace platypus
         uint32_t pushConstantStageFlags
     )
     {
+        VkDevice device = Context::get_instance()->getImpl()->device;
         // Get vulkan handles from out vertexBufferLayouts
         std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
         std::vector<VkVertexInputAttributeDescription> vertexAttribDescriptions;
@@ -159,19 +184,32 @@ namespace platypus
 
         // Depth and stencil testing
         //--------------------------
-        /*
         VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
-        depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-        depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
-        depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
-        depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE; // DISABLED ATM!
-        depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
-        depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
-        depthStencilCreateInfo.stencilTestEnable = VK_FALSE; // DISABLED ATM!
-        depthStencilCreateInfo.front = {}; // Optional (*related to stencilTestEnable)
-        depthStencilCreateInfo.back = {}; // Optional (*related to stencilTestEnable)
-        */
+        if (enableDepthTest)
+        {
+            depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+            depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+            depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+            depthStencilCreateInfo.depthCompareOp = to_vk_depth_compare_op(depthCmpOp);
+            depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE; // DISABLED ATM!
+            depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
+            depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
+            depthStencilCreateInfo.stencilTestEnable = VK_FALSE; // DISABLED ATM!
+            depthStencilCreateInfo.front = {}; // Optional (*related to stencilTestEnable)
+            depthStencilCreateInfo.back = {}; // Optional (*related to stencilTestEnable)
+        }
+        else
+        {
+            Debug::log(
+                "@Pipeline::create "
+                "Depth testing was disabled for pipeline but currently "
+                "using only a single render pass which requires pipeline to "
+                "configure VkPipelineDepthStencilStateCreateInfo! "
+                "...sorry for the inconveniance:D",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
 
         // Color blending (Theres 2 ways to do blending -> "blendEnable" or "logicOpEnable")
         //---------------
@@ -232,7 +270,7 @@ namespace platypus
 
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkResult createPipelineLayoutResult = vkCreatePipelineLayout(
-            Context::get_impl()->device,
+            device,
             &layoutCreateInfo,
             nullptr,
             &pipelineLayout
@@ -259,7 +297,7 @@ namespace platypus
         pipelineCreateInfo.pViewportState = &viewportCreateInfo;
         pipelineCreateInfo.pRasterizationState = &rasterizationCreateInfo;
         pipelineCreateInfo.pMultisampleState = &multisampleCreateInfo;
-        pipelineCreateInfo.pDepthStencilState = nullptr; //&depthStencilCreateInfo;
+        pipelineCreateInfo.pDepthStencilState = enableDepthTest ? &depthStencilCreateInfo: nullptr;
         pipelineCreateInfo.pColorBlendState = &colorBlendCreateInfo;
         pipelineCreateInfo.pDynamicState = nullptr; // not used atm!
         pipelineCreateInfo.layout = pipelineLayout;
@@ -272,7 +310,7 @@ namespace platypus
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkResult createResult = vkCreateGraphicsPipelines(
-            Context::get_impl()->device,
+            device,
             VK_NULL_HANDLE,
             1,
             &pipelineCreateInfo,
@@ -299,7 +337,7 @@ namespace platypus
 
     void Pipeline::destroy()
     {
-        VkDevice device = Context::get_impl()->device;
+        VkDevice device = Context::get_instance()->getImpl()->device;
         vkDestroyPipeline(device, _pImpl->handle, nullptr);
         vkDestroyPipelineLayout(device, _pImpl->layout, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;

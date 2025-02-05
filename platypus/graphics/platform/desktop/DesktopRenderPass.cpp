@@ -36,10 +36,10 @@ namespace platypus
             return;
         }
 
-        VkFormat format = swapchain._pImpl->imageFormat;
+        VkFormat colorImageFormat = swapchain._pImpl->imageFormat;
 
         VkAttachmentDescription colorAttachmentDescription{};
-        colorAttachmentDescription.format = format;
+        colorAttachmentDescription.format = colorImageFormat;
         colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -48,9 +48,9 @@ namespace platypus
         colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         colorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        /*
+        VkFormat depthImageFormat = swapchain._pImpl->depthImageFormat;
         VkAttachmentDescription depthAttachmentDescription{};
-        depthAttachmentDescription.format = depthFormat;
+        depthAttachmentDescription.format = depthImageFormat;
         depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -58,37 +58,33 @@ namespace platypus
         depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        */
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 
-        /*
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment = 1;
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        */
 
         VkSubpassDescription subpassDescription{};
         subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpassDescription.colorAttachmentCount = 1;
         subpassDescription.pColorAttachments = &colorAttachmentRef;
-        //subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
+        subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
 
         VkSubpassDependency subPassDependency{};
         subPassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         subPassDependency.dstSubpass = 0;
-        subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
+        subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
         subPassDependency.srcAccessMask = 0; // no fukin idea what this is..
-        subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        //VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription, depthAttachmentDescription };
-        VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription };
+        subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription, depthAttachmentDescription };
 
         VkRenderPassCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        createInfo.attachmentCount = 1;//2;
+        createInfo.attachmentCount = 2;
         createInfo.pAttachments = renderPassAttachments;
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
@@ -98,7 +94,7 @@ namespace platypus
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(
-            Context::get_impl()->device,
+            Context::get_instance()->getImpl()->device,
             &createInfo,
             nullptr,
             &renderPass
@@ -121,7 +117,7 @@ namespace platypus
 
     void RenderPass::destroy()
     {
-        vkDestroyRenderPass(Context::get_impl()->device, _pImpl->handle, nullptr);
+        vkDestroyRenderPass(Context::get_instance()->getImpl()->device, _pImpl->handle, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;
     }
 }

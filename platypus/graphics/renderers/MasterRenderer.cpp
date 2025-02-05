@@ -80,7 +80,7 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[frame];
 
         currentCommandBuffer.begin(swapchain.getRenderPass());
-        render::begin_render_pass(currentCommandBuffer, swapchain, { 0, 0, 1, 1 });
+        render::begin_render_pass(currentCommandBuffer, swapchain, { 0, 0, 1, 1 }, true);
 
         // NOTE: We create new copies of secondary command buffers here!
         // Fucking stupid, since the actual command buffers we are using/refering to lives inside the

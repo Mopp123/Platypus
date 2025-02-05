@@ -17,7 +17,11 @@ namespace platypus
         friend class Swapchain;
         friend class Shader;
         friend class Buffer;
-        static ContextImpl* s_pImpl;
+
+        static Context* s_pInstance;
+        ContextImpl* _pImpl = nullptr;
+
+        size_t _minUniformBufferOffsetAlignment = 1;
 
     public:
         Context(const char* appName, Window* pWindow);
@@ -36,6 +40,11 @@ namespace platypus
         // *On vulkan, required to re query swapchain support details to recreate swapchain
         void handleWindowResize();
 
-        static const ContextImpl * const get_impl();
+        static Context* get_instance();
+
+        // Required for vulkan's descriptor sets using dynamic offsets of uniform buffers.
+        // For OpenGL this should be always 1
+        inline size_t getMinUniformBufferOffsetAlignment() const { return _minUniformBufferOffsetAlignment; }
+        inline const ContextImpl * const getImpl() const { return _pImpl; }
     };
 }
