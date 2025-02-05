@@ -1,6 +1,5 @@
 #include "Scene.h"
 #include "Application.h"
-
 #include "Debug.h"
 
 
@@ -8,14 +7,16 @@ namespace platypus
 {
     Scene::Scene()
     {
-        /*
         size_t maxEntityCount = 1000;
-        size_t maxDirectionalLights = 1;
 
-        componentPools[ComponentType::PK_TRANSFORM] = ComponentPool(
+        _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
+            sizeof(Transform), maxEntityCount, true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
             sizeof(Transform), maxEntityCount, true
         );
 
+        /*
         // NOTE: Only temporarely adding all default systems here!
         // TODO: Some better way of handling this!!
         //  Also you would need to create all default systems at start
@@ -263,5 +264,77 @@ namespace platypus
             Debug::MessageType::PLATYPUS_MESSAGE
         );
         return nullptr;
+    }
+
+    Transform* Scene::createTransform(
+        entityID_t target,
+        const Vector3f& position,
+        const Quaternion& rotation,
+        const Vector3f& scale
+    )
+    {
+        if (!isValidEntity(target))
+        {
+            Debug::log(
+                "@Scene::createTransform "
+                "Invalid entity: " + std::to_string(target),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_TRANSFORM;
+        if (_componentPools.find(componentType) == _componentPools.end())
+        {
+            Debug::log(
+                "@Scene::createTransform "
+                "No component pool exists for component type: " + std::to_string(componentType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        Transform* pComponent = (Transform*)_componentPools[componentType].allocComponent(target);
+        addToComponentMask(target, componentType);
+        pComponent->globalMatrix = create_transformation_matrix(
+            position,
+            rotation,
+            scale
+        );
+
+        return pComponent;
+    }
+
+    StaticMeshRenderable* Scene::createStaticMeshRenderable(
+        entityID_t target,
+        ID_t meshAssetID
+    )
+    {
+        if (!isValidEntity(target))
+        {
+            Debug::log(
+                "@Scene::Scene::createStaticMeshRenderable "
+                "Invalid entity: " + std::to_string(target),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
+        if (_componentPools.find(componentType) == _componentPools.end())
+        {
+            Debug::log(
+                "@Scene::Scene::createStaticMeshRenderable "
+                "No component pool exists for component type: " + std::to_string(componentType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        StaticMeshRenderable* pComponent = (StaticMeshRenderable*)_componentPools[componentType].allocComponent(target);
+        addToComponentMask(target, componentType);
+        pComponent->meshID = meshAssetID;
+
+        return pComponent;
     }
 }

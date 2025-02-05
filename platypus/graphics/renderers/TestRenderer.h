@@ -7,6 +7,7 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/utils/Maths.h"
+#include "platypus/assets/Mesh.h"
 #include <cstdlib>
 
 
@@ -22,9 +23,6 @@ namespace platypus
         Shader _vertexShader;
         Shader _fragmentShader;
 
-        Buffer* _pVertexBuffer = nullptr;
-        Buffer* _pIndexBuffer = nullptr;
-
         std::vector<Buffer*> _testUniformBuffer;
 
         DescriptorSetLayout _testDescriptorSetLayout;
@@ -32,6 +30,17 @@ namespace platypus
 
         float _viewportWidth = 0.0f;
         float _viewportHeight = 0.0f;
+
+        // Just quick dumb way to test rendering multiple thigs
+        // TODO:
+        //  * Batching
+        struct RenderData
+        {
+            const Buffer* pVertexBuffer = nullptr;
+            const Buffer* pIndexBuffer = nullptr;
+            Matrix4f transformationMatrix = Matrix4f(1.0f);
+        };
+        std::vector<RenderData> _renderList;
 
     public:
         TestRenderer(
@@ -50,6 +59,8 @@ namespace platypus
             float viewportHeight
         );
         void destroyPipeline();
+
+        void submit(const Mesh* pMesh, const Matrix4f& transformationMatrix);
 
         const CommandBuffer& recordCommandBuffer(
             const RenderPass& renderPass,

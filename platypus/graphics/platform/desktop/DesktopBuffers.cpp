@@ -308,7 +308,7 @@ namespace platypus
         if (dataSize > getTotalSize())
         {
             Debug::log(
-                "@Buffer::update "
+                "@Buffer::update(1) "
                 "provided data size(" + std::to_string(dataSize) + ") too big! "
                 "Buffer size is " + std::to_string(getTotalSize()),
                 Debug::MessageType::PLATYPUS_ERROR
@@ -324,5 +324,28 @@ namespace platypus
             &allocatedInfo
         );
         memcpy(allocatedInfo.pMappedData, pData, dataSize);
+    }
+
+    void Buffer::update(void* pData, size_t dataSize, size_t offset)
+    {
+        if (dataSize + offset > getTotalSize())
+        {
+            Debug::log(
+                "@Buffer::update(2) "
+                "provided data size(" + std::to_string(dataSize) + ") too big using offset: " + std::to_string(offset) + " "
+                "Buffer size is " + std::to_string(getTotalSize()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        VmaAllocationInfo allocatedInfo;
+        vmaGetAllocationInfo(
+            Context::get_impl()->vmaAllocator,
+            _pImpl->vmaAllocation,
+            &allocatedInfo
+        );
+        memcpy(((PE_byte*)allocatedInfo.pMappedData) + offset, pData, dataSize);
     }
 }

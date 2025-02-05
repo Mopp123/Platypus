@@ -15,6 +15,7 @@ namespace platypus
         switch (type)
         {
             case DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            case DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
             case DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             default:
                 Debug::log(
@@ -138,7 +139,8 @@ namespace platypus
         const uint32_t maxDescriptorSets = 1 * maxFramesInFlight;
         const std::vector<DescriptorType> types =
         {
-            DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER
+            DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER
         };
 
         for (size_t i = 0; i < types.size(); ++i)
@@ -241,7 +243,7 @@ namespace platypus
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = pBuffer->getImpl()->handle;
             bufferInfo.offset = 0;
-            bufferInfo.range = pBuffer->getTotalSize();
+            bufferInfo.range = pBuffer->getDataElemSize();//pBuffer->getTotalSize();
             bufferInfos.push_back(bufferInfo);
 
             const DescriptorSetLayoutBinding& binding = bindings[i];

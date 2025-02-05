@@ -23,7 +23,8 @@ namespace platypus
         _swapchain(_window),
         _descriptorPool(_swapchain),
         // NOTE: Not sure is CommanPool created at this point -> fucks up master renderer creation if not!
-        _masterRenderer(_swapchain, _commandPool, _descriptorPool)
+        _masterRenderer(_swapchain, _commandPool, _descriptorPool),
+        _assetManager(_commandPool)
     {
         if (s_pInstance)
         {

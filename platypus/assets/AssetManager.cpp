@@ -1,11 +1,19 @@
 #include "AssetManager.h"
 #include "platypus/core/Debug.h"
+#include "platypus/graphics/Buffers.h"
 
 
 namespace platypus
 {
+    AssetManager::AssetManager(CommandPool& commandPool) :
+        _commandPoolRef(commandPool)
+    {
+    }
+
     AssetManager::~AssetManager()
-    {}
+    {
+        destroyAssets();
+    }
 
     void AssetManager::destroyAssets()
     {
@@ -18,8 +26,27 @@ namespace platypus
         Debug::log("Assets destroyed");
     }
 
-    Mesh* AssetManager::createMesh(Buffer* pVertexBuffer, Buffer* pIndexBuffer)
+    Mesh* AssetManager::createMesh(
+        const std::vector<float>& vertexData,
+        const std::vector<uint32_t>& indexData
+    )
     {
+        Buffer* pVertexBuffer = new Buffer(
+            _commandPoolRef,
+            (void*)vertexData.data(),
+            sizeof(float),
+            vertexData.size(),
+            BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+        );
+        Buffer* pIndexBuffer = new Buffer(
+            _commandPoolRef,
+            (void*)indexData.data(),
+            sizeof(uint32_t),
+            indexData.size(),
+            BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+        );
         Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer);
         _assets[pMesh->getID()] = pMesh;
         return pMesh;

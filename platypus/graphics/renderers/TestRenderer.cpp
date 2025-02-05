@@ -7,6 +7,8 @@
 
 namespace platypus
 {
+    static size_t s_TEST_MAX_ENTITIES = 100;
+    static size_t s_TEST_MIN_ALIGNMENT = 256;
     TestRenderer::TestRenderer(
         const Swapchain& swapchain,
         CommandPool& commandPool,
@@ -21,61 +23,32 @@ namespace platypus
                 {
                     0,
                     1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     { { 1, ShaderDataType::Mat4 } }
                 }
             }
         )
     {
-        // NOTE: Not sure can buffers exist through the whole lifetime of the app...
-
-        // TESTING!
-        float s = 1.0f;
-        std::vector<float> vertexData = {
-            -s, -s,     1, 0, 0,
-            -s, s,      0, 1, 0,
-            s, s,       1, 0, 1,
-            s, -s,      1, 1, 0
-        };
-
-        std::vector<uint32_t> indices = {
-            0, 1, 2,
-            2, 3, 0
-        };
-
-        _pVertexBuffer = new Buffer(
-            _commandPoolRef,
-            vertexData.data(),
-            sizeof(float),
-            vertexData.size(),
-            BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
-        );
-
-        _pIndexBuffer = new Buffer(
-            _commandPoolRef,
-            indices.data(),
-            sizeof(uint32_t),
-            indices.size(),
-            BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
-        );
 
         // Testing ubos
+        /*
         Matrix4f transformationMatrix = create_transformation_matrix(
             { 0, 0, 0 },
-            { 1, 1, 1 },
-            { { 0, 1, 0 }, 0.0f }
+            { { 0, 1, 0 }, 0.0f },
+            { 1, 1, 1 }
         );
-
+        std::vector<Matrix4f> uniformBufferData(s_TEST_MAX_ENTITIES, transformationMatrix);
+        */
+        s_TEST_MIN_ALIGNMENT = s_TEST_MIN_ALIGNMENT >= sizeof(Matrix4f) ? s_TEST_MIN_ALIGNMENT : sizeof(Matrix4f);
+        std::vector<PE_byte> uniformBufferData(s_TEST_MAX_ENTITIES * s_TEST_MIN_ALIGNMENT, 0);
         for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
         {
             Buffer* pUniformBuffer = new Buffer(
                 _commandPoolRef,
-                &transformationMatrix,
-                sizeof(Matrix4f),
-                1,
+                uniformBufferData.data(),
+                s_TEST_MIN_ALIGNMENT,
+                uniformBufferData.size() / s_TEST_MIN_ALIGNMENT,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
             );
@@ -97,9 +70,6 @@ namespace platypus
         _testUniformBuffer.clear();
 
         _testDescriptorSetLayout.destroy();
-
-        delete _pVertexBuffer;
-        delete _pIndexBuffer;
     }
 
     void TestRenderer::allocCommandBuffers(uint32_t count)
@@ -162,8 +132,17 @@ namespace platypus
         _pipeline.destroy();
     }
 
-    static float s_TEST_value = 0.0f;
-    static float s_TEST_anim = 0.0f;
+    void TestRenderer::submit(const Mesh* pMesh, const Matrix4f& transformationMatrix)
+    {
+        _renderList.push_back(
+            {
+                pMesh->getVertexBuffer(),
+                pMesh->getIndexBuffer(),
+                transformationMatrix
+            }
+        );
+    }
+
     const CommandBuffer& TestRenderer::recordCommandBuffer(
         const RenderPass& renderPass,
         uint32_t viewportWidth,
@@ -206,28 +185,34 @@ namespace platypus
             }
         );
 
+        size_t uniformBufferOffset = 0;
+        for (const RenderData& renderData : _renderList)
+        {
+            _testUniformBuffer[frame]->update(
+                (void*)(&renderData.transformationMatrix),
+                sizeof(Matrix4f),
+                uniformBufferOffset
+            );
+            // NOTE: Atm just testing here! quite inefficient to alloc this vector again and again every frame!
+            // TODO: Optimize!
+            std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame] };
+            std::vector<uint32_t> descriptorSetOffsets = { (uint32_t)uniformBufferOffset };
+            render::bind_descriptor_sets(
+                currentCommandBuffer,
+                descriptorSetsToBind,
+                descriptorSetOffsets
+            );
+            uniformBufferOffset += s_TEST_MIN_ALIGNMENT;
 
-        //s_TEST_value += 0.01f;
-        Matrix4f transformationMatrix = create_transformation_matrix(
-            { 0, 1.0f, -5.0f },
-            { 10, 10, 10 },
-            { { 1, 0, 0 }, 1.57f }
-        );
-
-        _testUniformBuffer[frame]->update(&transformationMatrix, sizeof(Matrix4f));
-        // NOTE: Atm just testing here! quite inefficient to alloc this vector again and again every frame!
-        // TODO: Optimize!
-        std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame] };
-        render::bind_descriptor_sets(
-            currentCommandBuffer,
-            descriptorSetsToBind
-        );
-
-        render::bind_vertex_buffers(currentCommandBuffer, { _pVertexBuffer });
-        render::bind_index_buffer(currentCommandBuffer, _pIndexBuffer);
-        render::draw_indexed(currentCommandBuffer, (uint32_t)_pIndexBuffer->getDataLength(), 1);
+            render::bind_vertex_buffers(currentCommandBuffer, { renderData.pVertexBuffer });
+            render::bind_index_buffer(currentCommandBuffer, renderData.pIndexBuffer);
+            render::draw_indexed(currentCommandBuffer, (uint32_t)renderData.pIndexBuffer->getDataLength(), 1);
+        }
 
         currentCommandBuffer.end();
+
+        // NOTE: Only temporarely clearing this here every frame!
+        _renderList.clear();
 
         return currentCommandBuffer;
     }

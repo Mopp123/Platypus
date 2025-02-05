@@ -144,6 +144,7 @@ namespace platypus
         ~Buffer();
 
         void update(void* pData, size_t dataSize);
+        void update(void* pData, size_t dataSize, size_t offset);
 
         inline const void* getData() const { return _pData; }
         inline size_t getDataElemSize() const { return _dataElemSize; }

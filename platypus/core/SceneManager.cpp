@@ -78,9 +78,35 @@ namespace platypus
         // Submit all "renderable components" for rendering.
         // NOTE: This has to be done here since need quarantee that all necessary components have been
         // properly updated before submission!
+        Application* pApp = Application::get_instance();
+        AssetManager& assetManager = pApp->getAssetManager();
+        MasterRenderer& masterRenderer = pApp->getMasterRenderer();
+        uint64_t requiredMask = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
+        for (const Entity& e : _pCurrentScene->_entities)
+        {
+            if ((e.componentMask & requiredMask) == requiredMask)
+            {
+                const StaticMeshRenderable* pRenderable = (const StaticMeshRenderable*)_pCurrentScene->getComponent(
+                    e.id,
+                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
+                );
+                const Mesh* pMesh = assetManager.getMesh(pRenderable->meshID);
+
+                Transform* pTransform = (Transform*)_pCurrentScene->getComponent(
+                    e.id,
+                    ComponentType::COMPONENT_TYPE_TRANSFORM
+                );
+
+                masterRenderer.submit(
+                    pMesh,
+                    pTransform->globalMatrix
+                );
+            }
+        }
+
+
         /*
         ComponentPool& transformPool = _pCurrentScene->componentPools[ComponentType::PK_TRANSFORM];
-        MasterRenderer& masterRenderer = Application::get_instance()->getMasterRenderer();
         std::map<ComponentType, Renderer*>& renderers = masterRenderer.accessRenderers();
         std::map<ComponentType, Renderer*>::iterator rIt;
         const std::vector<Entity>& entities = _pCurrentScene->entities;

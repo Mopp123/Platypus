@@ -27,7 +27,6 @@ namespace platypus
         Window _window;
         InputManager _inputManager;
         SceneManager _sceneManager;
-        AssetManager _assetManager;
         Context _context;
 
         // TESTING BELOW
@@ -37,6 +36,8 @@ namespace platypus
         CommandPool _commandPool;
         DescriptorPool _descriptorPool;
         MasterRenderer _masterRenderer;
+
+        AssetManager _assetManager;
 
     public:
         Application(
@@ -62,5 +63,6 @@ namespace platypus
         inline AssetManager& getAssetManager() { return _assetManager; }
         inline Context& getContext() { return _context; }
         inline const CommandPool& getCommandPool() const { return _commandPool; }
+        inline MasterRenderer& getMasterRenderer() { return _masterRenderer; }
     };
 }

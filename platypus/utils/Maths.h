@@ -136,8 +136,8 @@ namespace platypus
 
     Matrix4f create_transformation_matrix(
         const Vector3f& pos,
-        const Vector3f& scale,
-        const Quaternion& rotation
+        const Quaternion& rotation,
+        const Vector3f& scale
     );
 
 

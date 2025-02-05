@@ -439,6 +439,8 @@ namespace platypus
             if (is_device_adequate(physicalDevice, surface))
             {
                 Debug::log("Picked device: " + deviceNameStr);
+                // TESTING
+                Debug::log("___TEST___minUniformBufferOffsetAlignment: " + std::to_string(properties.limits.minUniformBufferOffsetAlignment));
                 return physicalDevice;
             }
         }

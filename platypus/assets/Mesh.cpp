@@ -4,7 +4,9 @@
 namespace platypus
 {
     Mesh::Mesh(Buffer* pVertexBuffer, Buffer* pIndexBuffer) :
-        Asset(AssetType::ASSET_TYPE_MESH)
+        Asset(AssetType::ASSET_TYPE_MESH),
+        _pVertexBuffer(pVertexBuffer),
+        _pIndexBuffer(pIndexBuffer)
     {}
 
     Mesh::~Mesh()

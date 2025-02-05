@@ -130,7 +130,7 @@ namespace platypus
         // ->There could probably be a better way
         void bind_vertex_buffers(
             const CommandBuffer& commandBuffer,
-            const std::vector<Buffer*>& vertexBuffers
+            const std::vector<const Buffer*>& vertexBuffers
         )
         {
             // NOTE: A little inefficient but necessary
@@ -201,7 +201,8 @@ namespace platypus
 
         void bind_descriptor_sets(
             CommandBuffer& commandBuffer,
-            const std::vector<DescriptorSet>& descriptorSets
+            const std::vector<DescriptorSet>& descriptorSets,
+            const std::vector<uint32_t>& offsets
         )
         {
             #ifdef PLATYPUS_DEBUG
@@ -228,8 +229,8 @@ namespace platypus
                 0,
                 descriptorSetCount,
                 handles.data(),
-                0,
-                nullptr
+                (uint32_t)offsets.size(),
+                offsets.data()
             );
         }
 

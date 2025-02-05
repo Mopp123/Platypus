@@ -33,6 +33,8 @@ namespace platypus
         void cleanUp();
         void handleWindowResize(const Swapchain& swapchain);
 
+        void submit(const Mesh* pMesh, const Matrix4f& transformationMatrix);
+
         const CommandBuffer& recordCommandBuffer(const Swapchain& swapchain, size_t frame);
     };
 }

@@ -3,6 +3,9 @@
 #include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/ComponentPool.h"
 #include "platypus/ecs/components/Component.h"
+#include "platypus/ecs/components/Transform.h"
+#include "platypus/ecs/components/Renderable.h"
+
 #include "platypus/ecs/systems/System.h"
 
 #include <unordered_map>
@@ -47,6 +50,18 @@ namespace platypus
         );
         // Returns first component of "type" found in "entity"'s child entities
         void* getComponentInChildren(entityID_t entityID, ComponentType type);
+
+        Transform* createTransform(
+            entityID_t target,
+            const Vector3f& position,
+            const Quaternion& rotation,
+            const Vector3f& scale
+        );
+
+        StaticMeshRenderable* createStaticMeshRenderable(
+            entityID_t target,
+            ID_t meshAssetID
+        );
 
         virtual void init() = 0;
         virtual void update() = 0;
