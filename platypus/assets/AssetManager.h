@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Asset.h"
+#include "Image.h"
 #include "Mesh.h"
 #include "platypus/graphics/CommandBuffer.h"
 #include <unordered_map>
@@ -20,10 +21,15 @@ namespace platypus
         ~AssetManager();
         void destroyAssets();
 
+        Image* createImage(PE_ubyte* pData, int width, int height, int channels);
+        Image* loadImage(const std::string& filepath);
+
         Mesh* createMesh(
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
         );
+
+        Image* getImage(ID_t assetID) const;
         Mesh* getMesh(ID_t assetID) const;
 
     private:

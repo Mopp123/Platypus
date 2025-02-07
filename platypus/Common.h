@@ -6,6 +6,7 @@
 
 // PE stands for Platypus Engine
 #define PE_byte char
+#define PE_ubyte unsigned char
 
 
 namespace platypus

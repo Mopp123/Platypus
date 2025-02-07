@@ -24,6 +24,7 @@ add_compile_definitions(PLATYPUS_DEBUG=1)
 include_directories(
     ${PROJECT_SOURCE_DIR}
     "dependencies/glfw/include"
+    "dependencies/stb"
 )
 
 file(GLOB SRC_FILES

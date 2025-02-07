@@ -9,7 +9,8 @@ namespace platypus
     enum AssetType
     {
         ASSET_TYPE_NONE = 0,
-        ASSET_TYPE_MESH = 1
+        ASSET_TYPE_MESH = 1,
+        ASSET_TYPE_IMAGE = 2
     };
 
     std::string asset_type_to_string(AssetType type);
@@ -21,6 +22,8 @@ namespace platypus
         AssetType _type = AssetType::ASSET_TYPE_NONE;
 
     public:
+        Asset() = delete;
+        Asset(const Asset&) = delete;
         Asset(AssetType type);
         virtual ~Asset();
 

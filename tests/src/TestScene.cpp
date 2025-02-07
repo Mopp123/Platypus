@@ -1,6 +1,7 @@
 #include "TestScene.h"
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
+#include "platypus/assets/Image.h"
 
 using namespace platypus;
 
@@ -72,6 +73,11 @@ void TestScene::init()
         { { 0, 0, 1 }, 0.785f },
         { 0.5f, 0.5f, 0.5f }
     );
+
+
+    // Test loading image
+    AssetManager& assetManager = Application::get_instance()->getAssetManager();
+    Image* pImage = assetManager.loadImage("assets/test.png");
 
     Debug::log("___TEST___initialized test scene!");
 }

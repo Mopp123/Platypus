@@ -11,23 +11,66 @@
 
 namespace platypus
 {
-    static void copy_buffer(const CommandPool& commandPool, Buffer* source, Buffer* destination)
+    void copy_buffer(const CommandPool& commandPool, VkBuffer source, VkBuffer destination, size_t size)
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(1, CommandBufferLevel::PRIMARY_COMMAND_BUFFER)[0];
+        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+            1,
+            CommandBufferLevel::PRIMARY_COMMAND_BUFFER
+        )[0];
 
         commandBuffer.beginSingleUse();
 
         VkBufferCopy copyRegion;
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
-        copyRegion.size = source->getDataElemSize() * source->getDataLength();
+        copyRegion.size = size;
 
         vkCmdCopyBuffer(
             commandBuffer.getImpl()->handle,
-            source->getImpl()->handle,
-            destination->getImpl()->handle,
+            source,
+            destination,
             1,
             &copyRegion
+        );
+
+        commandBuffer.finishSingleUse();
+    }
+
+    void copy_buffer_to_image(
+        const CommandPool& commandPool,
+        VkBuffer source,
+        VkImage destination,
+        uint32_t imageWidth,
+        uint32_t imageHeight
+    )
+    {
+        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+            1,
+            CommandBufferLevel::PRIMARY_COMMAND_BUFFER
+        )[0];
+
+        commandBuffer.beginSingleUse();
+
+        VkBufferImageCopy bufferImgCpy{};
+        bufferImgCpy.bufferOffset = 0;
+        bufferImgCpy.bufferRowLength = 0;
+        bufferImgCpy.bufferImageHeight = 0;
+
+        bufferImgCpy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        bufferImgCpy.imageSubresource.mipLevel = 0;
+        bufferImgCpy.imageSubresource.baseArrayLayer = 0;
+        bufferImgCpy.imageSubresource.layerCount = 1;
+
+        bufferImgCpy.imageOffset = { 0,0,0 };
+        bufferImgCpy.imageExtent = { imageWidth, imageHeight, 1 };
+
+        vkCmdCopyBufferToImage(
+            commandBuffer.getImpl()->handle,
+            source,
+            destination,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            &bufferImgCpy
         );
 
         commandBuffer.finishSingleUse();
@@ -290,7 +333,12 @@ namespace platypus
         }
         else
         {
-            copy_buffer(commandPool, pStagingBuffer, this);
+            copy_buffer(
+                commandPool,
+                pStagingBuffer->_pImpl->handle,
+                _pImpl->handle,
+                getTotalSize()
+            );
             delete pStagingBuffer;
         }
     }

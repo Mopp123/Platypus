@@ -26,6 +26,63 @@ namespace platypus
         Debug::log("Assets destroyed");
     }
 
+    Image* AssetManager::createImage(PE_ubyte* pData, int width, int height, int channels)
+    {
+        bool failure = false;
+        if (!pData)
+        {
+            Debug::log(
+                "@AssetManager::createImage "
+                "Provided data was nullptr!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            failure = true;
+        }
+        if (width <= 0 || height <= 0)
+        {
+            Debug::log(
+                "@AssetManager::createImage "
+                "Invalid image dimensions: " + std::to_string(width) + "x"+ std::to_string(height),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            failure = true;
+        }
+        if (width <= 0 || height <= 0)
+        {
+            Debug::log(
+                "@AssetManager::createImage "
+                "Invalid channel count: " + std::to_string(channels),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            failure = true;
+        }
+        if (failure)
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        Image* pImage = new Image(pData, width, height, channels);
+        _assets[pImage->getID()] = pImage;
+        return pImage;
+    }
+
+    Image* AssetManager::loadImage(const std::string& filepath)
+    {
+        Image* pImage = Image::load_image(filepath);
+        if (!pImage)
+        {
+            Debug::log(
+                "@AssetManager::loadImage "
+                "Failed to load image from: " + filepath,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        _assets[pImage->getID()] = pImage;
+        return pImage;
+    }
+
     Mesh* AssetManager::createMesh(
         const std::vector<float>& vertexData,
         const std::vector<uint32_t>& indexData
@@ -50,6 +107,26 @@ namespace platypus
         Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer);
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
+    }
+
+    Image* AssetManager::getImage(ID_t assetID) const
+    {
+        Asset* pAsset = getAsset(assetID);
+        if (!pAsset)
+            return nullptr;
+
+        if (pAsset->getType() != AssetType::ASSET_TYPE_IMAGE)
+        {
+            Debug::log(
+                "@AssetManager::getImage "
+                "Found asset with id: " + std::to_string(assetID) + " "
+                "but it had invalid type: " + asset_type_to_string(pAsset->getType()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return (Image*)pAsset;
     }
 
     Mesh* AssetManager::getMesh(ID_t assetID) const
