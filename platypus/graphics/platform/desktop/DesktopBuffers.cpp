@@ -243,11 +243,9 @@ namespace platypus
 
         if (!useStaging)
         {
-            // NOTE: Even if want to have host visible and coherent, we may not want to have this buffer
-            // be mapped all the time?
             allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
             allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
         else
         {
@@ -282,13 +280,13 @@ namespace platypus
 
         if (!useStaging)
         {
-            VmaAllocationInfo allocatedInfo;
-            vmaGetAllocationInfo(
+            vmaCopyMemoryToAllocation(
                 vmaAllocator,
+                pData,
                 vmaAllocation,
-                &allocatedInfo
+                0,
+                getTotalSize()
             );
-            memcpy(allocatedInfo.pMappedData, pData, getTotalSize());
         }
         else
         {
@@ -324,14 +322,13 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
-
-        VmaAllocationInfo allocatedInfo;
-        vmaGetAllocationInfo(
+        vmaCopyMemoryToAllocation(
             Context::get_instance()->getImpl()->vmaAllocator,
+            pData,
             _pImpl->vmaAllocation,
-            &allocatedInfo
+            0,
+            getTotalSize()
         );
-        memcpy(allocatedInfo.pMappedData, pData, dataSize);
     }
 
     void Buffer::update(void* pData, size_t dataSize, size_t offset)
@@ -347,13 +344,12 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
-
-        VmaAllocationInfo allocatedInfo;
-        vmaGetAllocationInfo(
+        vmaCopyMemoryToAllocation(
             Context::get_instance()->getImpl()->vmaAllocator,
+            pData,
             _pImpl->vmaAllocation,
-            &allocatedInfo
+            offset,
+            dataSize
         );
-        memcpy(((PE_byte*)allocatedInfo.pMappedData) + offset, pData, dataSize);
     }
 }
