@@ -90,7 +90,6 @@ namespace platypus
                     e.id,
                     ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
                 );
-                const Mesh* pMesh = assetManager.getMesh(pRenderable->meshID);
 
                 Transform* pTransform = (Transform*)_pCurrentScene->getComponent(
                     e.id,
@@ -98,7 +97,7 @@ namespace platypus
                 );
 
                 masterRenderer.submit(
-                    pMesh,
+                    pRenderable,
                     pTransform->globalMatrix
                 );
             }

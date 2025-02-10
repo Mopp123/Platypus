@@ -1,6 +1,7 @@
 #include "TestRenderer.h"
-#include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
+#include "platypus/core/Application.h"
+#include "platypus/core/Debug.h"
 #include <string>
 #include <cmath>
 
@@ -14,9 +15,9 @@ namespace platypus
         DescriptorPool& descriptorPool
     ) :
         _commandPoolRef(commandPool),
+        _descriptorPoolRef(descriptorPool),
         _vertexShader("assets/shaders/TestVertexShader.spv", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
         _fragmentShader("assets/shaders/TestFragmentShader.spv", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
-
         _testDescriptorSetLayout(
             {
                 {
@@ -25,6 +26,17 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     { { 1, ShaderDataType::Mat4 } }
+                }
+            }
+        ),
+        _textureDescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 2 } }
                 }
             }
         )
@@ -59,6 +71,7 @@ namespace platypus
             delete pUniformBuffer;
         _testUniformBuffer.clear();
 
+        _textureDescriptorSetLayout.destroy();
         _testDescriptorSetLayout.destroy();
     }
 
@@ -89,13 +102,16 @@ namespace platypus
         VertexBufferLayout vbLayout = {
             {
                 { 0, ShaderDataType::Float2 },
-                { 1, ShaderDataType::Float3 }
+                { 1, ShaderDataType::Float2 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = { &_testDescriptorSetLayout };
+        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
+            &_testDescriptorSetLayout,
+            &_textureDescriptorSetLayout
+        };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
         _pipeline.create(
@@ -122,15 +138,45 @@ namespace platypus
         _pipeline.destroy();
     }
 
-    void TestRenderer::submit(const Mesh* pMesh, const Matrix4f& transformationMatrix)
+    void TestRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
     {
-        _renderList.push_back(
+        Application* pApp = Application::get_instance();
+        AssetManager& assetManager = pApp->getAssetManager();
+        const Mesh* pMesh = assetManager.getMesh(pRenderable->meshID);
+        // NOTE: Below just testing... SLOW AS FUCK!
+        if (_texDescriptorSetCache.find(pRenderable->textureID) != _texDescriptorSetCache.end())
+        {
+            _renderList.push_back(
+                {
+                    pMesh->getVertexBuffer(),
+                    pMesh->getIndexBuffer(),
+                    transformationMatrix,
+                    _texDescriptorSetCache[pRenderable->textureID]
+                }
+            );
+        }
+        else
+        {
+            const Texture* pTexture = assetManager.getTexture(pRenderable->textureID);
+            for (int i = 0; i < pApp->getSwapchain().getMaxFramesInFlight(); ++i)
             {
-                pMesh->getVertexBuffer(),
-                pMesh->getIndexBuffer(),
-                transformationMatrix
+                _texDescriptorSetCache[pRenderable->textureID].push_back(
+                    _descriptorPoolRef.createDescriptorSet(
+                        &_textureDescriptorSetLayout,
+                        { pTexture }
+                    )
+                );
             }
-        );
+            Debug::log("___TEST___CREATED NEW DESCRIPTOR SETS!");
+            _renderList.push_back(
+                {
+                    pMesh->getVertexBuffer(),
+                    pMesh->getIndexBuffer(),
+                    transformationMatrix,
+                    _texDescriptorSetCache[pRenderable->textureID]
+                }
+            );
+        }
     }
 
     const CommandBuffer& TestRenderer::recordCommandBuffer(
@@ -182,7 +228,7 @@ namespace platypus
             );
             // NOTE: Atm just testing here! quite inefficient to alloc this vector again and again every frame!
             // TODO: Optimize!
-            std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame] };
+            std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame], renderData.descriptorSets[frame] };
             std::vector<uint32_t> descriptorSetOffsets = { (uint32_t)uniformBufferOffset };
             render::bind_descriptor_sets(
                 currentCommandBuffer,

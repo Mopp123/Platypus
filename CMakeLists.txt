@@ -35,6 +35,7 @@ file(GLOB SRC_FILES
     platypus/utils/*.cpp
 
     platypus/assets/*.cpp
+    platypus/assets/platform/${BUILD_TARGET}/*.cpp
 
     platypus/graphics/platform/${BUILD_TARGET}/*.cpp
     platypus/graphics/renderers/*.cpp

@@ -83,6 +83,29 @@ namespace platypus
         return pImage;
     }
 
+    Texture* AssetManager::createTexture(ID_t imageID, const TextureSampler* pSampler)
+    {
+        Image* pImage = getImage(imageID);
+        if (!pImage)
+        {
+            Debug::log(
+                "AssetManager::createTexture "
+                "Failed to find image with ID: " + std::to_string(imageID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+
+        Texture* pTexture = new Texture(
+            _commandPoolRef,
+            pImage,
+            pSampler
+        );
+        _assets[pTexture->getID()] = pTexture;
+        return pTexture;
+    }
+
     Mesh* AssetManager::createMesh(
         const std::vector<float>& vertexData,
         const std::vector<uint32_t>& indexData
@@ -127,6 +150,26 @@ namespace platypus
             return nullptr;
         }
         return (Image*)pAsset;
+    }
+
+    Texture* AssetManager::getTexture(ID_t assetID) const
+    {
+        Asset* pAsset = getAsset(assetID);
+        if (!pAsset)
+            return nullptr;
+
+        if (pAsset->getType() != AssetType::ASSET_TYPE_TEXTURE)
+        {
+            Debug::log(
+                "@AssetManager::getTexture "
+                "Found asset with id: " + std::to_string(assetID) + " "
+                "but it had invalid type: " + asset_type_to_string(pAsset->getType()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return (Texture*)pAsset;
     }
 
     Mesh* AssetManager::getMesh(ID_t assetID) const

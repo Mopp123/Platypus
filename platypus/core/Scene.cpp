@@ -307,7 +307,8 @@ namespace platypus
 
     StaticMeshRenderable* Scene::createStaticMeshRenderable(
         entityID_t target,
-        ID_t meshAssetID
+        ID_t meshAssetID,
+        ID_t textureAssetID
     )
     {
         if (!isValidEntity(target))
@@ -334,6 +335,7 @@ namespace platypus
         StaticMeshRenderable* pComponent = (StaticMeshRenderable*)_componentPools[componentType].allocComponent(target);
         addToComponentMask(target, componentType);
         pComponent->meshID = meshAssetID;
+        pComponent->textureID = textureAssetID;
 
         return pComponent;
     }

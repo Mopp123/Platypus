@@ -6,11 +6,12 @@
 
 namespace platypus
 {
-    enum AssetType
+    enum class AssetType
     {
-        ASSET_TYPE_NONE = 0,
-        ASSET_TYPE_MESH = 1,
-        ASSET_TYPE_IMAGE = 2
+        ASSET_TYPE_NONE,
+        ASSET_TYPE_MESH,
+        ASSET_TYPE_IMAGE,
+        ASSET_TYPE_TEXTURE
     };
 
     std::string asset_type_to_string(AssetType type);

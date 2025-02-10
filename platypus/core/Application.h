@@ -62,6 +62,10 @@ namespace platypus
         inline SceneManager& getSceneManager() { return _sceneManager; }
         inline AssetManager& getAssetManager() { return _assetManager; }
         inline Context& getContext() { return _context; }
+        // NOTE: Need to access swapchain's image count and "framesInFlight" count in many places.
+        // Currently doing by accessing Application instance.
+        // TODO: This should be handled more "elegantly"
+        inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline const CommandPool& getCommandPool() const { return _commandPool; }
         inline MasterRenderer& getMasterRenderer() { return _masterRenderer; }
     };

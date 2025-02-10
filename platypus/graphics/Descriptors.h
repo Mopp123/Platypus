@@ -2,6 +2,7 @@
 
 #include "Buffers.h"
 #include "Swapchain.h"
+#include "platypus/assets/Texture.h"
 
 
 namespace platypus
@@ -117,30 +118,20 @@ namespace platypus
     private:
         friend class DescriptorPool;
         DescriptorSetImpl* _pImpl = nullptr;
-        const DescriptorSetLayout* _pLayout;
-        std::vector<const Buffer*> _pBuffers;
-        //std::vector<const Texture*> _pTextures;
+        std::vector<const Buffer*> _buffers;
+        std::vector<const Texture*> _textures;
 
     public:
         DescriptorSet() = default;
 
-        DescriptorSet(
-            const DescriptorSetLayout* pLayout,
-            const std::vector<const Buffer*>& pBuffers
-        );
+        DescriptorSet(const std::vector<const Buffer*>& buffers);
+
+        DescriptorSet(const std::vector<const Texture*>& textures);
 
         DescriptorSet(const DescriptorSet& other);
         DescriptorSet& operator=(DescriptorSet&& other);
 
         /*
-        DescriptorSet(
-            DescriptorSetLayout layout,
-            std::vector<const Texture*> pTextures
-        ) :
-            _layout(layout),
-            _pTextures(pTextures)
-        {}
-
         DescriptorSet(
             DescriptorSetLayout layout,
             std::vector<const Texture*> pTextures,
@@ -154,9 +145,8 @@ namespace platypus
 
         ~DescriptorSet();
 
-        inline const DescriptorSetLayout* getLayout() const { return _pLayout; }
-        inline const std::vector<const Buffer*>& getBuffers() const { return _pBuffers; }
-        //inline const std::vector<const Texture*>& getTextures() const { return _pTextures; }
+        inline const std::vector<const Buffer*>& getBuffers() const { return _buffers; }
+        inline const std::vector<const Texture*>& getTextures() const { return _textures; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
     };
 
@@ -171,10 +161,14 @@ namespace platypus
         DescriptorPool(const Swapchain& swapchain);
         ~DescriptorPool();
 
-        // Buffer has to be provided for each binding in the layout!
+        // Buffer and/or Texture has to be provided for each binding in the layout!
         DescriptorSet createDescriptorSet(
             const DescriptorSetLayout* pLayout,
             const std::vector<const Buffer*>& buffers
+        );
+        DescriptorSet createDescriptorSet(
+            const DescriptorSetLayout* pLayout,
+            const std::vector<const Texture*>& textures
         );
     };
 }

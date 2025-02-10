@@ -5,6 +5,7 @@
 #include "DesktopContext.h"
 #include "DesktopSwapchain.h"
 #include "DesktopBuffers.h"
+#include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <vulkan/vk_enum_string_helper.h>
 
 
@@ -97,19 +98,21 @@ namespace platypus
     }
 
 
-    DescriptorSet::DescriptorSet(
-        const DescriptorSetLayout* pLayout,
-        const std::vector<const Buffer*>& pBuffers
-    ) :
-        _pLayout(pLayout),
-        _pBuffers(pBuffers)
+    DescriptorSet::DescriptorSet(const std::vector<const Buffer*>& buffers) :
+        _buffers(buffers)
+    {
+        _pImpl = new DescriptorSetImpl;
+    }
+
+    DescriptorSet::DescriptorSet(const std::vector<const Texture*>& textures) :
+        _textures(textures)
     {
         _pImpl = new DescriptorSetImpl;
     }
 
     DescriptorSet::DescriptorSet(const DescriptorSet& other) :
-        _pLayout(other._pLayout),
-        _pBuffers(other._pBuffers)
+        _buffers(other._buffers),
+        _textures(other._textures)
     {
         _pImpl = new DescriptorSetImpl;
         _pImpl->handle = other._pImpl->handle;
@@ -117,8 +120,8 @@ namespace platypus
 
     DescriptorSet& DescriptorSet::operator=(DescriptorSet&& other)
     {
-        _pLayout = other._pLayout;
-        _pBuffers = other._pBuffers;
+        _buffers = other._buffers;
+        _textures = other._textures;
         _pImpl = new DescriptorSetImpl;
         _pImpl->handle = other._pImpl->handle;
         return *this;
@@ -136,11 +139,13 @@ namespace platypus
         std::vector<VkDescriptorPoolSize> poolSizes;
 
         const size_t& maxFramesInFlight = swapchain.getImpl()->maxFramesInFlight;
-        const uint32_t maxDescriptorSets = 1 * maxFramesInFlight;
+        // NOTE: maxDescriptorSets hardcoded here ONLY FOR TESTING!
+        const uint32_t maxDescriptorSets = 2 * maxFramesInFlight;
         const std::vector<DescriptorType> types =
         {
             DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER
+            DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
+            DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
         };
 
         for (size_t i = 0; i < types.size(); ++i)
@@ -193,7 +198,7 @@ namespace platypus
         }
     }
 
-    // Buffer has to be provided for each binding in the layout!
+    // Buffer and/or Texture has to be provided for each binding in the layout!
     DescriptorSet DescriptorPool::createDescriptorSet(
         const DescriptorSetLayout* pLayout,
         const std::vector<const Buffer*>& buffers
@@ -203,7 +208,7 @@ namespace platypus
         if (bindings.size() != buffers.size())
         {
             Debug::log(
-                "@DescriptorPool::createDescriptorSets "
+                "@DescriptorPool::createDescriptorSets(1) "
                 "Buffer required for each layout's binding! "
                 "Provided bindings: " + std::to_string(bindings.size()) + " "
                 "buffers: " + std::to_string(buffers.size()),
@@ -229,7 +234,7 @@ namespace platypus
         {
             const std::string resultStr(string_VkResult(allocResult));
             Debug::log(
-                "@DescriptorPool::createDescriptorSets "
+                "@DescriptorPool::createDescriptorSets(1) "
                 "Failed to allocate descriptor set! VkResult: " + resultStr,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -268,7 +273,77 @@ namespace platypus
             vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
         }
 
-        DescriptorSet createdDescriptorSet(pLayout, buffers);
+        DescriptorSet createdDescriptorSet(buffers);
+        createdDescriptorSet._pImpl->handle = descriptorSetHandle;
+        return createdDescriptorSet;
+    }
+
+
+    DescriptorSet DescriptorPool::createDescriptorSet(
+        const DescriptorSetLayout* pLayout,
+        const std::vector<const Texture*>& textures
+    )
+    {
+        const std::vector<DescriptorSetLayoutBinding>& bindings = pLayout->getBindings();
+        if (bindings.size() != textures.size())
+        {
+            Debug::log(
+                "@DescriptorPool::createDescriptorSets(2) "
+                "Texture required for each layout's binding! "
+                "Provided bindings: " + std::to_string(bindings.size()) + " "
+                "textures: " + std::to_string(textures.size()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = _pImpl->handle;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &pLayout->getImpl()->handle;
+
+        VkDescriptorSet descriptorSetHandle;
+        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkResult allocResult = vkAllocateDescriptorSets(
+            device,
+            &allocInfo,
+            &descriptorSetHandle
+        );
+        if (allocResult != VK_SUCCESS)
+        {
+            const std::string resultStr(string_VkResult(allocResult));
+            Debug::log(
+                "@DescriptorPool::createDescriptorSets(2) "
+                "Failed to allocate descriptor set! VkResult: " + resultStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        for (size_t i = 0; i < bindings.size(); ++i)
+        {
+            const Texture* pTexture = textures[i];
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = pTexture->getImpl()->imageView;
+            imageInfo.sampler = pTexture->getSampler()->getImpl()->handle;
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.dstSet = descriptorSetHandle;
+            descriptorWrite.dstBinding = (uint32_t)i;
+            descriptorWrite.dstArrayElement = 0; // if using array descriptors, this is the first index in the array..
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+            descriptorWrite.pImageInfo = &imageInfo;
+            descriptorWrite.pTexelBufferView = nullptr;
+
+            vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+        }
+
+        DescriptorSet createdDescriptorSet(textures);
         createdDescriptorSet._pImpl->handle = descriptorSetHandle;
         return createdDescriptorSet;
     }

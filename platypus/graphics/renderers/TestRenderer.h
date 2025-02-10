@@ -8,7 +8,9 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/utils/Maths.h"
 #include "platypus/assets/Mesh.h"
+#include "platypus/ecs/components/Renderable.h"
 #include <cstdlib>
+#include <unordered_map>
 
 
 namespace platypus
@@ -18,6 +20,7 @@ namespace platypus
     private:
         CommandPool& _commandPoolRef;
         std::vector<CommandBuffer> _commandBuffers;
+        DescriptorPool& _descriptorPoolRef;
         Pipeline _pipeline;
 
         Shader _vertexShader;
@@ -27,6 +30,8 @@ namespace platypus
 
         DescriptorSetLayout _testDescriptorSetLayout;
         std::vector<DescriptorSet> _testDescriptorSets;
+
+        DescriptorSetLayout _textureDescriptorSetLayout;
 
         float _viewportWidth = 0.0f;
         float _viewportHeight = 0.0f;
@@ -39,8 +44,12 @@ namespace platypus
             const Buffer* pVertexBuffer = nullptr;
             const Buffer* pIndexBuffer = nullptr;
             Matrix4f transformationMatrix = Matrix4f(1.0f);
+            const std::vector<DescriptorSet>& descriptorSets;
         };
         std::vector<RenderData> _renderList;
+
+        // NOTE: Atm only for testing!
+        std::unordered_map<ID_t, std::vector<DescriptorSet>> _texDescriptorSetCache;
 
     public:
         TestRenderer(
@@ -60,7 +69,7 @@ namespace platypus
         );
         void destroyPipeline();
 
-        void submit(const Mesh* pMesh, const Matrix4f& transformationMatrix);
+        void submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix);
 
         const CommandBuffer& recordCommandBuffer(
             const RenderPass& renderPass,

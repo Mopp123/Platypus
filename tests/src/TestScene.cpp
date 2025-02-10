@@ -13,12 +13,14 @@ TestScene::TestScene()
 
 TestScene::~TestScene()
 {
+    delete pTextureSampler;
     Debug::log("___TEST___destroyed test scene!");
 }
 
 static entityID_t create_test_entity(
     Scene* pScene,
-    const Mesh* pMesh,
+    ID_t meshID,
+    ID_t textureID,
     const Vector3f& position,
     const Quaternion& rotation,
     const Vector3f& scale
@@ -33,7 +35,8 @@ static entityID_t create_test_entity(
     );
     pScene->createStaticMeshRenderable(
         testEntity,
-        pMesh->getID()
+        meshID,
+        textureID
     );
     return testEntity;
 }
@@ -42,10 +45,10 @@ void TestScene::init()
 {
     float s = 1.0f;
     std::vector<float> vertexData = {
-        -s, -s,     1, 0, 0,
-        -s, s,      0, 1, 0,
-        s, s,       1, 0, 1,
-        s, -s,      1, 1, 0
+        -s, -s,     0, 0,
+        -s, s,      0, 1,
+        s, s,       1, 1,
+        s, -s,      1, 0
     };
 
     std::vector<uint32_t> indices = {
@@ -53,14 +56,29 @@ void TestScene::init()
         2, 3, 0
     };
 
-    Mesh* pMesh = Application::get_instance()->getAssetManager().createMesh(
+    AssetManager& assetManager = Application::get_instance()->getAssetManager();
+    Mesh* pMesh = assetManager.createMesh(
         vertexData,
         indices
     );
 
+
+    // Test loading image
+    Image* pImage = assetManager.loadImage("assets/test.png");
+
+    // Test creating sampler and texture
+    pTextureSampler = new TextureSampler(
+        TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        1,
+        0
+    );
+    Texture* pTexture = assetManager.createTexture(pImage->getID(), pTextureSampler);
+
     create_test_entity(
         this,
-        pMesh,
+        pMesh->getID(),
+        pTexture->getID(),
         { 0.5f, 0, -1.5f },
         { { 0, 1, 0 }, 0 },
         { 0.5f, 0.5f, 0.5f }
@@ -68,16 +86,12 @@ void TestScene::init()
 
     testEntity = create_test_entity(
         this,
-        pMesh,
+        pMesh->getID(),
+        pTexture->getID(),
         { 0.0f, 0, -2.0f },
         { { 0, 0, 1 }, 0.785f },
         { 0.5f, 0.5f, 0.5f }
     );
-
-
-    // Test loading image
-    AssetManager& assetManager = Application::get_instance()->getAssetManager();
-    Image* pImage = assetManager.loadImage("assets/test.png");
 
     Debug::log("___TEST___initialized test scene!");
 }

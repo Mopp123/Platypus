@@ -1,7 +1,6 @@
 #pragma once
 
 #include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/Texture.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 

@@ -59,9 +59,9 @@ namespace platypus
         createPipelines(swapchain);
     }
 
-    void MasterRenderer::submit(const Mesh* pMesh, const Matrix4f& transformationMatrix)
+    void MasterRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
     {
-        _testRenderer.submit(pMesh, transformationMatrix);
+        _testRenderer.submit(pRenderable, transformationMatrix);
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer(const Swapchain& swapchain, size_t frame)

@@ -60,7 +60,8 @@ namespace platypus
 
         StaticMeshRenderable* createStaticMeshRenderable(
             entityID_t target,
-            ID_t meshAssetID
+            ID_t meshAssetID,
+            ID_t textureAssetID
         );
 
         virtual void init() = 0;

@@ -44,4 +44,10 @@ namespace platypus
         SwapchainSupportDetails deviceSwapchainSupportDetails;
     };
 
+    std::vector<VkImageView> create_image_views(
+        VkDevice device,
+        const std::vector<VkImage>& images,
+        VkFormat format,
+        VkImageAspectFlags aspectFlags
+    );
 }
