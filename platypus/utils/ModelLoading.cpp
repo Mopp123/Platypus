@@ -1,5 +1,7 @@
 #include "ModelLoading.h"
+#include "platypus/Common.h"
 #include "platypus/core/Debug.h"
+#include "Maths.h"
 #include <unordered_map>
 #include <algorithm>
 
@@ -33,7 +35,7 @@
 #define GLTF_ATTRIB_LOCATION_JOINTS0    4
 
 
-namespace pk
+namespace platypus
 {
     static std::string gltf_primitive_mode_to_string(int mode)
     {
@@ -88,10 +90,9 @@ namespace pk
                         "@gltf_accessor_component_type_to_engine(float) "
                         "invalid accessor component type: " + std::to_string(gltfAccessorComponentType) + " "
                         "Component count: " + std::to_string(gltfComponentCount),
-                        Debug::MessageType::PK_FATAL_ERROR
+                        Debug::MessageType::PLATYPUS_ERROR
                     );
                     return ShaderDataType::None;
-
             }
         }
         // int types
@@ -111,7 +112,7 @@ namespace pk
                     Debug::log(
                         "@gltf_accessor_component_type_to_engine(int) "
                         "invalid accessor component type: " + std::to_string(gltfAccessorComponentType),
-                        Debug::MessageType::PK_FATAL_ERROR
+                        Debug::MessageType::PLATYPUS_ERROR
                     );
                     return ShaderDataType::None;
             }
@@ -121,13 +122,18 @@ namespace pk
             "Unexpected input! "
             "gltf accessor component type: " + std::to_string(gltfAccessorComponentType) + " "
             "Component count:  " + std::to_string(gltfComponentCount),
-            Debug::MessageType::PK_FATAL_ERROR
+            Debug::MessageType::PLATYPUS_ERROR
         );
         return ShaderDataType::None;
     }
 
 
-    static Buffer* load_index_buffer(tinygltf::Model& gltfModel, tinygltf::Mesh& gltfMesh, size_t primitiveIndex)
+    static Buffer* load_index_buffer(
+        const CommandPool& commandPool,
+        tinygltf::Model& gltfModel,
+        tinygltf::Mesh& gltfMesh,
+        size_t primitiveIndex
+    )
     {
         if (primitiveIndex >= gltfMesh.primitives.size())
         {
@@ -140,7 +146,7 @@ namespace pk
             return nullptr;
         }
 
-        tinygltf::Primitive primitive = gltfmesh.primitives[primitiveIndex];
+        tinygltf::Primitive primitive = gltfMesh.primitives[primitiveIndex];
         if (primitive.indices < 0 || primitive.indices >= gltfModel.accessors.size())
         {
             Debug::log(
@@ -151,15 +157,15 @@ namespace pk
             return nullptr;
         }
 
-        const tinygltf::Accessor& accessor = &gltfModel.accessors[primitive.indices];
+        const tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
         size_t bufferLength = accessor.count;
 
-        const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferview];
+        const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
         const size_t elementSize = bufferView.byteLength / accessor.count;
         void* pData = gltfModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset;
 
         return new Buffer(
-            const CommandPool& commandPool,
+            commandPool,
             pData,
             elementSize,
             bufferLength,
@@ -173,185 +179,164 @@ namespace pk
     // Current limitations!
     // * Expecting to have only a single set of primitives for single mesh!
     //  -> if thats not the case shit gets fucked!
-    static Buffer* load_mesh_gltf(
+    static Buffer* load_vertex_buffer(
+        const CommandPool& commandPool,
         tinygltf::Model& gltfModel,
         tinygltf::Mesh& gltfMesh
     )
     {
-        size_t combinedvertexbuffersize = 0;
-
-        // sortedvertexbufferattributes is used to create single vertex buffer containing
-        // vertex positions, normals and uv coords in that order starting from location = 0.
-        // this is also for creating vertexbufferlayout in correct order.
+        size_t combinedVertexBufferSize = 0;
+        size_t elementSize = 0;
+        // sortedvertexbufferattributes is used to create single vertex buffer containing:
+        //  * vertex positions
+        //  * normals
+        //  * uv coords
+        //  * joint weights(if mesh has those)
+        //  * joint indices(if mesh has those)
+        // in that order starting from location = 0.
         //
         // key: attrib location
         // value:
         //  first: pretty obvious...
         //  second: index in gltfbuffers
-        std::unordered_map<int, std::pair<vertexbufferelement, int>> sortedvertexbufferattributes;
-        std::unordered_map<int, tinygltf::accessor> attribaccessormapping;
-        std::unordered_map<int, size_t> actualattribelemsize;
-        for (size_t i = 0; i < gltfmesh.primitives.size(); ++i)
+        std::unordered_map<int, std::pair<VertexBufferElement, int>> sortedVertexBufferAttributes;
+        std::unordered_map<int, tinygltf::Accessor> attribAccessorMapping;
+        std::unordered_map<int, size_t> actualAttribElemSize;
+        for (size_t i = 0; i < gltfMesh.primitives.size(); ++i)
         {
-            tinygltf::primitive primitive = gltfmesh.primitives[i];
-
-            if (!pindexbufferaccessor)
+            for (auto &attrib : gltfMesh.primitives[i].attributes)
             {
-                pindexbufferaccessor = &gltfmodel.accessors[primitive.indices];
-                indexbufferlength = pindexbufferaccessor->count;
-            }
+                tinygltf::Accessor accessor = gltfModel.accessors[attrib.second];
 
-            if (indexbufferlength <= 0)
-            {
-                debug::log(
-                    "@load_mesh_gltf "
-                    "index buffer length was 0",
-                    debug::messagetype::pk_fatal_error
-                );
-                return nullptr;
-            }
+                int componentCount = 1;
+                if (accessor.type != TINYGLTF_TYPE_SCALAR)
+                    componentCount = accessor.type;
 
-            for (auto &attrib : primitive.attributes)
-            {
-                tinygltf::accessor accessor = gltfmodel.accessors[attrib.second];
-
-                int componentcount = 1;
-                if (accessor.type != tinygltf_type_scalar)
-                    componentcount = accessor.type;
-
-                // note: using this expects shader having vertex attribs in same order
+                // NOTE: using this expects shader having vertex attribs in same order
                 // as here starting from pos 0
-                int attriblocation = -1; // note: attriblocation is more like attrib index here!
-                if (attrib.first == "position")     attriblocation = gltf_attrib_location_position;
-                if (attrib.first == "normal")       attriblocation = gltf_attrib_location_normal;
-                if (attrib.first == "texcoord_0")   attriblocation = gltf_attrib_location_tex_coord0;
+                int attribLocation = -1; // NOTE: attribLocation is more like attrib index here!
+                if (attrib.first == "POSITION")     attribLocation = GLTF_ATTRIB_LOCATION_POSITION;
+                if (attrib.first == "NORMAL")       attribLocation = GLTF_ATTRIB_LOCATION_NORMAL;
+                if (attrib.first == "TEXCOORD_0")   attribLocation = GLTF_ATTRIB_LOCATION_TEX_COORD0;
 
-                if (attrib.first == "weights_0")    attriblocation = gltf_attrib_location_weights0;
-                if (attrib.first == "joints_0")     attriblocation = gltf_attrib_location_joints0;
+                if (attrib.first == "WEIGHTS_0")    attribLocation = GLTF_ATTRIB_LOCATION_WEIGHTS0;
+                if (attrib.first == "JOINTS_0")     attribLocation = GLTF_ATTRIB_LOCATION_JOINTS0;
 
-                if (attriblocation > -1)
+                if (attribLocation > -1)
                 {
-                    // note: possible issue if file format expects some
+                    // NOTE: Possible issue if file format expects some
                     // shit to be normalized on the application side..
                     int normalized = accessor.normalized;
                     if (normalized)
                     {
-                        debug::log(
-                            "@load_mesh_gltf "
-                            "vertex attribute expected to be normalized from gltf file side "
+                        Debug::log(
+                            "@load_vertex_buffer "
+                            "Vertex attribute expected to be normalized from gltf file side "
                             "but engine doesnt currently support this!",
-                            debug::messagetype::pk_fatal_error
+                            Debug::MessageType::PLATYPUS_ERROR
                         );
+                        return nullptr;
                     }
 
-                    // joint indices may come as unsigned bytes -> switch those to float for now..
-                    shaderdatatype shaderdatatype = shaderdatatype::none;
-                    if (accessor.componenttype != gltf_accessor_component_type_unsigned_byte)
+                    // Joint indices may come as unsigned bytes -> switch those to float for now..
+                    ShaderDataType shaderDataType = ShaderDataType::None;
+                    if (accessor.componentType != GLTF_ACCESSOR_COMPONENT_TYPE_UNSIGNED_BYTE)
                     {
-                        shaderdatatype = gltf_accessor_component_type_to_engine(accessor.componenttype, componentcount);
+                        shaderDataType = gltf_accessor_component_type_to_engine(accessor.componentType, componentCount);
                     }
                     else
                     {
-                        shaderdatatype = gltf_accessor_component_type_to_engine(
-                            tinygltf_component_type_float,
-                            componentcount
-                        );
-                        actualattribelemsize[attriblocation] = 1 * 4; // 1 byte for each vec4 component
+                        // NOTE: THIS SHOULD ONLY BE HAPPENING IF ATTRIB == JOINT
+                        // OTHER CASES AREN'T HANDLED HERE!!!
+                        if (attrib.first == "JOINTS_0")
+                        {
+                            shaderDataType = gltf_accessor_component_type_to_engine(
+                                TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                componentCount
+                            );
+                            actualAttribElemSize[attribLocation] = 1 * 4; // 1 byte for each vec4 component
+                        }
+                        else
+                        {
+                            Debug::log(
+                                "accessor.componentType was GLTF_ACCESSOR_COMPONENT_TYPE_UNSIGNED_BYTE "
+                                "but the attrib isn't JOINTS_0! "
+                                "Currently GLTF_ACCESSOR_COMPONENT_TYPE_UNSIGNED_BYTE are allowed only for "
+                                "attributes of type: JOINTS_0",
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            return nullptr;
+                        }
                     }
-                    size_t attribsize = get_shader_data_type_size(shaderdatatype);
+                    size_t attribSize = get_shader_datatype_size(shaderDataType);
 
-                    int bufferviewindex = accessor.bufferview;
-                    vertexbufferelement elem(attriblocation, shaderdatatype);
-                    sortedvertexbufferattributes[attriblocation] = std::make_pair(elem, bufferviewindex);
-                    attribaccessormapping[attriblocation] = accessor;
+                    int bufferViewIndex = accessor.bufferView;
+                    VertexBufferElement elem(attribLocation, shaderDataType);
+                    sortedVertexBufferAttributes[attribLocation] = std::make_pair(elem, bufferViewIndex);
+                    attribAccessorMapping[attribLocation] = accessor;
 
-                    size_t elemcount = accessor.count;
-                    combinedvertexbuffersize += elemcount * attribsize;
+                    elementSize += attribSize;
+                    // NOTE: Don't remember wtf this elemCount is...
+                    size_t elemCount = accessor.count;
+                    combinedVertexBufferSize += elemCount * attribSize;
                 }
                 else
                 {
-                    debug::log(
-                        "@load_mesh_gltf "
-                        "vertex attribute location was missing",
-                        debug::messagetype::pk_warning
+                    Debug::log(
+                        "@load_vertex_buffer "
+                        "Vertex attribute location was missing",
+                        Debug::MessageType::PLATYPUS_WARNING
                     );
                 }
             }
         }
 
-        if (!pindexbufferaccessor)
-        {
-            debug::log(
-                "@load_mesh_gltf "
-                "failed to find index buffer from gltf model! currently index buffer is required for all meshes!",
-                debug::messagetype::pk_fatal_error
-            );
-            return nullptr;
-        }
-        const tinygltf::bufferview& indexbufferview = gltfmodel.bufferviews[pindexbufferaccessor->bufferview];
-        const size_t indexbufelemsize = indexbufferview.bytelength / pindexbufferaccessor->count;
-        void* pindexbufferdata = gltfmodel.buffers[indexbufferview.buffer].data.data() + indexbufferview.byteoffset + pindexbufferaccessor->byteoffset;
-        buffer* pindexbuffer = buffer::create(
-            pindexbufferdata,
-            indexbufelemsize,
-            indexbufferlength,
-            bufferusageflagbits::buffer_usage_index_buffer_bit,
-            bufferupdatefrequency::buffer_update_frequency_static,
-            false
-        );
+        // Combine all into single raw buffer
+        PE_byte* pCombinedRawBuffer = new PE_byte[combinedVertexBufferSize];
+        const size_t attribCount = sortedVertexBufferAttributes.size();
+        size_t srcOffsets[attribCount];
+        memset(srcOffsets, 0, sizeof(size_t) * attribCount);
+        size_t dstOffset = 0;
 
-        pk_byte* pcombinedrawbuffer = new pk_byte[combinedvertexbuffersize];
-        const size_t attribcount = sortedvertexbufferattributes.size();
-        size_t srcoffsets[attribcount];
-        memset(srcoffsets, 0, sizeof(size_t) * attribcount);
-        size_t dstoffset = 0;
-        std::vector<vertexbufferelement> vblayoutelements(sortedvertexbufferattributes.size());
-
-        size_t currentattribindex = 0;
-
-
-        // testing
-        const size_t stride = sizeof(float) * 3 * 2 + sizeof(float) * 2 + sizeof(float) * 4 * 2;
-        const size_t vertexcount = combinedvertexbuffersize / stride;
-        std::unordered_map<int, std::pair<vec4, vec4>> vertexjointdata;
-        int vertexindex = 0;
+        size_t currentAttribIndex = 0;
+        std::unordered_map<int, std::pair<Vector4f, Vector4f>> vertexJointData;
+        int vertexIndex = 0;
         int i = 0;
-
-        while (dstoffset < combinedvertexbuffersize)
+        while (dstOffset < combinedVertexBufferSize)
         {
-            const std::pair<vertexbufferelement, int>& currentattrib = sortedvertexbufferattributes[currentattribindex];
-            size_t currentattribelemsize = get_shader_data_type_size(currentattrib.first.gettype());
+            const std::pair<VertexBufferElement, int>& currentAttrib = sortedVertexBufferAttributes[currentAttribIndex];
+            size_t currentAttribElemSize = get_shader_datatype_size(currentAttrib.first.getType());
 
-            size_t gltfinternalsize = currentattribelemsize;
-            if (actualattribelemsize.find(currentattribindex) != actualattribelemsize.end())
-                gltfinternalsize = actualattribelemsize[currentattribindex];
+            size_t gltfInternalSize = currentAttribElemSize;
+            if (actualAttribElemSize.find(currentAttribIndex) != actualAttribElemSize.end())
+                gltfInternalSize = actualAttribElemSize[currentAttribIndex];
 
-            tinygltf::bufferview& bufview = gltfmodel.bufferviews[currentattrib.second];
-            pk_ubyte* psrcbuffer = (pk_ubyte*)(gltfmodel.buffers[bufview.buffer].data.data() + bufview.byteoffset + attribaccessormapping[currentattribindex].byteoffset + srcoffsets[currentattribindex]);
+            tinygltf::BufferView& bufView = gltfModel.bufferViews[currentAttrib.second];
+            PE_ubyte* pSrcBuffer = (PE_ubyte*)(gltfModel.buffers[bufView.buffer].data.data() + bufView.byteOffset + attribAccessorMapping[currentAttribIndex].byteOffset + srcOffsets[currentAttribIndex]);
 
-            // if attrib "gltf internal type" wasn't float
+            // If attrib "gltf internal type" wasn't float
             //  -> we need to convert it into that (atm done only for joint ids buf which are ubytes)
-            if (currentattrib.first.getlocation() == gltf_attrib_location_joints0)
+            if (currentAttrib.first.getLocation() == 4)
             {
-                vec4 val;
-                val.x = (float)*psrcbuffer;
-                val.y = (float)*(psrcbuffer + 1);
-                val.z = (float)*(psrcbuffer + 2);
-                val.w = (float)*(psrcbuffer + 3);
-                vertexjointdata[vertexindex].second = val;
+                Vector4f val;
+                val.x = (float)*pSrcBuffer;
+                val.y = (float)*(pSrcBuffer + 1);
+                val.z = (float)*(pSrcBuffer + 2);
+                val.w = (float)*(pSrcBuffer + 3);
+                vertexJointData[vertexIndex].second = val;
 
-                memcpy(pcombinedrawbuffer + dstoffset, &val, sizeof(vec4));
+                memcpy(pCombinedRawBuffer + dstOffset, &val, sizeof(Vector4f));
             }
             else
             {
                 // make all weights sum be 1
-                if (currentattrib.first.getlocation() == gltf_attrib_location_weights0)
+                if (currentAttrib.first.getLocation() == 3)
                 {
-                    vec4 val;
-                    val.x = (float)*psrcbuffer;
-                    val.y = (float)*(psrcbuffer + sizeof(float));
-                    val.z = (float)*(psrcbuffer + sizeof(float) * 2);
-                    val.w = (float)*(psrcbuffer + sizeof(float) * 3);
+                    Vector4f val;
+                    val.x = (float)*pSrcBuffer;
+                    val.y = (float)*(pSrcBuffer + sizeof(float));
+                    val.z = (float)*(pSrcBuffer + sizeof(float) * 2);
+                    val.w = (float)*(pSrcBuffer + sizeof(float) * 3);
                     const float sum = val.x + val.y + val.z + val.w;
                     if (sum != 0.0f)
                     {
@@ -362,69 +347,37 @@ namespace pk
                     }
                     else if (sum != 1.0f)
                     {
-                        val = vec4(1.0f, 0, 0, 0);
+                        val = Vector4f(1.0f, 0, 0, 0);
                     }
-                    vertexjointdata[vertexindex].first = val;
+                    vertexJointData[vertexIndex].first = val;
 
-                    memcpy(pcombinedrawbuffer + dstoffset, &val, sizeof(vec4));
+                    memcpy(pCombinedRawBuffer + dstOffset, &val, sizeof(Vector4f));
                 }
                 else
                 {
-                    memcpy(pcombinedrawbuffer + dstoffset, psrcbuffer, gltfinternalsize);
+                    memcpy(pCombinedRawBuffer + dstOffset, pSrcBuffer, gltfInternalSize);
                 }
             }
 
+            srcOffsets[currentAttribIndex] += gltfInternalSize;
+            dstOffset += currentAttribElemSize;
 
-            srcoffsets[currentattribindex] += gltfinternalsize;
-            dstoffset += currentattribelemsize;
-            // danger!!!!
-            vblayoutelements[currentattrib.first.getlocation()] = currentattrib.first; // danger!!!
-
-            currentattribindex += 1;
-            currentattribindex = currentattribindex % attribcount;
+            currentAttribIndex += 1;
+            currentAttribIndex = currentAttribIndex % attribCount;
 
             ++i;
             if ((i % 5) == 0)
-                ++vertexindex;
+                ++vertexIndex;
         }
-
-        buffer* pvertexbuffer = buffer::create(
-            pcombinedrawbuffer,
-            1,
-            combinedvertexbuffersize,
-            bufferusageflagbits::buffer_usage_vertex_buffer_bit,
-            bufferupdatefrequency::buffer_update_frequency_static,
-            false
+        size_t bufferLength = combinedVertexBufferSize / elementSize;
+        return new Buffer(
+            commandPool,
+            pCombinedRawBuffer,
+            elementSize,
+            bufferLength,
+            BUFFER_USAGE_VERTEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
+            BUFFER_UPDATE_FREQUENCY_STATIC
         );
-
-        debug::log(
-            "@load_mesh_gltf creating mesh with vertex buffer layout:"
-        );
-        for (const vertexbufferelement& e : vblayoutelements)
-            debug::log("\tlocation = " + std::to_string(e.getlocation()) + " type = " + std::to_string(e.gettype()));
-
-        pmesh = new mesh(
-            { pvertexbuffer },
-            pindexbuffer,
-            nullptr
-        );
-        return pmesh;
-    }
-
-
-    static mat4 to_engine_matrix(const std::vector<double>& gltfMatrix)
-    {
-        // Defaulting to 0 matrix to be able to test does this have matrix at all!
-        mat4 matrix(0.0f);
-        if (gltfMatrix.size() == 16)
-        {
-            for (int i = 0; i < 4; ++i)
-            {
-                for (int j = 0; j < 4; ++j)
-                    matrix[i + j * 4] = gltfMatrix[i + j * 4];
-            }
-        }
-        return matrix;
     }
 
 
@@ -441,6 +394,7 @@ namespace pk
     //      -> something was wrong with RiggedFigure, having something to do
     //      with multiple vertex attribs overlapping?
     bool load_gltf_model(
+        const CommandPool& commandPool,
         const std::string& filepath,
         std::vector<Buffer*>& outVertexBuffers,
         std::vector<Buffer*>& outIndexBuffers
@@ -509,94 +463,31 @@ namespace pk
         }
 
         // Load meshes
-        std::vector<Buffer*> meshes;
         for (size_t i = 0; i < gltfModel.meshes.size(); ++i)
         {
             tinygltf::Mesh& gltfMesh = gltfModel.meshes[i];
-            Mesh* pMesh = load_mesh_gltf(
-                gltfModel,
-                gltfMesh,
-                true
-            );
-            if (pMesh)
-                meshes.push_back(pMesh);
-        }
-
-        // Load skeleton if found
-        size_t skinsCount = gltfModel.skins.size();
-        Pose bindPose;
-        std::vector<Pose> animPoses;
-        if (skinsCount == 1)
-        {
-            int rootJointNodeIndex = gltfModel.skins[0].joints[0];
-            // Mapping from gltf joint node index to our pose struct's joint index
-            std::unordered_map<int, int> nodeJointMapping;
-            add_joint(
-                gltfModel,
-                bindPose,
-                -1, // index to pose struct's parent joint. NOT glTF node index!
-                rootJointNodeIndex,
-                nodeJointMapping
-            );
-            Debug::log("___TEST___loaded joints: " + std::to_string(nodeJointMapping.size()));
-
-
-            // Load animations if found
-            // NOTE: For now supporting just a single animation
-            size_t animCount = gltfModel.animations.size();
-            if (animCount > 1)
+            Buffer* pIndexBuffer = load_index_buffer(commandPool, gltfModel, gltfMesh, i);
+            Buffer* pVertexBuffer = load_vertex_buffer(commandPool, gltfModel, gltfMesh);
+            if (!pIndexBuffer)
             {
                 Debug::log(
-                    "@load_model_gltf "
-                    "Multiple animations(" + std::to_string(animCount) + ") "
-                    "from file: " + filepath + " Currently only a single animation is supported",
-                    Debug::MessageType::PK_FATAL_ERROR
+                    "@load_gltf_model "
+                    "Failed to load index buffer for mesh: " + std::to_string(i) + " "
+                    "from file: " + filepath,
+                    Debug::MessageType::PLATYPUS_ERROR
                 );
             }
-            if (animCount == 1)
+            else if (!pVertexBuffer)
             {
-                animPoses = load_anim_poses(
-                    gltfModel,
-                    bindPose,
-                    nodeJointMapping
+                Debug::log(
+                    "@load_gltf_model "
+                    "Failed to load vertex buffer for mesh: " + std::to_string(i) + " "
+                    "from file: " + filepath,
+                    Debug::MessageType::PLATYPUS_ERROR
                 );
             }
-
-            // Load inverse bind matrices
-            const tinygltf::Accessor& invBindAccess = gltfModel.accessors[gltfModel.skins[0].inverseBindMatrices];
-            const tinygltf::BufferView& invBindBufView = gltfModel.bufferViews[invBindAccess.bufferView];
-            const tinygltf::Buffer& invBindBuf = gltfModel.buffers[invBindBufView.buffer];
-            size_t offset = invBindBufView.byteOffset + invBindAccess.byteOffset;
-            for (int i = 0; i < bindPose.joints.size(); ++i)
-            {
-                mat4 inverseBindMatrix(1.0f);
-                memcpy(&inverseBindMatrix, invBindBuf.data.data() + offset, sizeof(mat4));
-                bindPose.joints[i].inverseMatrix = inverseBindMatrix;
-                offset += sizeof(float) * 16;
-            }
-            // NOTE: Temporarely assign mesh's bind and animation poses here
-            // TODO: Load bind pose an anim poses in same func where mesh loading happens!
-            // TODO: Support multiple meshes
-            meshes[0]->setBindPose(bindPose);
-            meshes[0]->setAnimationPoses(animPoses);
+            outIndexBuffers.push_back(pIndexBuffer);
+            outVertexBuffers.push_back(pVertexBuffer);
         }
-        else if (skinsCount > 1)
-        {
-            Debug::log(
-                "@load_model_gltf "
-                "Too many skins in file: " + std::to_string(skinsCount) + " "
-                "Currently only 1 is supported",
-                Debug::MessageType::PK_FATAL_ERROR
-            );
-            return nullptr;
-        }
-
-
-        if (skinsCount == 1)
-        {
-            return new Model(meshes);
-        }
-        else
-            return new Model(meshes);
     }
 }

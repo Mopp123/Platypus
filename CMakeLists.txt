@@ -25,6 +25,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}
     "dependencies/glfw/include"
     "dependencies/stb"
+    "dependencies/json"
     "dependencies/tinygltf"
 )
 

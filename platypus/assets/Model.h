@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Asset.h"
+#include "Mesh.h"
 #include <vector>
 
 namespace platypus

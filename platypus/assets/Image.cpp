@@ -1,9 +1,10 @@
 #include "Image.h"
 #include "platypus/core/Debug.h"
+#include <cstring>
 
 // NOTE: When starting to use tinygltf we probably need to define STB_IMAGE_IMPLEMENTATION in the file
 // we handle model loading so we WILL NEED TO REMOVE THIS FROM HERE!
-#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 
