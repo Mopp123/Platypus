@@ -1,7 +1,11 @@
 #version 450
 
+layout(location = 0) in vec2 var_texCoord;
+
+layout(set = 1, binding = 0) uniform sampler2D textureSampler;
+
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    fragColor = vec4(0, 1, 0, 1);
+    fragColor = texture(textureSampler, var_texCoord);
 }
