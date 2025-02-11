@@ -3,6 +3,7 @@
 #include "Asset.h"
 #include "platypus/assets/Image.h"
 #include "platypus/graphics/CommandBuffer.h"
+#include <memory>
 
 
 namespace platypus
@@ -21,11 +22,13 @@ namespace platypus
     };
 
 
+    // NOTE: Atm TextureSampler is supposed to be passed around as const ref!
+    // That's why pImpl is shared_ptr in this case
     struct TextureSamplerImpl;
     class TextureSampler
     {
     private:
-        TextureSamplerImpl* _pImpl = nullptr;
+        std::shared_ptr<TextureSamplerImpl> _pImpl = nullptr;
 
     public:
         TextureSampler(
@@ -35,8 +38,9 @@ namespace platypus
             uint32_t anisotropicFiltering
         );
         ~TextureSampler();
+        TextureSampler(const TextureSampler& other);
 
-        inline const TextureSamplerImpl* getImpl() const { return _pImpl; }
+        inline const std::shared_ptr<TextureSamplerImpl>& getImpl() const { return _pImpl; }
     };
 
 
@@ -45,14 +49,18 @@ namespace platypus
     {
     private:
         TextureImpl* _pImpl = nullptr;
-        const TextureSampler* _pSampler = nullptr;
+        std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
 
     public:
-        Texture(const CommandPool& commandPool, const Image* pImage, const TextureSampler* pSampler);
+        Texture(
+            const CommandPool& commandPool,
+            const Image* pImage,
+            const TextureSampler& pSampler
+        );
         Texture(const Texture&) = delete;
         ~Texture();
 
-        inline const TextureSampler * const getSampler() const { return _pSampler; }
+        inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
         inline const TextureImpl* getImpl() const { return _pImpl; }
     };
 }

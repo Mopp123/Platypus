@@ -42,7 +42,7 @@ namespace platypus
         return VK_PRESENT_MODE_FIFO_KHR;
     }
 
-    static VkExtent2D select_extent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities, Window& window)
+    static VkExtent2D select_extent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities, const Window& window)
     {
         if (surfaceCapabilities.currentExtent.width != UINT32_MAX)
         {
@@ -275,7 +275,7 @@ namespace platypus
     }
 
 
-    Swapchain::Swapchain(Window& window)
+    Swapchain::Swapchain(const Window& window)
     {
         _pImpl = new SwapchainImpl;
         create(window);
@@ -287,7 +287,7 @@ namespace platypus
         delete _pImpl;
     }
 
-    void Swapchain::create(Window& window)
+    void Swapchain::create(const Window& window)
     {
         const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
         const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = pContextImpl->deviceSwapchainSupportDetails;
@@ -444,7 +444,7 @@ namespace platypus
         _pImpl->handle = VK_NULL_HANDLE;
     }
 
-    void Swapchain::recreate(Window& window)
+    void Swapchain::recreate(const Window& window)
     {
         destroy();
         create(window);

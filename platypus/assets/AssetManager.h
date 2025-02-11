@@ -24,7 +24,7 @@ namespace platypus
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels);
         Image* loadImage(const std::string& filepath);
-        Texture* createTexture(ID_t imageID, const TextureSampler* pSampler);
+        Texture* createTexture(ID_t imageID, const TextureSampler& sampler);
 
         Mesh* createMesh(
             const std::vector<float>& vertexData,

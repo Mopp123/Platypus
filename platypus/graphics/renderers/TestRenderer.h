@@ -15,9 +15,11 @@
 
 namespace platypus
 {
+    class MasterRenderer;
     class TestRenderer
     {
     private:
+        const MasterRenderer& _masterRendererRef;
         CommandPool& _commandPoolRef;
         std::vector<CommandBuffer> _commandBuffers;
         DescriptorPool& _descriptorPoolRef;
@@ -32,9 +34,6 @@ namespace platypus
         std::vector<DescriptorSet> _testDescriptorSets;
 
         DescriptorSetLayout _textureDescriptorSetLayout;
-
-        float _viewportWidth = 0.0f;
-        float _viewportHeight = 0.0f;
 
         // Just quick dumb way to test rendering multiple thigs
         // TODO:
@@ -53,6 +52,7 @@ namespace platypus
 
     public:
         TestRenderer(
+            const MasterRenderer& masterRenderer,
             const Swapchain& swapchain,
             CommandPool& commandPool,
             DescriptorPool& descriptorPool

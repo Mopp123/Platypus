@@ -6,14 +6,12 @@
 namespace platypus
 {
     class InputManager;
-    class Application;
 
     struct WindowImpl;
     class Window
     {
     private:
         friend class InputManager;
-        friend class Application;
         int _width = 800;
         int _height = 600;
         bool _resized = false;
@@ -32,7 +30,7 @@ namespace platypus
 
         bool isCloseRequested();
 
-        void getSurfaceExtent(int* pWidth, int* pHeight);
+        void getSurfaceExtent(int* pWidth, int* pHeight) const;
 
         WindowImpl* getImpl();
 
@@ -40,5 +38,6 @@ namespace platypus
         inline int getHeight() const { return _height; }
         inline bool resized() const { return _resized; }
         inline bool isMinimized() const { return _width == 0 || _height == 0; }
+        inline void resetResized() { _resized = false; }
     };
 }

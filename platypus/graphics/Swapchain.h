@@ -33,12 +33,12 @@ namespace platypus
         size_t _currentFrame = 0;
 
     public:
-        Swapchain(Window& window);
+        Swapchain(const Window& window);
         ~Swapchain();
 
-        void create(Window& window);
+        void create(const Window& window);
         void destroy();
-        void recreate(Window& window);
+        void recreate(const Window& window);
 
         SwapchainResult acquireImage();
         SwapchainResult present();

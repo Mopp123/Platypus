@@ -10,10 +10,12 @@ namespace platypus
 {
     static size_t s_TEST_MAX_ENTITIES = 100;
     TestRenderer::TestRenderer(
+        const MasterRenderer& masterRenderer,
         const Swapchain& swapchain,
         CommandPool& commandPool,
         DescriptorPool& descriptorPool
     ) :
+        _masterRendererRef(masterRenderer),
         _commandPoolRef(commandPool),
         _descriptorPoolRef(descriptorPool),
         _vertexShader("assets/shaders/TestVertexShader.spv", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
@@ -41,7 +43,6 @@ namespace platypus
             }
         )
     {
-
         size_t uniformBufferElementSize = get_dynamic_uniform_buffer_element_size(sizeof(Matrix4f));
         std::vector<Matrix4f> uniformBufferData(s_TEST_MAX_ENTITIES);
         for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
@@ -96,9 +97,6 @@ namespace platypus
         float viewportHeight
     )
     {
-        _viewportWidth = viewportWidth;
-        _viewportHeight = viewportHeight;
-
         VertexBufferLayout vbLayout = {
             {
                 { 0, ShaderDataType::Float2 },
@@ -158,7 +156,8 @@ namespace platypus
         else
         {
             const Texture* pTexture = assetManager.getTexture(pRenderable->textureID);
-            for (int i = 0; i < pApp->getSwapchain().getMaxFramesInFlight(); ++i)
+            size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+            for (int i = 0; i < maxFramesInFlight; ++i)
             {
                 _texDescriptorSetCache[pRenderable->textureID].push_back(
                     _descriptorPoolRef.createDescriptorSet(
@@ -201,8 +200,8 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _commandBuffers[frame];
         currentCommandBuffer.begin(renderPass);
 
-        render::set_viewport(currentCommandBuffer, 0, 0, _viewportWidth, _viewportHeight, 0.0f, 1.0f);
-        Rect2D scissor = { 0, 0, (uint32_t)_viewportWidth, (uint32_t)_viewportHeight };
+        render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
+        Rect2D scissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
         render::set_scissor(currentCommandBuffer, scissor);
 
         render::bind_pipeline(currentCommandBuffer, _pipeline);

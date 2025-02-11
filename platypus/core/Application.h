@@ -24,17 +24,12 @@ namespace platypus
     private:
         static Application* s_pInstance;
 
+        // Order of these is important for proper construction and destruction!
         Window _window;
         InputManager _inputManager;
-        SceneManager _sceneManager;
         Context _context;
+        SceneManager _sceneManager;
 
-        // TESTING BELOW
-        // NOTE: All rendering related stuff should probably contained somewhere else / in some "main renderer"
-        // thing...
-        Swapchain _swapchain;
-        CommandPool _commandPool;
-        DescriptorPool _descriptorPool;
         MasterRenderer _masterRenderer;
 
         AssetManager _assetManager;
@@ -53,20 +48,13 @@ namespace platypus
 
         void run();
 
-        void handleResize();
-
         static Application* get_instance();
 
-        inline const Window& getWindow() const { return _window; }
+        inline Window& getWindow() { return _window; }
         inline InputManager& getInputManager() { return _inputManager; }
         inline SceneManager& getSceneManager() { return _sceneManager; }
         inline AssetManager& getAssetManager() { return _assetManager; }
         inline Context& getContext() { return _context; }
-        // NOTE: Need to access swapchain's image count and "framesInFlight" count in many places.
-        // Currently doing by accessing Application instance.
-        // TODO: This should be handled more "elegantly"
-        inline const Swapchain& getSwapchain() const { return _swapchain; }
-        inline const CommandPool& getCommandPool() const { return _commandPool; }
         inline MasterRenderer& getMasterRenderer() { return _masterRenderer; }
     };
 }

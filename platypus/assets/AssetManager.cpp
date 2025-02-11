@@ -83,7 +83,7 @@ namespace platypus
         return pImage;
     }
 
-    Texture* AssetManager::createTexture(ID_t imageID, const TextureSampler* pSampler)
+    Texture* AssetManager::createTexture(ID_t imageID, const TextureSampler& sampler)
     {
         Image* pImage = getImage(imageID);
         if (!pImage)
@@ -100,7 +100,7 @@ namespace platypus
         Texture* pTexture = new Texture(
             _commandPoolRef,
             pImage,
-            pSampler
+            sampler
         );
         _assets[pTexture->getID()] = pTexture;
         return pTexture;

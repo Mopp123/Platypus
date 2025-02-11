@@ -1,4 +1,5 @@
 #include "MasterRenderer.h"
+#include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
@@ -7,33 +8,69 @@
 namespace platypus
 {
     MasterRenderer::MasterRenderer(
-        const Swapchain& swapchain,
-        CommandPool& commandPool,
-        DescriptorPool& descriptorPool
+        const Window& window
     ) :
-        _commandPoolRef(commandPool),
-        _testRenderer(swapchain, commandPool, descriptorPool)
+        _swapchain(window),
+        _descriptorPool(_swapchain),
+        _testRenderer(*this, _swapchain, _commandPool, _descriptorPool)
     {
+        // NOTE: May fuckup?
+        allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+        createPipelines();
     }
 
     MasterRenderer::~MasterRenderer()
     {
     }
 
-    void MasterRenderer::createPipelines(const Swapchain& swapchain)
+    void MasterRenderer::cleanUp()
     {
-        const Extent2D swapchainExtent = swapchain.getExtent();
-        _testRenderer.createPipeline(swapchain.getRenderPass(), swapchainExtent.width, swapchainExtent.height);
+        destroyPipelines();
+        freeCommandBuffers();
     }
 
-    void MasterRenderer::destroyPipelines()
+    void MasterRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
     {
-        _testRenderer.destroyPipeline();
+        _testRenderer.submit(pRenderable, transformationMatrix);
+    }
+
+    void MasterRenderer::render(const Window& window)
+    {
+        SwapchainResult result = _swapchain.acquireImage();
+        if (result == SwapchainResult::ERROR)
+        {
+            Debug::log(
+                "@MasterRenderer::render "
+                "Failed to acquire swapchain image!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        else if (result == SwapchainResult::RESIZE_REQUIRED)
+        {
+            handleWindowResize();
+        }
+        else
+        {
+            const CommandBuffer& cmdBuf = recordCommandBuffer();
+            Context::get_instance()->submitPrimaryCommandBuffer(
+                _swapchain,
+                cmdBuf,
+                _swapchain.getCurrentFrame()
+            );
+
+            // present may also tell us to recreate swapchain!
+            if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || window.resized())
+                handleWindowResize();
+        }
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
     {
-        _primaryCommandBuffers = _commandPoolRef.allocCommandBuffers(count, CommandBufferLevel::PRIMARY_COMMAND_BUFFER);
+        _primaryCommandBuffers = _commandPool.allocCommandBuffers(
+            count,
+            CommandBufferLevel::PRIMARY_COMMAND_BUFFER
+        );
         _testRenderer.allocCommandBuffers(count);
     }
 
@@ -46,26 +83,25 @@ namespace platypus
         _primaryCommandBuffers.clear();
     }
 
-    void MasterRenderer::cleanUp()
+    void MasterRenderer::createPipelines()
     {
-        destroyPipelines();
-        freeCommandBuffers();
+        const Extent2D swapchainExtent = _swapchain.getExtent();
+        _testRenderer.createPipeline(
+            _swapchain.getRenderPass(),
+            swapchainExtent.width,
+            swapchainExtent.height
+        );
     }
 
-    void MasterRenderer::handleWindowResize(const Swapchain& swapchain)
+    void MasterRenderer::destroyPipelines()
     {
-        cleanUp();
-        allocCommandBuffers(swapchain.getImageCount());
-        createPipelines(swapchain);
+        _testRenderer.destroyPipeline();
     }
 
-    void MasterRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
+    const CommandBuffer& MasterRenderer::recordCommandBuffer()
     {
-        _testRenderer.submit(pRenderable, transformationMatrix);
-    }
+        size_t frame = _swapchain.getCurrentFrame();
 
-    const CommandBuffer& MasterRenderer::recordCommandBuffer(const Swapchain& swapchain, size_t frame)
-    {
         if (frame >= _primaryCommandBuffers.size())
         {
             Debug::log(
@@ -79,8 +115,8 @@ namespace platypus
 
         CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[frame];
 
-        currentCommandBuffer.begin(swapchain.getRenderPass());
-        render::begin_render_pass(currentCommandBuffer, swapchain, { 0, 0, 1, 1 }, true);
+        currentCommandBuffer.begin(_swapchain.getRenderPass());
+        render::begin_render_pass(currentCommandBuffer, _swapchain, { 0, 0, 1, 1 }, true);
 
         // NOTE: We create new copies of secondary command buffers here!
         // Fucking stupid, since the actual command buffers we are using/refering to lives inside the
@@ -105,10 +141,10 @@ namespace platypus
             100.0f
         );
 
-        const Extent2D swapchainExtent = swapchain.getExtent();
+        const Extent2D swapchainExtent = _swapchain.getExtent();
         secondaryCommandBuffers.push_back(
             _testRenderer.recordCommandBuffer(
-                swapchain.getRenderPass(),
+                _swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
                 projectionMatrix,
@@ -122,5 +158,27 @@ namespace platypus
         currentCommandBuffer.end();
 
         return currentCommandBuffer;
+    }
+
+    void MasterRenderer::handleWindowResize()
+    {
+        Context* pContext = Context::get_instance();
+        Application* pApp = Application::get_instance();
+        pContext->waitForOperations();
+
+        Window& window = pApp->getWindow();
+        if (!window.isMinimized())
+        {
+            pContext->handleWindowResize();
+            _swapchain.recreate(window);
+            cleanUp();
+            allocCommandBuffers(_swapchain.getImageCount());
+            createPipelines();
+            window.resetResized();
+        }
+        else
+        {
+            pApp->getInputManager().waitEvents();
+        }
     }
 }

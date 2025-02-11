@@ -1,8 +1,7 @@
 #include "Application.h"
 #include "platypus/graphics/Swapchain.h"
 #include "Debug.h"
-
-#include "platypus/graphics/Buffers.h"
+#include "Timing.h"
 
 
 namespace platypus
@@ -20,11 +19,8 @@ namespace platypus
         _window(name, width, height, resizable, fullscreen),
         _inputManager(_window),
         _context(name.c_str(), &_window),
-        _swapchain(_window),
-        _descriptorPool(_swapchain),
-        // NOTE: Not sure is CommanPool created at this point -> fucks up master renderer creation if not!
-        _masterRenderer(_swapchain, _commandPool, _descriptorPool),
-        _assetManager(_commandPool)
+        _masterRenderer(_window),
+        _assetManager(_masterRenderer.getCommandPool())
     {
         if (s_pInstance)
         {
@@ -37,9 +33,6 @@ namespace platypus
         }
         s_pInstance = this;
 
-        _masterRenderer.allocCommandBuffers(_swapchain.getMaxFramesInFlight());
-        _masterRenderer.createPipelines(_swapchain);
-
         _sceneManager.assignNextScene(pInitialScene);
     }
 
@@ -47,6 +40,7 @@ namespace platypus
     {
     }
 
+    static int s_TEST_frames = 0;
     void Application::run()
     {
         while (!_window.isCloseRequested())
@@ -55,52 +49,22 @@ namespace platypus
 
             _sceneManager.update();
 
-            // NOTE: Below should probably be done somewhere else...?
-            SwapchainResult result = _swapchain.acquireImage();
-            if (result == SwapchainResult::ERROR)
-            {
-                Debug::log(
-                    "@Application::run "
-                    "Failed to acquire swapchain image!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            else if (result == SwapchainResult::RESIZE_REQUIRED)
-            {
-                handleResize();
-            }
-            else
-            {
-                const CommandBuffer& cmdBuf = _masterRenderer.recordCommandBuffer(_swapchain, _swapchain.getCurrentFrame());
-                _context.submitPrimaryCommandBuffer(_swapchain, cmdBuf, _swapchain.getCurrentFrame());
+            _masterRenderer.render(_window);
 
-                // present may also tell us to recreate swapchain!
-                if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || _window.resized())
-                    handleResize();
+            Timing::update();
+            if (s_TEST_frames >= 1000)
+            {
+                float fps = 1.0f / Timing::get_delta_time();
+                Debug::log("FPS: " + std::to_string(fps));
+                s_TEST_frames = 0;
             }
+            ++s_TEST_frames;
 
             _sceneManager.handleSceneSwitching();
         }
         _context.waitForOperations();
 
         _masterRenderer.cleanUp();
-    }
-
-    void Application::handleResize()
-    {
-        _context.waitForOperations();
-        if (!_window.isMinimized())
-        {
-            _context.handleWindowResize();
-            _swapchain.recreate(_window);
-            _masterRenderer.handleWindowResize(_swapchain);
-            _window._resized = false;
-        }
-        else
-        {
-            _inputManager.waitEvents();
-        }
     }
 
     Application* Application::get_instance()

@@ -10,6 +10,14 @@ namespace platypus
     struct TextureSamplerImpl
     {
         VkSampler handle = VK_NULL_HANDLE;
+
+        // NOTE: This is an exception that impl has it's own destructor!
+        // We wanted to be able to pass TextureSampler just as "pure data" in different places without
+        // having to manage it's vulkan implementation's lifetime explicitly so this is required!
+        // Also important: Texture will manage eventually the sampler's implementation when all TextureSamplers
+        // go out of scope!
+        // THIS WILL PROBABLY CAUSE ISSUES AND CONFUSION IN FUTURE!
+        ~TextureSamplerImpl();
     };
 
 

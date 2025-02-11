@@ -2,6 +2,9 @@
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
 #include "platypus/assets/Image.h"
+#include "platypus/assets/Texture.h"
+
+#include <memory>
 
 using namespace platypus;
 
@@ -13,7 +16,6 @@ TestScene::TestScene()
 
 TestScene::~TestScene()
 {
-    delete pTextureSampler;
     Debug::log("___TEST___destroyed test scene!");
 }
 
@@ -67,13 +69,13 @@ void TestScene::init()
     Image* pImage = assetManager.loadImage("assets/test.png");
 
     // Test creating sampler and texture
-    pTextureSampler = new TextureSampler(
+    TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
         1,
         0
     );
-    Texture* pTexture = assetManager.createTexture(pImage->getID(), pTextureSampler);
+    Texture* pTexture = assetManager.createTexture(pImage->getID(), textureSampler);
 
     create_test_entity(
         this,

@@ -75,7 +75,7 @@ namespace platypus
         return (bool)glfwWindowShouldClose(_pImpl->pGLFWwindow);
     }
 
-    void Window::getSurfaceExtent(int* pWidth, int* pHeight)
+    void Window::getSurfaceExtent(int* pWidth, int* pHeight) const
     {
         glfwGetFramebufferSize(_pImpl->pGLFWwindow, pWidth, pHeight);
     }

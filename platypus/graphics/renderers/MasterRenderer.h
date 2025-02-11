@@ -13,30 +13,30 @@ namespace platypus
     class MasterRenderer
     {
     private:
-        CommandPool& _commandPoolRef;
+        Swapchain _swapchain;
+        CommandPool _commandPool;
+        DescriptorPool _descriptorPool;
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
         TestRenderer _testRenderer;
 
     public:
-        MasterRenderer(
-            const Swapchain& swapchain,
-            CommandPool& commandPool,
-            DescriptorPool& descriptorPool
-        );
+        MasterRenderer(const Window& window);
         ~MasterRenderer();
 
-        void createPipelines(const Swapchain& swapchain);
-        void destroyPipelines();
+        void cleanUp();
+        void submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix);
+        void render(const Window& window);
 
+        inline const Swapchain& getSwapchain() const { return _swapchain; }
+        inline CommandPool& getCommandPool() { return _commandPool; }
+
+    private:
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
-
-        void cleanUp();
-        void handleWindowResize(const Swapchain& swapchain);
-
-        void submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix);
-
-        const CommandBuffer& recordCommandBuffer(const Swapchain& swapchain, size_t frame);
+        void createPipelines();
+        void destroyPipelines();
+        const CommandBuffer& recordCommandBuffer();
+        void handleWindowResize();
     };
 }

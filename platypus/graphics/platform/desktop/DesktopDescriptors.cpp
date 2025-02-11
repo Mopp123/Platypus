@@ -327,7 +327,7 @@ namespace platypus
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = pTexture->getImpl()->imageView;
-            imageInfo.sampler = pTexture->getSampler()->getImpl()->handle;
+            imageInfo.sampler = pTexture->getSamplerImpl()->handle;
 
             VkWriteDescriptorSet descriptorWrite{};
             descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

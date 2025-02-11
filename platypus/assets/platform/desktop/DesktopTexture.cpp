@@ -152,6 +152,21 @@ namespace platypus
     }
 
 
+    // NOTE: This is an exception that impl has it's own destructor!
+    // We wanted to be able to pass TextureSampler just as "pure data" in different places without
+    // having to manage it's vulkan implementation's lifetime explicitly so this is required!
+    // Also important: Texture will manage eventually the sampler's implementation when all TextureSamplers
+    // go out of scope!
+    // THIS WILL PROBABLY CAUSE ISSUES AND CONFUSION IN FUTURE!
+    TextureSamplerImpl::~TextureSamplerImpl()
+    {
+        vkDestroySampler(
+            Context::get_instance()->getImpl()->device,
+            handle,
+            nullptr
+        );
+    }
+
     TextureSampler::TextureSampler(
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
@@ -206,6 +221,8 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
             //createInfo.minLod = 0.0f; // Optional
+            // NOTE: Should rather use: VK_LOD_CLAMP_NONE for maxLod, so we don't need mip level count here!
+            // https://www.reddit.com/r/vulkan/comments/1hgq0fz/texture_samplers_best_practice/
             //createInfo.maxLod = (float)mipLevelCount;
             //createInfo.mipLodBias = 0.0f; // Optional
         }
@@ -233,27 +250,25 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        _pImpl = new TextureSamplerImpl{ handle };
+        _pImpl = std::make_shared<TextureSamplerImpl>();
+        _pImpl->handle = handle;
     }
+
+    TextureSampler::TextureSampler(const TextureSampler& other) :
+        _pImpl(other._pImpl)
+    {}
 
     TextureSampler::~TextureSampler()
-    {
-        if (_pImpl)
-        {
-            vkDestroySampler(
-                Context::get_instance()->getImpl()->device,
-                _pImpl->handle,
-                nullptr
-            );
-            delete _pImpl;
-            Debug::log("___TEST___TextureSampler destroyed!");
-        }
-    }
+    {}
 
 
-    Texture::Texture(const CommandPool& commandPool, const Image* pImage, const TextureSampler* pSampler) :
+    Texture::Texture(
+        const CommandPool& commandPool,
+        const Image* pImage,
+        const TextureSampler& pSampler
+    ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pSampler(pSampler)
+        _pSamplerImpl(pSampler.getImpl())
     {
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
@@ -362,7 +377,6 @@ namespace platypus
             vkDestroyImageView(pContextImpl->device, _pImpl->imageView, nullptr);
             vmaDestroyImage(pContextImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
             delete _pImpl;
-            Debug::log("___TEST___Texture destroyed!");
         }
     }
 }
