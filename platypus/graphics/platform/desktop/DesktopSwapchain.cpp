@@ -298,7 +298,7 @@ namespace platypus
 
         // "For maximum efficiency" ...on some lesser systems cause mem to run out?
         uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
-        if (imageCount > 0 && imageCount > surfaceCapabilities.maxImageCount)
+        if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount)
             imageCount = surfaceCapabilities.maxImageCount;
 
         VkSwapchainCreateInfoKHR createInfo{};
