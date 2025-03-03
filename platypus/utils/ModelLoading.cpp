@@ -146,7 +146,7 @@ namespace platypus
             return nullptr;
         }
 
-        tinygltf::Primitive primitive = gltfMesh.primitives[primitiveIndex];
+        const tinygltf::Primitive& primitive = gltfMesh.primitives[primitiveIndex];
         if (primitive.indices < 0 || primitive.indices >= gltfModel.accessors.size())
         {
             Debug::log(
@@ -175,6 +175,12 @@ namespace platypus
     }
 
 
+    struct GLTFVertexBufferAttrib
+    {
+        int location;
+        ShaderDataType dataType;
+        int bufferViewIndex;
+    };
     // NOTE:
     // Current limitations!
     // * Expecting to have only a single set of primitives for single mesh!
@@ -198,15 +204,15 @@ namespace platypus
         // key: attrib location
         // value:
         //  first: pretty obvious...
-        //  second: index in gltfbuffers
-        std::unordered_map<int, std::pair<VertexBufferElement, int>> sortedVertexBufferAttributes;
+        //  second: index in gltfBufferViews
+        std::unordered_map<int, GLTFVertexBufferAttrib> sortedVertexBufferAttributes;
         std::unordered_map<int, tinygltf::Accessor> attribAccessorMapping;
         std::unordered_map<int, size_t> actualAttribElemSize;
         for (size_t i = 0; i < gltfMesh.primitives.size(); ++i)
         {
             for (auto &attrib : gltfMesh.primitives[i].attributes)
             {
-                tinygltf::Accessor accessor = gltfModel.accessors[attrib.second];
+                const tinygltf::Accessor& accessor = gltfModel.accessors[attrib.second];
 
                 int componentCount = 1;
                 if (accessor.type != TINYGLTF_TYPE_SCALAR)
@@ -268,13 +274,10 @@ namespace platypus
                             return nullptr;
                         }
                     }
-                    size_t attribSize = get_shader_datatype_size(shaderDataType);
-
-                    int bufferViewIndex = accessor.bufferView;
-                    VertexBufferElement elem(attribLocation, shaderDataType);
-                    sortedVertexBufferAttributes[attribLocation] = std::make_pair(elem, bufferViewIndex);
+                    sortedVertexBufferAttributes[attribLocation] = { attribLocation, shaderDataType, accessor.bufferView };
                     attribAccessorMapping[attribLocation] = accessor;
 
+                    size_t attribSize = get_shader_datatype_size(shaderDataType);
                     elementSize += attribSize;
                     // NOTE: Don't remember wtf this elemCount is...
                     size_t elemCount = accessor.count;
@@ -304,19 +307,19 @@ namespace platypus
         int i = 0;
         while (dstOffset < combinedVertexBufferSize)
         {
-            const std::pair<VertexBufferElement, int>& currentAttrib = sortedVertexBufferAttributes[currentAttribIndex];
-            size_t currentAttribElemSize = get_shader_datatype_size(currentAttrib.first.getType());
+            const GLTFVertexBufferAttrib& currentAttrib = sortedVertexBufferAttributes[currentAttribIndex];
+            size_t currentAttribElemSize = get_shader_datatype_size(currentAttrib.dataType);
 
             size_t gltfInternalSize = currentAttribElemSize;
             if (actualAttribElemSize.find(currentAttribIndex) != actualAttribElemSize.end())
                 gltfInternalSize = actualAttribElemSize[currentAttribIndex];
 
-            tinygltf::BufferView& bufView = gltfModel.bufferViews[currentAttrib.second];
+            tinygltf::BufferView& bufView = gltfModel.bufferViews[currentAttrib.bufferViewIndex];
             PE_ubyte* pSrcBuffer = (PE_ubyte*)(gltfModel.buffers[bufView.buffer].data.data() + bufView.byteOffset + attribAccessorMapping[currentAttribIndex].byteOffset + srcOffsets[currentAttribIndex]);
 
             // If attrib "gltf internal type" wasn't float
             //  -> we need to convert it into that (atm done only for joint ids buf which are ubytes)
-            if (currentAttrib.first.getLocation() == 4)
+            if (currentAttrib.location == 4)
             {
                 Vector4f val;
                 val.x = (float)*pSrcBuffer;
@@ -330,7 +333,7 @@ namespace platypus
             else
             {
                 // make all weights sum be 1
-                if (currentAttrib.first.getLocation() == 3)
+                if (currentAttrib.location == 3)
                 {
                     Vector4f val;
                     val.x = (float)*pSrcBuffer;
@@ -366,11 +369,11 @@ namespace platypus
             currentAttribIndex = currentAttribIndex % attribCount;
 
             ++i;
-            if ((i % 5) == 0)
+            if ((i % attribCount) == 0)
                 ++vertexIndex;
         }
         size_t bufferLength = combinedVertexBufferSize / elementSize;
-        return new Buffer(
+        Buffer* pBuffer = new Buffer(
             commandPool,
             pCombinedRawBuffer,
             elementSize,
@@ -378,6 +381,8 @@ namespace platypus
             BUFFER_USAGE_VERTEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
             BUFFER_UPDATE_FREQUENCY_STATIC
         );
+        delete[] pCombinedRawBuffer;
+        return pBuffer;
     }
 
 
@@ -489,5 +494,6 @@ namespace platypus
             outIndexBuffers.push_back(pIndexBuffer);
             outVertexBuffers.push_back(pVertexBuffer);
         }
+        return true;
     }
 }

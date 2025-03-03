@@ -3,6 +3,7 @@
 #include "platypus/core/Application.h"
 #include "platypus/assets/Image.h"
 #include "platypus/assets/Texture.h"
+#include "platypus/ecs/components/Renderable.h"
 
 #include <memory>
 
@@ -77,6 +78,7 @@ void TestScene::init()
     );
     Texture* pTexture = assetManager.createTexture(pImage->getID(), textureSampler);
 
+    /*
     create_test_entity(
         this,
         pMesh->getID(),
@@ -94,6 +96,21 @@ void TestScene::init()
         { { 0, 0, 1 }, 0.785f },
         { 0.5f, 0.5f, 0.5f }
     );
+    */
+
+    Model* pTestModel = assetManager.loadModel("assets/TestCube.glb");
+    entityID_t testEntity2 = createEntity();
+    createTransform(
+        testEntity2,
+        { -0.5f, 0, -4 },
+        { {0, 1, 0}, 0.78f },
+        { 1, 1, 1 }
+    );
+    createStaticMeshRenderable(
+        testEntity2,
+        pTestModel->getMeshes()[0]->getID(),
+        pTexture->getID()
+    );
 
     Debug::log("___TEST___initialized test scene!");
 }
@@ -101,6 +118,7 @@ void TestScene::init()
 static float s_TEST_value = 0.0f;
 void TestScene::update()
 {
+    /*
     s_TEST_value += 0.0001f;
     Matrix4f newMatrix = create_transformation_matrix(
         { 0.0f, 0, -2.0f },
@@ -109,4 +127,5 @@ void TestScene::update()
     );
     Transform* pTransform = (Transform*)getComponent(testEntity, ComponentType::COMPONENT_TYPE_TRANSFORM);
     pTransform->globalMatrix = newMatrix;
+    */
 }

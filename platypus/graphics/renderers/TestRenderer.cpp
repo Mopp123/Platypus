@@ -99,8 +99,9 @@ namespace platypus
     {
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float2 },
-                { 1, ShaderDataType::Float2 }
+                { 0, ShaderDataType::Float3 },
+                { 1, ShaderDataType::Float3 },
+                { 2, ShaderDataType::Float2 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0

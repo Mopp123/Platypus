@@ -8,6 +8,8 @@
 
 namespace platypus
 {
+    // NOTE: Loads currently a single mesh, "whole model" loading not yet supported!
+    // ALSO currently this is supposed to put a single index buffer and vertex buffer to out vals
     bool load_gltf_model(
         const CommandPool& commandPool,
         const std::string& filepath,

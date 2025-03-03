@@ -2767,6 +2767,12 @@ bool WriteImageData(const std::string *basepath, const std::string *filename,
                     const Image *image, bool embedImages,
                     const FsCallbacks* fs_cb, const URICallbacks *uri_cb,
                     std::string *out_uri, void *) {
+  // Early out on empty images, report the original uri if the image was not written.
+  if (image->image.empty()) {
+    *out_uri = *filename;
+    return true;
+  }
+
   const std::string ext = GetFilePathExtension(*filename);
 
   // Write image to temporary buffer
@@ -3309,11 +3315,12 @@ static bool UpdateImageObject(const Image &image, std::string &baseDir,
     filename = std::to_string(index) + "." + ext;
   }
 
-  // If callback is set and image data exists, modify image data object. If
-  // image data does not exist, this is not considered a failure and the
-  // original uri should be maintained.
+  // If callback is set, modify image data object.
+  // Note that the callback is also invoked for images without data.
+  // The default callback implementation simply returns true for
+  // empty images and sets the out URI to filename.
   bool imageWritten = false;
-  if (WriteImageData != nullptr && !filename.empty() && !image.image.empty()) {
+  if (WriteImageData != nullptr && !filename.empty()) {
     imageWritten = WriteImageData(&baseDir, &filename, &image, embedImages,
                                   fs_cb, uri_cb, out_uri, user_data);
     if (!imageWritten) {
@@ -4387,7 +4394,7 @@ static bool ParseImage(Image *image, const int image_idx, std::string *err,
     }
   } else {
     // Assume external file
-    // Keep texture path (for textures that cannot be decoded)
+    // Unconditionally keep the external URI of the image
     image->uri = uri;
 #ifdef TINYGLTF_NO_EXTERNAL_IMAGE
     return true;
@@ -4434,6 +4441,7 @@ static bool ParseImage(Image *image, const int image_idx, std::string *err,
     }
     return false;
   }
+
   return LoadImageData(image, image_idx, err, warn, 0, 0, &img.at(0),
                        static_cast<int>(img.size()), load_image_user_data);
 }
@@ -5597,7 +5605,7 @@ static bool ParseAnimation(Animation *animation, std::string *err,
         }
         sampler.input = inputIndex;
         sampler.output = outputIndex;
-        ParseExtrasAndExtensions(&sampler, err, o,
+        ParseExtrasAndExtensions(&sampler, err, s,
                                  store_original_json_for_extras_and_extensions);
 
         animation->samplers.emplace_back(std::move(sampler));
@@ -6445,6 +6453,15 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
           return false;
         }
         const Buffer &buffer = model->buffers[size_t(bufferView.buffer)];
+        if (bufferView.byteOffset >= buffer.data.size()) {
+          if (err) {
+            std::stringstream ss;
+            ss << "image[" << idx << "] bufferView \"" << image.bufferView
+               << "\" indexed out of bounds of its buffer." << std::endl;
+            (*err) += ss.str();
+          }
+          return false;
+        }
 
         if (LoadImageData == nullptr) {
           if (err) {
@@ -7199,6 +7216,7 @@ static void SerializeGltfBufferData(const std::vector<unsigned char> &data,
 
 static bool SerializeGltfBufferData(const std::vector<unsigned char> &data,
                                     const std::string &binFilename) {
+#ifndef TINYGLTF_NO_FS
 #ifdef _WIN32
 #if defined(__GLIBCXX__)  // mingw
   int file_descriptor = _wopen(UTF8ToWchar(binFilename).c_str(),
@@ -7227,6 +7245,9 @@ static bool SerializeGltfBufferData(const std::vector<unsigned char> &data,
     // write empty file.
   }
   return true;
+#else
+  return false;
+#endif
 }
 
 #if 0  // FIXME(syoyo): not used. will be removed in the future release.
@@ -8448,6 +8469,7 @@ static bool WriteGltfStream(std::ostream &stream, const std::string &content) {
 
 static bool WriteGltfFile(const std::string &output,
                           const std::string &content) {
+#ifndef TINYGLTF_NO_FS
 #ifdef _WIN32
 #if defined(_MSC_VER)
   std::ofstream gltfFile(UTF8ToWchar(output).c_str());
@@ -8467,6 +8489,9 @@ static bool WriteGltfFile(const std::string &output,
   if (!gltfFile.is_open()) return false;
 #endif
   return WriteGltfStream(gltfFile, content);
+#else
+    return false;
+#endif
 }
 
 static bool WriteBinaryGltfStream(std::ostream &stream,
@@ -8533,6 +8558,7 @@ static bool WriteBinaryGltfStream(std::ostream &stream,
 static bool WriteBinaryGltfFile(const std::string &output,
                                 const std::string &content,
                                 const std::vector<unsigned char> &binBuffer) {
+#ifndef TINYGLTF_NO_FS
 #ifdef _WIN32
 #if defined(_MSC_VER)
   std::ofstream gltfFile(UTF8ToWchar(output).c_str(), std::ios::binary);
@@ -8549,6 +8575,9 @@ static bool WriteBinaryGltfFile(const std::string &output,
   std::ofstream gltfFile(output.c_str(), std::ios::binary);
 #endif
   return WriteBinaryGltfStream(gltfFile, content, binBuffer);
+#else
+    return false;
+#endif
 }
 
 bool TinyGLTF::WriteGltfSceneToStream(const Model *model, std::ostream &stream,

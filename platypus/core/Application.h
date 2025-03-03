@@ -3,16 +3,7 @@
 #include "Window.h"
 #include "InputManager.h"
 #include "platypus/graphics/Context.h"
-#include "platypus/graphics/Swapchain.h"
-
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/Shader.h"
-#include "platypus/graphics/Pipeline.h"
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/Descriptors.h"
-
 #include "platypus/graphics/renderers/MasterRenderer.h"
-
 #include "SceneManager.h"
 #include "platypus/assets/AssetManager.h"
 
@@ -29,9 +20,7 @@ namespace platypus
         InputManager _inputManager;
         Context _context;
         SceneManager _sceneManager;
-
         MasterRenderer _masterRenderer;
-
         AssetManager _assetManager;
 
     public:

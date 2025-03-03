@@ -1,6 +1,7 @@
 #version 450
 
-layout(location = 0) in vec2 var_texCoord;
+layout(location = 0) in vec2 var_normal;
+layout(location = 1) in vec2 var_texCoord;
 
 layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 

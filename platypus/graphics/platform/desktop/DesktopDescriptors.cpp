@@ -140,7 +140,7 @@ namespace platypus
 
         const size_t& maxFramesInFlight = swapchain.getImpl()->maxFramesInFlight;
         // NOTE: maxDescriptorSets hardcoded here ONLY FOR TESTING!
-        const uint32_t maxDescriptorSets = 2 * maxFramesInFlight;
+        const uint32_t maxDescriptorSets = 4 * maxFramesInFlight;
         const std::vector<DescriptorType> types =
         {
             DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,

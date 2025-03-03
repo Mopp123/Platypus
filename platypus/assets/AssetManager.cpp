@@ -1,6 +1,7 @@
 #include "AssetManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/utils/ModelLoading.h"
 
 
 namespace platypus
@@ -130,6 +131,48 @@ namespace platypus
         Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer);
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
+    }
+
+    Model* AssetManager::loadModel(const std::string& filepath)
+    {
+        std::vector<Buffer*> vertexBuffers;
+        std::vector<Buffer*> indexBuffers;
+        if (!load_gltf_model(_commandPoolRef, filepath, vertexBuffers, indexBuffers))
+        {
+            Debug::log(
+                "@AssetManager::loadModel "
+                "Failed to load model using filepath: " + filepath,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        // Currently supporting only loading single mesh from file for model!
+        // TODO: Multiple meshes and buffers per model!
+        if (vertexBuffers.size() != indexBuffers.size())
+        {
+            Debug::log(
+                "@AssetManager::loadModel "
+                "Failed to load model using filepath: " + filepath + " "
+                "Mismatch in meshes' index buffers and vertex buffers' sizes! "
+                "It is currently required to have a single index buffer and vertex buffer"
+                "for a single mesh!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+
+        std::vector<Mesh*> meshes(vertexBuffers.size());
+        for (size_t i = 0; i < vertexBuffers.size(); ++i)
+        {
+            Mesh* pMesh = new Mesh(vertexBuffers[i], indexBuffers[i]);
+            _assets[pMesh->getID()] = pMesh;
+            meshes[i] = pMesh;
+        }
+        Model* pModel = new Model(meshes);
+        _assets[pModel->getID()] = pModel;
+        return pModel;
     }
 
     Image* AssetManager::getImage(ID_t assetID) const

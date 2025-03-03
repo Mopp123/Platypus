@@ -48,6 +48,8 @@ add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 # TODO: Some flag to build looking all libs from current dir for "shipping"
 add_library(glfw SHARED IMPORTED)
 set_property(TARGET glfw PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/dependencies/glfw/build/src/libglfw.so.3.5")
+# Below so much more nice, but the issue with licences and static linking?
+# add_subdirectory(dependencies/glfw)
 
 find_package(Vulkan REQUIRED)
 set(VMA_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/dependencies/VulkanMemoryAllocator/include")

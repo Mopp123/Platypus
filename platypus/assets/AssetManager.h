@@ -3,6 +3,7 @@
 #include "Asset.h"
 #include "Image.h"
 #include "Mesh.h"
+#include "Model.h"
 #include "Texture.h"
 #include "platypus/graphics/CommandBuffer.h"
 #include <unordered_map>
@@ -30,6 +31,8 @@ namespace platypus
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
         );
+
+        Model* loadModel(const std::string& filepath);
 
         Image* getImage(ID_t assetID) const;
         Texture* getTexture(ID_t assetID) const;
