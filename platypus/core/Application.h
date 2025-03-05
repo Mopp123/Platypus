@@ -19,8 +19,8 @@ namespace platypus
         Window _window;
         InputManager _inputManager;
         Context _context;
-        SceneManager _sceneManager;
         MasterRenderer _masterRenderer;
+        SceneManager _sceneManager;
         AssetManager _assetManager;
 
     public:

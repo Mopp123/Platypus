@@ -1,0 +1,13 @@
+
+version: "3.7"
+
+services:
+
+  platypus-test-site:
+    container_name: platypus-web-test
+    command: bash start-container.sh
+    image: platypus-web-test
+    volumes:
+      - ./buildweb/:/usr/src/app
+    ports:
+      - 80:80

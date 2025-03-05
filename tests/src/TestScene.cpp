@@ -99,7 +99,7 @@ void TestScene::init()
     */
 
     Model* pTestModel = assetManager.loadModel("assets/TestCube.glb");
-    entityID_t testEntity2 = createEntity();
+    testEntity2 = createEntity();
     createTransform(
         testEntity2,
         { -0.5f, 0, -4 },
@@ -118,14 +118,15 @@ void TestScene::init()
 static float s_TEST_value = 0.0f;
 void TestScene::update()
 {
-    /*
     s_TEST_value += 0.0001f;
     Matrix4f newMatrix = create_transformation_matrix(
-        { 0.0f, 0, -2.0f },
-        { { 0, 0, 1 }, s_TEST_value },
-        { 0.4f, 0.4f, 0.4f }
+        { 0.0f, 0, -4.0f },
+        { { 0, 1, 1 }, s_TEST_value },
+        { 1, 1, 1 }
     );
-    Transform* pTransform = (Transform*)getComponent(testEntity, ComponentType::COMPONENT_TYPE_TRANSFORM);
+    Transform* pTransform = (Transform*)getComponent(
+        testEntity2,
+        ComponentType::COMPONENT_TYPE_TRANSFORM
+    );
     pTransform->globalMatrix = newMatrix;
-    */
 }

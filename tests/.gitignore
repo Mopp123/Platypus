@@ -1,3 +1,13 @@
-build
 compile_commands.json
 *.spv
+
+/build/desktop
+
+/build/web/CMakeFiles
+/build/web/*.wasm
+/build/web/*.txt
+/build/web/Makefile
+/build/web/*.data
+/build/web/*.html
+/build/web/*.js
+/build/web/*.cmake
