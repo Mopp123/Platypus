@@ -59,24 +59,24 @@ namespace platypus
         { GLFW_KEY_N, KeyName::KEY_N },
         { GLFW_KEY_M, KeyName::KEY_M },
 
-        { GLFW_KEY_UP,    KeyName::KEY_UP },
+        { GLFW_KEY_UP,    KeyName::KEY_UP   },
         { GLFW_KEY_DOWN,  KeyName::KEY_DOWN },
         { GLFW_KEY_LEFT,  KeyName::KEY_LEFT },
         { GLFW_KEY_RIGHT, KeyName::KEY_RIGHT},
 
-        { GLFW_KEY_SPACE,        KeyName::KEY_SPACE },
+        { GLFW_KEY_SPACE,        KeyName::KEY_SPACE     },
         { GLFW_KEY_BACKSPACE,    KeyName::KEY_BACKSPACE },
-        { GLFW_KEY_ENTER,        KeyName::KEY_ENTER },
-        { GLFW_KEY_LEFT_CONTROL, KeyName::KEY_LCTRL },
-        { GLFW_KEY_LEFT_SHIFT,   KeyName::KEY_SHIFT },
-        { GLFW_KEY_TAB,          KeyName::KEY_TAB },
-        { GLFW_KEY_ESCAPE,       KeyName::KEY_ESCAPE}
+        { GLFW_KEY_ENTER,        KeyName::KEY_ENTER     },
+        { GLFW_KEY_LEFT_CONTROL, KeyName::KEY_LCTRL     },
+        { GLFW_KEY_LEFT_SHIFT,   KeyName::KEY_SHIFT     },
+        { GLFW_KEY_TAB,          KeyName::KEY_TAB       },
+        { GLFW_KEY_ESCAPE,       KeyName::KEY_ESCAPE    }
     };
 
     static std::unordered_map<int, MouseButtonName> s_glfwToMouseButtonMapping
     {
-        { GLFW_MOUSE_BUTTON_LEFT,   MouseButtonName::MOUSE_LEFT },
-        { GLFW_MOUSE_BUTTON_RIGHT,  MouseButtonName::MOUSE_RIGHT },
+        { GLFW_MOUSE_BUTTON_LEFT,   MouseButtonName::MOUSE_LEFT   },
+        { GLFW_MOUSE_BUTTON_RIGHT,  MouseButtonName::MOUSE_RIGHT  },
         { GLFW_MOUSE_BUTTON_MIDDLE, MouseButtonName::MOUSE_MIDDLE }
     };
 

@@ -8,6 +8,6 @@ services:
     command: bash start-container.sh
     image: platypus-web-test
     volumes:
-      - ./buildweb/:/usr/src/app
+      - ./build/web/:/usr/src/app
     ports:
       - 80:80

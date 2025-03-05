@@ -19,17 +19,17 @@ else
     then
         cd $root_dir/web/build
         echo "starting $build_type build to $( pwd )"
-        emcmake cmake -S ${src_dir} -B . -DBUILD_TYPE=$build_type
-        cmake --build .
-    elif [[ "$build_type" == "linux" ]]
+        emcmake cmake -S . -B build/web -DBUILD_TARGET=$build_type
+        cmake --build build/web
+    elif [[ "$build_type" == "desktop" ]]
     then
-        cmake -S . -B ./desktop/ -DBUILD_TYPE=$build_type
-        cmake --build ./desktop/
+        cmake -S . -B build/desktop -DBUILD_TARGET=$build_type
+        cmake --build ./build/desktop
     else
         echo -e "\e[31mUnsupported build type: $build_type\e[0m"
         echo "Currently supported build types:"
         echo "  web"
-        echo "  linux"
+        echo "  desktop"
     fi
 fi
 

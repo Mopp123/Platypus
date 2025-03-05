@@ -43,10 +43,15 @@ namespace platypus
         InputManager(const InputManager&) = delete;
         ~InputManager();
 
-        // Needed to have some way to handle window resizing outside of regular events.
-        // Sets new window dimensions and flags it as resized.
+        // Following functions require platform specific implementation.
+        // @handleWindowResizeEvent:
+        //  *Needed to have some way to handle window resizing outside of regular events.
+        //  Sets new window dimensions and flags it as resized.
         void handleWindowResizeEvent(int width, int height);
+        void pollEvents();
+        void waitEvents();
 
+        // All below implemented by core/InputManager.cpp
         void addKeyEvent(KeyEvent* ev);
         void addMouseButtonEvent(MouseButtonEvent* ev);
         void addCursorPosEvent(CursorPosEvent* ev);
@@ -65,9 +70,6 @@ namespace platypus
 
         bool isKeyDown(KeyName key) const;
         bool isMouseButtonDown(MouseButtonName button) const;
-
-        void pollEvents();
-        void waitEvents();
 
         inline void setMousePos(int x, int y) { _mouseX = x; _mouseY = y; }
         inline int getMouseX() const { return _mouseX; }
