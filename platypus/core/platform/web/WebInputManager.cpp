@@ -92,6 +92,11 @@ namespace platypus
     }
 
 
+    EM_JS(int, webwindow_get_width, (), {
+        return window.width;
+    });
+
+
     EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
@@ -173,6 +178,7 @@ namespace platypus
 
         return true;
     }
+
     EM_BOOL mouse_up_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
@@ -194,6 +200,63 @@ namespace platypus
 
         return true;
     }
+
+    EM_BOOL cursor_pos_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
+    {
+        InputManager* pInputManager = (InputManager*)userData;
+
+        // In web gl our coords are flipped -> need to flip mouseY
+        const int windowWidth = Application::get_instance()->getWindow().getHeight();
+
+        int mx = mouseEvent->targetX;
+        int my = windowWidth - mouseEvent->targetY;
+        pInputManager->setMousePos(mx, my);
+        pInputManager->processCursorPosEvents(mx, my);
+
+        return true;
+    }
+
+    EM_BOOL scroll_callback(int eventType, const EmscriptenWheelEvent* wheelEvent, void* userData)
+    {
+        InputManager* pInputManager = (InputManager*)userData;
+
+        double scroll = wheelEvent->deltaY;
+        // Maybe take deltaX into account too eventually
+        pInputManager->processScrollEvents(0, scroll);
+
+        return true;
+    }
+
+    // NOTE: On web platform "window" resizing works differently from desktop.
+    // We can only detect if the actual browser window is resized.
+    // Canvas in which we render can't get resized UNLESS in following cases:
+    //  * The application has some configurable settings where user can specify resolution
+    //  * The application has been setup to always fit the canvas to the inner scale of the browser
+    //  window.
+    EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
+    {
+        InputManager* pInputManager = (InputManager*)userData;
+        const Window& window = Application::get_instance()->getWindow();
+        if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN &&  eventType == EMSCRIPTEN_EVENT_RESIZE)
+        {
+            // NOTE: BELOW FUCKED ATM!
+            // TODO:
+            //  * somehow call the fit_page() func of the WebWindow here
+            //  * handle the window's resizing and possible swapchain recreation etc...
+            int width = webwindow_get_width();
+            int height = webwindow_get_height();
+            int surfaceWidth = webwindow_get_inner_width();
+            int surfaceHeight = webwindow_get_inner_height();
+
+            (Application::get())->resizeWindow(surfaceWidth, surfaceHeight);
+
+            WebInputManager* inputManager = (WebInputManager*)userData;
+            inputManager->processWindowResizeEvents(surfaceWidth, surfaceHeight);
+        }
+
+        return true;
+    }
+
 
     InputManager::InputManager(Window& windowRef)
     {

@@ -11,11 +11,23 @@ namespace platypus
         int width,
         int height,
         bool resizable,
-        bool fullscreen
+        WindowMode mode
     ) :
         _width(width),
-        _height(height)
+        _height(height),
+        _mode(mode)
     {
+        if (mode != WindowMode::WINDOWED)
+        {
+            Debug::log(
+                "@Window::Window "
+                "Current desktop window implementation allows windows to be "
+                "only in windowed mode",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         if (!glfwInit())
         {
             const char* errDescription;
@@ -38,7 +50,7 @@ namespace platypus
             _width,
             _height,
             title.c_str(),
-            fullscreen ? glfwGetPrimaryMonitor() : NULL,
+            mode == WindowMode::FULLSCREEN ? glfwGetPrimaryMonitor() : NULL,
             NULL
         );
         if (!pGLFWwindow)

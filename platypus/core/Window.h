@@ -5,6 +5,20 @@
 
 namespace platypus
 {
+    // @WINDOWED_FIT_SCREEN:
+    //  On desktop:
+    //      Puts to screen resolution but on windowed mode
+    //  On web:
+    //      Puts the canvas to fit the browser window's "inner scale" and
+    //      resizes if appropriately
+    //
+    enum class WindowMode
+    {
+        WINDOWED,
+        WINDOWED_FIT_SCREEN,
+        FULLSCREEN
+    };
+
     class InputManager;
 
     struct WindowImpl;
@@ -15,6 +29,7 @@ namespace platypus
         int _width = 800;
         int _height = 600;
         bool _resized = false;
+        WindowMode _mode;
 
         WindowImpl* _pImpl = nullptr;
 
@@ -24,7 +39,7 @@ namespace platypus
             int width,
             int height,
             bool resizable,
-            bool fullscreen
+            WindowMode mode
         );
         ~Window();
 
@@ -39,5 +54,6 @@ namespace platypus
         inline bool resized() const { return _resized; }
         inline bool isMinimized() const { return _width == 0 || _height == 0; }
         inline void resetResized() { _resized = false; }
+        inline WindowMode getMode() const { return _mode; }
     };
 }

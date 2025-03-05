@@ -39,22 +39,30 @@ namespace platypus
       int width,
       int height,
       bool resizable,
-      bool fullscreen
+      WindowMode mode
     ) :
         _width(width),
-        _height(height)
+        _height(height),
+        _mode(mode)
     {
-        if (fullscreen)
+        if (mode == WindowMode::FULLSCREEN)
         {
             Debug::log(
                 "@Window::Window "
-                "Requested fullscreen window but this feature isn't available yet",
+                "Current web window implementation doesn't support fullscreen yet",
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
+        else if (mode == WindowMode::WINDOWED)
+        {
+            resize_canvas(width, height);
+        }
+        else if (mode == WindowMode::WINDOWED_FIT_SCREEN)
+        {
+            fit_page();
+        }
 
-        resize_canvas(width, height);
         _pImpl = new WindowImpl;
 
         Debug::log("Window created successfully");
