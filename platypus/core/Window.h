@@ -49,6 +49,16 @@ namespace platypus
 
         WindowImpl* getImpl();
 
+        // @handleWindowResizeEvent:
+        //  *Needed to have some way to handle window resizing outside of regular events.
+        //  Sets new window dimensions and flags it as resized.
+        inline void resize(int width, int height)
+        {
+            _width = width;
+            _height = height;
+            _resized = true;
+        }
+
         inline int getWidth() const { return _width; }
         inline int getHeight() const { return _height; }
         inline bool resized() const { return _resized; }

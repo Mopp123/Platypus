@@ -42,11 +42,10 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # -> specify all engine files here
     list(APPEND SRC_FILES
         ${PARENT_DIR}/platypus/core/Debug.cpp
+        ${PARENT_DIR}/platypus/core/InputManager.cpp
 
-        ${PARENT_DIR}/platypus/core/Window.h
         ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
 
-        ${PARENT_DIR}/platypus/graphics/Context.h
         ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
 
 

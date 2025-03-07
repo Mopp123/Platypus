@@ -45,9 +45,10 @@ namespace platypus
 
         // Following functions require platform specific implementation.
         // @handleWindowResizeEvent:
-        //  *Needed to have some way to handle window resizing outside of regular events.
-        //  Sets new window dimensions and flags it as resized.
-        void handleWindowResizeEvent(int width, int height);
+        //  * Needed to have some way to handle window resizing outside of regular events.
+        //  * Needs to at least set window dimensions and flag it as resized
+        //  * Call all necessary platform independent window resizing stuff
+        void handleWindowResizing(int width, int height);
         void pollEvents();
         void waitEvents();
 

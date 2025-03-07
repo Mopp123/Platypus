@@ -20,10 +20,16 @@ namespace platypus
     });
 
 
-    EM_JS(void, get_canvas_scale, (Extent2D& extent), {
+    // Quite dumb, but couldn't figure out quickly enough how
+    // to get references or ptrs working with this kind of stuff
+    EM_JS(int, get_canvas_width, (), {
         var c = document.getElementById('canvas');
-        extent.width = c.width;
-        extent.height = c.height;
+        return c.width;
+    });
+
+    EM_JS(int, get_canvas_height, (), {
+        var c = document.getElementById('canvas');
+        return c.height;
     });
 
 
@@ -81,10 +87,8 @@ namespace platypus
 
     void Window::getSurfaceExtent(int* pWidth, int* pHeight) const
     {
-        Extent2D canvasScale{};
-        get_canvas_scale(canvasScale);
-        *pWidth = canvasScale.width;
-        *pHeight = canvasScale.height;
+        *pWidth = get_canvas_width();
+        *pHeight = get_canvas_height();
     }
 
     WindowImpl* Window::getImpl()

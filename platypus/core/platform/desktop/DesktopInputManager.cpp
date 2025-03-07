@@ -188,7 +188,7 @@ namespace platypus
         destroyEvents();
     }
 
-    void InputManager::handleWindowResizeEvent(int width, int height)
+    void InputManager::handleWindowResizing(int width, int height)
     {
         _windowRef._width = width;
         _windowRef._height = height;

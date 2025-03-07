@@ -1,10 +1,15 @@
 #include "platypus/core/InputEvent.h"
 #include "platypus/core/InputManager.h"
+//#include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+
+#include <emscripten.h>
+#include <emscripten/html5.h>
+
 
 namespace platypus
 {
-    const std::unordered_map<std::string, InputKeyName> s_emscToKeyMapping
+    const std::unordered_map<std::string, KeyName> s_emscToKeyMapping
     {
         { "0", KeyName::KEY_0 },
         { "1", KeyName::KEY_1 },
@@ -72,7 +77,7 @@ namespace platypus
     };
 
 
-    const std::unordered_map<unsigned short, InputMouseButtonName> s_emscToMouseButtonMapping
+    const std::unordered_map<unsigned short, MouseButtonName> s_emscToMouseButtonMapping
     {
         { 0, MouseButtonName::MOUSE_LEFT   },
         { 1, MouseButtonName::MOUSE_RIGHT  },
@@ -96,12 +101,26 @@ namespace platypus
         return window.width;
     });
 
+    EM_JS(int, webwindow_get_height, (), {
+        return window.height;
+    });
+
+    EM_JS(int, webwindow_get_inner_width, (), {
+        return window.innerWidth;
+    });
+
+    EM_JS(int, webwindow_get_inner_height, (), {
+       return window.innerHeight;
+    });
+
 
     EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
     {
+        Debug::log("___TEST___key down: " + std::string(keyEvent->key));
         InputManager* pInputManager = (InputManager*)userData;
 
-        if (s_emscToKeyMapping.find(keyEvent->key) == s_emscToKeyMapping.end())
+        std::unordered_map<std::string, KeyName>::const_iterator keyIt = s_emscToKeyMapping.find(keyEvent->key);
+        if (keyIt == s_emscToKeyMapping.end())
         {
             Debug::log(
                 "@keydown_callback "
@@ -111,7 +130,7 @@ namespace platypus
             return true;
         }
 
-        KeyName keyName = s_emscToKeyMapping[keyEvent->key];
+        KeyName keyName = keyIt->second;
         pInputManager->_keyDown[keyName] = true;
         // NOTE: Don't know yet what we should do with scancodes and mods here... if anything...
         int scancode = 0;
@@ -119,7 +138,7 @@ namespace platypus
         pInputManager->processKeyEvents(keyName, scancode, InputAction::PRESS, mods);
 
         // check is this just a 'char' -> process char input events
-        if (inputManager->is_character(keyEvent->key))
+        if (is_character(keyEvent->key))
         {
             unsigned char b1 = keyEvent->key[0];
             //unsigned char b2 = keyEvent->key[1];
@@ -128,7 +147,7 @@ namespace platypus
             // Extended chars are disabled atm!
             unsigned int codepoint = b1;
 
-            inputManager->processCharInputEvents(codepoint);
+            pInputManager->processCharInputEvents(codepoint);
         }
 
         return true;
@@ -137,7 +156,8 @@ namespace platypus
     {
         InputManager* pInputManager = (InputManager*)userData;
 
-        if (s_emscToKeyMapping.find(keyEvent->key) == s_emscToKeyMapping.end())
+        std::unordered_map<std::string, KeyName>::const_iterator keyIt = s_emscToKeyMapping.find(keyEvent->key);
+        if (keyIt == s_emscToKeyMapping.end())
         {
             Debug::log(
                 "@keyup_callback "
@@ -147,7 +167,7 @@ namespace platypus
             return true;
         }
 
-        KeyName keyName = s_emscToKeyMapping[keyEvent->key];
+        KeyName keyName = keyIt->second;
         pInputManager->_keyDown[keyName] = false;
         // NOTE: Don't know yet what we should do with scancodes and mods here... if anything...
         int scancode = 0;
@@ -161,17 +181,18 @@ namespace platypus
     {
         InputManager* pInputManager = (InputManager*)userData;
 
-        if (s_emscToMouseButtonMapping.find(mouseEvent->button) == s_emscToMouseButtonMapping.end())
+        std::unordered_map<unsigned short, MouseButtonName>::const_iterator buttonIt = s_emscToMouseButtonMapping.find(mouseEvent->button);
+        if (buttonIt == s_emscToMouseButtonMapping.end())
         {
             Debug::log(
                 "@mouse_down_callback "
-                "Failed to find button: " + std::string(mouseEvent->button),
+                "Failed to find button: " + std::to_string(mouseEvent->button),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             return true;
         }
 
-        MouseButtonName buttonName = s_emscToMouseButtonMapping[mouseEvent->button];
+        MouseButtonName buttonName = buttonIt->second;
         pInputManager->_mouseDown[buttonName] = true;
         int mods = 0;
         pInputManager->processMouseButtonEvents(buttonName, InputAction::PRESS, mods);
@@ -183,17 +204,18 @@ namespace platypus
     {
         InputManager* pInputManager = (InputManager*)userData;
 
-        if (s_emscToMouseButtonMapping.find(mouseEvent->button) == s_emscToMouseButtonMapping.end())
+        std::unordered_map<unsigned short, MouseButtonName>::const_iterator buttonIt = s_emscToMouseButtonMapping.find(mouseEvent->button);
+        if (buttonIt == s_emscToMouseButtonMapping.end())
         {
             Debug::log(
                 "@mouse_up_callback "
-                "Failed to find button: " + std::string(mouseEvent->button),
+                "Failed to find button: " + std::to_string(mouseEvent->button),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             return true;
         }
 
-        MouseButtonName buttonName = s_emscToMouseButtonMapping[mouseEvent->button];
+        MouseButtonName buttonName = buttonIt->second;
         pInputManager->_mouseDown[buttonName] = false;
         int mods = 0;
         pInputManager->processMouseButtonEvents(buttonName, InputAction::RELEASE, mods);
@@ -206,10 +228,12 @@ namespace platypus
         InputManager* pInputManager = (InputManager*)userData;
 
         // In web gl our coords are flipped -> need to flip mouseY
-        const int windowWidth = Application::get_instance()->getWindow().getHeight();
+        // NOTE: ATM DISABLED ONLY FOR TESTING
+        //const int windowHeight = Application::get_instance()->getWindow().getHeight();
 
         int mx = mouseEvent->targetX;
-        int my = windowWidth - mouseEvent->targetY;
+        int my = mouseEvent->targetY;
+        //int my = windowHeight - mouseEvent->targetY;
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
 
@@ -235,39 +259,73 @@ namespace platypus
     //  window.
     EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
     {
+        Debug::log("___TEST___UI CALLBACK");
         InputManager* pInputManager = (InputManager*)userData;
-        const Window& window = Application::get_instance()->getWindow();
-        if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN &&  eventType == EMSCRIPTEN_EVENT_RESIZE)
-        {
-            // NOTE: BELOW FUCKED ATM!
-            // TODO:
-            //  * somehow call the fit_page() func of the WebWindow here
-            //  * handle the window's resizing and possible swapchain recreation etc...
+        //const Window& window = Application::get_instance()->getWindow();
+        //if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN && eventType == EMSCRIPTEN_EVENT_RESIZE)
+        //{
             int width = webwindow_get_width();
             int height = webwindow_get_height();
             int surfaceWidth = webwindow_get_inner_width();
             int surfaceHeight = webwindow_get_inner_height();
 
-            (Application::get())->resizeWindow(surfaceWidth, surfaceHeight);
+            pInputManager->processWindowResizeEvents(width, height);
 
-            WebInputManager* inputManager = (WebInputManager*)userData;
-            inputManager->processWindowResizeEvents(surfaceWidth, surfaceHeight);
-        }
+            // calls fit_page func to resize canvas to whole "inner window scale"
+            pInputManager->handleWindowResizing(width, height);
+        //}
 
         return true;
     }
 
 
-    InputManager::InputManager(Window& windowRef)
+    InputManager::InputManager(Window& windowRef) :
+        _windowRef(windowRef)
     {
+        //emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, key_callback);
+        emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keydown_callback);
+        emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keyup_callback);
+        //emscripten_set_keypress_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keypress_callback);
+
+        emscripten_set_mousedown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, mouse_down_callback);
+        emscripten_set_mouseup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, mouse_up_callback);
+
+        emscripten_set_mousemove_callback("canvas", this, true, cursor_pos_callback);
+        emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, scroll_callback);
+
+
+        emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, ui_callback);
     }
 
     InputManager::~InputManager()
     {
     }
 
-    void InputManager::handleWindowResizeEvent(int width, int height)
+    void InputManager::handleWindowResizing(int width, int height)
     {
+        if (_windowRef.getMode() == WindowMode::WINDOWED_FIT_SCREEN)
+        {
+            EM_ASM({
+                var c = document.getElementById('canvas');
+                c.width = window.innerWidth;
+                c.height = window.innerHeight;
+            });
+
+            int actualWidth = 0;
+            int actualHeight = 0;
+            _windowRef.getSurfaceExtent(&actualWidth, &actualHeight);
+            _windowRef._width = actualWidth;
+            _windowRef._height = actualHeight;
+            Debug::log("___TEST___new window scale(fit page): " + std::to_string(actualWidth) + ", " + std::to_string(actualHeight));
+        }
+        else
+        {
+            _windowRef._width = width;
+            _windowRef._height = height;
+            Debug::log("___TEST___new window scale(static): " + std::to_string(width) + ", " + std::to_string(height));
+        }
+
+        _windowRef._resized = true;
     }
 
     void InputManager::pollEvents()
