@@ -9,6 +9,14 @@
 
 #include "platypus/graphics/CommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/platform/web/WebShader.h"
+
+#include "platypus/assets/AssetManager.h"
+#include "platypus/assets/Image.h"
+#include "platypus/assets/Texture.h"
+
+#include "platypus/assets/Texture.h"
 
 #include <emscripten.h>
 
@@ -49,6 +57,20 @@ int main(int argc, const char** argv)
         BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
         BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
     );
+
+    AssetManager assetManager(commandPool);
+    Image* pImage = assetManager.loadImage("assets/test.png");
+    TextureSampler sampler(
+      TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+      TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
+      1,
+      0
+    );
+    Texture* pTexture = assetManager.createTexture(pImage->getID(), sampler);
+
+    //Shader vertexShader("assets/shaders/web/StaticShader.vert", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT);
+    //Shader fragmentShader("assets/shaders/web/StaticShader.frag", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT);
+    //OpenglShaderProgram p(ShaderVersion::ESSL1, vertexShader.getImpl(), fragmentShader.getImpl());
 
     emscripten_set_main_loop(update, 0, 1);
     /*

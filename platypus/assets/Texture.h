@@ -29,6 +29,9 @@ namespace platypus
     {
     private:
         std::shared_ptr<TextureSamplerImpl> _pImpl = nullptr;
+        TextureSamplerFilterMode _filterMode;
+        TextureSamplerAddressMode _addressMode;
+        uint32_t _mipLevelCount = 0;
 
     public:
         TextureSampler(
@@ -40,6 +43,9 @@ namespace platypus
         ~TextureSampler();
         TextureSampler(const TextureSampler& other);
 
+        inline TextureSamplerFilterMode getFilterMode() const { return _filterMode; }
+        inline TextureSamplerAddressMode getAddressMode() const { return _addressMode; }
+        inline uint32_t getMipLevelCount() const { return _mipLevelCount; }
         inline const std::shared_ptr<TextureSamplerImpl>& getImpl() const { return _pImpl; }
     };
 
@@ -55,7 +61,7 @@ namespace platypus
         Texture(
             const CommandPool& commandPool,
             const Image* pImage,
-            const TextureSampler& pSampler
+            const TextureSampler& sampler
         );
         Texture(const Texture&) = delete;
         ~Texture();

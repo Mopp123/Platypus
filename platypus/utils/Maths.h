@@ -104,6 +104,7 @@ namespace platypus
 
         inline float& operator[](int index) { return _data[index]; }
         inline float operator[](int index) const { return _data[index]; }
+        inline const float* getRawArray() const { return _data; }
     };
 
 

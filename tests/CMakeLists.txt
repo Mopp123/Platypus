@@ -28,6 +28,12 @@ if(${BUILD_TARGET} MATCHES "desktop")
     set_property(TARGET platypus PROPERTY IMPORTED_LOCATION "${PARENT_DIR}/build/libplatypus.so")
 elseif(${BUILD_TARGET} MATCHES "web")
     add_compile_definitions(PLATYPUS_BUILD_WEB=1)
+    list(
+        APPEND PROJECT_INCLUDES
+        ${PARENT_DIR}/dependencies/stb
+        ${PARENT_DIR}/dependencies/json
+        ${PARENT_DIR}/dependencies/tinygltf
+    )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
     set(CMAKE_EXECUTABLE_SUFFIX .html)
     set(HTML_SHELL_LOCATION "${PROJECT_SOURCE_DIR}/shell.html")
@@ -46,6 +52,11 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
 
         ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
+
+        ${PARENT_DIR}/platypus/utils/*.cpp
+
+        ${PARENT_DIR}/platypus/assets/*.cpp
+        ${PARENT_DIR}/platypus/assets/platform/${BUILD_TARGET}/*.cpp
 
 
         #${PARENT_DIR}/platypus/ecs/components/*.cpp
