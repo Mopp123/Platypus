@@ -43,7 +43,6 @@ elseif(${BUILD_TARGET} MATCHES "web")
     list(APPEND SRC_FILES
         ${PARENT_DIR}/platypus/core/Debug.cpp
         ${PARENT_DIR}/platypus/core/InputManager.cpp
-
         ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
 
         ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp

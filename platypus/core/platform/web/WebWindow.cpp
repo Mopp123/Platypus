@@ -19,7 +19,6 @@ namespace platypus
         c.height = h;
     });
 
-
     // Quite dumb, but couldn't figure out quickly enough how
     // to get references or ptrs working with this kind of stuff
     EM_JS(int, get_canvas_width, (), {

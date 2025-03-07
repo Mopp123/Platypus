@@ -9,7 +9,7 @@
 
 namespace platypus
 {
-    const std::unordered_map<std::string, KeyName> s_emscToKeyMapping
+    static const std::unordered_map<std::string, KeyName> s_emscToKeyMapping
     {
         { "0", KeyName::KEY_0 },
         { "1", KeyName::KEY_1 },
@@ -77,7 +77,7 @@ namespace platypus
     };
 
 
-    const std::unordered_map<unsigned short, MouseButtonName> s_emscToMouseButtonMapping
+    static const std::unordered_map<unsigned short, MouseButtonName> s_emscToMouseButtonMapping
     {
         { 0, MouseButtonName::MOUSE_LEFT   },
         { 1, MouseButtonName::MOUSE_RIGHT  },
@@ -114,11 +114,9 @@ namespace platypus
     });
 
 
-    EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
+    static EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
     {
-        Debug::log("___TEST___key down: " + std::string(keyEvent->key));
         InputManager* pInputManager = (InputManager*)userData;
-
         std::unordered_map<std::string, KeyName>::const_iterator keyIt = s_emscToKeyMapping.find(keyEvent->key);
         if (keyIt == s_emscToKeyMapping.end())
         {
@@ -152,10 +150,10 @@ namespace platypus
 
         return true;
     }
-    EM_BOOL keyup_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
+
+    static EM_BOOL keyup_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
-
         std::unordered_map<std::string, KeyName>::const_iterator keyIt = s_emscToKeyMapping.find(keyEvent->key);
         if (keyIt == s_emscToKeyMapping.end())
         {
@@ -177,10 +175,9 @@ namespace platypus
         return true;
     }
 
-    EM_BOOL mouse_down_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
+    static EM_BOOL mouse_down_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
-
         std::unordered_map<unsigned short, MouseButtonName>::const_iterator buttonIt = s_emscToMouseButtonMapping.find(mouseEvent->button);
         if (buttonIt == s_emscToMouseButtonMapping.end())
         {
@@ -200,10 +197,9 @@ namespace platypus
         return true;
     }
 
-    EM_BOOL mouse_up_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
+    static EM_BOOL mouse_up_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
-
         std::unordered_map<unsigned short, MouseButtonName>::const_iterator buttonIt = s_emscToMouseButtonMapping.find(mouseEvent->button);
         if (buttonIt == s_emscToMouseButtonMapping.end())
         {
@@ -223,7 +219,7 @@ namespace platypus
         return true;
     }
 
-    EM_BOOL cursor_pos_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
+    static EM_BOOL cursor_pos_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
 
@@ -240,7 +236,7 @@ namespace platypus
         return true;
     }
 
-    EM_BOOL scroll_callback(int eventType, const EmscriptenWheelEvent* wheelEvent, void* userData)
+    static EM_BOOL scroll_callback(int eventType, const EmscriptenWheelEvent* wheelEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
 
@@ -257,9 +253,8 @@ namespace platypus
     //  * The application has some configurable settings where user can specify resolution
     //  * The application has been setup to always fit the canvas to the inner scale of the browser
     //  window.
-    EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
+    static EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
     {
-        Debug::log("___TEST___UI CALLBACK");
         InputManager* pInputManager = (InputManager*)userData;
         //const Window& window = Application::get_instance()->getWindow();
         //if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN && eventType == EMSCRIPTEN_EVENT_RESIZE)
@@ -271,7 +266,6 @@ namespace platypus
 
             pInputManager->processWindowResizeEvents(width, height);
 
-            // calls fit_page func to resize canvas to whole "inner window scale"
             pInputManager->handleWindowResizing(width, height);
         //}
 
@@ -305,6 +299,7 @@ namespace platypus
     {
         if (_windowRef.getMode() == WindowMode::WINDOWED_FIT_SCREEN)
         {
+            // "Fit canvas to window inner scale"
             EM_ASM({
                 var c = document.getElementById('canvas');
                 c.width = window.innerWidth;
@@ -316,13 +311,11 @@ namespace platypus
             _windowRef.getSurfaceExtent(&actualWidth, &actualHeight);
             _windowRef._width = actualWidth;
             _windowRef._height = actualHeight;
-            Debug::log("___TEST___new window scale(fit page): " + std::to_string(actualWidth) + ", " + std::to_string(actualHeight));
         }
         else
         {
             _windowRef._width = width;
             _windowRef._height = height;
-            Debug::log("___TEST___new window scale(static): " + std::to_string(width) + ", " + std::to_string(height));
         }
 
         _windowRef._resized = true;
