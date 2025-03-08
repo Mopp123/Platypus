@@ -14,7 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(PROJECT_INCLUDES ${PARENT_DIR})
 
 set(SRC_FILES
-    src/Main.cpp
+    src/*.cpp
 )
 
 if(${BUILD_TARGET} MATCHES "desktop")
@@ -47,25 +47,27 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here
     list(APPEND SRC_FILES
-        ${PARENT_DIR}/platypus/core/Debug.cpp
-        ${PARENT_DIR}/platypus/core/InputManager.cpp
-        ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
+        #${PARENT_DIR}/platypus/core/Debug.cpp
+        #${PARENT_DIR}/platypus/core/InputManager.cpp
+        #${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
 
-        ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
+        #${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
 
-        ${PARENT_DIR}/platypus/utils/*.cpp
-
-        ${PARENT_DIR}/platypus/assets/*.cpp
-        ${PARENT_DIR}/platypus/assets/platform/${BUILD_TARGET}/*.cpp
-
-
-        #${PARENT_DIR}/platypus/ecs/components/*.cpp
         #${PARENT_DIR}/platypus/utils/*.cpp
 
         #${PARENT_DIR}/platypus/assets/*.cpp
         #${PARENT_DIR}/platypus/assets/platform/${BUILD_TARGET}/*.cpp
 
-        #${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
+        ${PARENT_DIR}/platypus/core/*.cpp
+        ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
+
+        ${PARENT_DIR}/platypus/ecs/components/*.cpp
+        ${PARENT_DIR}/platypus/utils/*.cpp
+
+        ${PARENT_DIR}/platypus/assets/*.cpp
+        ${PARENT_DIR}/platypus/assets/platform/${BUILD_TARGET}/*.cpp
+
+        ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
         #${PARENT_DIR}/platypus/graphics/renderers/*.cpp
     )
 else()

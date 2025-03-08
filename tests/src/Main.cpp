@@ -1,34 +1,10 @@
-//#include "platypus/core/Application.h"
-//#include "TestScene.h"
+#include "platypus/core/Application.h"
+#include "TestScene.h"
 
-// NOTE: Atm just testing web implementations individually
-
-#include "platypus/core/Window.h"
-#include "platypus/core/InputManager.h"
-#include "platypus/graphics/Context.h"
-
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/Shader.h"
-#include "platypus/graphics/platform/web/WebShader.h"
-
-#include "platypus/assets/AssetManager.h"
-#include "platypus/assets/Image.h"
-#include "platypus/assets/Texture.h"
-
-#include "platypus/assets/Texture.h"
-
-#include <emscripten.h>
-
-
-using namespace platypus;
-
-void update()
-{
-}
 
 int main(int argc, const char** argv)
 {
+    /*
     const std::string appName = "Platypus-web-test";
     Window window(
       appName,
@@ -73,9 +49,15 @@ int main(int argc, const char** argv)
     //OpenglShaderProgram p(ShaderVersion::ESSL1, vertexShader.getImpl(), fragmentShader.getImpl());
 
     emscripten_set_main_loop(update, 0, 1);
-    /*
-    platypus::Application app("Platypus-web-test", 800, 600, true, false, new TestScene);
-    app.run();
     */
+    platypus::Application app(
+        "Platypus-web-test",
+        800,
+        600,
+        true,
+        platypus::WindowMode::WINDOWED_FIT_SCREEN,
+        new TestScene
+    );
+    app.run();
     return 0;
 }

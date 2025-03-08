@@ -29,7 +29,7 @@ namespace platypus
             int width,
             int height,
             bool resizable,
-            bool fullscreen,
+            WindowMode windowMode,
             Scene* pInitialScene
         );
         Application(const Application&) = delete;

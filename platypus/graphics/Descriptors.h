@@ -81,7 +81,7 @@ namespace platypus
             _uniformInfo(other._uniformInfo)
         {}
 
-        virtual ~DescriptorSetLayoutBinding() {}
+        ~DescriptorSetLayoutBinding() {}
 
         inline uint32_t getBinding() const { return _binding; }
         inline DescriptorType getType() const { return _type; }
