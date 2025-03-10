@@ -120,30 +120,6 @@ namespace platypus
         return vkFlags;
     }
 
-    size_t get_shader_datatype_size(ShaderDataType type)
-    {
-        switch (type)
-        {
-        case ShaderDataType::Float:  return sizeof(float);
-        case ShaderDataType::Float2: return sizeof(float) * 2;
-        case ShaderDataType::Float3: return sizeof(float) * 3;
-        case ShaderDataType::Float4: return sizeof(float) * 4;
-        default: return 0;
-        }
-    }
-
-    uint32_t get_shader_datatype_component_count(ShaderDataType type)
-    {
-        switch (type)
-        {
-        case ShaderDataType::Float:  return 1;
-        case ShaderDataType::Float2: return 2;
-        case ShaderDataType::Float3: return 3;
-        case ShaderDataType::Float4: return 4;
-        default: return 0;
-        }
-    }
-
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
     {
         size_t alignRequirement = Context::get_instance()->getMinUniformBufferOffsetAlignment();
@@ -200,7 +176,8 @@ namespace platypus
         std::vector<VertexBufferElement> elements,
         VertexInputRate inputRate,
         uint32_t binding
-    )
+    ) :
+        _inputRate(inputRate)
     {
         _pImpl = new VertexBufferLayoutImpl;
         _pImpl->bindingDescription.binding = binding;

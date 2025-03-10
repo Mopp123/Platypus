@@ -98,21 +98,24 @@ namespace platypus
     }
 
 
-    DescriptorSet::DescriptorSet(const std::vector<const Buffer*>& buffers) :
-        _buffers(buffers)
+    DescriptorSet::DescriptorSet(const std::vector<const Buffer*>& buffers, const DescriptorSetLayout* pLayout) :
+        _buffers(buffers),
+        _pLayout(pLayout)
     {
         _pImpl = new DescriptorSetImpl;
     }
 
-    DescriptorSet::DescriptorSet(const std::vector<const Texture*>& textures) :
-        _textures(textures)
+    DescriptorSet::DescriptorSet(const std::vector<const Texture*>& textures, const DescriptorSetLayout* pLayout) :
+        _textures(textures),
+        _pLayout(pLayout)
     {
         _pImpl = new DescriptorSetImpl;
     }
 
     DescriptorSet::DescriptorSet(const DescriptorSet& other) :
         _buffers(other._buffers),
-        _textures(other._textures)
+        _textures(other._textures),
+        _pLayout(other._pLayout)
     {
         _pImpl = new DescriptorSetImpl;
         _pImpl->handle = other._pImpl->handle;

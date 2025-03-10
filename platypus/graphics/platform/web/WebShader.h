@@ -21,6 +21,8 @@ namespace platypus
     };
 
 
+    // Called OpenglShader program instead of WebGL or GL ES since this could be used for
+    // desktop opengl implementation as well
     class OpenglShaderProgram
     {
     private:

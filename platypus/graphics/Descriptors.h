@@ -121,12 +121,14 @@ namespace platypus
         std::vector<const Buffer*> _buffers;
         std::vector<const Texture*> _textures;
 
+        const DescriptorSetLayout* _pLayout;
+
     public:
         DescriptorSet() = default;
 
-        DescriptorSet(const std::vector<const Buffer*>& buffers);
+        DescriptorSet(const std::vector<const Buffer*>& buffers, const DescriptorSetLayout* pLayout);
 
-        DescriptorSet(const std::vector<const Texture*>& textures);
+        DescriptorSet(const std::vector<const Texture*>& textures, const DescriptorSetLayout* pLayout);
 
         DescriptorSet(const DescriptorSet& other);
         DescriptorSet& operator=(DescriptorSet&& other);
@@ -147,6 +149,7 @@ namespace platypus
 
         inline const std::vector<const Buffer*>& getBuffers() const { return _buffers; }
         inline const std::vector<const Texture*>& getTextures() const { return _textures; }
+        inline const DescriptorSetLayout* getLayout() const { return _pLayout; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
     };
 

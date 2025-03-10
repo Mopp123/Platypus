@@ -1,12 +1,10 @@
 #include "platypus/graphics/CommandBuffer.h"
+#include "WebCommandBuffer.h"
+#include <GL/glew.h>
 
 
 namespace platypus
 {
-    struct CommandBufferImpl
-    {
-    };
-
     CommandBuffer::CommandBuffer(const CommandPool* pPool, CommandBufferLevel level) :
         _pPool(pPool),
         _level(level)
@@ -33,6 +31,14 @@ namespace platypus
 
     void CommandBuffer::end()
     {
+        // unbind all
+        GL_FUNC(glActiveTexture(GL_TEXTURE0));
+        GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
+        GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, 0));
+
+        // Make sure this cmd buf is unable to touch any pipeline until calling bindPipeline() again
+        ((CommandBufferImpl*)pCmdBufImpl)->pPipeline = nullptr;
+        ((CommandBufferImpl*)pCmdBufImpl)->_drawIndexedType = IndexType::INDEX_TYPE_NONE;
     }
 
     void CommandBuffer::beginSingleUse()

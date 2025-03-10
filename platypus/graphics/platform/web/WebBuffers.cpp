@@ -27,6 +27,59 @@ namespace platypus
         }
     }
 
+
+    struct VertexBufferElementImpl
+    {
+    };
+
+    VertexBufferElement::VertexBufferElement()
+    {
+    }
+
+    VertexBufferElement::VertexBufferElement(uint32_t location, ShaderDataType dataType) :
+        _location(location),
+        _type(dataType)
+    {
+    }
+
+    VertexBufferElement::VertexBufferElement(const VertexBufferElement&) :
+        _location(other._location),
+        _type(other._type)
+    {
+    }
+
+    VertexBufferElement::~VertexBufferElement()
+    {
+    }
+
+
+    struct VertexBufferLayoutImpl
+    {
+    };
+
+    VertexBufferLayout::VertexBufferLayout(
+        std::vector<VertexBufferElement> elements,
+        VertexInputRate inputRate,
+        uint32_t binding
+    ) :
+        _elements(elements),
+        _inputRate(inputRate)
+    {
+        for (const VertexBufferElement& element : elements)
+            _stride += get_shader_datatype_size(element.getType());
+    }
+
+    VertexBufferLayout::VertexBufferLayout(const VertexBufferLayout& other) :
+        _elements(other._elements),
+        _inputRate(other._inputRate),
+        _stride(other._stride)
+    {
+    }
+
+    VertexBufferLayout::~VertexBufferLayout()
+    {
+    }
+
     Buffer::Buffer(
         const CommandPool& commandPool,
         void* pData,
