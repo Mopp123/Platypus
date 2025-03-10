@@ -42,7 +42,7 @@ namespace platypus
     {
     }
 
-    VertexBufferElement::VertexBufferElement(const VertexBufferElement&) :
+    VertexBufferElement::VertexBufferElement(const VertexBufferElement& other) :
         _location(other._location),
         _type(other._type)
     {

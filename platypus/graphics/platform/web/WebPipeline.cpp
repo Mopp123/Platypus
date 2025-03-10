@@ -54,8 +54,8 @@ namespace platypus
         // NOTE: on web platform we aren't using layout qualifiers
         _pImpl->pShaderProgram = new OpenglShaderProgram(
             ShaderVersion::ESSL1,
-            (const ShaderImpl*)vertexShader.getImpl(),
-            (const ShaderImpl*)fragmentShader.getImpl()
+            (const ShaderImpl*)vertexShader._pImpl,
+            (const ShaderImpl*)fragmentShader._pImpl
         );
         _pImpl->cullMode = cullMode;
         _pImpl->frontFace = frontFace;
@@ -66,13 +66,13 @@ namespace platypus
 
     void Pipeline::destroy()
     {
-        if (_pShaderProgram)
+        if (_pImpl)
         {
             _pImpl->vertexBufferLayouts.clear();
             _pImpl->descriptorSetLayouts.clear();
 
-            delete _pShaderProgram;
-            _pShaderProgram = nullptr;
+            delete _pImpl->pShaderProgram;
+            _pImpl->pShaderProgram = nullptr;
         }
     }
 }

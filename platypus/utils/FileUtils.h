@@ -10,4 +10,5 @@ namespace platypus
     // Currently used for loading spir-v shaders and text files.
     // NOTE: Pretty insecure!
     std::vector<char> load_file(const std::string& filepath);
+    std::string load_text_file(const std::string& filepath);
 }

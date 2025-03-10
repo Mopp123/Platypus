@@ -2,6 +2,7 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Shader.h"
+#include "platypus/core/Debug.h"
 
 
 #define GL_FUNC(func)	func;																				\
@@ -19,7 +20,7 @@
 
 namespace platypus
 {
-    unsigned int to_gl_data_type(ShaderDataType shaderDataType);
+    unsigned int to_gl_datatype(ShaderDataType shaderDataType);
     std::string gl_error_to_string(unsigned int error);
 
 

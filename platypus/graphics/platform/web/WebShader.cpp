@@ -49,7 +49,7 @@ namespace platypus
 
     Shader::Shader(const std::string& filepath, ShaderStageFlagBits stage)
     {
-        std::string source = std::string(load_file(filepath).data());
+        std::string source = load_text_file(filepath);
 
         GLenum stageType = to_gl_shader(stage);
         uint32_t id = glCreateShader(stageType);

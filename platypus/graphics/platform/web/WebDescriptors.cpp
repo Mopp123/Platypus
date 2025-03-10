@@ -50,7 +50,7 @@ namespace platypus
     {
     }
 
-    DescriptorSet::DescriptorSet& operator=(DescriptorSet&& other)
+    DescriptorSet& DescriptorSet::operator=(DescriptorSet&& other)
     {
         _buffers = other._buffers;
         _textures = other._textures;

@@ -18,8 +18,8 @@ namespace platypus
         _masterRendererRef(masterRenderer),
         _commandPoolRef(commandPool),
         _descriptorPoolRef(descriptorPool),
-        _vertexShader("assets/shaders/TestVertexShader.spv", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("assets/shaders/TestFragmentShader.spv", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _vertexShader("assets/shaders/web/TestShader.vert", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
+        _fragmentShader("assets/shaders/web/TestShader.frag", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _testDescriptorSetLayout(
             {
                 {

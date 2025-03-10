@@ -18,7 +18,7 @@ namespace platypus
 
         pApp->getInputManager().pollEvents();
         sceneManager.update();
-        renderer.render(_window);
+        renderer.render(pApp->getWindow());
 
         Timing::update();
         if (s_TEST_frames >= 1000)

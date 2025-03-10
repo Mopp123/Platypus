@@ -2,7 +2,7 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
-#include "OpenglShaderProgram.h"
+#include "WebShader.h"
 
 
 namespace platypus
@@ -10,7 +10,7 @@ namespace platypus
     struct PipelineImpl
     {
         std::vector<VertexBufferLayout> vertexBufferLayouts;
-        std::vector<DescriptorSetLayout> descriptorSetLayouts;
+        std::vector<const DescriptorSetLayout*> descriptorSetLayouts;
         float viewportWidth = 0.0f;
         float viewportHeight = 0.0f;
 

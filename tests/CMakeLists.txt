@@ -47,17 +47,6 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here
     list(APPEND SRC_FILES
-        #${PARENT_DIR}/platypus/core/Debug.cpp
-        #${PARENT_DIR}/platypus/core/InputManager.cpp
-        #${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
-
-        #${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
-
-        #${PARENT_DIR}/platypus/utils/*.cpp
-
-        #${PARENT_DIR}/platypus/assets/*.cpp
-        #${PARENT_DIR}/platypus/assets/platform/${BUILD_TARGET}/*.cpp
-
         ${PARENT_DIR}/platypus/core/*.cpp
         ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
 
@@ -67,8 +56,9 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/platypus/assets/*.cpp
         ${PARENT_DIR}/platypus/assets/platform/${BUILD_TARGET}/*.cpp
 
+        ${PARENT_DIR}/platypus/graphics/*.cpp
         ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
-        #${PARENT_DIR}/platypus/graphics/renderers/*.cpp
+        ${PARENT_DIR}/platypus/graphics/renderers/*.cpp
     )
 else()
     message(FATAL_ERROR "No build target specified")

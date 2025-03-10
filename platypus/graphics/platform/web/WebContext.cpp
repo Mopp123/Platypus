@@ -12,7 +12,7 @@
 
 namespace platypus
 {
-    unsigned int to_gl_data_type(ShaderDataType shaderDataType)
+    unsigned int to_gl_datatype(ShaderDataType shaderDataType)
     {
         switch (shaderDataType)
         {
