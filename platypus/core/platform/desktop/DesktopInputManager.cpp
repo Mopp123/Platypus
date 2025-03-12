@@ -165,7 +165,7 @@ namespace platypus
     {
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         pInputManager->processWindowResizeEvents(width, height);
-        pInputManager->handleWindowResizeEvent(width, height);
+        pInputManager->handleWindowResizing(width, height);
     }
 
 

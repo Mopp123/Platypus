@@ -18,8 +18,8 @@ namespace platypus
         _masterRendererRef(masterRenderer),
         _commandPoolRef(commandPool),
         _descriptorPoolRef(descriptorPool),
-        _vertexShader("assets/shaders/web/TestShader.vert", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("assets/shaders/web/TestShader.frag", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _vertexShader("TestVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
+        _fragmentShader("TestFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _testDescriptorSetLayout(
             {
                 {
@@ -122,7 +122,7 @@ namespace platypus
             viewportWidth,
             viewportHeight,
             viewportScissor,
-            CullMode::CULL_MODE_NONE,
+            CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

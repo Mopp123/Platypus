@@ -117,9 +117,12 @@ namespace platypus
         {
             VkViewport viewport{};
             viewport.x = viewportX;
-            viewport.y = viewportY;
+            //viewport.y = viewportY;
+            // NOTE: Not sure if works when changing viewportY, not tested
+            viewport.y = viewportHeight - viewportY;
             viewport.width = viewportWidth;
-            viewport.height = viewportHeight;
+            //viewport.height = viewportHeight;
+            viewport.height = -viewportHeight;
             viewport.minDepth = viewportMinDepth;
             viewport.maxDepth = viewportMaxDepth;
             vkCmdSetViewport(commandBuffer.getImpl()->handle, 0, 1, &viewport);

@@ -1,6 +1,9 @@
 #include "FileUtils.h"
+
 #include <fstream>
 #include <stdio.h>
+#include <cstring>
+
 #include "platypus/core/Debug.h"
 
 

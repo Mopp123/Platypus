@@ -71,6 +71,7 @@ namespace platypus
             count,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         );
+        Debug::log("___TEST___ALLOCATED " + std::to_string(_primaryCommandBuffers.size()) + " PRIMARY CMD BUFS");
         _testRenderer.allocCommandBuffers(count);
     }
 
@@ -172,7 +173,8 @@ namespace platypus
             pContext->handleWindowResize();
             _swapchain.recreate(window);
             cleanUp();
-            allocCommandBuffers(_swapchain.getImageCount());
+            //allocCommandBuffers(_swapchain.getImageCount()); // NOTE: Isn't this supposed to be frames in flight count?
+            allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
             createPipelines();
             window.resetResized();
         }

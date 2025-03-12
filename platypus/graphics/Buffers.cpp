@@ -36,9 +36,4 @@ namespace platypus
             default: return 0;
         }
     }
-
-    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
-    {
-        return requestSize;
-    }
 }

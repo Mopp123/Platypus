@@ -19,8 +19,7 @@ uniform Test test;
 varying vec3 var_normal;
 varying vec2 var_texCoord;
 
-void main()
-{
+void main() {
     vec4 translatedPos = test.transformationMatrix * vec4(position, 1.0);
     gl_Position = constants.projectionMatrix * translatedPos;
     var_normal = normal;

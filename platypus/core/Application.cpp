@@ -12,6 +12,8 @@ namespace platypus
     static int s_TEST_frames = 0;
     static void update()
     {
+        Timing::update();
+
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         MasterRenderer& renderer = pApp->getMasterRenderer();
@@ -20,7 +22,6 @@ namespace platypus
         sceneManager.update();
         renderer.render(pApp->getWindow());
 
-        Timing::update();
         if (s_TEST_frames >= 1000)
         {
             float fps = 1.0f / Timing::get_delta_time();

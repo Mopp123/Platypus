@@ -47,9 +47,10 @@ namespace platypus
     }
 
 
-    Shader::Shader(const std::string& filepath, ShaderStageFlagBits stage)
+    Shader::Shader(const std::string& filename, ShaderStageFlagBits stage)
     {
-        std::string source = load_text_file(filepath);
+        const std::string fullPath = "assets/shaders/web/" + filename + ".glsl";
+        std::string source = load_text_file(fullPath);
 
         GLenum stageType = to_gl_shader(stage);
         uint32_t id = glCreateShader(stageType);
@@ -98,7 +99,6 @@ namespace platypus
         _pImpl = new ShaderImpl;
         _pImpl->source = source;
         _pImpl->id = id;
-        Debug::log("___TEST___Shader created(stage: " + std::to_string(stage) + ")");
     }
 
     Shader::~Shader()

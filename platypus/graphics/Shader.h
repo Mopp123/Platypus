@@ -34,7 +34,10 @@ namespace platypus
         ShaderStageFlagBits _stage = ShaderStageFlagBits::SHADER_STAGE_NONE;
 
     public:
-        Shader(const std::string& filepath, ShaderStageFlagBits stage);
+        // Give shader's file name only EXCLUDING path and extension.
+        // All shaders has to be located int assets/shaders/{PLATFORM} and this resolves the path and
+        // extension depending on build target
+        Shader(const std::string& filename, ShaderStageFlagBits stage);
         ~Shader();
 
         inline ShaderStageFlagBits getStage() const { return _stage; }

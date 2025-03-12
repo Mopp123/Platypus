@@ -21,6 +21,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_definitions(PLATYPUS_DEBUG=1)
 
+if(${BUILD_TARGET} MATCHES "desktop")
+    add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
+elseif(${BUILD_TARGET} MATCHES "web")
+    add_compile_definitions(PLATYPUS_BUILD_WEB=1)
+endif()
+
 include_directories(
     ${PROJECT_SOURCE_DIR}
     "dependencies/glfw/include"
@@ -39,6 +45,7 @@ file(GLOB SRC_FILES
     platypus/assets/*.cpp
     platypus/assets/platform/${BUILD_TARGET}/*.cpp
 
+    platypus/graphics/*.cpp
     platypus/graphics/platform/${BUILD_TARGET}/*.cpp
     platypus/graphics/renderers/*.cpp
 )

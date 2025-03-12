@@ -4,6 +4,7 @@
 #include "platypus/assets/Image.h"
 #include "platypus/assets/Texture.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/core/Timing.h"
 
 #include <memory>
 
@@ -118,9 +119,9 @@ void TestScene::init()
 static float s_TEST_value = 0.0f;
 void TestScene::update()
 {
-    s_TEST_value += 0.0001f;
+    s_TEST_value += 1.0f * Timing::get_delta_time();
     Matrix4f newMatrix = create_transformation_matrix(
-        { 0.0f, 0, -4.0f },
+        { 0.0f, 1.0f, -5.0f },
         { { 0, 1, 1 }, s_TEST_value },
         { 1, 1, 1 }
     );

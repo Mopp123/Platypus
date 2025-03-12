@@ -450,7 +450,8 @@ namespace platypus
                 {
                     const std::vector<UniformInfo>& uniformInfo = binding.getUniformInfo();
 
-                    if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                    if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                         binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                     {
                         // TODO: some boundary checking..
                         const Buffer* pBuf = buffers[bufferBindingIndex];
@@ -542,7 +543,6 @@ namespace platypus
                                         const PE_byte* pData = pCurrentData + i * sizeof(Matrix4f);
                                         Matrix4f test;
                                         memcpy(&test, pData, sizeof(Matrix4f));
-                                        //Debug::log("___TEST___sending mat to: " + std::to_string(shaderUniformLocations[uboInfo.locationIndex + i]));
                                         GL_FUNC(glUniformMatrix4fv(
                                             shaderUniformLocations[uboInfo.locationIndex + i],
                                             1,

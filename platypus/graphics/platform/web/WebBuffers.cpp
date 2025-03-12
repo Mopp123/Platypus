@@ -10,6 +10,12 @@
 
 namespace platypus
 {
+    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
+    {
+        return requestSize;
+    }
+
+
     static GLenum to_opengl_buffer_update_frequency(BufferUpdateFrequency f)
     {
         switch (f)
@@ -99,14 +105,14 @@ namespace platypus
         // in gl terms its the glBufferData's "usage"
         GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(updateFrequency);
         uint32_t id = 0;
-        if (usageFlags & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT)
+        if ((usageFlags & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT)
         {
             GL_FUNC(glGenBuffers(1, &id));
             GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, id));
             GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
             GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, 0));
         }
-        else if (usageFlags & BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT)
+        else if ((usageFlags & BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT)
         {
             GL_FUNC(glGenBuffers(1, &id));
             GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id));
@@ -118,7 +124,8 @@ namespace platypus
             _pData = calloc(_dataLength, _dataElemSize);
             memcpy(_pData, pData, _dataLength * _dataElemSize);
         }
-        Debug::log("___TEST___Buffer created");
+
+        _pImpl = new BufferImpl { id };
     }
 
     Buffer::~Buffer()
@@ -138,7 +145,6 @@ namespace platypus
     // TODO: Test and figure out if it would be better to do it here!
     void Buffer::update(void* pData, size_t dataSize)
     {
-        Debug::log("@Buffer::update(2) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
         if (dataSize == getTotalSize())
         {
             Debug::log(
@@ -153,20 +159,22 @@ namespace platypus
             return;
         }
 
-        if (_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+        if ((_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
         {
             memcpy(_pData, pData, dataSize);
         }
         else
         {
+            Debug::log("@Buffer::update(1)(non uniform buffer) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
+            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _pImpl->id));
             GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
             GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
+            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
         }
     }
 
     void Buffer::update(void* pData, size_t dataSize, size_t offset)
     {
-        Debug::log("@Buffer::update(2) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
         if (dataSize + offset > getTotalSize())
         {
             Debug::log(
@@ -179,18 +187,21 @@ namespace platypus
             return;
         }
 
-        if (_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+        if ((_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
         {
             memcpy(((PE_byte*)_pData) + offset, pData, dataSize);
         }
         else
         {
+            Debug::log("@Buffer::update(2)(non uniform buffer) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
+            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _pImpl->id));
             glBufferSubData(
                 GL_ARRAY_BUFFER,
                 (GLintptr)offset,
                 (GLsizeiptr) dataSize,
                 pData
             );
+            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
         }
     }
 }

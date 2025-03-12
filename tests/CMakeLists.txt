@@ -18,7 +18,6 @@ set(SRC_FILES
 )
 
 if(${BUILD_TARGET} MATCHES "desktop")
-    add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
     list(
         APPEND PROJECT_INCLUDES
         ${PARENT_DIR}/dependencies/glfw/include

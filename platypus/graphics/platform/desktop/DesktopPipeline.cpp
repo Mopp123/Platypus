@@ -133,11 +133,13 @@ namespace platypus
 
         // Specify viewport
         // ----------------
+        // NOTE: Flipping the viewpot height here to have y point up so
+        // it's consistent with opengl and how gltf files' vertices go
         VkViewport viewport{};
         viewport.x = 0;
-        viewport.y = 0;
+        viewport.y = viewportHeight;
         viewport.width = viewportWidth;
-        viewport.height = viewportHeight;
+        viewport.height = -viewportHeight;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 

@@ -21,7 +21,6 @@ namespace platypus
     static std::vector<const char*> get_required_instance_extensions()
     {
         std::vector<const char*> requiredExtensions;
-
         uint32_t glfwRequiredExtensionCount = 0;
         const char** glfwRequiredExtensions = glfwGetRequiredInstanceExtensions(&glfwRequiredExtensionCount);
         for (uint32_t i = 0; i < glfwRequiredExtensionCount; ++i)
@@ -145,7 +144,7 @@ namespace platypus
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = PLATYPUS_ENGINE_NAME;
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        appInfo.apiVersion = VK_MAKE_API_VERSION(0, 1, 1, 0); //VK_API_VERSION_1_0;
 
         VkInstanceCreateInfo instanceCreateInfo{};
         instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

@@ -64,13 +64,14 @@ namespace platypus
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
 
-    // On Vulkan side this returns required actual size for inputted requestSize
-    // satisfying the minUniformBufferOffsetAlignment requirement.
-    //  -> In other words, returns a multiple of the requirement
-    //      -> This is needed to change uniform buffer multiple times inside the same command buffer
-    //      For example: to draw multiple things with different transformation matrices without having
-    //      to have different uniform buffer for each rendered object.
-    // On OpenGL this returns the inputted requestSize
+    // Requires platform impl
+    //  On Vulkan side this returns required actual size for inputted requestSize
+    //  satisfying the minUniformBufferOffsetAlignment requirement.
+    //   -> In other words, returns a multiple of the requirement
+    //       -> This is needed to change uniform buffer multiple times inside the same command buffer
+    //       For example: to draw multiple things with different transformation matrices without having
+    //       to have different uniform buffer for each rendered object.
+    //  On OpenGL this returns the inputted requestSize
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize);
 
     class Pipeline;

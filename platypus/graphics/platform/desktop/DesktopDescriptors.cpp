@@ -276,7 +276,7 @@ namespace platypus
             vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
         }
 
-        DescriptorSet createdDescriptorSet(buffers);
+        DescriptorSet createdDescriptorSet(buffers, pLayout);
         createdDescriptorSet._pImpl->handle = descriptorSetHandle;
         return createdDescriptorSet;
     }
@@ -346,7 +346,7 @@ namespace platypus
             vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
         }
 
-        DescriptorSet createdDescriptorSet(textures);
+        DescriptorSet createdDescriptorSet(textures, pLayout);
         createdDescriptorSet._pImpl->handle = descriptorSetHandle;
         return createdDescriptorSet;
     }
