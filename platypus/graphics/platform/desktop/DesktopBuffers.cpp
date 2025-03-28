@@ -322,6 +322,9 @@ namespace platypus
 
     Buffer::~Buffer()
     {
+        if (_pData)
+            free(_pData);
+
         if (_pImpl)
         {
             vmaDestroyBuffer(
@@ -329,9 +332,8 @@ namespace platypus
                 _pImpl->handle,
                 _pImpl->vmaAllocation
             );
+            delete _pImpl;
         }
-        if (_pData)
-            free(_pData);
     }
 
     void Buffer::update(void* pData, size_t dataSize)

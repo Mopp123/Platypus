@@ -82,6 +82,7 @@ namespace platypus
         #endif
 
         _context.waitForOperations();
+        // NOTE: Why the fuck is this commented out!?!?!
         //_masterRenderer.cleanUp();
     }
 

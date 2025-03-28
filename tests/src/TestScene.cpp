@@ -68,7 +68,7 @@ void TestScene::init()
 
 
     // Test loading image
-    Image* pImage = assetManager.loadImage("assets/test.png");
+    Image* pImage = assetManager.loadImage("assets/noise.png");
 
     // Test creating sampler and texture
     TextureSampler textureSampler(
@@ -119,6 +119,7 @@ void TestScene::init()
 static float s_TEST_value = 0.0f;
 void TestScene::update()
 {
+    /*
     s_TEST_value += 1.0f * Timing::get_delta_time();
     Matrix4f newMatrix = create_transformation_matrix(
         { 0.0f, 1.0f, -5.0f },
@@ -130,4 +131,5 @@ void TestScene::update()
         ComponentType::COMPONENT_TYPE_TRANSFORM
     );
     pTransform->globalMatrix = newMatrix;
+    */
 }

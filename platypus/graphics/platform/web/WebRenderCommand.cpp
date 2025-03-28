@@ -1,4 +1,5 @@
 #include "platypus/graphics/RenderCommand.h"
+#include "platypus/graphics/Context.h"
 #include "WebContext.h"
 #include "platypus/graphics/CommandBuffer.h"
 #include "WebCommandBuffer.h"
@@ -217,6 +218,11 @@ namespace platypus
             // Not sure if this stuff works here well...
             std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vbLayouts.begin();
 
+            // Bind the common VAO
+            // NOTE: This could probably be done immediately after context creation and never touch again,
+            // since we use the same VAO throughout the whole program
+            GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
+
             for (const Buffer* pBuffer : vertexBuffers)
             {
                 // NOTE: Could maybe remove this kind of checking on release build?
@@ -290,10 +296,17 @@ namespace platypus
                 }
                 vbLayoutIt++;
             }
+
+            // Unbind the common VAO
+            // NOTE: This isn't actually necessary, since we use the same VAO throughout the whole program
+            GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
         }
 
-        // NOTE: Not sure should we pass buffers as ptrs here.
-        // ->There could probably be a better way
+
+        // NOTE: ISSUE!
+        // Emscripten website:
+        //  This build mode has a limitation that the largest index in client-side index buffer must be smaller than the total number of indices in that buffer!
+        //  https://github.com/emscripten-core/emscripten/issues/4214
         void bind_index_buffer(
             const CommandBuffer& commandBuffer,
             const Buffer* indexBuffer
