@@ -20,7 +20,8 @@ namespace platypus
 
         pApp->getInputManager().pollEvents();
         sceneManager.update();
-        renderer.render(pApp->getWindow());
+        if (sceneManager.getCurrentScene())
+            renderer.render(pApp->getWindow());
 
         if (s_TEST_frames >= 1000)
         {
@@ -82,8 +83,8 @@ namespace platypus
         #endif
 
         _context.waitForOperations();
-        // NOTE: Why the fuck is this commented out!?!?!
-        //_masterRenderer.cleanUp();
+        // NOTE: Why the fuck was this commented out earlier!?!?!
+        _masterRenderer.cleanUp();
     }
 
     Application* Application::get_instance()

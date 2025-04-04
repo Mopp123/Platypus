@@ -13,12 +13,10 @@ using namespace platypus;
 
 TestScene::TestScene()
 {
-    Debug::log("___TEST___created test scene!");
 }
 
 TestScene::~TestScene()
 {
-    Debug::log("___TEST___destroyed test scene!");
 }
 
 static entityID_t create_test_entity(
@@ -47,6 +45,15 @@ static entityID_t create_test_entity(
 
 void TestScene::init()
 {
+    entityID_t cameraEntity = createEntity();
+    Matrix4f camProjMat = create_perspective_projection_matrix(
+        800.0f / 600.0f,
+        1.3f,
+        0.1f,
+        100.0f
+    );
+    Camera* pCamera = createCamera(cameraEntity, camProjMat);
+
     float s = 1.0f;
     std::vector<float> vertexData = {
         -s, -s,     0, 0,
@@ -68,7 +75,7 @@ void TestScene::init()
 
 
     // Test loading image
-    Image* pImage = assetManager.loadImage("assets/noise.png");
+    Image* pImage = assetManager.loadImage("assets/textures/TerrainGrass.png");
 
     // Test creating sampler and texture
     TextureSampler textureSampler(
@@ -113,7 +120,6 @@ void TestScene::init()
         pTexture->getID()
     );
 
-    Debug::log("___TEST___initialized test scene!");
 }
 
 static float s_TEST_value = 0.0f;

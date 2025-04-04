@@ -1,3 +1,11 @@
+/*
+
+TODO:
+    *Create floor plane and texture it
+    *Load tree and grass models
+    *Position tree and grass entities randomly
+*/
+
 #pragma once
 
 #include "platypus/core/Scene.h"

@@ -230,6 +230,7 @@ namespace platypus
         int mx = mouseEvent->targetX;
         int my = mouseEvent->targetY;
         //int my = windowHeight - mouseEvent->targetY;
+        pInputManager->setMouseMove((float)mx - (float)pInputManager->getMouseX(), (float)my - (float)pInputManager->getMouseY());
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
 

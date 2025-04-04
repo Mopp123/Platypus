@@ -49,13 +49,21 @@ namespace platypus
         ComponentPool(size_t componentSize, size_t componentCapacity, bool allowResize);
         ~ComponentPool();
 
+        // NOTE: Iterator to beginning of memory, NOT THE ACTUAL EXISTING COMPONENT!
+        // NOTE: Not even sure where this is used...?
         iterator begin();
         iterator end();
+
+        // Returns ptr to first existing component.
+        // Takes possible destroyed components from middle, beginning, etc into account.
+        void* first();
 
         // If allowResize and not enough space, this also adds space to the _pStorage
         void* allocComponent(entityID_t entityID);
         void destroyComponent(entityID_t entityID);
 
         void* operator[](entityID_t entityID);
+
+        inline size_t getComponentCount() const { return _componentCount; }
     };
 }

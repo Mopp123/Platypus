@@ -5,6 +5,7 @@
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Camera.h"
 
 #include "platypus/ecs/systems/System.h"
 
@@ -34,14 +35,13 @@ namespace platypus
         entityID_t createEntity();
         Entity getEntity(entityID_t entity) const;
         void destroyEntity(entityID_t entityID);
+        void destroyComponent(entityID_t entityID, ComponentType componentType);
         void addChild(entityID_t entityID, entityID_t childID);
         // NOTE: Could be optimized to return just ptr to first child and child count
         std::vector<entityID_t> getChildren(entityID_t entityID) const;
 
-        void addToComponentMask(entityID_t entityID, ComponentType componentType);
-        bool isValidEntity(entityID_t entityID) const;
-
         // TODO: all getComponent things could be optimized?
+        void* getComponent(ComponentType type);
         void* getComponent(
             entityID_t entityID,
             ComponentType type,
@@ -64,7 +64,18 @@ namespace platypus
             ID_t textureAssetID
         );
 
+        Camera* createCamera(
+            entityID_t target,
+            const Matrix4f& perspectiveProjectionMatrix
+        );
+
         virtual void init() = 0;
         virtual void update() = 0;
+
+    private:
+        void addToComponentMask(entityID_t entityID, ComponentType componentType);
+        // @param errLocation This can be used to tell what func caused this to error
+        bool isValidEntity(entityID_t entityID, const std::string& errLocation) const;
+        bool isValidComponent(ComponentType, const std::string& errLocation) const;
     };
 }

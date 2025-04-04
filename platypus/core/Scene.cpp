@@ -15,14 +15,9 @@ namespace platypus
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
             sizeof(Transform), maxEntityCount, true
         );
-
-        /*
-        // NOTE: Only temporarely adding all default systems here!
-        // TODO: Some better way of handling this!!
-        //  Also you would need to create all default systems at start
-        //  and never even destroy them..
-        systems.push_back(new TransformSystem);
-        */
+        _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
+            sizeof(Camera), 1, true
+        );
     }
 
     Scene::~Scene()
@@ -67,19 +62,13 @@ namespace platypus
         {
             if (e.id == entity)
             {
-                if (isValidEntity(entity))
+                if (!isValidEntity(entity, "getEntity"))
                 {
-                    outEntity = e;
+                    PLATYPUS_ASSERT(false);
                 }
                 else
                 {
-                    Debug::log(
-                        "@Scene::getEntity "
-                        "Found entity: " + std::to_string(entity) + " "
-                        "but the entity was invalid!",
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
+                    outEntity = e;
                 }
                 break;
             }
@@ -91,13 +80,8 @@ namespace platypus
     // TODO: Finish and test this
     void Scene::destroyEntity(entityID_t entityID)
     {
-        if (!isValidEntity(entityID))
+        if (!isValidEntity(entityID, "destroyEntity"))
         {
-            Debug::log(
-                "@Scene::destroyEntity "
-                "Invalid entityID",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return;
         }
@@ -123,25 +107,33 @@ namespace platypus
         }
     }
 
-    void Scene::addChild(entityID_t entityID, entityID_t childID)
+    void Scene::destroyComponent(entityID_t entityID, ComponentType componentType)
     {
-        if (!isValidEntity(entityID))
+        if (!isValidEntity(entityID, "destroyComponent"))
         {
-            Debug::log(
-                "@Scene::addChild "
-                "Invalid entityID: " + std::to_string(entityID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return;
         }
-        if (!isValidEntity(childID))
+        if (!isValidComponent(componentType, "destroyComponent"))
         {
-            Debug::log(
-                "@Scene::addChild "
-                "Invalid childID: " + std::to_string(childID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        uint64_t componentMask = _entities[entityID].componentMask;
+        if (componentMask & componentType)
+            _componentPools[componentType].destroyComponent(entityID);
+    }
+
+    void Scene::addChild(entityID_t entityID, entityID_t childID)
+    {
+        if (!isValidEntity(entityID, "addChild"))
+        {
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        if (!isValidEntity(childID, "addChild Invalid child entity"))
+        {
             PLATYPUS_ASSERT(false);
             return;
         }
@@ -152,13 +144,8 @@ namespace platypus
     // NOTE: Could be optimized to return just ptr to first child and child count
     std::vector<entityID_t> Scene::getChildren(entityID_t entityID) const
     {
-        if (!isValidEntity(entityID))
+        if (!isValidEntity(entityID, "getChildren"))
         {
-            Debug::log(
-                "@Scene::addChild "
-                "Invalid entityID: " + std::to_string(entityID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return {};
         }
@@ -167,40 +154,23 @@ namespace platypus
         return _entityChildMapping.at(entityID);
     }
 
-    void Scene::addToComponentMask(entityID_t entityID, ComponentType componentType)
+    void* Scene::getComponent(ComponentType type)
     {
-        if (!isValidEntity(entityID))
+        if (!isValidComponent(type, "getComponent"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (_componentPools[type].getComponentCount() == 0)
         {
             Debug::log(
-                "@Scene::addToComponentMask "
-                "Attempted to add component to invalid entity: " + std::to_string(entityID) + " ",
-                Debug::MessageType::PLATYPUS_ERROR
+                "Scene::getComponent "
+                "No components of type: " + component_type_to_string(type) + " found",
+                Debug::MessageType::PLATYPUS_WARNING
             );
-            PLATYPUS_ASSERT(false);
-            return;
+            return nullptr;
         }
-        uint64_t componentTypeID = componentType;
-        Entity& entity = _entities[entityID];
-        // For now dont allow same component type multiple times in entity
-        if (entity.componentMask & componentTypeID)
-        {
-            Debug::log(
-                "@Scene::addToComponentMask "
-                "Attempted to add component to entity: " + std::to_string(entityID) + " but "
-                "it already has a component of this type: " + std::to_string(componentTypeID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-        entity.componentMask |= componentTypeID;
-    }
-
-    bool Scene::isValidEntity(entityID_t entityID) const
-    {
-        if (entityID < 0 || entityID >= _entities.size())
-            return false;
-        return _entities[entityID].id != NULL_ENTITY_ID;
+        return _componentPools[type].first();
     }
 
     void* Scene::getComponent(
@@ -210,13 +180,8 @@ namespace platypus
         bool enableWarning
     )
     {
-        if (!isValidEntity(entityID))
+        if (!isValidEntity(entityID, "getComponent"))
         {
-            Debug::log(
-                "@Scene::getComponent "
-                "Invalid entityID!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
@@ -273,24 +238,14 @@ namespace platypus
         const Vector3f& scale
     )
     {
-        if (!isValidEntity(target))
+        if (!isValidEntity(target, "createTransform"))
         {
-            Debug::log(
-                "@Scene::createTransform "
-                "Invalid entity: " + std::to_string(target),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_TRANSFORM;
-        if (_componentPools.find(componentType) == _componentPools.end())
+        if (!isValidComponent(componentType, "createTransform"))
         {
-            Debug::log(
-                "@Scene::createTransform "
-                "No component pool exists for component type: " + std::to_string(componentType),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
@@ -311,24 +266,14 @@ namespace platypus
         ID_t textureAssetID
     )
     {
-        if (!isValidEntity(target))
+        if (!isValidEntity(target, "createStaticMeshRenderable"))
         {
-            Debug::log(
-                "@Scene::Scene::createStaticMeshRenderable "
-                "Invalid entity: " + std::to_string(target),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        if (_componentPools.find(componentType) == _componentPools.end())
+        if (!isValidComponent(componentType, "createStaticMeshRenderable"))
         {
-            Debug::log(
-                "@Scene::Scene::createStaticMeshRenderable "
-                "No component pool exists for component type: " + std::to_string(componentType),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
@@ -338,5 +283,82 @@ namespace platypus
         pComponent->textureID = textureAssetID;
 
         return pComponent;
+    }
+
+    Camera* Scene::createCamera(
+        entityID_t target,
+        const Matrix4f& perspectiveProjectionMatrix
+    )
+    {
+        if (!isValidEntity(target, "createCamera"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_CAMERA;
+        if (!isValidComponent(componentType, "createCamera"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        Camera* pComponent = (Camera*)_componentPools[componentType].allocComponent(target);
+        addToComponentMask(target, componentType);
+        pComponent->perspectiveProjectionMatrix = perspectiveProjectionMatrix;
+        return pComponent;
+    }
+
+    void Scene::addToComponentMask(entityID_t entityID, ComponentType componentType)
+    {
+        if (!isValidEntity(entityID, "addToComponentMask"))
+        {
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        uint64_t componentTypeID = componentType;
+        Entity& entity = _entities[entityID];
+        // For now dont allow same component type multiple times in entity
+        if (entity.componentMask & componentTypeID)
+        {
+            Debug::log(
+                "@Scene::addToComponentMask "
+                "Attempted to add component to entity: " + std::to_string(entityID) + " but "
+                "it already has a component of this type: " + std::to_string(componentTypeID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        entity.componentMask |= componentTypeID;
+    }
+
+    bool Scene::isValidEntity(entityID_t entityID, const std::string& errLocation) const
+    {
+        bool success = true;
+        if (entityID < 0 || entityID >= _entities.size())
+            success = false;
+        success = _entities[entityID].id != NULL_ENTITY_ID;
+        if (!success)
+        {
+            Debug::log(
+                "@Scene::" + errLocation + " "
+                "Invalid entityID: " + std::to_string(entityID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+        return success;
+    }
+
+    bool Scene::isValidComponent(ComponentType type, const std::string& errLocation) const
+    {
+        bool success = _componentPools.find(type) != _componentPools.end();
+        if (!success)
+        {
+            Debug::log(
+                "@Scene::" + errLocation + " "
+                "Invalid component type: " + component_type_to_string(type),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+        return success;
     }
 }

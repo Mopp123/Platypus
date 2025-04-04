@@ -1,7 +1,6 @@
 #pragma once
 
 #include "platypus/utils/Maths.h"
-#include "platypus/core/Scene.h"
 
 
 namespace platypus

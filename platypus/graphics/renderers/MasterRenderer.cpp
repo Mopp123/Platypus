@@ -3,6 +3,8 @@
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
+#include "platypus/ecs/components/Camera.h"
+#include "platypus/ecs/components/Component.h"
 
 
 namespace platypus
@@ -135,12 +137,16 @@ namespace platypus
             0.1f,
             1000.0f
         );*/
-        Matrix4f projectionMatrix = create_perspective_projection_matrix(
-            800.0f / 600.0f,
-            1.3f,
-            0.1f,
-            100.0f
-        );
+
+        Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
+        Application* pApp = Application::get_instance();
+        SceneManager& sceneManager = pApp->getSceneManager();
+        Scene* pScene = sceneManager.accessCurrentScene();
+        Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
+        if (pCamera)
+        {
+            perspectiveProjectionMatrix = pCamera->perspectiveProjectionMatrix;
+        }
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
         secondaryCommandBuffers.push_back(
@@ -148,7 +154,7 @@ namespace platypus
                 _swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
-                projectionMatrix,
+                perspectiveProjectionMatrix,
                 frame // NOTE: no idea should this be the "frame index" or "image index"
             )
         );

@@ -72,7 +72,11 @@ namespace platypus
     Pipeline::~Pipeline()
     {
         if (_pImpl)
+        {
+            if (_pImpl->handle != VK_NULL_HANDLE && _pImpl->layout != VK_NULL_HANDLE)
+                destroy();
             delete _pImpl;
+        }
     }
 
     // TODO: Implement descriptor sets (configure pipeline layout)
