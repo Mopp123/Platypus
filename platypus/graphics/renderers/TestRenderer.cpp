@@ -38,29 +38,30 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 3 } }
+                    { { 5 } }
                 }
             }
         )
     {
-        size_t uniformBufferElementSize = get_dynamic_uniform_buffer_element_size(sizeof(Matrix4f));
-        std::vector<Matrix4f> uniformBufferData(s_TEST_MAX_ENTITIES);
+        // Create object uniform buffers and descriptor sets
+        size_t objUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(sizeof(Matrix4f));
+        std::vector<Matrix4f> objUniformBufferData(s_TEST_MAX_ENTITIES);
         for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
         {
-            Buffer* pUniformBuffer = new Buffer(
+            Buffer* pObjUniformBuffer = new Buffer(
                 _commandPoolRef,
-                uniformBufferData.data(),
-                uniformBufferElementSize,
-                uniformBufferData.size(),
+                objUniformBufferData.data(),
+                objUniformBufferElementSize,
+                objUniformBufferData.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
             );
-            _testUniformBuffer.push_back(pUniformBuffer);
+            _testUniformBuffer.push_back(pObjUniformBuffer);
 
             _testDescriptorSets.push_back(
                 descriptorPool.createDescriptorSet(
                     &_testDescriptorSetLayout,
-                    { pUniformBuffer }
+                    { pObjUniformBuffer }
                 )
             );
         }
@@ -94,7 +95,8 @@ namespace platypus
     void TestRenderer::createPipeline(
         const RenderPass& renderPass,
         float viewportWidth,
-        float viewportHeight
+        float viewportHeight,
+        const DescriptorSetLayout& dirLightDescriptorSetLayout
     )
     {
         VertexBufferLayout vbLayout = {
@@ -109,6 +111,7 @@ namespace platypus
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout };
         std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
             &_testDescriptorSetLayout,
+            &dirLightDescriptorSetLayout,
             &_textureDescriptorSetLayout
         };
 
@@ -185,6 +188,7 @@ namespace platypus
         uint32_t viewportHeight,
         const Matrix4f& projectionMatrix,
         const Matrix4f& viewMatrix,
+        const DescriptorSet& dirLightDescriptorSet,
         size_t frame
     )
     {
@@ -231,7 +235,11 @@ namespace platypus
             );
             // NOTE: Atm just testing here! quite inefficient to alloc this vector again and again every frame!
             // TODO: Optimize!
-            std::vector<DescriptorSet> descriptorSetsToBind = { _testDescriptorSets[frame], renderData.descriptorSets[frame] };
+            std::vector<DescriptorSet> descriptorSetsToBind = {
+                _testDescriptorSets[frame],
+                dirLightDescriptorSet,
+                renderData.descriptorSets[frame]
+            };
             std::vector<uint32_t> descriptorSetOffsets = { (uint32_t)uniformBufferOffset };
             render::bind_descriptor_sets(
                 currentCommandBuffer,

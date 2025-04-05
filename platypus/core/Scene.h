@@ -6,6 +6,7 @@
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Camera.h"
+#include "platypus/ecs/components/Lights.h"
 
 #include "platypus/ecs/systems/System.h"
 
@@ -67,6 +68,12 @@ namespace platypus
         Camera* createCamera(
             entityID_t target,
             const Matrix4f& perspectiveProjectionMatrix
+        );
+
+        DirectionalLight* createDirectionalLight(
+            entityID_t target,
+            const Vector3f& direction,
+            const Vector3f& color
         );
 
         virtual void init() = 0;

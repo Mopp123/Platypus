@@ -10,6 +10,12 @@
 
 namespace platypus
 {
+    struct DirLightUniformBufferData
+    {
+        Vector4f direction = Vector4f(0, 0, 0, 1);
+        Vector4f color = Vector4f(1, 1, 1, 1);
+    };
+
     class MasterRenderer
     {
     private:
@@ -17,6 +23,12 @@ namespace platypus
         CommandPool _commandPool;
         DescriptorPool _descriptorPool;
         std::vector<CommandBuffer> _primaryCommandBuffers;
+
+        // Shared descriptor sets among multiple renderers
+        DirLightUniformBufferData _useDirLightData;
+        std::vector<Buffer*> _dirLightUniformBuffer;
+        DescriptorSetLayout _dirLightDescriptorSetLayout;
+        std::vector<DescriptorSet> _dirLightDescriptorSets;
 
         TestRenderer _testRenderer;
 

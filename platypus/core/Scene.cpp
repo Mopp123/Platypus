@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Application.h"
 #include "Debug.h"
+#include "platypus/ecs/components/Lights.h"
 
 
 namespace platypus
@@ -17,6 +18,9 @@ namespace platypus
         );
         _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
             sizeof(Camera), 1, true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
+            sizeof(DirectionalLight), 1, true
         );
     }
 
@@ -304,6 +308,30 @@ namespace platypus
         Camera* pComponent = (Camera*)_componentPools[componentType].allocComponent(target);
         addToComponentMask(target, componentType);
         pComponent->perspectiveProjectionMatrix = perspectiveProjectionMatrix;
+        return pComponent;
+    }
+
+    DirectionalLight* Scene::createDirectionalLight(
+        entityID_t target,
+        const Vector3f& direction,
+        const Vector3f& color
+    )
+    {
+        if (!isValidEntity(target, "createDirectionalLight"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT;
+        if (!isValidComponent(componentType, "createDirectionalLight"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        DirectionalLight* pComponent = (DirectionalLight*)_componentPools[componentType].allocComponent(target);
+        addToComponentMask(target, componentType);
+        pComponent->direction = direction;
+        pComponent->color = color;
         return pComponent;
     }
 

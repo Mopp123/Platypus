@@ -62,6 +62,9 @@ void TestScene::init()
     Camera* pCamera = createCamera(_camEntity, camProjMat);
     _camController.init();
 
+    entityID_t dirLightEntity = createEntity();
+    createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
+
     float s = 1.0f;
     std::vector<float> vertexData = {
         -s, -s,     0, 0,

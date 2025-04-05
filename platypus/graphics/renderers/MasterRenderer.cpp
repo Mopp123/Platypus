@@ -14,8 +14,45 @@ namespace platypus
     ) :
         _swapchain(window),
         _descriptorPool(_swapchain),
-        _testRenderer(*this, _swapchain, _commandPool, _descriptorPool)
+        _testRenderer(*this, _swapchain, _commandPool, _descriptorPool),
+        _dirLightDescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    {
+                        { 3, ShaderDataType::Float4 },
+                        { 4, ShaderDataType::Float4 }
+                    }
+                }
+            }
+        )
     {
+        // Create common uniform buffers and descriptor sets
+        DirLightUniformBufferData dirLightUniformBufferData;
+
+        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
+        {
+            Buffer* pDirLightUniformBuffer = new Buffer(
+                _commandPool,
+                &dirLightUniformBufferData,
+                sizeof(DirLightUniformBufferData),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+            );
+            _dirLightUniformBuffer.push_back(pDirLightUniformBuffer);
+
+            _dirLightDescriptorSets.push_back(
+                _descriptorPool.createDescriptorSet(
+                    &_dirLightDescriptorSetLayout,
+                    { pDirLightUniformBuffer }
+                )
+            );
+        }
+
         // NOTE: May fuckup?
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
         createPipelines();
@@ -23,6 +60,11 @@ namespace platypus
 
     MasterRenderer::~MasterRenderer()
     {
+        for (Buffer* pUniformBuffer : _dirLightUniformBuffer)
+            delete pUniformBuffer;
+        _dirLightUniformBuffer.clear();
+
+        _dirLightDescriptorSetLayout.destroy();
     }
 
     void MasterRenderer::cleanUp()
@@ -92,7 +134,8 @@ namespace platypus
         _testRenderer.createPipeline(
             _swapchain.getRenderPass(),
             swapchainExtent.width,
-            swapchainExtent.height
+            swapchainExtent.height,
+            _dirLightDescriptorSetLayout
         );
     }
 
@@ -144,12 +187,38 @@ namespace platypus
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
+
         Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
         Transform* pCameraTransform = (Transform*)pScene->getComponent(ComponentType::COMPONENT_TYPE_TRANSFORM);
         if (pCamera)
             perspectiveProjectionMatrix = pCamera->perspectiveProjectionMatrix;
         if (pCameraTransform)
             viewMatrix = pCameraTransform->globalMatrix.inverse();
+
+        const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT);
+        if (!pDirectionalLight)
+        {
+            _useDirLightData = { { 0, 0, 0, 1.0f }, { 0, 0, 0, 1.0f } };
+        }
+        else
+        {
+            _useDirLightData.direction = {
+                pDirectionalLight->direction.x,
+                pDirectionalLight->direction.y,
+                pDirectionalLight->direction.z,
+                1.0f
+            };
+            _useDirLightData.color = {
+                pDirectionalLight->color.r,
+                pDirectionalLight->color.g,
+                pDirectionalLight->color.b,
+                1.0f
+            };
+        }
+        _dirLightUniformBuffer[frame]->update(
+            &_useDirLightData,
+            sizeof(DirLightUniformBufferData)
+        );
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
         secondaryCommandBuffers.push_back(
@@ -159,6 +228,7 @@ namespace platypus
                 swapchainExtent.height,
                 perspectiveProjectionMatrix,
                 viewMatrix,
+                _dirLightDescriptorSets[frame],
                 frame // NOTE: no idea should this be the "frame index" or "image index"
             )
         );

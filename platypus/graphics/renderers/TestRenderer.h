@@ -9,12 +9,14 @@
 #include "platypus/utils/Maths.h"
 #include "platypus/assets/Mesh.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Lights.h"
 #include <cstdlib>
 #include <unordered_map>
 
 
 namespace platypus
 {
+
     class MasterRenderer;
     class TestRenderer
     {
@@ -29,7 +31,6 @@ namespace platypus
         Shader _fragmentShader;
 
         std::vector<Buffer*> _testUniformBuffer;
-
         DescriptorSetLayout _testDescriptorSetLayout;
         std::vector<DescriptorSet> _testDescriptorSets;
 
@@ -65,7 +66,8 @@ namespace platypus
         void createPipeline(
             const RenderPass& renderPass,
             float viewportWidth,
-            float viewportHeight
+            float viewportHeight,
+            const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
         void destroyPipeline();
 
@@ -77,6 +79,7 @@ namespace platypus
             uint32_t viewportHeight,
             const Matrix4f& projectionMatrix,
             const Matrix4f& viewMatrix,
+            const DescriptorSet& dirLightDescriptorSet,
             size_t frame
         );
     };

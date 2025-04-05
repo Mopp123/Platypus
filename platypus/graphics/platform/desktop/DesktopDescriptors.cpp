@@ -84,6 +84,7 @@ namespace platypus
 
     DescriptorSetLayout::~DescriptorSetLayout()
     {
+        // NOTE: Why not calling destroy() here!?!?
         if(_pImpl)
             delete _pImpl;
     }
