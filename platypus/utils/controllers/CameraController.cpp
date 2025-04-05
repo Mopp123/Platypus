@@ -3,102 +3,88 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+#include <cmath>
 
 
 namespace platypus
 {
-    void CameraController::init(entityID_t cameraEntity)
+    CameraController::ControllerCursorPosEvent::ControllerCursorPosEvent(
+        float& pitchRef,
+        float& yawRef,
+        float rotationSpeed
+    ) :
+        _pitchRef(pitchRef),
+        _yawRef(yawRef),
+        _rotationSpeed(rotationSpeed)
     {
-        _cameraEntity = cameraEntity;
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene)
-        {
-            Debug::log(
-                "@CameraController::init "
-                "No current scene found!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
+        Application* pApp = Application::get_instance();
+        InputManager& inputManager = pApp->getInputManager();
+        _lastX = inputManager.getMouseX();
+        _lastY = inputManager.getMouseY();
+    }
 
-        Transform* pTransform = pScene.getComponent(_cameraEntity);
-        if (!pTransform)
+    void CameraController::ControllerCursorPosEvent::func(int x, int y)
+    {
+        float dx = x - _lastX;
+        float dy = y - _lastY;
+
+        _lastX = x;
+        _lastY = y;
+
+        Application* pApp = Application::get_instance();
+        InputManager& inputManager = pApp->getInputManager();
+        if (inputManager.isMouseButtonDown(MouseButtonName::MOUSE_LEFT))
         {
-            Debug::log(
-                "@CameraController::init "
-                "No transform found for entity: " + std::to_string(_cameraEntity) + " "
-                "Transform component is required to use CameraController!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        Camera* pCamera = pScene.getComponent(_cameraEntity);
-        if (!pCamera)
-        {
-            Debug::log(
-                "@CameraController::init "
-                "No camera found for entity: " + std::to_string(_cameraEntity) + " "
-                "Camera component is required to use CameraController!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
+            _yawRef += dx * _rotationSpeed;
+            float newPitch = _pitchRef + dy * _rotationSpeed;
+            if (newPitch >= 0.0f && newPitch <= PLATY_MATH_PI * 0.5f)
+                _pitchRef = newPitch;
         }
     }
 
-    void CameraController::update()
+
+    void CameraController::ControllerScrollEvent::func(double xOffset, double yOffset)
     {
-        float& xPos = _pivotPoint.x;
-        float& zPos = _pivotPoint.z;
+        float newZoom = _zoomRef + yOffset * _zoomSpeedRef;
+        if (newZoom >= 0.0f && newZoom <= _maxZoomRef)
+            _zoomRef = newZoom;
+    }
 
-        float rotatedAngle = _yaw + M_PI * 0.5f;
 
-        if (_moveForward)
+    void CameraController::init()
+    {
+        Application* pApp = Application::get_instance();
+        InputManager& inputManager = pApp->getInputManager();
+
+        inputManager.addCursorPosEvent(new ControllerCursorPosEvent(_pitch, _yaw, _rotationSpeed));
+        inputManager.addScrollEvent(new ControllerScrollEvent(_zoom, _zoomSpeed, _maxZoom));
+        _initialized = true;
+    }
+
+    void CameraController::update(Transform* pCameraTransform)
+    {
+        if (!_initialized)
         {
-            xPos += std::cos(rotatedAngle) * _speed * Timing::get_delta_time();
-            zPos += -std::sin(rotatedAngle) * _speed * Timing::get_delta_time();
-        }
-        else if (_moveBackwards)
-        {
-            xPos += std::cos(rotatedAngle) * -_speed * Timing::get_delta_time();
-            zPos += -std::sin(rotatedAngle) * -_speed * Timing::get_delta_time();
-        }
-
-        if (_moveLeft)
-        {
-            xPos += std::cos(_yaw) * -_speed * Timing::get_delta_time();
-            zPos += -std::sin(_yaw) * -_speed * Timing::get_delta_time();
-        }
-        else if (_moveRight)
-        {
-            xPos += std::cos(_yaw) * _speed * Timing::get_delta_time();
-            zPos += -std::sin(_yaw) * _speed * Timing::get_delta_time();
+            Debug::log(
+                "@CameraController::update "
+                "CameraController was not initialized! "
+                "Make sure you have initialized with init() before updating",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
         }
 
-        // calc cam transform according to pivot point and angles
-        float horizontalDist = std::cos(_pitch) * _distToPivotPoint;
-        float verticalDist = std::sin(_pitch) * _distToPivotPoint;
+        // NOTE: This is done in a way that _yaw=0 is pointing towards -z axis
+        float useYaw = _yaw + PLATY_MATH_PI * 0.5f;
 
-        mat4 translationMat;
-        translationMat.setIdentity();
-        translationMat[0 + 3 * 4] = _pivotPoint.x + std::sin(_yaw) * horizontalDist;
-        translationMat[1 + 3 * 4] = _pivotPoint.y + verticalDist;
-        translationMat[2 + 3 * 4] = _pivotPoint.z + std::cos(_yaw) * horizontalDist;
+        float horizontalDist = cos(_pitch) * _zoom;
+        float verticalDist = sin(_pitch) * _zoom;
 
-        mat4 rotMatYaw;
-        rotMatYaw.setIdentity();
-        rotMatYaw[0 + 0 * 4] = std::cos(_yaw);
-        rotMatYaw[0 + 2 * 4] = std::sin(_yaw);
-        rotMatYaw[2 + 0 * 4] = -std::sin(_yaw);
-        rotMatYaw[2 + 2 * 4] = std::cos(_yaw);
+        Matrix4f translationMatrix(1.0f);
+        translationMatrix[0 + 3 * 4] = _offsetPosition.x + cos(useYaw) * horizontalDist;
+        translationMatrix[1 + 3 * 4] = _offsetPosition.y + verticalDist ;
+        translationMatrix[2 + 3 * 4] = _offsetPosition.z + sin(useYaw) * horizontalDist;
 
-        mat4 rotMatPitch;
-        rotMatPitch.setIdentity();
-        rotMatPitch[1 + 1 * 4] = std::cos(-_pitch);
-        rotMatPitch[1 + 2 * 4] = -std::sin(-_pitch);
-        rotMatPitch[2 + 1 * 4] = std::sin(-_pitch);
-        rotMatPitch[2 + 2 * 4] = std::cos(-_pitch);
-
-        Transform* pTransform = pScene.getComponent(_cameraEntity);
-        pTransform->globalMatrix = translationMat * rotMatYaw * rotMatPitch;
+        pCameraTransform->globalMatrix = translationMatrix * create_rotation_matrix(-_pitch, -_yaw);
     }
 }

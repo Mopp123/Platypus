@@ -11,9 +11,14 @@ TODO:
 #include "platypus/core/Scene.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/utils/controllers/CameraController.h"
 
 class TestScene : public platypus::Scene
 {
+private:
+    platypus::CameraController _camController;
+    entityID_t _camEntity = NULL_ENTITY_ID;
+
 public:
     entityID_t testEntity = NULL_ENTITY_ID;
     entityID_t testEntity2 = NULL_ENTITY_ID;

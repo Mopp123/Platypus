@@ -131,7 +131,6 @@ namespace platypus
 
     void mouse_button_callback(GLFWwindow* pGLFWwindow, int button, int action, int mods)
     {
-        Debug::log("PROCESS MOUSE EVENT: BUTTON" + std::to_string(button) + " ACTION = " + std::to_string(action), Debug::MessageType::PLATYPUS_WARNING);
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         MouseButtonName buttonName = get_mouse_button_name(button);
         InputAction inputAction = get_input_action(action);
@@ -151,7 +150,6 @@ namespace platypus
 
         int mx = (int)x;
         int my = (int)y;
-        pInputManager->setMouseMove((float)mx - (float)pInputManager->getMouseX(), (float)my - (float)pInputManager->getMouseY());
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
     }

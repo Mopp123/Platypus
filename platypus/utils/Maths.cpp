@@ -142,6 +142,136 @@ namespace platypus
             _data[i + i * 4] = 1.0f;
     }
 
+    // Found from: https://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
+    //     Comment on the site about this :
+    //         "This was lifted from MESA implementation of the GLU library."
+    Matrix4f Matrix4f::inverse() const
+    {
+        Matrix4f inverseMatrix;
+        inverseMatrix._data[0] = _data[5] * _data[10] * _data[15] -
+            _data[5] * _data[11] * _data[14] -
+            _data[9] * _data[6] * _data[15] +
+            _data[9] * _data[7] * _data[14] +
+            _data[13] * _data[6] * _data[11] -
+            _data[13] * _data[7] * _data[10];
+
+        inverseMatrix._data[4] = -_data[4] * _data[10] * _data[15] +
+            _data[4] * _data[11] * _data[14] +
+            _data[8] * _data[6] * _data[15] -
+            _data[8] * _data[7] * _data[14] -
+            _data[12] * _data[6] * _data[11] +
+            _data[12] * _data[7] * _data[10];
+
+        inverseMatrix._data[8] = _data[4] * _data[9] * _data[15] -
+            _data[4] * _data[11] * _data[13] -
+            _data[8] * _data[5] * _data[15] +
+            _data[8] * _data[7] * _data[13] +
+            _data[12] * _data[5] * _data[11] -
+            _data[12] * _data[7] * _data[9];
+
+        inverseMatrix._data[12] = -_data[4] * _data[9] * _data[14] +
+            _data[4] * _data[10] * _data[13] +
+            _data[8] * _data[5] * _data[14] -
+            _data[8] * _data[6] * _data[13] -
+            _data[12] * _data[5] * _data[10] +
+            _data[12] * _data[6] * _data[9];
+
+        inverseMatrix._data[1] = -_data[1] * _data[10] * _data[15] +
+            _data[1] * _data[11] * _data[14] +
+            _data[9] * _data[2] * _data[15] -
+            _data[9] * _data[3] * _data[14] -
+            _data[13] * _data[2] * _data[11] +
+            _data[13] * _data[3] * _data[10];
+
+        inverseMatrix._data[5] = _data[0] * _data[10] * _data[15] -
+            _data[0] * _data[11] * _data[14] -
+            _data[8] * _data[2] * _data[15] +
+            _data[8] * _data[3] * _data[14] +
+            _data[12] * _data[2] * _data[11] -
+            _data[12] * _data[3] * _data[10];
+
+        inverseMatrix._data[9] = -_data[0] * _data[9] * _data[15] +
+            _data[0] * _data[11] * _data[13] +
+            _data[8] * _data[1] * _data[15] -
+            _data[8] * _data[3] * _data[13] -
+            _data[12] * _data[1] * _data[11] +
+            _data[12] * _data[3] * _data[9];
+
+        inverseMatrix._data[13] = _data[0] * _data[9] * _data[14] -
+            _data[0] * _data[10] * _data[13] -
+            _data[8] * _data[1] * _data[14] +
+            _data[8] * _data[2] * _data[13] +
+            _data[12] * _data[1] * _data[10] -
+            _data[12] * _data[2] * _data[9];
+
+        inverseMatrix._data[2] = _data[1] * _data[6] * _data[15] -
+            _data[1] * _data[7] * _data[14] -
+            _data[5] * _data[2] * _data[15] +
+            _data[5] * _data[3] * _data[14] +
+            _data[13] * _data[2] * _data[7] -
+            _data[13] * _data[3] * _data[6];
+
+        inverseMatrix._data[6] = -_data[0] * _data[6] * _data[15] +
+            _data[0] * _data[7] * _data[14] +
+            _data[4] * _data[2] * _data[15] -
+            _data[4] * _data[3] * _data[14] -
+            _data[12] * _data[2] * _data[7] +
+            _data[12] * _data[3] * _data[6];
+
+        inverseMatrix._data[10] = _data[0] * _data[5] * _data[15] -
+            _data[0] * _data[7] * _data[13] -
+            _data[4] * _data[1] * _data[15] +
+            _data[4] * _data[3] * _data[13] +
+            _data[12] * _data[1] * _data[7] -
+            _data[12] * _data[3] * _data[5];
+
+        inverseMatrix._data[14] = -_data[0] * _data[5] * _data[14] +
+            _data[0] * _data[6] * _data[13] +
+            _data[4] * _data[1] * _data[14] -
+            _data[4] * _data[2] * _data[13] -
+            _data[12] * _data[1] * _data[6] +
+            _data[12] * _data[2] * _data[5];
+
+        inverseMatrix._data[3] = -_data[1] * _data[6] * _data[11] +
+            _data[1] * _data[7] * _data[10] +
+            _data[5] * _data[2] * _data[11] -
+            _data[5] * _data[3] * _data[10] -
+            _data[9] * _data[2] * _data[7] +
+            _data[9] * _data[3] * _data[6];
+
+        inverseMatrix._data[7] = _data[0] * _data[6] * _data[11] -
+            _data[0] * _data[7] * _data[10] -
+            _data[4] * _data[2] * _data[11] +
+            _data[4] * _data[3] * _data[10] +
+            _data[8] * _data[2] * _data[7] -
+            _data[8] * _data[3] * _data[6];
+
+        inverseMatrix._data[11] = -_data[0] * _data[5] * _data[11] +
+            _data[0] * _data[7] * _data[9] +
+            _data[4] * _data[1] * _data[11] -
+            _data[4] * _data[3] * _data[9] -
+            _data[8] * _data[1] * _data[7] +
+            _data[8] * _data[3] * _data[5];
+
+        inverseMatrix._data[15] = _data[0] * _data[5] * _data[10] -
+            _data[0] * _data[6] * _data[9] -
+            _data[4] * _data[1] * _data[10] +
+            _data[4] * _data[2] * _data[9] +
+            _data[8] * _data[1] * _data[6] -
+            _data[8] * _data[2] * _data[5];
+
+
+        float determinant = _data[0] * inverseMatrix._data[0] + _data[1] * inverseMatrix._data[4] + _data[2] * inverseMatrix._data[8] + _data[3] * inverseMatrix._data[12];
+
+        if (determinant == 0)
+            return inverseMatrix;
+
+        for (int i = 0; i < 16; ++i)
+            inverseMatrix[i] *= (1.0f / determinant);
+
+        return inverseMatrix;
+    }
+
     void Matrix4f::operator=(const Matrix4f& other)
     {
         memcpy(_data, other._data, sizeof(float) * 16);
@@ -269,6 +399,25 @@ namespace platypus
 
         // NOTE: Not sure is the order correct...
         return translationMatrix * rotationMatrix * scaleMatrix;
+    }
+
+
+    Matrix4f create_rotation_matrix(float pitch, float yaw)
+    {
+        Matrix4f pitchMatrix(1.0f);
+        Matrix4f yawMatrix(1.0f);
+
+        pitchMatrix[1 + 1 * 4] = cos(pitch);
+        pitchMatrix[1 + 2 * 4] = -sin(pitch);
+        pitchMatrix[2 + 1 * 4] = sin(pitch);
+        pitchMatrix[2 + 2 * 4] = cos(pitch);
+
+        yawMatrix[0 + 0 * 4] = cos(yaw);
+        yawMatrix[0 + 2 * 4] = sin(yaw);
+        yawMatrix[2 + 0 * 4] = -sin(yaw);
+        yawMatrix[2 + 2 * 4] = cos(yaw);
+
+        return yawMatrix * pitchMatrix;
     }
 
 

@@ -29,8 +29,6 @@ namespace platypus
 
         int _mouseX = 0;
         int _mouseY = 0;
-        float _mouseDX = 0.0f;
-        float _mouseDY = 0.0f;
 
         Window& _windowRef;
 
@@ -75,10 +73,7 @@ namespace platypus
         bool isMouseButtonDown(MouseButtonName button) const;
 
         inline void setMousePos(int x, int y) { _mouseX = x; _mouseY = y; }
-        inline void setMouseMove(int dx, int dy) { _mouseDX = dx; _mouseDY = dy; }
         inline int getMouseX() const { return _mouseX; }
         inline int getMouseY() const { return _mouseY; }
-        inline float getMouseDX() const { return _mouseDX; }
-        inline float getMouseDY() const { return _mouseDY; }
     };
 }

@@ -2,6 +2,10 @@
 
 #include "platypus/core/Window.h"
 
+// Don't care to mess with adapting to different systems having
+// different max push constants sizes, so we'll cap it to max
+// quaranteed minimum
+#define PLATYPUS_MAX_PUSH_CONSTANTS_SIZE 128
 
 namespace platypus
 {

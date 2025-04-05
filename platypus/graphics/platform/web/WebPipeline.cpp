@@ -46,6 +46,16 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
+        if (pushConstantSize > PLATYPUS_MAX_PUSH_CONSTANTS_SIZE)
+        {
+            Debug::log(
+                "@Pipeline::create "
+                "Push constants size too big: " + std::to_string(pushConstantSize) + " "
+                "Maximum size is " + std::to_string(PLATYPUS_MAX_PUSH_CONSTANTS_SIZE),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
 
         _pImpl->vertexBufferLayouts = vertexBufferLayouts;
         _pImpl->descriptorSetLayouts = descriptorLayouts;

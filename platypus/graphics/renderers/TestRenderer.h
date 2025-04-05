@@ -76,6 +76,7 @@ namespace platypus
             uint32_t viewportWidth,
             uint32_t viewportHeight,
             const Matrix4f& projectionMatrix,
+            const Matrix4f& viewMatrix,
             size_t frame
         );
     };

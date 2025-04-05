@@ -8,6 +8,7 @@
 
 #include <memory>
 
+
 using namespace platypus;
 
 
@@ -45,14 +46,21 @@ static entityID_t create_test_entity(
 
 void TestScene::init()
 {
-    entityID_t cameraEntity = createEntity();
+    _camEntity = createEntity();
+    createTransform(
+        _camEntity,
+        { 0.0f, 0.0f, 0.0f },
+        { {0, 1, 0}, 0.0f },
+        { 1, 1, 1 }
+    );
     Matrix4f camProjMat = create_perspective_projection_matrix(
         800.0f / 600.0f,
         1.3f,
         0.1f,
         100.0f
     );
-    Camera* pCamera = createCamera(cameraEntity, camProjMat);
+    Camera* pCamera = createCamera(_camEntity, camProjMat);
+    _camController.init();
 
     float s = 1.0f;
     std::vector<float> vertexData = {
@@ -110,9 +118,9 @@ void TestScene::init()
     testEntity2 = createEntity();
     createTransform(
         testEntity2,
-        { -0.5f, 0, -4 },
-        { {0, 1, 0}, 0.78f },
-        { 1, 1, 1 }
+        { 0, 0, 0 },
+        { {0, 1, 0}, 0.0f },
+        { 0.5f, 0.5f, 0.5f }
     );
     createStaticMeshRenderable(
         testEntity2,
@@ -138,4 +146,7 @@ void TestScene::update()
     );
     pTransform->globalMatrix = newMatrix;
     */
+
+    Transform* pCamTransform = (Transform*)getComponent(_camEntity, ComponentType::COMPONENT_TYPE_TRANSFORM);
+    _camController.update(pCamTransform);
 }

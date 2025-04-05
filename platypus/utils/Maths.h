@@ -2,6 +2,8 @@
 
 #include <string>
 
+#define PLATY_MATH_PI 3.14159265358979323846
+
 
 namespace platypus
 {
@@ -97,6 +99,7 @@ namespace platypus
         Matrix4f();
         Matrix4f(float diag);
         void setIdentity();
+        Matrix4f inverse() const;
         void operator=(const Matrix4f& other);
         friend Matrix4f operator*(const Matrix4f& left, const Matrix4f& right);
 
@@ -141,6 +144,7 @@ namespace platypus
         const Vector3f& scale
     );
 
+    Matrix4f create_rotation_matrix(float pitch, float yaw);
 
     Matrix4f create_orthographic_projection_matrix(
         float left,

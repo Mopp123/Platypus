@@ -139,14 +139,17 @@ namespace platypus
         );*/
 
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
+        Matrix4f viewMatrix = Matrix4f(1.0f);
+
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
         Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
+        Transform* pCameraTransform = (Transform*)pScene->getComponent(ComponentType::COMPONENT_TYPE_TRANSFORM);
         if (pCamera)
-        {
             perspectiveProjectionMatrix = pCamera->perspectiveProjectionMatrix;
-        }
+        if (pCameraTransform)
+            viewMatrix = pCameraTransform->globalMatrix.inverse();
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
         secondaryCommandBuffers.push_back(
@@ -155,6 +158,7 @@ namespace platypus
                 swapchainExtent.width,
                 swapchainExtent.height,
                 perspectiveProjectionMatrix,
+                viewMatrix,
                 frame // NOTE: no idea should this be the "frame index" or "image index"
             )
         );

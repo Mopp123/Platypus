@@ -27,7 +27,7 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                    { { 1, ShaderDataType::Mat4 } }
+                    { { 2, ShaderDataType::Mat4 } }
                 }
             }
         ),
@@ -38,7 +38,7 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 2 } }
+                    { { 3 } }
                 }
             }
         )
@@ -127,7 +127,7 @@ namespace platypus
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
             false, // enable color blending
-            sizeof(Matrix4f), // push constants size
+            sizeof(Matrix4f) * 2, // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
     }
@@ -184,6 +184,7 @@ namespace platypus
         uint32_t viewportWidth,
         uint32_t viewportHeight,
         const Matrix4f& projectionMatrix,
+        const Matrix4f& viewMatrix,
         size_t frame
     )
     {
@@ -207,14 +208,16 @@ namespace platypus
 
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
+        Matrix4f pushConstants[2] = { projectionMatrix, viewMatrix };
         render::push_constants(
             currentCommandBuffer,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
             0,
-            sizeof(Matrix4f),
-            &projectionMatrix,
+            sizeof(Matrix4f) * 2,
+            pushConstants,
             {
-                { 0, ShaderDataType::Mat4 }
+                { 0, ShaderDataType::Mat4 },
+                { 1, ShaderDataType::Mat4 }
             }
         );
 

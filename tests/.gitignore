@@ -1,6 +1,9 @@
 compile_commands.json
 *.spv
 
+/assets/textures
+
+
 /build/desktop
 
 /build/web/CMakeFiles
