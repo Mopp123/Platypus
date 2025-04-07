@@ -166,10 +166,9 @@ namespace platypus
         else
         {
             Debug::log("@Buffer::update(1)(non uniform buffer) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
-            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _pImpl->id));
+            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
             GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
             GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
-            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
         }
     }
 
@@ -193,15 +192,13 @@ namespace platypus
         }
         else
         {
-            Debug::log("@Buffer::update(2)(non uniform buffer) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
-            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _pImpl->id));
+            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
             glBufferSubData(
                 GL_ARRAY_BUFFER,
                 (GLintptr)offset,
                 (GLsizeiptr) dataSize,
                 pData
             );
-            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
         }
     }
 }

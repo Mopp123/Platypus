@@ -12,6 +12,24 @@
 using namespace platypus;
 
 
+void TestScene::SceneWindowResizeEvent::func(int w, int h)
+{
+    Camera* pCameraComponent = (Camera*)_pScene->getComponent(
+        _cameraEntity,
+        ComponentType::COMPONENT_TYPE_CAMERA
+    );
+
+    const Extent2D swapchainExtent = Application::get_instance()->getMasterRenderer().getSwapchain().getExtent();
+
+    float newAspectRatio = (float)swapchainExtent.width / (float)swapchainExtent.height;
+    pCameraComponent->perspectiveProjectionMatrix = create_perspective_projection_matrix(
+        newAspectRatio,
+        _fov,
+        _zNear,
+        _zFar
+    );
+}
+
 TestScene::TestScene()
 {
 }
@@ -90,7 +108,6 @@ void TestScene::init()
     );
     Camera* pCamera = createCamera(_camEntity, camProjMat);
     _camController.init();
-
     _camController.set(
         PLATY_MATH_PI * 0.25f, // pitch
         0.0f, // yaw
@@ -98,6 +115,10 @@ void TestScene::init()
         40.0f, // zoom
         80.0f, // max zoom
         1.25f // zoom speed
+    );
+
+    Application::get_instance()->getInputManager().addWindowResizeEvent(
+        new SceneWindowResizeEvent(this, _camEntity)
     );
 
     entityID_t dirLightEntity = createEntity();

@@ -268,6 +268,7 @@ namespace platypus
                 (uint32_t)batchData.pIndexBuffer->getDataLength(),
                 batchData.count
             );
+            // "Clear" batch for next round of submits
             batchData.count = 0;
         }
 

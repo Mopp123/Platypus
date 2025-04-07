@@ -250,9 +250,19 @@ namespace platypus
                 // TODO: Some safeguards 'n error handling if this fails
                 size_t stride = vbLayoutIt->getStride();
                 size_t toNext = 0;
+                int32_t lastLocation = 0;
                 for (const VertexBufferElement& element : vbLayoutIt->getElements())
                 {
-                    int32_t location = shaderAttribLocations[element.getLocation()];
+                    //int32_t location = shaderAttribLocations[element.getLocation()];
+
+                    // NOTE: If can't find this elem from shader, it may have been ment as mat4
+                    //  -> try using last location + i for the matrix' column's indices
+                    // NOTE: May cause issues if mat4 is not the last attribute?
+                    int32_t location = pShaderProgram->getAttribLocation(element.getLocation());
+                    if (location == -1)
+                        location = lastLocation + 1;
+                    lastLocation = location;
+
                     ShaderDataType shaderDataType = element.getType();
 
                     if (shaderDataType != ShaderDataType::Mat4)
@@ -273,6 +283,7 @@ namespace platypus
                         toNext += get_shader_datatype_size(shaderDataType);
                     }
                     // Special case on matrices since on opengl those are set as 4 vec4s
+                    // NOTE: Decided to use rather Float4 elements for specifying matrices -> DELETE BELOW else(maybe?)
                     else
                     {
                         for (int i = 0; i < 4; ++i)
@@ -296,10 +307,6 @@ namespace platypus
                 }
                 vbLayoutIt++;
             }
-
-            // Unbind the common VAO
-            // NOTE: This isn't actually necessary, since we use the same VAO throughout the whole program
-            GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
         }
 
 

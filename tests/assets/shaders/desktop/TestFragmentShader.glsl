@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 var_normal;
 layout(location = 1) in vec2 var_texCoord;
 
-layout(set = 1, binding = 0) uniform DirectionalLight
+layout(set = 0, binding = 0) uniform DirectionalLight
 {
     vec4 direction;
     vec4 color;
@@ -11,7 +11,7 @@ layout(set = 1, binding = 0) uniform DirectionalLight
 
 const vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1);
 
-layout(set = 2, binding = 0) uniform sampler2D textureSampler;
+layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 
 layout(location = 0) out vec4 fragColor;
 

@@ -160,13 +160,25 @@ namespace platypus
         pInputManager->processScrollEvents(xOffset, yOffset);
     }
 
+    static int s_lastFramebufferWidth = 0;
+    static int s_lastFramebufferHeight = 0;
     void framebuffer_resize_callback(GLFWwindow* pGLFWwindow, int width, int height)
     {
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         pInputManager->processWindowResizeEvents(width, height);
         pInputManager->handleWindowResizing(width, height);
+        s_lastFramebufferWidth = width;
+        s_lastFramebufferHeight = height;
     }
 
+    static void window_refresh_callback(GLFWwindow* pGLFWwindow)
+    {
+        Debug::log("___TEST___WINDOW ERFRESH CALLBACK!");
+
+        InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
+        pInputManager->processWindowResizeEvents(s_lastFramebufferWidth, s_lastFramebufferHeight);
+        pInputManager->handleWindowResizing(s_lastFramebufferWidth, s_lastFramebufferHeight);
+    }
 
     InputManager::InputManager(Window& windowRef) :
         _windowRef(windowRef)
@@ -180,6 +192,7 @@ namespace platypus
         glfwSetCursorPosCallback(pGLFWwindow, cursor_pos_callback);
         glfwSetScrollCallback(pGLFWwindow, scroll_callback);
         glfwSetFramebufferSizeCallback(pGLFWwindow, framebuffer_resize_callback);
+        glfwSetWindowRefreshCallback(pGLFWwindow, window_refresh_callback);
     }
 
     InputManager::~InputManager()

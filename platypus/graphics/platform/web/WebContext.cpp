@@ -124,9 +124,10 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        // Create a single vao to use for everything on opengl side
+        // Create a single vao and bind immediately to use for everything on opengl side
         uint32_t vaoID = 0;
         GL_FUNC(glGenVertexArrays(1, &vaoID));
+        GL_FUNC(glBindVertexArray(vaoID));
 
         _pImpl = new ContextImpl;
         _pImpl->vaoID = vaoID;

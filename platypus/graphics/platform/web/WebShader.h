@@ -55,6 +55,8 @@ namespace platypus
         void setUniform(int location, float val) const;
         void setUniform1i(int location, int val) const;
 
+        int32_t getAttribLocation(size_t index) const;
+
         inline const std::vector<int32_t>& getAttribLocations() const { return _attribLocations; }
         inline const std::vector<int32_t>& getUniformLocations() const { return _uniformLocations; }
 

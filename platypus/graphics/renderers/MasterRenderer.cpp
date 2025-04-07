@@ -180,17 +180,6 @@ namespace platypus
         // TODO: Figure out some nice way to optimize this!
         std::vector<CommandBuffer> secondaryCommandBuffers;
 
-        // TESTING projection matrices
-        /*
-        Matrix4f projectionMatrix = create_orthographic_projection_matrix(
-            -1.0f,
-            1.0f,
-            -1.0f,
-            1.0f,
-            0.1f,
-            1000.0f
-        );*/
-
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
 

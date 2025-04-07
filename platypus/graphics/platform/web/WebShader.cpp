@@ -385,4 +385,11 @@ namespace platypus
     {
         glUniform1i(location, val);
     }
+
+    int32_t OpenglShaderProgram::getAttribLocation(size_t index) const
+    {
+        if (index < _attribLocations.size())
+            return _attribLocations[index];
+        return -1;
+    }
 }
