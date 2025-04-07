@@ -248,7 +248,6 @@ namespace platypus
             pContext->handleWindowResize();
             _swapchain.recreate(window);
             cleanUp();
-            //allocCommandBuffers(_swapchain.getImageCount()); // NOTE: Isn't this supposed to be frames in flight count?
             allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
             createPipelines();
             window.resetResized();

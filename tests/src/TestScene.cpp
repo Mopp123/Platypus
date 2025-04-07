@@ -19,11 +19,9 @@ void TestScene::SceneWindowResizeEvent::func(int w, int h)
         ComponentType::COMPONENT_TYPE_CAMERA
     );
 
-    const Extent2D swapchainExtent = Application::get_instance()->getMasterRenderer().getSwapchain().getExtent();
-
-    float newAspectRatio = (float)swapchainExtent.width / (float)swapchainExtent.height;
+    float useHeight = h > 0 ? (float)h : 1.0f;
     pCameraComponent->perspectiveProjectionMatrix = create_perspective_projection_matrix(
-        newAspectRatio,
+        (float)w / useHeight,
         _fov,
         _zNear,
         _zFar

@@ -173,8 +173,6 @@ namespace platypus
 
     static void window_refresh_callback(GLFWwindow* pGLFWwindow)
     {
-        Debug::log("___TEST___WINDOW ERFRESH CALLBACK!");
-
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         pInputManager->processWindowResizeEvents(s_lastFramebufferWidth, s_lastFramebufferHeight);
         pInputManager->handleWindowResizing(s_lastFramebufferWidth, s_lastFramebufferHeight);
