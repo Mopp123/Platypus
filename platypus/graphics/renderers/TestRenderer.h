@@ -16,7 +16,6 @@
 
 namespace platypus
 {
-
     class MasterRenderer;
     class TestRenderer
     {

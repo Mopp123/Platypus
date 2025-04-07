@@ -145,7 +145,7 @@ namespace platypus
     // TODO: Test and figure out if it would be better to do it here!
     void Buffer::update(void* pData, size_t dataSize)
     {
-        if (dataSize == getTotalSize())
+        if (dataSize != getTotalSize())
         {
             Debug::log(
                 "@Buffer::update(1) "
