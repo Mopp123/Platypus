@@ -17,7 +17,7 @@
 namespace platypus
 {
     class MasterRenderer;
-    class TestRenderer
+    class StaticMeshRenderer
     {
     private:
         const MasterRenderer& _masterRendererRef;
@@ -29,34 +29,14 @@ namespace platypus
         Shader _vertexShader;
         Shader _fragmentShader;
 
-        //std::vector<Buffer*> _testUniformBuffer;
-        DescriptorSetLayout _testDescriptorSetLayout;
-        //std::vector<DescriptorSet> _testDescriptorSets;
-
         DescriptorSetLayout _textureDescriptorSetLayout;
-
-        // Just quick dumb way to test rendering multiple thigs
-        // TODO:
-        //  * Batching
-        /*
-        struct RenderData
-        {
-            const Buffer* pVertexBuffer = nullptr;
-            const Buffer* pIndexBuffer = nullptr;
-            Matrix4f transformationMatrix = Matrix4f(1.0f);
-            const std::vector<DescriptorSet>& descriptorSets;
-        };
-        std::vector<RenderData> _renderList;
-        */
 
         struct BatchData
         {
             ID_t identifier = NULL_ID;
             const Buffer* pVertexBuffer = nullptr;
             const Buffer* pIndexBuffer = nullptr;
-            std::vector<Buffer*> transformsBuffer;
-            std::vector<DescriptorSet> transformsDescriptorSets;
-            std::vector<uint32_t> transformsBufferOffsets;
+            Buffer* pInstancedBuffer = nullptr;
             std::vector<DescriptorSet> textureDescriptorSets;
             size_t count = 0;
         };
@@ -66,18 +46,14 @@ namespace platypus
         static size_t s_maxBatches;
         static size_t s_maxBatchLength;
 
-
-        // NOTE: Atm only for testing!
-        std::unordered_map<ID_t, std::vector<DescriptorSet>> _texDescriptorSetCache;
-
     public:
-        TestRenderer(
+        StaticMeshRenderer(
             const MasterRenderer& masterRenderer,
             const Swapchain& swapchain,
             CommandPool& commandPool,
             DescriptorPool& descriptorPool
         );
-        ~TestRenderer();
+        ~StaticMeshRenderer();
 
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();

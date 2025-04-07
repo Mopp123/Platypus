@@ -28,7 +28,7 @@ namespace platypus
             renderer.render(pApp->getWindow());
 
         std::chrono::time_point<std::chrono::high_resolution_clock> currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float> delta = currentTime - lastDisplayDelta;
+        std::chrono::duration<float> delta = currentTime - s_lastDisplayDelta;
         if (delta.count() >= 1.0f)
         {
             Debug::log("DELTA: " + std::to_string(Timing::get_delta_time()));

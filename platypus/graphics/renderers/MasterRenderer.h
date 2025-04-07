@@ -4,6 +4,7 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
 #include "TestRenderer.h"
+#include "StaticMeshRenderer.h"
 
 #include "platypus/ecs/components/Renderable.h"
 
@@ -30,7 +31,7 @@ namespace platypus
         DescriptorSetLayout _dirLightDescriptorSetLayout;
         std::vector<DescriptorSet> _dirLightDescriptorSets;
 
-        TestRenderer _testRenderer;
+        StaticMeshRenderer _staticMeshRenderer;
 
     public:
         MasterRenderer(const Window& window);
@@ -42,8 +43,6 @@ namespace platypus
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }
-
-        inline const TestRenderer& getTestRenderer() const { return _testRenderer; }
 
     private:
         void allocCommandBuffers(uint32_t count);

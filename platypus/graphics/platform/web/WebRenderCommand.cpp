@@ -469,15 +469,17 @@ namespace platypus
                         // TODO: some boundary checking..
                         const Buffer* pBuf = buffers[bufferBindingIndex];
                         const PE_byte* pBufData = (const PE_byte*)pBuf->getData();
-                        if (!pBuf)
-                        {
-                            Debug::log(
-                                "@bind_descriptor_sets "
-                                "Uniform buffer's data was nullptr!",
-                                Debug::MessageType::PLATYPUS_ERROR
-                            );
-                            PLATYPUS_ASSERT(false);
-                        }
+                        #ifdef PLATYPUS_DEBUG
+                            if (!pBuf)
+                            {
+                                Debug::log(
+                                    "@bind_descriptor_sets "
+                                    "Uniform buffer's data was nullptr!",
+                                    Debug::MessageType::PLATYPUS_ERROR
+                                );
+                                PLATYPUS_ASSERT(false);
+                            }
+                        #endif
                         size_t addDynamicOffset = 0;
                         if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                         {
@@ -561,19 +563,9 @@ namespace platypus
                                 case ShaderDataType::Mat4:
                                 {
                                     valSize = sizeof(Matrix4f) * uboInfo.arrayLen;
-                                    /*
-                                    glUniformMatrix4fv(
-                                        shaderUniformLocations[uboInfo.locationIndex],
-                                        uboInfo.arrayLen,
-                                        GL_FALSE,
-                                        (const float*)pCurrentData
-                                    );
-                                    */
                                     for (int i = 0; i < uboInfo.arrayLen; ++i)
                                     {
                                         const PE_byte* pData = pCurrentData + i * sizeof(Matrix4f);
-                                        Matrix4f test;
-                                        memcpy(&test, pData, sizeof(Matrix4f));
                                         GL_FUNC(glUniformMatrix4fv(
                                             shaderUniformLocations[uboInfo.locationIndex + i],
                                             1,

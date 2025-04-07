@@ -22,13 +22,13 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
                     {
-                        { 3, ShaderDataType::Float4 },
-                        { 4, ShaderDataType::Float4 }
+                        { 2, ShaderDataType::Float4 },
+                        { 3, ShaderDataType::Float4 }
                     }
                 }
             }
         ),
-        _testRenderer(*this, _swapchain, _commandPool, _descriptorPool)
+        _staticMeshRenderer(*this, _swapchain, _commandPool, _descriptorPool)
     {
         // Create common uniform buffers and descriptor sets
         DirLightUniformBufferData dirLightUniformBufferData;
@@ -75,7 +75,7 @@ namespace platypus
 
     void MasterRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
     {
-        _testRenderer.submit(pRenderable, transformationMatrix);
+        _staticMeshRenderer.submit(pRenderable, transformationMatrix);
     }
 
     void MasterRenderer::render(const Window& window)
@@ -116,12 +116,12 @@ namespace platypus
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         );
         Debug::log("___TEST___ALLOCATED " + std::to_string(_primaryCommandBuffers.size()) + " PRIMARY CMD BUFS");
-        _testRenderer.allocCommandBuffers(count);
+        _staticMeshRenderer.allocCommandBuffers(count);
     }
 
     void MasterRenderer::freeCommandBuffers()
     {
-        _testRenderer.freeCommandBuffers();
+        _staticMeshRenderer.freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
@@ -131,7 +131,7 @@ namespace platypus
     void MasterRenderer::createPipelines()
     {
         const Extent2D swapchainExtent = _swapchain.getExtent();
-        _testRenderer.createPipeline(
+        _staticMeshRenderer.createPipeline(
             _swapchain.getRenderPass(),
             swapchainExtent.width,
             swapchainExtent.height,
@@ -141,7 +141,7 @@ namespace platypus
 
     void MasterRenderer::destroyPipelines()
     {
-        _testRenderer.destroyPipeline();
+        _staticMeshRenderer.destroyPipeline();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -228,7 +228,7 @@ namespace platypus
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
         secondaryCommandBuffers.push_back(
-            _testRenderer.recordCommandBuffer(
+            _staticMeshRenderer.recordCommandBuffer(
                 _swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,

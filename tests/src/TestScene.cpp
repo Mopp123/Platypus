@@ -166,9 +166,10 @@ void TestScene::init()
     Model* pTreeModel1 = assetManager.loadModel("assets/models/FirTree.glb");
     Model* pTreeModel2 = assetManager.loadModel("assets/models/PineTree.glb");
     Image* pTreeTextureImage = assetManager.loadImage("assets/textures/FirTreeTexture.png");
-    Texture* pTreeTexture = assetManager.createTexture(pTreeTextureImage->getID(), textureSampler);
+    Texture* pFirTreeTexture = assetManager.createTexture(pTreeTextureImage->getID(), textureSampler);
+    Texture* pPineTreeTexture = assetManager.createTexture(pTreeTextureImage->getID(), textureSampler);
 
-    size_t treeCount = 50;
+    size_t treeCount = 51;
     for (size_t i = 0; i < treeCount; ++i)
     {
         entityID_t entity = createEntity();
@@ -182,14 +183,18 @@ void TestScene::init()
         );
 
         ID_t useMeshID = pTreeModel1->getMeshes()[0]->getID();
+        ID_t useTextureID = pFirTreeTexture->getID();
         int randType = std::rand() % 4;
         if (randType == 3)
+        {
             useMeshID = pTreeModel2->getMeshes()[0]->getID();
+            useTextureID = pPineTreeTexture->getID();
+        }
 
         createStaticMeshRenderable(
             entity,
             useMeshID,
-            pTreeTexture->getID()
+            useTextureID
         );
     }
 }
