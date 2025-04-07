@@ -29,15 +29,16 @@ namespace platypus
         Shader _vertexShader;
         Shader _fragmentShader;
 
-        std::vector<Buffer*> _testUniformBuffer;
+        //std::vector<Buffer*> _testUniformBuffer;
         DescriptorSetLayout _testDescriptorSetLayout;
-        std::vector<DescriptorSet> _testDescriptorSets;
+        //std::vector<DescriptorSet> _testDescriptorSets;
 
         DescriptorSetLayout _textureDescriptorSetLayout;
 
         // Just quick dumb way to test rendering multiple thigs
         // TODO:
         //  * Batching
+        /*
         struct RenderData
         {
             const Buffer* pVertexBuffer = nullptr;
@@ -46,6 +47,26 @@ namespace platypus
             const std::vector<DescriptorSet>& descriptorSets;
         };
         std::vector<RenderData> _renderList;
+        */
+
+        struct BatchData
+        {
+            const Buffer* pVertexBuffer = nullptr;
+            const Buffer* pIndexBuffer = nullptr;
+            std::vector<Buffer*> transformsBuffer;
+            std::vector<DescriptorSet> transformsDescriptorSets;
+            std::vector<uint32_t> transformsBufferOffsets;
+            std::vector<DescriptorSet> textureDescriptorSets;
+            size_t count = 0;
+        };
+        std::vector<BatchData> _batches;
+        std::set<size_t> _freeBatchIndices;
+        std::unordered_map<ID_t, size_t> _occupiedBatches;
+        size_t _currentFrame = 0;
+
+        static size_t s_maxBatches;
+        static size_t s_maxBatchLength;
+
 
         // NOTE: Atm only for testing!
         std::unordered_map<ID_t, std::vector<DescriptorSet>> _texDescriptorSetCache;

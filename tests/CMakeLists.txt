@@ -33,7 +33,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/dependencies/json
         ${PARENT_DIR}/dependencies/tinygltf
     )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions -O3")
     set(CMAKE_EXECUTABLE_SUFFIX .html)
     set(HTML_SHELL_LOCATION "${PROJECT_SOURCE_DIR}/shell.html")
     # NOTE: This gets converted to camel case for some reason...
@@ -41,7 +41,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # Emscripten recommends using the -o out.html
     set(HTML_OUT "test.html")
 
-    set(ADDITIONAL_LINK_FLAGS "-fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH -l websocket.js")
+    set(ADDITIONAL_LINK_FLAGS "-O3 -fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH -l websocket.js")
 
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here

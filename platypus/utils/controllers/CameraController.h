@@ -58,5 +58,14 @@ namespace platypus
     public:
         void init();
         void update(Transform* pCameraTransform);
+
+        void set(
+            float pitch,
+            float yaw,
+            float rotationSpeed,
+            float zoom,
+            float maxZoom,
+            float zoomSpeed
+        );
     };
 }

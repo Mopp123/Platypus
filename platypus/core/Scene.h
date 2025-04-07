@@ -18,6 +18,12 @@ namespace platypus
 {
     class SceneManager;
 
+    struct EnvironmentProperties
+    {
+        Vector3f ambientColor = Vector3f(0, 0, 0);
+        Vector4f clearColor = Vector4f(0, 0, 1, 1);
+    };
+
     class Scene
     {
     private:
@@ -30,6 +36,8 @@ namespace platypus
         std::unordered_map<ComponentType, ComponentPool> _componentPools;
 
     public:
+        EnvironmentProperties environmentProperties;
+
         Scene();
         virtual ~Scene();
 

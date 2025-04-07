@@ -144,7 +144,7 @@ namespace platypus
 
         const size_t& maxFramesInFlight = swapchain.getImpl()->maxFramesInFlight;
         // NOTE: maxDescriptorSets hardcoded here ONLY FOR TESTING!
-        const uint32_t maxDescriptorSets = 4 * maxFramesInFlight;
+        const uint32_t maxDescriptorSets = PLATY_MAX_DESCRIPTOR_SETS * maxFramesInFlight;
         const std::vector<DescriptorType> types =
         {
             DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -156,7 +156,7 @@ namespace platypus
         {
             VkDescriptorPoolSize poolSize{};
             poolSize.type = to_vk_descriptor_type(types[i]);
-            poolSize.descriptorCount = maxFramesInFlight;
+            poolSize.descriptorCount = maxDescriptorSets; //maxFramesInFlight;
             poolSizes.push_back(poolSize);
         }
 

@@ -17,10 +17,13 @@ uniform sampler2D textureSampler;
 void main() {
     vec3 toLight = normalize(directionalLight.direction.xyz * -1.0);
     vec3 unitNormal = normalize(var_normal);
-
-    float dirLightAmount = dot(toLight, unitNormal);
-
+    float dirLightAmount = max(dot(toLight, unitNormal), 0.0);
     vec4 textureColor = texture2D(textureSampler, var_texCoord);
 
-    gl_FragColor = textureColor * (ambientLight + dirLightAmount * directionalLight.color);
+    if (textureColor.a < 0.5)
+    {
+        discard;
+    }
+
+    gl_FragColor = textureColor * (ambientLight + dirLightAmount * vec4(directionalLight.color.rgb, 1.0));
 }

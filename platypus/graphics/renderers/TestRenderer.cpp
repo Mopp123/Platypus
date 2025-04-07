@@ -8,7 +8,10 @@
 
 namespace platypus
 {
-    static size_t s_TEST_MAX_ENTITIES = 100;
+    size_t TestRenderer::s_maxBatches = 20;
+    size_t TestRenderer::s_maxBatchLength = 200;
+
+    static size_t s_TEST_MAX_ENTITIES = 1000;
     TestRenderer::TestRenderer(
         const MasterRenderer& masterRenderer,
         const Swapchain& swapchain,
@@ -43,7 +46,42 @@ namespace platypus
             }
         )
     {
+        _batches.resize(s_maxBatches);
+        for (size_t i = 0; i < _batches.size(); ++i)
+        {
+            _freeBatchIndices.insert(i);
+            BatchData& batchData = _batches[i];
+            size_t uniformBufferElemSize = get_dynamic_uniform_buffer_element_size(sizeof(Matrix4f));
+            std::vector<Matrix4f> transformsBuffer(s_maxBatchLength);
+
+            for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
+            {
+                Buffer* pUniformBuffer = new Buffer(
+                    _commandPoolRef,
+                    transformsBuffer.data(),
+                    uniformBufferElemSize,
+                    transformsBuffer.size(),
+                    BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+                );
+                batchData.transformsBuffer.push_back(pUniformBuffer);
+
+                batchData.transformsDescriptorSets.push_back(
+                    descriptorPool.createDescriptorSet(
+                        &_testDescriptorSetLayout,
+                        { pUniformBuffer }
+                    )
+                );
+            }
+            batchData.transformsBufferOffsets.resize(s_maxBatchLength);
+            for (int i = 0; i < s_maxBatchLength; ++i)
+            {
+                batchData.transformsBufferOffsets[i] = i * uniformBufferElemSize;
+            }
+        }
+
         // Create object uniform buffers and descriptor sets
+        /*
         size_t objUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(sizeof(Matrix4f));
         std::vector<Matrix4f> objUniformBufferData(s_TEST_MAX_ENTITIES);
         for (int i = 0; i < swapchain.getMaxFramesInFlight(); ++i)
@@ -65,16 +103,27 @@ namespace platypus
                 )
             );
         }
+        */
     }
 
     TestRenderer::~TestRenderer()
     {
+        /*
         for (Buffer* pUniformBuffer : _testUniformBuffer)
             delete pUniformBuffer;
         _testUniformBuffer.clear();
 
-        _textureDescriptorSetLayout.destroy();
+        */
+
+        for (BatchData& b : _batches)
+        {
+            for (Buffer* pBuffer : b.transformsBuffer)
+                delete pBuffer;
+            // NOTE: shouldn't we also delete descriptor sets?
+        }
+
         _testDescriptorSetLayout.destroy();
+        _textureDescriptorSetLayout.destroy();
     }
 
     void TestRenderer::allocCommandBuffers(uint32_t count)
@@ -125,7 +174,7 @@ namespace platypus
             viewportWidth,
             viewportHeight,
             viewportScissor,
-            CullMode::CULL_MODE_BACK,
+            CullMode::CULL_MODE_NONE,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
@@ -140,7 +189,84 @@ namespace platypus
         _pipeline.destroy();
     }
 
-    void TestRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
+    // NOTE: This can't create new batch if a batch exists for this texture but it's full
+    //  -> should create new batch using that same texture
+    void TestRenderer::submit(
+        const StaticMeshRenderable* pRenderable,
+        const Matrix4f& transformationMatrix
+    )
+    {
+        Application* pApp = Application::get_instance();
+        AssetManager& assetManager = pApp->getAssetManager();
+        const Mesh* pMesh = assetManager.getMesh(pRenderable->meshID);
+
+        ID_t textureID = pRenderable->textureID;
+        if (_occupiedBatches.find(textureID) != _occupiedBatches.end())
+        {
+            // add to existing batch
+            BatchData& currentBatch = _batches[_occupiedBatches[textureID]];
+            if (currentBatch.count + 1 >= s_maxBatchLength)
+            {
+                Debug::log(
+                    "@TestRenderer::submit "
+                    "Existing batch was found but it was full!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return;
+            }
+            currentBatch.transformsBuffer[_currentFrame]->update(
+                (void*)(&transformationMatrix),
+                sizeof(Matrix4f),
+                currentBatch.count * currentBatch.transformsBuffer[_currentFrame]->getDataElemSize()
+            );
+            ++currentBatch.count;
+        }
+        else
+        {
+            // occupy new batch
+            if (_freeBatchIndices.empty())
+            {
+                Debug::log(
+                    "@TestRenderer::submit "
+                    "Submit requires new batch but no free batches were found!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return;
+            }
+            size_t freeBatchIndex = *_freeBatchIndices.begin();
+            BatchData& currentBatch = _batches[freeBatchIndex];
+            _occupiedBatches[textureID] = freeBatchIndex;
+            _freeBatchIndices.erase(freeBatchIndex);
+
+            currentBatch.pVertexBuffer = pMesh->getVertexBuffer();
+            currentBatch.pIndexBuffer = pMesh->getIndexBuffer();
+
+            const Texture* pTexture = assetManager.getTexture(textureID);
+            size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+            for (int i = 0; i < maxFramesInFlight; ++i)
+            {
+                currentBatch.textureDescriptorSets.push_back(
+                    _descriptorPoolRef.createDescriptorSet(
+                        &_textureDescriptorSetLayout,
+                        { pTexture }
+                    )
+                );
+            }
+
+            currentBatch.transformsBuffer[_currentFrame]->update(
+                (void*)(&transformationMatrix),
+                sizeof(Matrix4f),
+                currentBatch.count * currentBatch.transformsBuffer[_currentFrame]->getDataElemSize()
+            );
+            ++currentBatch.count;
+        }
+        // Update transforms uniform buffer
+    }
+    /*
+    void TestRenderer::submit(
+        const StaticMeshRenderable* pRenderable,
+        const Matrix4f& transformationMatrix
+    )
     {
         Application* pApp = Application::get_instance();
         AssetManager& assetManager = pApp->getAssetManager();
@@ -181,6 +307,7 @@ namespace platypus
             );
         }
     }
+    */
 
     const CommandBuffer& TestRenderer::recordCommandBuffer(
         const RenderPass& renderPass,
@@ -192,18 +319,18 @@ namespace platypus
         size_t frame
     )
     {
-        if (frame >= _commandBuffers.size())
+        if (_currentFrame >= _commandBuffers.size())
         {
             Debug::log(
                 "@TestRenderer::recordCommandBuffer "
-                "Frame index(" + std::to_string(frame) + ") out of bounds! "
+                "Frame index(" + std::to_string(_currentFrame) + ") out of bounds! "
                 "Allocated command buffer count is " + std::to_string(_commandBuffers.size()),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
 
-        CommandBuffer& currentCommandBuffer = _commandBuffers[frame];
+        CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
@@ -225,6 +352,38 @@ namespace platypus
             }
         );
 
+        std::unordered_map<ID_t, size_t>::const_iterator batchIt;
+        for (batchIt = _occupiedBatches.begin(); batchIt != _occupiedBatches.end(); ++batchIt)
+        {
+            BatchData& batchData = _batches[batchIt->second];
+
+            render::bind_vertex_buffers(currentCommandBuffer, { batchData.pVertexBuffer });
+            render::bind_index_buffer(currentCommandBuffer, batchData.pIndexBuffer);
+
+            std::vector<DescriptorSet> descriptorSetsToBind = {
+                batchData.transformsDescriptorSets[_currentFrame],
+                dirLightDescriptorSet,
+                batchData.textureDescriptorSets[_currentFrame]
+            };
+
+            for (int i = 0; i < batchData.count; ++i)
+            {
+                render::bind_descriptor_sets(
+                    currentCommandBuffer,
+                    descriptorSetsToBind,
+                    { batchData.transformsBufferOffsets[i] }
+                );
+
+                render::draw_indexed(
+                    currentCommandBuffer,
+                    (uint32_t)batchData.pIndexBuffer->getDataLength(),
+                    1
+                );
+            }
+            batchData.count = 0;
+        }
+
+        /*
         size_t uniformBufferOffset = 0;
         for (const RenderData& renderData : _renderList)
         {
@@ -253,11 +412,17 @@ namespace platypus
 
             uniformBufferOffset += _testUniformBuffer[frame]->getDataElemSize();
         }
+        */
 
         currentCommandBuffer.end();
 
         // NOTE: Only temporarely clearing this here every frame!
-        _renderList.clear();
+        //_renderList.clear();
+
+
+
+        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
 
         return currentCommandBuffer;
     }

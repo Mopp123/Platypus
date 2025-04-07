@@ -45,7 +45,8 @@ namespace platypus
 
     void CameraController::ControllerScrollEvent::func(double xOffset, double yOffset)
     {
-        float newZoom = _zoomRef + yOffset * _zoomSpeedRef;
+        float val = yOffset > 0.0 ? 1.0f : -1.0f;
+        float newZoom = _zoomRef - val * _zoomSpeedRef;
         if (newZoom >= 0.0f && newZoom <= _maxZoomRef)
             _zoomRef = newZoom;
     }
@@ -86,5 +87,22 @@ namespace platypus
         translationMatrix[2 + 3 * 4] = _offsetPosition.z + sin(useYaw) * horizontalDist;
 
         pCameraTransform->globalMatrix = translationMatrix * create_rotation_matrix(-_pitch, -_yaw);
+    }
+
+    void CameraController::set(
+        float pitch,
+        float yaw,
+        float rotationSpeed,
+        float zoom,
+        float maxZoom,
+        float zoomSpeed
+    )
+    {
+        _pitch = pitch;
+        _yaw = yaw;
+        _rotationSpeed = rotationSpeed;
+        _zoom = zoom;
+        _maxZoom = maxZoom;
+        _zoomSpeed = zoomSpeed;
     }
 }

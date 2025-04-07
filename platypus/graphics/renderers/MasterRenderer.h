@@ -43,6 +43,8 @@ namespace platypus
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }
 
+        inline const TestRenderer& getTestRenderer() const { return _testRenderer; }
+
     private:
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();

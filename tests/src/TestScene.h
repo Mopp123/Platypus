@@ -20,9 +20,6 @@ private:
     entityID_t _camEntity = NULL_ENTITY_ID;
 
 public:
-    entityID_t testEntity = NULL_ENTITY_ID;
-    entityID_t testEntity2 = NULL_ENTITY_ID;
-
     TestScene();
     ~TestScene();
     virtual void init();

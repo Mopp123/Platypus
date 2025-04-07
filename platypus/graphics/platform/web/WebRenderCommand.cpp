@@ -478,7 +478,25 @@ namespace platypus
                             );
                             PLATYPUS_ASSERT(false);
                         }
-                        size_t uboOffset = 0;
+                        size_t addDynamicOffset = 0;
+                        if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                        {
+                            #ifdef PLATYPUS_DEBUG
+                                if (bufferBindingIndex >= offsets.size())
+                                {
+                                    Debug::log(
+                                        "@bind_descriptor_sets "
+                                        "Dynamic buffer offset out of bounds! "
+                                        "Dynamic offsets provided: " + std::to_string(offsets.size()) + " "
+                                        "Current bufferBindingIndex: " + std::to_string(bufferBindingIndex),
+                                        Debug::MessageType::PLATYPUS_ERROR
+                                    );
+                                    PLATYPUS_ASSERT(false);
+                                }
+                            #endif
+                            addDynamicOffset = offsets[bufferBindingIndex];
+                        }
+                        size_t uboOffset = 0 + addDynamicOffset;
                         for (const UniformInfo& uboInfo : uniformInfo)
                         {
                             size_t valSize = 0;

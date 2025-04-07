@@ -3,6 +3,8 @@
 #include "Debug.h"
 #include "Timing.h"
 
+#include <chrono>
+
 #ifdef PLATYPUS_BUILD_WEB
     #include "emscripten.h"
 #endif
@@ -10,9 +12,11 @@
 namespace platypus
 {
     static int s_TEST_frames = 0;
+    static std::chrono::time_point<std::chrono::high_resolution_clock> s_lastDisplayDelta;
     static void update()
     {
         Timing::update();
+
 
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
@@ -23,14 +27,23 @@ namespace platypus
         if (sceneManager.getCurrentScene())
             renderer.render(pApp->getWindow());
 
-        if (s_TEST_frames >= 1000)
+        std::chrono::time_point<std::chrono::high_resolution_clock> currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> delta = currentTime - lastDisplayDelta;
+        if (delta.count() >= 1.0f)
+        {
+            Debug::log("DELTA: " + std::to_string(Timing::get_delta_time()));
+            s_lastDisplayDelta = std::chrono::high_resolution_clock::now();
+        }
+
+        /*
+        if (s_TEST_frames >= 2)
         {
             float fps = 1.0f / Timing::get_delta_time();
             Debug::log("FPS: " + std::to_string(fps));
             s_TEST_frames = 0;
         }
         ++s_TEST_frames;
-
+        */
         sceneManager.handleSceneSwitching();
     }
 
@@ -65,6 +78,7 @@ namespace platypus
         s_pInstance = this;
 
         _sceneManager.assignNextScene(pInitialScene);
+        s_lastDisplayDelta = std::chrono::high_resolution_clock::now();
     }
 
     Application::~Application()

@@ -20,32 +20,61 @@ TestScene::~TestScene()
 {
 }
 
-static entityID_t create_test_entity(
-    Scene* pScene,
-    ID_t meshID,
-    ID_t textureID,
-    const Vector3f& position,
-    const Quaternion& rotation,
-    const Vector3f& scale
-)
+static Mesh* create_ground_mesh(AssetManager& assetManager, float scale)
 {
-    entityID_t testEntity = pScene->createEntity();
-    pScene->createTransform(
-        testEntity,
-        position,
-        rotation,
-        scale
+    float t = scale * 0.5f;
+    std::vector<float> vertexData = {
+       -scale * 0.5f, 0, -scale * 0.5f, 0, 1, 0,  0, 0,
+       -scale * 0.5f, 0,  scale * 0.5f, 0, 1, 0,  0, t,
+        scale * 0.5f, 0,  scale * 0.5f, 0, 1, 0,  t, t,
+        scale * 0.5f, 0, -scale * 0.5f, 0, 1, 0,  t, 0
+    };
+
+    std::vector<uint32_t> indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    return assetManager.createMesh(
+        vertexData,
+        indices
     );
-    pScene->createStaticMeshRenderable(
-        testEntity,
-        meshID,
-        textureID
+}
+
+static Mesh* create_grass_mesh(AssetManager& assetManager, float scale)
+{
+    float s = scale * 0.5f;
+    std::vector<float> vertexData = {
+       -s, scale, 0,    0, 1, 0,    0, 0,
+       -s,  0, 0,       0, 1, 0,    0, 1,
+        s,  0, 0,       0, 1, 0,    1, 1,
+        s, scale, 0,    0, 1, 0,    1, 0,
+
+       0, scale, -s,    0, 1, 0,    0, 0,
+       0,  0,    -s,       0, 1, 0,    0, 1,
+       0,  0,     s,       0, 1, 0,    1, 1,
+       0, scale,  s,    0, 1, 0,    1, 0
+    };
+
+    std::vector<uint32_t> indices = {
+        0, 1, 2,
+        2, 3, 0,
+
+        4, 5, 6,
+        6, 7, 4
+    };
+
+    return assetManager.createMesh(
+        vertexData,
+        indices
     );
-    return testEntity;
 }
 
 void TestScene::init()
 {
+    float clearBrightness = 0.5f;
+    environmentProperties.clearColor = { clearBrightness, clearBrightness, clearBrightness, 1.0f };
+
     _camEntity = createEntity();
     createTransform(
         _camEntity,
@@ -62,75 +91,107 @@ void TestScene::init()
     Camera* pCamera = createCamera(_camEntity, camProjMat);
     _camController.init();
 
+    _camController.set(
+        PLATY_MATH_PI * 0.25f, // pitch
+        0.0f, // yaw
+        0.0025f, // rot speed
+        40.0f, // zoom
+        80.0f, // max zoom
+        1.25f // zoom speed
+    );
+
     entityID_t dirLightEntity = createEntity();
     createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
 
-    float s = 1.0f;
-    std::vector<float> vertexData = {
-        -s, -s,     0, 0,
-        -s, s,      0, 1,
-        s, s,       1, 1,
-        s, -s,      1, 0
-    };
-
-    std::vector<uint32_t> indices = {
-        0, 1, 2,
-        2, 3, 0
-    };
 
     AssetManager& assetManager = Application::get_instance()->getAssetManager();
-    Mesh* pMesh = assetManager.createMesh(
-        vertexData,
-        indices
+
+    // Create plane, representing floor
+    entityID_t groundEntity = createEntity();
+    createTransform(
+        groundEntity,
+        { 0, 0, 0 },
+        { { 0, 1, 0 }, 0 },
+        { 1, 1, 1 }
     );
 
-
-    // Test loading image
-    Image* pImage = assetManager.loadImage("assets/textures/TerrainGrass.png");
-
-    // Test creating sampler and texture
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
-        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
         1,
         0
     );
-    Texture* pTexture = assetManager.createTexture(pImage->getID(), textureSampler);
+    Image* pTerrainGrassImage = assetManager.loadImage("assets/textures/TerrainGrass.png");
+    Texture* pTerrainGrassTexture = assetManager.createTexture(pTerrainGrassImage->getID(), textureSampler);
 
-    /*
-    create_test_entity(
-        this,
-        pMesh->getID(),
-        pTexture->getID(),
-        { 0.5f, 0, -1.5f },
-        { { 0, 1, 0 }, 0 },
-        { 0.5f, 0.5f, 0.5f }
-    );
+    float areaScale = 60.0f;
+    float halfAreaScale = areaScale * 0.5f;
+    Mesh* pGroundMesh = create_ground_mesh(assetManager, areaScale);
 
-    testEntity = create_test_entity(
-        this,
-        pMesh->getID(),
-        pTexture->getID(),
-        { 0.0f, 0, -2.0f },
-        { { 0, 0, 1 }, 0.785f },
-        { 0.5f, 0.5f, 0.5f }
-    );
-    */
-
-    Model* pTestModel = assetManager.loadModel("assets/TestCube.glb");
-    testEntity2 = createEntity();
-    createTransform(
-        testEntity2,
-        { 0, 0, 0 },
-        { {0, 1, 0}, 0.0f },
-        { 0.5f, 0.5f, 0.5f }
-    );
     createStaticMeshRenderable(
-        testEntity2,
-        pTestModel->getMeshes()[0]->getID(),
-        pTexture->getID()
+        groundEntity,
+        pGroundMesh->getID(),
+        pTerrainGrassTexture->getID()
     );
 
+    // Create some grass entities
+    Image* pGrassImage = assetManager.loadImage("assets/textures/Grass.png");
+    Texture* pGrassTexture = assetManager.createTexture(pGrassImage->getID(), textureSampler);
+    Mesh* pGrassMesh = create_grass_mesh(assetManager, 1.25f);
+    size_t grassCount = 100;
+    for (size_t i = 0; i < grassCount; ++i)
+    {
+        entityID_t entity = createEntity();
+        float randX = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
+        float randZ = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
+
+        float randRot = (float)(std::rand() % 180);
+        randRot = randRot / (float)(PLATY_MATH_PI * 2.0);
+        createTransform(
+            entity,
+            { randX, 0, randZ },
+            { {0, 1, 0}, randRot },
+            { 1, 1, 1 }
+        );
+
+        createStaticMeshRenderable(
+            entity,
+            pGrassMesh->getID(),
+            pGrassTexture->getID()
+        );
+    }
+
+
+    // Create tree entities
+    Model* pTreeModel1 = assetManager.loadModel("assets/models/FirTree.glb");
+    Model* pTreeModel2 = assetManager.loadModel("assets/models/PineTree.glb");
+    Image* pTreeTextureImage = assetManager.loadImage("assets/textures/FirTreeTexture.png");
+    Texture* pTreeTexture = assetManager.createTexture(pTreeTextureImage->getID(), textureSampler);
+
+    size_t treeCount = 50;
+    for (size_t i = 0; i < treeCount; ++i)
+    {
+        entityID_t entity = createEntity();
+        float randX = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
+        float randZ = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
+        createTransform(
+            entity,
+            { randX, 0, randZ },
+            { {0, 1, 0}, 0.0f },
+            { 0.5f, 0.5f, 0.5f }
+        );
+
+        ID_t useMeshID = pTreeModel1->getMeshes()[0]->getID();
+        int randType = std::rand() % 4;
+        if (randType == 3)
+            useMeshID = pTreeModel2->getMeshes()[0]->getID();
+
+        createStaticMeshRenderable(
+            entity,
+            useMeshID,
+            pTreeTexture->getID()
+        );
+    }
 }
 
 static float s_TEST_value = 0.0f;

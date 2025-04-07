@@ -14,7 +14,6 @@ namespace platypus
     ) :
         _swapchain(window),
         _descriptorPool(_swapchain),
-        _testRenderer(*this, _swapchain, _commandPool, _descriptorPool),
         _dirLightDescriptorSetLayout(
             {
                 {
@@ -28,7 +27,8 @@ namespace platypus
                     }
                 }
             }
-        )
+        ),
+        _testRenderer(*this, _swapchain, _commandPool, _descriptorPool)
     {
         // Create common uniform buffers and descriptor sets
         DirLightUniformBufferData dirLightUniformBufferData;
@@ -162,7 +162,17 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[frame];
 
         currentCommandBuffer.begin(_swapchain.getRenderPass());
-        render::begin_render_pass(currentCommandBuffer, _swapchain, { 0, 0, 1, 1 }, true);
+
+        Application* pApp = Application::get_instance();
+        SceneManager& sceneManager = pApp->getSceneManager();
+        Scene* pScene = sceneManager.accessCurrentScene();
+
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _swapchain,
+            pScene->environmentProperties.clearColor,
+            true
+        );
 
         // NOTE: We create new copies of secondary command buffers here!
         // Fucking stupid, since the actual command buffers we are using/refering to lives inside the
@@ -183,10 +193,6 @@ namespace platypus
 
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
-
-        Application* pApp = Application::get_instance();
-        SceneManager& sceneManager = pApp->getSceneManager();
-        Scene* pScene = sceneManager.accessCurrentScene();
 
         Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
         Transform* pCameraTransform = (Transform*)pScene->getComponent(ComponentType::COMPONENT_TYPE_TRANSFORM);
