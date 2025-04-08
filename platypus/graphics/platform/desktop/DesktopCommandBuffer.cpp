@@ -45,11 +45,10 @@ namespace platypus
     {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        VkCommandBufferInheritanceInfo inheritanceInfo{};
         if (_level == CommandBufferLevel::SECONDARY_COMMAND_BUFFER)
         {
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-
-            VkCommandBufferInheritanceInfo inheritanceInfo{};
             inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
             inheritanceInfo.renderPass = renderPass.getImpl()->handle;
             inheritanceInfo.subpass = 0;

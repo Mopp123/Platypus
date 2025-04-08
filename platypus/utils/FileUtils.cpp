@@ -35,7 +35,7 @@ namespace platypus
 
     std::string load_text_file(const std::string& filepath)
     {
-        FILE* pFile = pFile = fopen(filepath.c_str(), "rb");
+        FILE* pFile = fopen(filepath.c_str(), "rb");
         if (!pFile)
         {
             Debug::log(

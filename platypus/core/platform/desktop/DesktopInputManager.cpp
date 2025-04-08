@@ -124,7 +124,6 @@ namespace platypus
 
     void char_callback(GLFWwindow* pGLFWwindow, unsigned int codepoint)
     {
-        Debug::log("PROCESS CHARACTER EVENT: NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         pInputManager->processCharInputEvents(codepoint);
     }

@@ -1,6 +1,6 @@
 #include "platypus/core/InputEvent.h"
 #include "platypus/core/InputManager.h"
-//#include "platypus/core/Application.h"
+#include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 
 #include <emscripten.h>
@@ -259,18 +259,23 @@ namespace platypus
     static EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
-        //const Window& window = Application::get_instance()->getWindow();
-        //if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN && eventType == EMSCRIPTEN_EVENT_RESIZE)
-        //{
+        const Window& window = Application::get_instance()->getWindow();
+        if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN && eventType == EMSCRIPTEN_EVENT_RESIZE)
+        {
             int width = webwindow_get_width();
             int height = webwindow_get_height();
             int surfaceWidth = webwindow_get_inner_width();
             int surfaceHeight = webwindow_get_inner_height();
 
-            pInputManager->processWindowResizeEvents(width, height);
-
+            // NOTE: The passed width, height doesn't do anything here
             pInputManager->handleWindowResizing(width, height);
-        //}
+
+            int actualWidth = 0;
+            int actualHeight = 0;
+            window.getSurfaceExtent(&actualWidth, &actualHeight);
+
+            pInputManager->processWindowResizeEvents(actualWidth, actualHeight);
+        }
 
         return true;
     }

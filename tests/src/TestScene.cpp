@@ -88,7 +88,7 @@ static Mesh* create_grass_mesh(AssetManager& assetManager, float scale)
 
 void TestScene::init()
 {
-    float clearBrightness = 0.0f;
+    float clearBrightness = 0.1f;
     environmentProperties.clearColor = { clearBrightness, clearBrightness, clearBrightness, 1.0f };
 
     _camEntity = createEntity();
@@ -100,8 +100,8 @@ void TestScene::init()
     );
     int windowSurfaceWidth = 0;
     int windowSurfaceHeight = 0;
-    Application::get_instance()->getWindow().getSurfaceExtent(&
-        windowSurfaceWidth, &windowSurfaceHeight
+    Application::get_instance()->getWindow().getSurfaceExtent(
+        &windowSurfaceWidth, &windowSurfaceHeight
     );
     float aspectRatio = 1.7f;
     if (windowSurfaceHeight > 0)
@@ -133,10 +133,10 @@ void TestScene::init()
     entityID_t dirLightEntity = createEntity();
     createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
 
+    const float scaleModifier = 20;
+    float areaScale = 60.0f * scaleModifier;
 
-    float areaScale = 200.0f;
-
-    // Load/create all used assets
+    // Load/generate all assets
     AssetManager& assetManager = Application::get_instance()->getAssetManager();
 
     Image* pTerrainGrassImage = assetManager.loadImage("assets/textures/TerrainGrass.png");
@@ -186,7 +186,7 @@ void TestScene::init()
     );
 
     // Grass entities
-    size_t grassCount = 1000;
+    size_t grassCount = 100 * scaleModifier * scaleModifier;
     createEntities(
         pGrassMesh->getID(),
         pGrassTexture->getID(),
@@ -196,7 +196,7 @@ void TestScene::init()
     );
 
     // Tree entities
-    size_t totalTreeCount = 500;
+    size_t totalTreeCount = 50 * scaleModifier * scaleModifier;
     createEntities(
         pTreeModel1->getMeshes()[0]->getID(),
         pFirTreeTexture->getID(),
@@ -211,6 +211,9 @@ void TestScene::init()
         areaScale,
         totalTreeCount / 2
     );
+
+    size_t totalRenderableCount = grassCount + totalTreeCount + 1;
+    Debug::log("___TEST___Total renderable count: " + std::to_string(totalRenderableCount));
 }
 
 static float s_TEST_value = 0.0f;

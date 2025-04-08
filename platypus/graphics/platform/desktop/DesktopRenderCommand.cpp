@@ -32,19 +32,16 @@ namespace platypus
 
             VkClearValue clearColorValue{};
             clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
+            VkClearValue clearDepthStencilValue{};
+            clearDepthStencilValue.depthStencil = { 1.0f, 0 };
+            VkClearValue clearValues[2] = { clearColorValue, clearDepthStencilValue };
+
             if (clearDepthBuffer)
-            {
-                VkClearValue clearDepthStencilValue{};
-                clearDepthStencilValue.depthStencil = { 1.0f, 0 };
                 beginInfo.clearValueCount = 2;
-                VkClearValue clearValues[2] = { clearColorValue, clearDepthStencilValue };
-                beginInfo.pClearValues = clearValues;
-            }
             else
-            {
                 beginInfo.clearValueCount = 1;
-                beginInfo.pClearValues = &clearColorValue;
-            }
+
+            beginInfo.pClearValues = clearValues;
 
             beginInfo.renderArea.offset = { 0, 0 };
             Extent2D swapchainExtent = swapchain.getExtent();
