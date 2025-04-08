@@ -220,9 +220,6 @@ namespace platypus
         currentCommandBuffer.begin(renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-        Rect2D scissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
-        //render::set_scissor(currentCommandBuffer, scissor);
-
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
         Matrix4f pushConstants[2] = { projectionMatrix, viewMatrix };
@@ -268,7 +265,7 @@ namespace platypus
                 (uint32_t)batchData.pIndexBuffer->getDataLength(),
                 batchData.count
             );
-            // "Clear" batch for next round of submits
+            // "Clear" the batch for next round of submits
             batchData.count = 0;
         }
 

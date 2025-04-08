@@ -11,7 +11,6 @@
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Lights.h"
 #include <cstdlib>
-#include <unordered_map>
 
 
 namespace platypus
