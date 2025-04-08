@@ -118,7 +118,7 @@ namespace platypus
         InputManager* pInputManager = (InputManager*)glfwGetWindowUserPointer(pGLFWwindow);
         KeyName keyName = get_key_name(key);
         InputAction inputAction = get_input_action(action);
-        pInputManager->_keyDown[keyName] = action == GLFW_PRESS;
+        pInputManager->_keyDown[keyName] = action != GLFW_RELEASE;
         pInputManager->processKeyEvents(keyName, scancode, inputAction, mods);
     }
 

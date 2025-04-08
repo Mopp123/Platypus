@@ -51,7 +51,7 @@ namespace platypus
         float _maxZoom = 20.0f;
         float _zoomSpeed = 0.25f;
 
-        float _movementSpeed = 2.0f;
+        float _movementSpeed = 5.0f;
 
         bool _initialized = false;
 

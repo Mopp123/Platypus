@@ -2,6 +2,7 @@
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/core/Application.h"
+#include "platypus/core/Timing.h"
 #include "platypus/core/Debug.h"
 #include <cmath>
 
@@ -76,7 +77,33 @@ namespace platypus
         }
 
         // NOTE: This is done in a way that _yaw=0 is pointing towards -z axis
-        float useYaw = _yaw + PLATY_MATH_PI * 0.5f;
+        float halfPI = PLATY_MATH_PI * 0.5f;
+        float useYaw = _yaw + halfPI;
+
+        InputManager& inputManager = Application::get_instance()->getInputManager();
+
+        float moveAmount = _movementSpeed * Timing::get_delta_time();
+        if (inputManager.isKeyDown(KeyName::KEY_W))
+        {
+            _offsetPosition.x -= std::cos(useYaw) * moveAmount;
+            _offsetPosition.z -= std::sin(useYaw) * moveAmount;
+        }
+        else if (inputManager.isKeyDown(KeyName::KEY_S))
+        {
+            _offsetPosition.x += std::cos(useYaw) * moveAmount;
+            _offsetPosition.z += std::sin(useYaw) * moveAmount;
+        }
+
+        if (inputManager.isKeyDown(KeyName::KEY_D))
+        {
+            _offsetPosition.x -= std::cos(useYaw + halfPI) * moveAmount;
+            _offsetPosition.z -= std::sin(useYaw + halfPI) * moveAmount;
+        }
+        else if (inputManager.isKeyDown(KeyName::KEY_A))
+        {
+            _offsetPosition.x += std::cos(useYaw + halfPI) * moveAmount;
+            _offsetPosition.z += std::sin(useYaw + halfPI) * moveAmount;
+        }
 
         float horizontalDist = cos(_pitch) * _zoom;
         float verticalDist = sin(_pitch) * _zoom;

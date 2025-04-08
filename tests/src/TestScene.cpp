@@ -134,7 +134,7 @@ void TestScene::init()
     createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
 
 
-    float areaScale = 60.0f;
+    float areaScale = 200.0f;
 
     // Load/create all used assets
     AssetManager& assetManager = Application::get_instance()->getAssetManager();
@@ -149,10 +149,22 @@ void TestScene::init()
         1,
         0
     );
-    Texture* pTerrainGrassTexture = assetManager.createTexture(pTerrainGrassImage->getID(), textureSampler);
-    Texture* pGrassTexture = assetManager.createTexture(pGrassImage->getID(), textureSampler);
-    Texture* pFirTreeTexture = assetManager.createTexture(pTreeTextureImage->getID(), textureSampler);
-    Texture* pPineTreeTexture = assetManager.createTexture(pTreeTextureImage->getID(), textureSampler);
+    Texture* pTerrainGrassTexture = assetManager.createTexture(
+        pTerrainGrassImage->getID(),
+        textureSampler
+    );
+    Texture* pGrassTexture = assetManager.createTexture(
+        pGrassImage->getID(),
+        textureSampler
+    );
+    Texture* pFirTreeTexture = assetManager.createTexture(
+        pTreeTextureImage->getID(),
+        textureSampler
+    );
+    Texture* pPineTreeTexture = assetManager.createTexture(
+        pTreeTextureImage->getID(),
+        textureSampler
+    );
 
     Mesh* pGroundMesh = create_ground_mesh(assetManager, areaScale);
     Mesh* pGrassMesh = create_grass_mesh(assetManager, 1.25f);
@@ -174,7 +186,7 @@ void TestScene::init()
     );
 
     // Grass entities
-    size_t grassCount = 100;
+    size_t grassCount = 1000;
     createEntities(
         pGrassMesh->getID(),
         pGrassTexture->getID(),
@@ -184,7 +196,7 @@ void TestScene::init()
     );
 
     // Tree entities
-    size_t totalTreeCount = 50;
+    size_t totalTreeCount = 500;
     createEntities(
         pTreeModel1->getMeshes()[0]->getID(),
         pFirTreeTexture->getID(),
@@ -236,8 +248,8 @@ void TestScene::createEntities(
         entityID_t entity = createEntity();
         float randX = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
         float randZ = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
-        float randRot = (float)(std::rand() % 180);
-        randRot = randRot / (float)(PLATY_MATH_PI * 2.0);
+        float randRot = (float)(std::rand() % 255);
+        randRot = (randRot / 255.0f) * (float)(PLATY_MATH_PI * 2.0);
         createTransform(
             entity,
             { randX, 0, randZ },
