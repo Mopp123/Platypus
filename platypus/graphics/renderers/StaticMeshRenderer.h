@@ -39,6 +39,7 @@ namespace platypus
             std::vector<DescriptorSet> textureDescriptorSets;
             size_t count = 0;
         };
+
         std::vector<BatchData> _batches;
         size_t _currentFrame = 0;
 
@@ -77,6 +78,7 @@ namespace platypus
             size_t frame
         );
 
+    private:
         // returns index in _batches if already occupied batch found with enough space.
         // returns -1 if no existing batch found.
         int findExistingBatchIndex(ID_t identifier);
@@ -84,5 +86,15 @@ namespace platypus
         // returns index in _batches if free found
         // returns -1 if no free batch was found.
         int findFreeBatchIndex();
+
+        void addToBatch(
+            BatchData& batchData,
+            const Matrix4f& transformationMatrix
+        );
+        bool createBatch(
+            BatchData& batchData,
+            ID_t meshID,
+            ID_t textureID
+        );
     };
 }

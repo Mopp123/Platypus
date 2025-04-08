@@ -138,27 +138,14 @@ namespace platypus
         const Matrix4f& transformationMatrix
     )
     {
-        Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Mesh* pMesh = assetManager.getMesh(pRenderable->meshID);
-
         ID_t textureID = pRenderable->textureID;
         int foundBatchIndex = findExistingBatchIndex(textureID);
         if (foundBatchIndex != -1)
         {
-            // add to existing batch
-            BatchData& currentBatch = _batches[foundBatchIndex];
-
-            currentBatch.pInstancedBuffer->update(
-                (void*)(&transformationMatrix),
-                sizeof(Matrix4f),
-                currentBatch.count * sizeof(Matrix4f)
-            );
-            ++currentBatch.count;
+            addToBatch(_batches[foundBatchIndex], transformationMatrix);
         }
         else
         {
-            // occupy new batch
             int freeBatchIndex = findFreeBatchIndex();
             if (freeBatchIndex == -1)
             {
@@ -169,29 +156,17 @@ namespace platypus
                 );
                 return;
             }
-            BatchData& currentBatch = _batches[freeBatchIndex];
-            currentBatch.identifier = textureID;
-            currentBatch.pVertexBuffer = pMesh->getVertexBuffer();
-            currentBatch.pIndexBuffer = pMesh->getIndexBuffer();
-
-            const Texture* pTexture = assetManager.getTexture(textureID);
-            size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-            for (int i = 0; i < maxFramesInFlight; ++i)
+            BatchData& batchData = _batches[freeBatchIndex];
+            if (!createBatch(batchData, pRenderable->meshID, textureID))
             {
-                currentBatch.textureDescriptorSets.push_back(
-                    _descriptorPoolRef.createDescriptorSet(
-                        &_textureDescriptorSetLayout,
-                        { pTexture }
-                    )
+                Debug::log(
+                    "@StaticMeshRenderer::submit "
+                    "Failed to create new batch!",
+                    Debug::MessageType::PLATYPUS_ERROR
                 );
+                return;
             }
-
-            currentBatch.pInstancedBuffer->update(
-                (void*)(&transformationMatrix),
-                sizeof(Matrix4f),
-                currentBatch.count * sizeof(Matrix4f)
-            );
-            ++currentBatch.count;
+            addToBatch(batchData, transformationMatrix);
         }
     }
 
@@ -297,5 +272,66 @@ namespace platypus
                 return i;
         }
         return -1;
+    }
+
+    void StaticMeshRenderer::addToBatch(
+        BatchData& batchData,
+        const Matrix4f& transformationMatrix
+    )
+    {
+        batchData.pInstancedBuffer->update(
+            (void*)(&transformationMatrix),
+            sizeof(Matrix4f),
+            batchData.count * sizeof(Matrix4f)
+        );
+        ++batchData.count;
+    }
+
+    bool StaticMeshRenderer::createBatch(
+        BatchData& batchData,
+        ID_t meshID,
+        ID_t textureID
+    )
+    {
+        Application* pApp = Application::get_instance();
+        AssetManager& assetManager = pApp->getAssetManager();
+        const Mesh* pMesh = assetManager.getMesh(meshID);
+        const Texture* pTexture = assetManager.getTexture(textureID);
+        #ifdef PLATYPUS_DEBUG
+            if (!pMesh)
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::createBatch "
+                    "No mesh found with ID: " + std::to_string(meshID),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return false;
+            }
+            if (!pTexture)
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::createBatch "
+                    "No texture found with ID: " + std::to_string(meshID),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return false;
+            }
+        #endif
+
+        batchData.identifier = textureID;
+        batchData.pVertexBuffer = pMesh->getVertexBuffer();
+        batchData.pIndexBuffer = pMesh->getIndexBuffer();
+
+        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        for (int i = 0; i < maxFramesInFlight; ++i)
+        {
+            batchData.textureDescriptorSets.push_back(
+                _descriptorPoolRef.createDescriptorSet(
+                    &_textureDescriptorSetLayout,
+                    { pTexture }
+                )
+            );
+        }
+        return true;
     }
 }
