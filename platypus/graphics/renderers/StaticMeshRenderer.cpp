@@ -157,11 +157,11 @@ namespace platypus
                 return;
             }
             BatchData& batchData = _batches[freeBatchIndex];
-            if (!createBatch(batchData, pRenderable->meshID, textureID))
+            if (!occupyBatch(batchData, pRenderable->meshID, textureID))
             {
                 Debug::log(
                     "@StaticMeshRenderer::submit "
-                    "Failed to create new batch!",
+                    "Failed to occupy batch!",
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 return;
@@ -180,16 +180,18 @@ namespace platypus
         size_t frame
     )
     {
-        if (_currentFrame >= _commandBuffers.size())
-        {
-            Debug::log(
-                "@StaticMeshRenderer::recordCommandBuffer "
-                "Frame index(" + std::to_string(_currentFrame) + ") out of bounds! "
-                "Allocated command buffer count is " + std::to_string(_commandBuffers.size()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
+        #ifdef PLATYPUS_DEBUG
+            if (_currentFrame >= _commandBuffers.size())
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::recordCommandBuffer "
+                    "Frame index(" + std::to_string(_currentFrame) + ") out of bounds! "
+                    "Allocated command buffer count is " + std::to_string(_commandBuffers.size()),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        #endif
 
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(renderPass);
@@ -287,7 +289,7 @@ namespace platypus
         ++batchData.count;
     }
 
-    bool StaticMeshRenderer::createBatch(
+    bool StaticMeshRenderer::occupyBatch(
         BatchData& batchData,
         ID_t meshID,
         ID_t textureID
@@ -301,7 +303,7 @@ namespace platypus
             if (!pMesh)
             {
                 Debug::log(
-                    "@StaticMeshRenderer::createBatch "
+                    "@StaticMeshRenderer::occupyBatch "
                     "No mesh found with ID: " + std::to_string(meshID),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -310,7 +312,7 @@ namespace platypus
             if (!pTexture)
             {
                 Debug::log(
-                    "@StaticMeshRenderer::createBatch "
+                    "@StaticMeshRenderer::occupyBatch "
                     "No texture found with ID: " + std::to_string(meshID),
                     Debug::MessageType::PLATYPUS_ERROR
                 );

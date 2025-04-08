@@ -14,9 +14,9 @@ private:
     public:
         platypus::Scene* _pScene = nullptr;
         entityID_t _cameraEntity;
-        float _fov = 1.3f;
+        float _fov = 1.3f * 0.75f;
         float _zNear = 0.1f;
-        float _zFar = 100.0f;
+        float _zFar = 200.0f;
         SceneWindowResizeEvent(platypus::Scene* pScene, entityID_t cameraEntity) :
             _pScene(pScene),
             _cameraEntity(cameraEntity)
@@ -32,4 +32,13 @@ public:
     ~TestScene();
     virtual void init();
     virtual void update();
+
+private:
+    void createEntities(
+        ID_t meshID,
+        ID_t textureID,
+        const platypus::Vector3f transformScale,
+        float areaScale,
+        uint32_t count
+    );
 };

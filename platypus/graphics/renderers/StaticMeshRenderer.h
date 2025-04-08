@@ -91,7 +91,7 @@ namespace platypus
             BatchData& batchData,
             const Matrix4f& transformationMatrix
         );
-        bool createBatch(
+        bool occupyBatch(
             BatchData& batchData,
             ID_t meshID,
             ID_t textureID

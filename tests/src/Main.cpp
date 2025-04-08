@@ -10,7 +10,7 @@ int main(int argc, const char** argv)
     #endif
 
     platypus::Application app(
-        "Platypus-web-test",
+        "Engine-test",
         1024,
         768,
         true,
@@ -20,3 +20,5 @@ int main(int argc, const char** argv)
     app.run();
     return 0;
 }
+
+

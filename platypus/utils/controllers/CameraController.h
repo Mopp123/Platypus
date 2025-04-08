@@ -67,5 +67,7 @@ namespace platypus
             float maxZoom,
             float zoomSpeed
         );
+
+        inline void setOffsetPos(const Vector3f& position) { _offsetPosition = position; }
     };
 }

@@ -19,12 +19,15 @@ void main() {
     vec3 toLight = normalize(directionalLight.direction.xyz * -1.0);
     vec3 unitNormal = normalize(var_normal);
     float dirLightAmount = max(dot(toLight, unitNormal), 0.0);
+    vec4 totalLightColor = ambientLight + dirLightAmount * vec4(directionalLight.color.rgb, 1.0);
     vec4 textureColor = texture(textureSampler, var_texCoord);
+
+    vec4 finalColor = textureColor * totalLightColor;
 
     if (textureColor.a < 0.5)
     {
         discard;
     }
 
-    fragColor = textureColor * (ambientLight + dirLightAmount * vec4(directionalLight.color.rgb, 1.0));
+    fragColor = finalColor;
 }
