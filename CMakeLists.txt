@@ -15,11 +15,11 @@ endif()
 
 
 # -g to to use gdb debugger
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g -O3")
 # For our vim setup's YCM plugin to work
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_compile_definitions(PLATYPUS_DEBUG=1)
+#add_compile_definitions(PLATYPUS_DEBUG=1)
 
 if(${BUILD_TARGET} MATCHES "desktop")
     add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
@@ -61,6 +61,9 @@ set_property(TARGET glfw PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/depen
 
 find_package(Vulkan REQUIRED)
 set(VMA_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/dependencies/VulkanMemoryAllocator/include")
+
+
+set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-O3")
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS} ${VMA_INCLUDE_DIR})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)

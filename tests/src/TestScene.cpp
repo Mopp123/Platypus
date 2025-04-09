@@ -88,8 +88,10 @@ static Mesh* create_grass_mesh(AssetManager& assetManager, float scale)
 
 void TestScene::init()
 {
-    float clearBrightness = 0.1f;
-    environmentProperties.clearColor = { clearBrightness, clearBrightness, clearBrightness, 1.0f };
+    std::srand(23618);
+
+
+    environmentProperties.clearColor = { 0.1f, 0.2f, 0.35f, 1.0f };
 
     _camEntity = createEntity();
     createTransform(
@@ -109,9 +111,9 @@ void TestScene::init()
 
     Matrix4f camProjMat = create_perspective_projection_matrix(
         aspectRatio,
-        1.3f,
+        1.3f * 0.75f,
         0.1f,
-        200.0f
+        1000.0f
     );
 
     Camera* pCamera = createCamera(_camEntity, camProjMat);
@@ -124,7 +126,7 @@ void TestScene::init()
         80.0f,   // max zoom
         1.25f    // zoom speed
     );
-    _camController.setOffsetPos({ 0, 0, 0});
+    _camController.setOffsetPos({ 0, 4, 0});
 
     Application::get_instance()->getInputManager().addWindowResizeEvent(
         new SceneWindowResizeEvent(this, _camEntity)
@@ -133,7 +135,7 @@ void TestScene::init()
     entityID_t dirLightEntity = createEntity();
     createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
 
-    const float scaleModifier = 20;
+    const float scaleModifier = 30;
     float areaScale = 60.0f * scaleModifier;
 
     // Load/generate all assets

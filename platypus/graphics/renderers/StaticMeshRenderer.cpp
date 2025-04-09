@@ -9,7 +9,7 @@
 
 namespace platypus
 {
-    size_t StaticMeshRenderer::s_maxBatches = 20;
+    size_t StaticMeshRenderer::s_maxBatches = 100;
     size_t StaticMeshRenderer::s_maxBatchLength = 10000;
     StaticMeshRenderer::StaticMeshRenderer(
         const MasterRenderer& masterRenderer,

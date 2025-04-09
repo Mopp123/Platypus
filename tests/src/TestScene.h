@@ -16,7 +16,7 @@ private:
         entityID_t _cameraEntity;
         float _fov = 1.3f * 0.75f;
         float _zNear = 0.1f;
-        float _zFar = 200.0f;
+        float _zFar = 1000.0f;
         SceneWindowResizeEvent(platypus::Scene* pScene, entityID_t cameraEntity) :
             _pScene(pScene),
             _cameraEntity(cameraEntity)
