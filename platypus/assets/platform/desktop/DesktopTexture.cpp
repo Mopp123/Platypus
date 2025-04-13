@@ -281,6 +281,15 @@ namespace platypus
         );
 
         VkFormat imageFormat = channels_to_vk_format(pImage->getChannels());
+        if (imageFormat == VK_FORMAT_R8G8B8_SRGB)
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "3 channel textures have limited support on different devices! "
+                "You should provide 4 channel textures for wider support!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
 
         VkImageCreateInfo imageCreateInfo{};
         imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
