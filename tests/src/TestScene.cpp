@@ -3,6 +3,7 @@
 #include "platypus/core/Application.h"
 #include "platypus/assets/Image.h"
 #include "platypus/assets/Texture.h"
+#include "platypus/assets/Font.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/core/Timing.h"
 
@@ -135,7 +136,7 @@ void TestScene::init()
     entityID_t dirLightEntity = createEntity();
     createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
 
-    const float scaleModifier = 30;
+    const float scaleModifier = 1;
     float areaScale = 60.0f * scaleModifier;
 
     // Load/generate all assets

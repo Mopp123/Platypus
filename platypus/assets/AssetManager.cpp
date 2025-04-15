@@ -175,6 +175,24 @@ namespace platypus
         return pModel;
     }
 
+    Font* AssetManager::loadFont(const std::string& filepath, unsigned int pixelSize)
+    {
+        Font* pFont = new Font;
+        if (!pFont->load(filepath, pixelSize))
+        {
+            Debug::log(
+                "@AssetManager::loadFont "
+                "Failed to load font from: " + filepath,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            delete pFont;
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        _assets[pFont->getID()] = pFont;
+        return pFont;
+    }
+
     Image* AssetManager::getImage(ID_t assetID) const
     {
         Asset* pAsset = getAsset(assetID);

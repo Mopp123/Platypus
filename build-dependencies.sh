@@ -10,9 +10,28 @@ cd $dependencies_dir
 pwd $dependencies_dir
 
 # build glfw
-echo "Building GLFW..."
-cd glfw/
-cmake -S . -B build -D BUILD_SHARED_LIBS=ON
-cmake --build ./build/
+#echo "Building GLFW..."
+#cd glfw/
+#cmake -S . -B build -D BUILD_SHARED_LIBS=ON
+#cmake --build ./build/
+#
+#cd $dependencies_dir
 
-cd $dependencies_dir
+# build Freetype and HarfBuzz
+# initial Freetype..
+echo "Building freetype (without harfbuzz)"
+cd freetype
+./autogen.sh
+./configure --without-harfbuzz
+make
+
+# build HarfBuzz
+echo "Building harfbuzz"
+cd ../harfbuzz
+meson build
+meson compile -C build
+# finalize building Freetype
+cd ../freetype
+make distclean
+./configure
+make
