@@ -49,6 +49,8 @@ namespace platypus
         // TODO: Figure out way of knowing available sizes for fonts..
         bool load(const std::string& filepath, unsigned int pixelSize);
 
+        const Texture* getTexture() const;
+
         const FontGlyphData * const getGlyph(char c) const;
         inline const unsigned int getPixelSize() const { return _pixelSize; }
         inline std::unordered_map<char, FontGlyphData>& getGlyphMapping() { return _glyphMapping; }

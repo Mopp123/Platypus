@@ -79,6 +79,11 @@ namespace platypus
             ID_t textureAssetID
         );
 
+        GUIRenderable* createGUIRenderable(
+            entityID_t target,
+            const Vector4f color
+        );
+
         Camera* createCamera(
             entityID_t target,
             const Matrix4f& perspectiveProjectionMatrix

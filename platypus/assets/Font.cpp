@@ -216,6 +216,11 @@ namespace platypus
         return true;
     }
 
+    const Texture* Font::getTexture() const
+    {
+        return Application::get_instance()->getAssetManager().getTexture(_textureID);
+    }
+
     const FontGlyphData * const Font::getGlyph(char c) const
     {
         std::unordered_map<char, FontGlyphData>::const_iterator it = _glyphMapping.find(c);

@@ -3,46 +3,49 @@
 #include "Renderer.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
-#include "platypus/assets/Mesh.h"
 #include "platypus/ecs/components/Renderable.h"
-#include "platypus/ecs/components/Lights.h"
 #include <cstdlib>
+#include <map>
 
 
 namespace platypus
 {
-    class StaticMeshRenderer : public Renderer
+    class GUIRenderer : public Renderer
     {
     private:
         Shader _vertexShader;
         Shader _fragmentShader;
 
+        const Buffer* _pVertexBuffer = nullptr;
+        const Buffer* _pIndexBuffer = nullptr;
+
         DescriptorSetLayout _textureDescriptorSetLayout;
 
         struct BatchData
         {
-            ID_t identifier = NULL_ID;
-            const Buffer* pVertexBuffer = nullptr;
-            const Buffer* pIndexBuffer = nullptr;
+            ID_t textureID = NULL_ID;
             Buffer* pInstancedBuffer = nullptr;
             std::vector<DescriptorSet> textureDescriptorSets;
             size_t count = 0;
         };
 
+        // key = layer, value = index to _batches, which batch to use
+        std::map<uint32_t, std::set<size_t>> _toRender;
         std::vector<BatchData> _batches;
+
         size_t _currentFrame = 0;
 
         static size_t s_maxBatches;
         static size_t s_maxBatchLength;
 
     public:
-        StaticMeshRenderer(
+        GUIRenderer(
             const MasterRenderer& masterRenderer,
             CommandPool& commandPool,
             DescriptorPool& descriptorPool,
             uint64_t requiredComponentsMask
         );
-        ~StaticMeshRenderer();
+        ~GUIRenderer();
 
         virtual void createPipeline(
             const RenderPass& renderPass,
@@ -64,12 +67,8 @@ namespace platypus
         );
 
     private:
-        // returns index in _batches if already occupied batch found with enough space.
-        // returns -1 if no existing batch found.
-        int findExistingBatchIndex(ID_t identifier);
+        int findExistingBatchIndex(uint32_t layer, ID_t textureID);
 
-        // returns index in _batches if free found
-        // returns -1 if no free batch was found.
         int findFreeBatchIndex();
 
         void addToBatch(
@@ -77,8 +76,8 @@ namespace platypus
             const Matrix4f& transformationMatrix
         );
         bool occupyBatch(
-            BatchData& batchData,
-            ID_t meshID,
+            size_t batchIndex,
+            uint32_t layer,
             ID_t textureID
         );
     };

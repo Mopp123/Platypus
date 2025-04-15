@@ -333,6 +333,28 @@ namespace platypus
         return pComponent;
     }
 
+    GUIRenderable* Scene::createGUIRenderable(
+        entityID_t target,
+        const Vector4f color
+    )
+    {
+        if (!isValidEntity(target, "createGUIRenderable"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
+        if (!isValidComponent(componentType, "createGUIRenderable"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        GUIRenderable* pComponent = (GUIRenderable*)_componentPools[componentType].allocComponent(target);
+        addToComponentMask(target, componentType);
+        pComponent->color = color;
+        return pComponent;
+    }
+
     Camera* Scene::createCamera(
         entityID_t target,
         const Matrix4f& perspectiveProjectionMatrix

@@ -8,6 +8,9 @@
 
 #include "platypus/ecs/components/Renderable.h"
 
+#include <map>
+#include <memory>
+
 
 namespace platypus
 {
@@ -31,7 +34,10 @@ namespace platypus
         DescriptorSetLayout _dirLightDescriptorSetLayout;
         std::vector<DescriptorSet> _dirLightDescriptorSets;
 
-        StaticMeshRenderer _staticMeshRenderer;
+        std::unique_ptr<Renderer> _pStaticMeshRenderer;
+
+        // Key is the required component mask for submitted components of the renderer
+        std::map<uint64_t, Renderer*> _renderers;
 
     public:
         MasterRenderer(const Window& window);

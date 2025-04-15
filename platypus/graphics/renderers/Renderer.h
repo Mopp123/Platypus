@@ -23,14 +23,14 @@ namespace platypus
 
         size_t _currentFrame = 0;
 
-        uint32_t _requiredComponentsMask = 0;
+        uint64_t _requiredComponentsMask = 0;
 
     public:
         Renderer(
             const MasterRenderer& masterRenderer,
             CommandPool& commandPool,
             DescriptorPool& descriptorPool,
-            uint32_t requiredComponentsMask
+            uint64_t requiredComponentsMask
         );
         virtual ~Renderer();
 
@@ -57,6 +57,6 @@ namespace platypus
             size_t frame
         ) = 0;
 
-        inline uint32_t getRequiredComponentsMask() const { return _requiredComponentsMask; }
+        inline uint64_t getRequiredComponentsMask() const { return _requiredComponentsMask; }
     };
 }

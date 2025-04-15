@@ -6,7 +6,11 @@ project(${PROJECT_NAME})
 # Need to have absolute dirs so we cannot use '../' to get the engine directory here!
 get_filename_component(PARENT_DIR ../ ABSOLUTE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
+add_compile_options(
+    -Wall -std=c++17 -g
+)
+
 # For my vim setup's YCM plugin to work
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -22,7 +26,6 @@ if(${BUILD_TARGET} MATCHES "desktop")
         APPEND PROJECT_INCLUDES
         ${PARENT_DIR}/dependencies/glfw/include
     )
-    set(ADDITIONAL_LINK_FLAGS "-g")
     add_library(platypus SHARED IMPORTED)
     set_property(TARGET platypus PROPERTY IMPORTED_LOCATION "${PARENT_DIR}/build/libplatypus.so")
 elseif(${BUILD_TARGET} MATCHES "web")
@@ -33,7 +36,11 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/dependencies/json
         ${PARENT_DIR}/dependencies/tinygltf
     )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
+    # NOTE: Below commented replaced with add_compile_options
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
+    add_compile_options(
+        -s USE_FREETYPE=1 -fexceptions
+    )
     set(CMAKE_EXECUTABLE_SUFFIX .html)
     set(HTML_SHELL_LOCATION "${PROJECT_SOURCE_DIR}/shell.html")
     # NOTE: This gets converted to camel case for some reason...
@@ -42,6 +49,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
     set(HTML_OUT "test.html")
 
     set(ADDITIONAL_LINK_FLAGS "-fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH -l websocket.js")
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS ${ADDITIONAL_LINK_FLAGS})
 
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here
@@ -75,7 +83,6 @@ file(
 )
 
 add_executable(${PROJECT_NAME} ${USE_SRC_FILES})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS ${ADDITIONAL_LINK_FLAGS})
 
 if(${BUILD_TARGET} MATCHES "desktop")
     target_link_libraries(${PROJECT_NAME} PUBLIC platypus)

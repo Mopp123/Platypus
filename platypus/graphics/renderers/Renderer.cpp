@@ -6,7 +6,7 @@ namespace platypus
         const MasterRenderer& masterRenderer,
         CommandPool& commandPool,
         DescriptorPool& descriptorPool,
-        uint32_t requiredComponentsMask
+        uint64_t requiredComponentsMask
     ) :
         _masterRendererRef(masterRenderer),
         _commandPoolRef(commandPool),

@@ -21,8 +21,9 @@ void TestScene::SceneWindowResizeEvent::func(int w, int h)
     );
 
     float useHeight = h > 0 ? (float)h : 1.0f;
+    float aspect = (float)w / useHeight;
     pCameraComponent->perspectiveProjectionMatrix = create_perspective_projection_matrix(
-        (float)w / useHeight,
+        aspect,
         _fov,
         _zNear,
         _zFar

@@ -27,12 +27,6 @@ namespace platypus
                     }
                 }
             }
-        ),
-        _staticMeshRenderer(
-            *this,
-            _commandPool,
-            _descriptorPool,
-            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
         )
     {
         // Create common uniform buffers and descriptor sets
@@ -58,7 +52,14 @@ namespace platypus
             );
         }
 
-        // NOTE: May fuckup?
+        _pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
+            *this,
+            _commandPool,
+            _descriptorPool,
+            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+        _renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
+
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
         createPipelines();
     }
@@ -80,9 +81,9 @@ namespace platypus
 
     void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
-        if ((entity.componentMask & _staticMeshRenderer.getRequiredComponentsMask()) == _staticMeshRenderer.getRequiredComponentsMask())
+        if ((entity.componentMask & _pStaticMeshRenderer->getRequiredComponentsMask()) == _pStaticMeshRenderer->getRequiredComponentsMask())
         {
-            _staticMeshRenderer.submit(pScene, entity.id);
+            _pStaticMeshRenderer->submit(pScene, entity.id);
         }
     }
 
@@ -123,12 +124,13 @@ namespace platypus
             count,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         );
-        _staticMeshRenderer.allocCommandBuffers(count);
+        for (const auto& renderer : _renderers)
+            renderer.second->allocCommandBuffers(count);
     }
 
     void MasterRenderer::freeCommandBuffers()
     {
-        _staticMeshRenderer.freeCommandBuffers();
+        _pStaticMeshRenderer->freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
@@ -138,7 +140,7 @@ namespace platypus
     void MasterRenderer::createPipelines()
     {
         const Extent2D swapchainExtent = _swapchain.getExtent();
-        _staticMeshRenderer.createPipeline(
+        _pStaticMeshRenderer->createPipeline(
             _swapchain.getRenderPass(),
             swapchainExtent.width,
             swapchainExtent.height,
@@ -148,7 +150,7 @@ namespace platypus
 
     void MasterRenderer::destroyPipelines()
     {
-        _staticMeshRenderer.destroyPipeline();
+        _pStaticMeshRenderer->destroyPipeline();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -227,7 +229,7 @@ namespace platypus
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
         secondaryCommandBuffers.push_back(
-            _staticMeshRenderer.recordCommandBuffer(
+            _pStaticMeshRenderer->recordCommandBuffer(
                 _swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
