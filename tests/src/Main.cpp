@@ -1,5 +1,5 @@
-#include "platypus/core/Application.h"
-#include "TestScene.h"
+#include "Platypus.h"
+#include "UITestScene.h"
 
 
 int main(int argc, const char** argv)
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new TestScene
+        new UITestScene
     );
     app.run();
     return 0;
