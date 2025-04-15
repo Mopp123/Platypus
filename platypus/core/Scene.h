@@ -49,14 +49,20 @@ namespace platypus
         // NOTE: Could be optimized to return just ptr to first child and child count
         std::vector<entityID_t> getChildren(entityID_t entityID) const;
 
-        // TODO: all getComponent things could be optimized?
-        void* getComponent(ComponentType type);
+        // TODO: All getComponent things could be optimized?
+        void* getComponent(ComponentType type, bool enableWarning=true);
         void* getComponent(
             entityID_t entityID,
             ComponentType type,
             bool nestedSearch = false,
             bool enableWarning = true
         );
+        const void* getComponent(
+            entityID_t entityID,
+            ComponentType type,
+            bool nestedSearch = false,
+            bool enableWarning = true
+        ) const;
         // Returns first component of "type" found in "entity"'s child entities
         void* getComponentInChildren(entityID_t entityID, ComponentType type);
 

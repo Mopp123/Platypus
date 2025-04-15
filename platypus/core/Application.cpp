@@ -17,7 +17,6 @@ namespace platypus
     {
         Timing::update();
 
-
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         MasterRenderer& renderer = pApp->getMasterRenderer();

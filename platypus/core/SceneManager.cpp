@@ -81,28 +81,8 @@ namespace platypus
         Application* pApp = Application::get_instance();
         AssetManager& assetManager = pApp->getAssetManager();
         MasterRenderer& masterRenderer = pApp->getMasterRenderer();
-        uint64_t requiredMask = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        for (const Entity& e : _pCurrentScene->_entities)
-        {
-            if ((e.componentMask & requiredMask) == requiredMask)
-            {
-                const StaticMeshRenderable* pRenderable = (const StaticMeshRenderable*)_pCurrentScene->getComponent(
-                    e.id,
-                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
-                );
-
-                Transform* pTransform = (Transform*)_pCurrentScene->getComponent(
-                    e.id,
-                    ComponentType::COMPONENT_TYPE_TRANSFORM
-                );
-
-                masterRenderer.submit(
-                    pRenderable,
-                    pTransform->globalMatrix
-                );
-            }
-        }
-
+        for (const Entity& entity : _pCurrentScene->_entities)
+            masterRenderer.submit(_pCurrentScene, entity);
 
         /*
         ComponentPool& transformPool = _pCurrentScene->componentPools[ComponentType::PK_TRANSFORM];

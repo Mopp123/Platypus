@@ -13,8 +13,10 @@ UITestScene::~UITestScene()
 
 void UITestScene::init()
 {
+    initBase();
 }
 
 void UITestScene::update()
 {
+    updateBase();
 }

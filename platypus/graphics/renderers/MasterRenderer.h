@@ -38,7 +38,7 @@ namespace platypus
         ~MasterRenderer();
 
         void cleanUp();
-        void submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix);
+        void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }

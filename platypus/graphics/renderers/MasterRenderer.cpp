@@ -28,7 +28,12 @@ namespace platypus
                 }
             }
         ),
-        _staticMeshRenderer(*this, _swapchain, _commandPool, _descriptorPool)
+        _staticMeshRenderer(
+            *this,
+            _commandPool,
+            _descriptorPool,
+            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
+        )
     {
         // Create common uniform buffers and descriptor sets
         DirLightUniformBufferData dirLightUniformBufferData;
@@ -73,9 +78,12 @@ namespace platypus
         freeCommandBuffers();
     }
 
-    void MasterRenderer::submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix)
+    void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
-        _staticMeshRenderer.submit(pRenderable, transformationMatrix);
+        if ((entity.componentMask & _staticMeshRenderer.getRequiredComponentsMask()) == _staticMeshRenderer.getRequiredComponentsMask())
+        {
+            _staticMeshRenderer.submit(pScene, entity.id);
+        }
     }
 
     void MasterRenderer::render(const Window& window)
@@ -115,7 +123,6 @@ namespace platypus
             count,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         );
-        Debug::log("___TEST___ALLOCATED " + std::to_string(_primaryCommandBuffers.size()) + " PRIMARY CMD BUFS");
         _staticMeshRenderer.allocCommandBuffers(count);
     }
 
@@ -190,7 +197,10 @@ namespace platypus
         if (pCameraTransform)
             viewMatrix = pCameraTransform->globalMatrix.inverse();
 
-        const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT);
+        const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(
+            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
+            false
+        );
         if (!pDirectionalLight)
         {
             _useDirLightData = { { 0, 0, 0, 1.0f }, { 0, 0, 0, 1.0f } };

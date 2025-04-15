@@ -63,6 +63,7 @@ namespace platypus
         void destroyComponent(entityID_t entityID);
 
         void* operator[](entityID_t entityID);
+        const void* operator[](entityID_t entityID) const;
 
         inline size_t getComponentCount() const { return _componentCount; }
     };

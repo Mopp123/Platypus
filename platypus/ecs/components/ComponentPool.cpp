@@ -135,7 +135,7 @@ namespace platypus
         if (_entityOffsetMapping.find(entityID) == _entityOffsetMapping.end())
         {
             Debug::log(
-                "@ComponentPool::operator[] "
+                "@ComponentPool::operator[] (1)"
                 "Failed to find entity: " + std::to_string(entityID) + " from pool",
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -144,5 +144,23 @@ namespace platypus
         #endif
         size_t offset = _entityOffsetMapping[entityID];
         return (void*)(((PE_byte*)_pStorage) + offset * _componentSize);
+    }
+
+    const void* ComponentPool::operator[](entityID_t entityID) const
+    {
+        // Maybe use const ref const_iterator here? Or is it too dangerous?
+        std::unordered_map<entityID_t, size_t>::const_iterator it = _entityOffsetMapping.find(entityID);
+        if (it == _entityOffsetMapping.end())
+        {
+            Debug::log(
+                "@ComponentPool::operator[] (2)"
+                "Failed to find entity: " + std::to_string(entityID) + " from pool",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        size_t offset = it->second;
+        return (const void*)(((PE_byte*)_pStorage) + offset * _componentSize);
     }
 }

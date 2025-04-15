@@ -158,7 +158,7 @@ namespace platypus
         return _entityChildMapping.at(entityID);
     }
 
-    void* Scene::getComponent(ComponentType type)
+    void* Scene::getComponent(ComponentType type, bool enableWarning)
     {
         if (!isValidComponent(type, "getComponent"))
         {
@@ -167,11 +167,14 @@ namespace platypus
         }
         if (_componentPools[type].getComponentCount() == 0)
         {
-            Debug::log(
-                "Scene::getComponent "
-                "No components of type: " + component_type_to_string(type) + " found",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
+            if (enableWarning)
+            {
+                Debug::log(
+                    "Scene::getComponent "
+                    "No components of type: " + component_type_to_string(type) + " found",
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+            }
             return nullptr;
         }
         return _componentPools[type].first();
@@ -184,7 +187,7 @@ namespace platypus
         bool enableWarning
     )
     {
-        if (!isValidEntity(entityID, "getComponent"))
+        if (!isValidEntity(entityID, "getComponent (1)"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
@@ -192,7 +195,7 @@ namespace platypus
         if (_componentPools.find(type) == _componentPools.end())
         {
             Debug::log(
-                "@Scene::getComponent "
+                "@Scene::getComponent (1)"
                 "No component pool exists for component type: " + std::to_string(type),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -208,7 +211,48 @@ namespace platypus
         if (!nestedSearch && enableWarning)
         {
             Debug::log(
-                "@Scene::getComponent "
+                "@Scene::getComponent (1)"
+                "Couldn't find component of type: " + std::to_string(type) + " "
+                "from entity: " + std::to_string(entityID),
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
+        return nullptr;
+    }
+
+    const void* Scene::getComponent(
+        entityID_t entityID,
+        ComponentType type,
+        bool nestedSearch,
+        bool enableWarning
+    ) const
+    {
+        if (!isValidEntity(entityID, "getComponent (2)"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        std::unordered_map<ComponentType, ComponentPool>::const_iterator poolIt = _componentPools.find(type);
+        if (poolIt == _componentPools.end())
+        {
+            Debug::log(
+                "@Scene::getComponent (2)"
+                "No component pool exists for component type: " + std::to_string(type),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if ((_entities[entityID].componentMask & (uint64_t)type) == (uint64_t)type)
+        {
+            // NOTE: Changed to using [] operator, below commented out previous way...
+            return poolIt->second[entityID];
+            //return (Component*)componentPools[type].getComponent_DANGER(entityID);
+        }
+        if (!nestedSearch && enableWarning)
+        {
+            Debug::log(
+                "@Scene::getComponent (2)"
                 "Couldn't find component of type: " + std::to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING

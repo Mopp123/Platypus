@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Platypus.h"
+#include "platypus/Platypus.h"
 
 
 class BaseScene : public platypus::Scene
@@ -30,4 +30,4 @@ public:
     virtual ~BaseScene();
     void initBase();
     void updateBase();
-}
+};

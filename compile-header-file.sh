@@ -2,8 +2,6 @@
 
 # creates combined header file which can be used to include the whole engine
 out_file="Platypus.h"
-# all files need to be included containing this engine root
-engine_root_name="platypus"
 
 # Get script's dir
 root_dir=$(dirname "$0")
@@ -29,8 +27,8 @@ touch $out_file
 echo "#pragma once" >> $out_file
 echo '' >> $out_file
 find $src_dir -type f -print0 | while read -d $'\0' file; do
-    if [[ $file == *.h ]]
+    if [[ $file != *"platform"* ]] && [[ $file == *.h ]] && [[ $file != *"Platypus.h" ]]
     then
-        echo "#include \"$engine_root_name/$(realpath -s --relative-to="$src_dir" "$file")\"" >> $out_file
+        echo "#include \"$(realpath -s --relative-to="$src_dir" "$file")\"" >> $out_file
     fi
 done

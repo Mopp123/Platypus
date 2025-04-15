@@ -1,12 +1,8 @@
 #pragma once
 
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/RenderPass.h"
-#include "platypus/graphics/Shader.h"
-#include "platypus/graphics/Pipeline.h"
+#include "Renderer.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
-#include "platypus/utils/Maths.h"
 #include "platypus/assets/Mesh.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Lights.h"
@@ -15,16 +11,9 @@
 
 namespace platypus
 {
-    class MasterRenderer;
-    class StaticMeshRenderer
+    class StaticMeshRenderer : public Renderer
     {
     private:
-        const MasterRenderer& _masterRendererRef;
-        CommandPool& _commandPoolRef;
-        std::vector<CommandBuffer> _commandBuffers;
-        DescriptorPool& _descriptorPoolRef;
-        Pipeline _pipeline;
-
         Shader _vertexShader;
         Shader _fragmentShader;
 
@@ -49,26 +38,22 @@ namespace platypus
     public:
         StaticMeshRenderer(
             const MasterRenderer& masterRenderer,
-            const Swapchain& swapchain,
             CommandPool& commandPool,
-            DescriptorPool& descriptorPool
+            DescriptorPool& descriptorPool,
+            uint32_t requiredComponentsMask
         );
         ~StaticMeshRenderer();
 
-        void allocCommandBuffers(uint32_t count);
-        void freeCommandBuffers();
-
-        void createPipeline(
+        virtual void createPipeline(
             const RenderPass& renderPass,
             float viewportWidth,
             float viewportHeight,
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
-        void destroyPipeline();
 
-        void submit(const StaticMeshRenderable* pRenderable, const Matrix4f& transformationMatrix);
+        virtual void submit(const Scene* pScene, entityID_t entity);
 
-        const CommandBuffer& recordCommandBuffer(
+        virtual const CommandBuffer& recordCommandBuffer(
             const RenderPass& renderPass,
             uint32_t viewportWidth,
             uint32_t viewportHeight,

@@ -13,13 +13,16 @@ namespace platypus
     size_t StaticMeshRenderer::s_maxBatchLength = 10000;
     StaticMeshRenderer::StaticMeshRenderer(
         const MasterRenderer& masterRenderer,
-        const Swapchain& swapchain,
         CommandPool& commandPool,
-        DescriptorPool& descriptorPool
+        DescriptorPool& descriptorPool,
+        uint32_t requiredComponentsMask
     ) :
-        _masterRendererRef(masterRenderer),
-        _commandPoolRef(commandPool),
-        _descriptorPoolRef(descriptorPool),
+        Renderer(
+            masterRenderer,
+            commandPool,
+            descriptorPool,
+            requiredComponentsMask
+        ),
         _vertexShader("TestVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
         _fragmentShader("TestFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _textureDescriptorSetLayout(
@@ -34,7 +37,9 @@ namespace platypus
             }
         )
     {
+        // Alloc batches
         _batches.resize(s_maxBatches);
+        // Create empty instanced buffers for batches
         for (size_t i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
@@ -47,7 +52,6 @@ namespace platypus
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
             );
-
         }
     }
 
@@ -59,21 +63,6 @@ namespace platypus
             // NOTE: shouldn't we also delete descriptor sets?
         }
         _textureDescriptorSetLayout.destroy();
-    }
-
-    void StaticMeshRenderer::allocCommandBuffers(uint32_t count)
-    {
-        _commandBuffers = _commandPoolRef.allocCommandBuffers(
-            count,
-            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
-        );
-    }
-
-    void StaticMeshRenderer::freeCommandBuffers()
-    {
-        for (CommandBuffer& buffer : _commandBuffers)
-            buffer.free();
-        _commandBuffers.clear();
     }
 
     void StaticMeshRenderer::createPipeline(
@@ -128,16 +117,16 @@ namespace platypus
         );
     }
 
-    void StaticMeshRenderer::destroyPipeline()
+    void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
     {
-        _pipeline.destroy();
-    }
+        const StaticMeshRenderable* pRenderable = (const StaticMeshRenderable*)pScene->getComponent(
+            entity, ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
+        );
+        const Transform* pTransform = (const Transform*)pScene->getComponent(
+            entity, ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+        const Matrix4f transformationMatrix = pTransform->globalMatrix;
 
-    void StaticMeshRenderer::submit(
-        const StaticMeshRenderable* pRenderable,
-        const Matrix4f& transformationMatrix
-    )
-    {
         ID_t textureID = pRenderable->textureID;
         int foundBatchIndex = findExistingBatchIndex(textureID);
         if (foundBatchIndex != -1)
