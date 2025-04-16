@@ -65,6 +65,12 @@ namespace platypus
         // TODO: Fix the above
         _assetManager(_masterRenderer.getCommandPool())
     {
+        #ifdef PLATYPUS_DEBUG
+            Debug::log(
+                "Running platypus engine in DEBUG mode"
+            );
+        #endif
+
         if (s_pInstance)
         {
             Debug::log(

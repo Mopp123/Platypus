@@ -111,14 +111,24 @@ void TestScene::init()
     if (windowSurfaceHeight > 0)
         aspectRatio = (float)windowSurfaceWidth / (float)windowSurfaceHeight;
 
-    Matrix4f camProjMat = create_perspective_projection_matrix(
+    Matrix4f perspectiveProjMat = create_perspective_projection_matrix(
         aspectRatio,
         1.3f * 0.75f,
         0.1f,
         1000.0f
     );
 
-    Camera* pCamera = createCamera(_camEntity, camProjMat);
+    Matrix4f orthoProjMat = create_orthographic_projection_matrix(
+        0,
+        windowSurfaceWidth,
+        0,
+        windowSurfaceHeight,
+        0,
+        100
+    );
+
+    Camera* pCamera = createCamera(_camEntity, perspectiveProjMat, orthoProjMat);
+
     _camController.init();
     _camController.set(
         PLATY_MATH_PI * 0.25f, // pitch

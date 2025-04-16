@@ -58,6 +58,7 @@ namespace platypus
         inline int getTextureAtlasRowCount() const { return _textureAtlasRowCount; }
         inline int getTilePixelWidth() const { return _textureAtlasTileWidth; }
         inline int getMaxCharHeight() const { return _charHeight; }
+        inline ID_t getTextureID() const { return _textureID; }
 
     private:
         bool createFont(const std::string& filepath, const std::string& charsToLoad);

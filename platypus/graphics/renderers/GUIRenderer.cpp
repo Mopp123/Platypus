@@ -30,19 +30,19 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 4 } }
+                    { { 1 } }
                 }
             }
         )
     {
         // Create common vertex and index buffers
         std::vector<float> vertexData = {
-            -1,  1,     0, 1,
-            -1, -1,     0, 0,
-             1, -1,     1, 0,
-             1,  1,     1, 1
+            -1, 1,   0, 1,
+            -1, -1,   0, 0,
+            1,  -1,   1, 0,
+            1, 1,   1, 1
         };
-        std::vector<uint32_t> indices = {
+        std::vector<uint16_t> indices = {
             0, 1, 2,
             2, 3, 0
         };
@@ -103,18 +103,18 @@ namespace platypus
     {
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float3 },
-                { 1, ShaderDataType::Float2 },
+                { 0, ShaderDataType::Float2 },
+                { 1, ShaderDataType::Float2 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
         };
         VertexBufferLayout instancedVbLayout = {
             {
+                { 2, ShaderDataType::Float4 },
                 { 3, ShaderDataType::Float4 },
                 { 4, ShaderDataType::Float4 },
-                { 5, ShaderDataType::Float4 },
-                { 6, ShaderDataType::Float4 }
+                { 5, ShaderDataType::Float4 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
             1
@@ -134,7 +134,7 @@ namespace platypus
             viewportScissor,
             CullMode::CULL_MODE_NONE,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            false, // enable depth test
+            true, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
             false, // enable color blending
             sizeof(Matrix4f), // push constants size
@@ -190,7 +190,8 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
-        const Matrix4f& projectionMatrix,
+        const Matrix4f& perspectiveProjectionMatrix,
+        const Matrix4f& orthographicProjectionMatrix,
         const Matrix4f& viewMatrix,
         const DescriptorSet& dirLightDescriptorSet,
         size_t frame
@@ -215,13 +216,12 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
-        Matrix4f pushConstants[1] = { projectionMatrix };
         render::push_constants(
             currentCommandBuffer,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
             0,
             sizeof(Matrix4f),
-            pushConstants,
+            orthographicProjectionMatrix.getRawArray(),
             {
                 { 0, ShaderDataType::Mat4 }
             }
@@ -353,6 +353,7 @@ namespace platypus
             );
         }
         _toRender[layer].insert(batchIndex);
+        Debug::log("___TEST___Occupied GUI Renderer batch!");
         return true;
     }
 }

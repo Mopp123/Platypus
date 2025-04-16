@@ -86,7 +86,8 @@ namespace platypus
 
         Camera* createCamera(
             entityID_t target,
-            const Matrix4f& perspectiveProjectionMatrix
+            const Matrix4f& perspectiveProjectionMatrix,
+            const Matrix4f& orthographicProjectionMatrix
         );
 
         DirectionalLight* createDirectionalLight(

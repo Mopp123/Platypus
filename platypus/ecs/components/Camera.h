@@ -8,5 +8,6 @@ namespace platypus
     struct Camera
     {
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
+        Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
     };
 }

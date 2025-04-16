@@ -58,7 +58,15 @@ namespace platypus
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
         );
+        _pGUIRenderer = std::make_unique<GUIRenderer>(
+            *this,
+            _commandPool,
+            _descriptorPool,
+            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+
         _renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
+        _renderers[_pGUIRenderer->getRequiredComponentsMask()] = _pGUIRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
         createPipelines();
@@ -81,9 +89,10 @@ namespace platypus
 
     void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
-        if ((entity.componentMask & _pStaticMeshRenderer->getRequiredComponentsMask()) == _pStaticMeshRenderer->getRequiredComponentsMask())
+        for (auto& it : _renderers)
         {
-            _pStaticMeshRenderer->submit(pScene, entity.id);
+            if ((entity.componentMask & it.second->getRequiredComponentsMask()) == it.second->getRequiredComponentsMask())
+                it.second->submit(pScene, entity.id);
         }
     }
 
@@ -130,7 +139,8 @@ namespace platypus
 
     void MasterRenderer::freeCommandBuffers()
     {
-        _pStaticMeshRenderer->freeCommandBuffers();
+        for (auto& it : _renderers)
+            it.second->freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
@@ -140,17 +150,22 @@ namespace platypus
     void MasterRenderer::createPipelines()
     {
         const Extent2D swapchainExtent = _swapchain.getExtent();
-        _pStaticMeshRenderer->createPipeline(
-            _swapchain.getRenderPass(),
-            swapchainExtent.width,
-            swapchainExtent.height,
-            _dirLightDescriptorSetLayout
-        );
+
+        for (auto& it : _renderers)
+        {
+            it.second->createPipeline(
+                _swapchain.getRenderPass(),
+                swapchainExtent.width,
+                swapchainExtent.height,
+                _dirLightDescriptorSetLayout
+            );
+        }
     }
 
     void MasterRenderer::destroyPipelines()
     {
-        _pStaticMeshRenderer->destroyPipeline();
+        for (auto& it : _renderers)
+            it.second->destroyPipeline();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -190,12 +205,16 @@ namespace platypus
         std::vector<CommandBuffer> secondaryCommandBuffers;
 
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
+        Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
 
         Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
         Transform* pCameraTransform = (Transform*)pScene->getComponent(ComponentType::COMPONENT_TYPE_TRANSFORM);
         if (pCamera)
+        {
             perspectiveProjectionMatrix = pCamera->perspectiveProjectionMatrix;
+            orthographicProjectionMatrix = pCamera->orthographicProjectionMatrix;
+        }
         if (pCameraTransform)
             viewMatrix = pCameraTransform->globalMatrix.inverse();
 
@@ -228,17 +247,22 @@ namespace platypus
         );
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
-        secondaryCommandBuffers.push_back(
-            _pStaticMeshRenderer->recordCommandBuffer(
-                _swapchain.getRenderPass(),
-                swapchainExtent.width,
-                swapchainExtent.height,
-                perspectiveProjectionMatrix,
-                viewMatrix,
-                _dirLightDescriptorSets[frame],
-                frame // NOTE: no idea should this be the "frame index" or "image index"
-            )
-        );
+
+        for (auto& it : _renderers)
+        {
+            secondaryCommandBuffers.push_back(
+                it.second->recordCommandBuffer(
+                    _swapchain.getRenderPass(),
+                    swapchainExtent.width,
+                    swapchainExtent.height,
+                    perspectiveProjectionMatrix,
+                    orthographicProjectionMatrix,
+                    viewMatrix,
+                    _dirLightDescriptorSets[frame],
+                    frame // NOTE: no idea should this be the "frame index" or "image index"
+                )
+            );
+        }
 
         render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
 

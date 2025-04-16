@@ -5,6 +5,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "TestRenderer.h"
 #include "StaticMeshRenderer.h"
+#include "GUIRenderer.h"
 
 #include "platypus/ecs/components/Renderable.h"
 
@@ -35,6 +36,7 @@ namespace platypus
         std::vector<DescriptorSet> _dirLightDescriptorSets;
 
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
+        std::unique_ptr<Renderer> _pGUIRenderer;
 
         // Key is the required component mask for submitted components of the renderer
         std::map<uint64_t, Renderer*> _renderers;

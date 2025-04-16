@@ -51,7 +51,8 @@ namespace platypus
             const RenderPass& renderPass,
             uint32_t viewportWidth,
             uint32_t viewportHeight,
-            const Matrix4f& projectionMatrix,
+            const Matrix4f& perspectiveProjectionMatrix,
+            const Matrix4f& orthographicProjectionMatrix,
             const Matrix4f& viewMatrix,
             const DescriptorSet& dirLightDescriptorSet,
             size_t frame

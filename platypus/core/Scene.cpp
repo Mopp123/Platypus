@@ -16,6 +16,9 @@ namespace platypus
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
             sizeof(Transform), maxEntityCount, true
         );
+        _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = ComponentPool(
+            sizeof(GUIRenderable), maxEntityCount, true
+        );
         _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
             sizeof(Camera), 1, true
         );
@@ -357,7 +360,8 @@ namespace platypus
 
     Camera* Scene::createCamera(
         entityID_t target,
-        const Matrix4f& perspectiveProjectionMatrix
+        const Matrix4f& perspectiveProjectionMatrix,
+        const Matrix4f& orthographicProjectionMatrix
     )
     {
         if (!isValidEntity(target, "createCamera"))
@@ -374,6 +378,7 @@ namespace platypus
         Camera* pComponent = (Camera*)_componentPools[componentType].allocComponent(target);
         addToComponentMask(target, componentType);
         pComponent->perspectiveProjectionMatrix = perspectiveProjectionMatrix;
+        pComponent->orthographicProjectionMatrix = orthographicProjectionMatrix;
         return pComponent;
     }
 

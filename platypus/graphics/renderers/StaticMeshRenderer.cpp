@@ -163,7 +163,8 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
-        const Matrix4f& projectionMatrix,
+        const Matrix4f& perspectiveProjectionMatrix,
+        const Matrix4f& orthographicProjectionMatrix,
         const Matrix4f& viewMatrix,
         const DescriptorSet& dirLightDescriptorSet,
         size_t frame
@@ -188,7 +189,7 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
-        Matrix4f pushConstants[2] = { projectionMatrix, viewMatrix };
+        Matrix4f pushConstants[2] = { perspectiveProjectionMatrix, viewMatrix };
         render::push_constants(
             currentCommandBuffer,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,

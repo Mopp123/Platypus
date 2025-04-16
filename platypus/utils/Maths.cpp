@@ -296,6 +296,16 @@ namespace platypus
         return result;
     }
 
+    Vector4f operator*(const Matrix4f& left, const Vector4f& right)
+    {
+        Vector4f result;
+        result.x = left[0 + 0 * 4] * right.x + left[0 + 1 * 4] * right.y + left[0 + 2 * 4] * right.z + left[0 + 3 * 4] * right.w;
+        result.y = left[1 + 0 * 4] * right.x + left[1 + 1 * 4] * right.y + left[1 + 2 * 4] * right.z + left[1 + 3 * 4] * right.w;
+        result.z = left[2 + 0 * 4] * right.x + left[2 + 1 * 4] * right.y + left[2 + 2 * 4] * right.z + left[2 + 3 * 4] * right.w;
+        result.w = left[3 + 0 * 4] * right.x + left[3 + 1 * 4] * right.y + left[3 + 2 * 4] * right.z + left[3 + 3 * 4] * right.w;
+        return result;
+    }
+
     std::string Matrix4f::toString() const
     {
         std::string str;
@@ -432,6 +442,8 @@ namespace platypus
     {
         Matrix4f result(1.0f);
 
+        // Ment to be used with opengl?
+        /*
         result[0] = 2.0f / (right - left);
         result[1 + 1 * 4] = 2.0f / (top - bottom);
         result[2 + 2 * 4] = -2.0f / (zFar - zNear);
@@ -439,6 +451,23 @@ namespace platypus
         result[0 + 3 * 4] = -((right + left) / (right - left));
         result[1 + 3 * 4] = -((top + bottom) / (top - bottom));
         result[2 + 3 * 4] = -((zFar + zNear) / (zFar - zNear));
+        */
+
+        // NOTE: Above was switched to below, using
+        // Vulkan-CookBook: https://github.com/PacktPublishing/Vulkan-Cookbook/blob/master/Library/Source%20Files/10%20Helper%20Recipes/05%20Preparing%20an%20orthographic%20projection%20matrix.cpp
+        // which works in the way it was intended. Above commented out requires something like near plane needs to be positive val of negative far plane and
+        // the usable range is half the on u put to near and or far planes... it's just fucked... something to do with clipping coords which z is behaving differently between Vulkan and OpenGL
+        //
+        // BUT WEIRD! For some reason web build is able to extend rendering to infinity towards positive z!
+        result[0] = 2.0f / (right - left);
+        result[1 + 1 * 4] = 2.0f / (bottom - top);
+        result[2 + 2 * 4] = 1.0f / (zNear - zFar);
+        result[0 + 3 * 4] = -(right + left) / (right - left);
+
+        result[1 + 3 * 4] = (bottom + top) / (bottom - top);
+
+        result[2 + 3 * 4] = zNear / (zNear - zFar);
+        result[3 + 3 * 4] = 1.0f;
 
         return result;
     }

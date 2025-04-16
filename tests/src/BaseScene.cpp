@@ -46,14 +46,26 @@ void BaseScene::initBase()
     if (windowSurfaceHeight > 0)
         aspectRatio = (float)windowSurfaceWidth / (float)windowSurfaceHeight;
 
-    Matrix4f camProjMat = create_perspective_projection_matrix(
+    Matrix4f perspectiveProjMat = create_perspective_projection_matrix(
         aspectRatio,
         1.3f * 0.75f,
         0.1f,
         1000.0f
     );
 
-    Camera* pCamera = createCamera(_cameraEntity, camProjMat);
+    Debug::log("___TEST___window scale: " + std::to_string(windowSurfaceWidth) + ", " + std::to_string(windowSurfaceHeight));
+
+    Matrix4f orthoProjMat = create_orthographic_projection_matrix(
+        -1,
+        1, //windowSurfaceWidth,
+        1,
+        -1,//windowSurfaceHeight,
+        0,
+        1
+    );
+
+    Camera* pCamera = createCamera(_cameraEntity, perspectiveProjMat, orthoProjMat);
+    /*
     _cameraController.init();
     _cameraController.set(
         PLATY_MATH_PI * 0.25f, // pitch
@@ -64,6 +76,7 @@ void BaseScene::initBase()
         1.25f    // zoom speed
     );
     _cameraController.setOffsetPos({ 0, 4, 0});
+    */
 
     Application::get_instance()->getInputManager().addWindowResizeEvent(
         new SceneWindowResizeEvent(this, _cameraEntity)
