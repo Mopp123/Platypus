@@ -147,6 +147,7 @@ namespace platypus
 
     Matrix4f create_rotation_matrix(float pitch, float yaw);
 
+    // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
     Matrix4f create_orthographic_projection_matrix(
         float left,
         float right,
@@ -156,6 +157,7 @@ namespace platypus
         float zFar
     );
 
+    // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
     Matrix4f create_perspective_projection_matrix(
         float aspectRatio,
         float fov,

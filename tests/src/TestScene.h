@@ -1,10 +1,6 @@
 #pragma once
 
-#include "platypus/core/Scene.h"
-#include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/utils/controllers/CameraController.h"
-#include "platypus/core/InputEvent.h"
+#include "platypus/Platypus.h"
 
 class TestScene : public platypus::Scene
 {

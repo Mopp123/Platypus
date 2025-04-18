@@ -431,6 +431,8 @@ namespace platypus
     }
 
 
+    // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
+    // https://www.kdab.com/projection-matrices-with-vulkan-part-1/
     Matrix4f create_orthographic_projection_matrix(
         float left,
         float right,
@@ -473,6 +475,8 @@ namespace platypus
     }
 
 
+    // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
+    // https://www.kdab.com/projection-matrices-with-vulkan-part-1/
     Matrix4f create_perspective_projection_matrix(
         float aspectRatio,
         float fov,

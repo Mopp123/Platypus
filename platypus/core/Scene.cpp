@@ -1,6 +1,9 @@
 #include "Scene.h"
 #include "Application.h"
 #include "Debug.h"
+#include "platypus/ecs/components/Transform.h"
+#include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
 
 
@@ -12,6 +15,9 @@ namespace platypus
 
         _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
             sizeof(Transform), maxEntityCount, true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = ComponentPool(
+            sizeof(GUITransform), maxEntityCount, true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
             sizeof(Transform), maxEntityCount, true
@@ -41,6 +47,16 @@ namespace platypus
         _systems.clear();
 
         _entityChildMapping.clear();
+    }
+
+    void* Scene::allocateComponent(entityID_t target, ComponentType componentType)
+    {
+        if (!isValidComponent(componentType, "allocateComponent"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return _componentPools[componentType].allocComponent(target);
     }
 
     entityID_t Scene::createEntity()
@@ -280,130 +296,6 @@ namespace platypus
             Debug::MessageType::PLATYPUS_MESSAGE
         );
         return nullptr;
-    }
-
-    Transform* Scene::createTransform(
-        entityID_t target,
-        const Vector3f& position,
-        const Quaternion& rotation,
-        const Vector3f& scale
-    )
-    {
-        if (!isValidEntity(target, "createTransform"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_TRANSFORM;
-        if (!isValidComponent(componentType, "createTransform"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        Transform* pComponent = (Transform*)_componentPools[componentType].allocComponent(target);
-        addToComponentMask(target, componentType);
-        pComponent->globalMatrix = create_transformation_matrix(
-            position,
-            rotation,
-            scale
-        );
-
-        return pComponent;
-    }
-
-    StaticMeshRenderable* Scene::createStaticMeshRenderable(
-        entityID_t target,
-        ID_t meshAssetID,
-        ID_t textureAssetID
-    )
-    {
-        if (!isValidEntity(target, "createStaticMeshRenderable"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        if (!isValidComponent(componentType, "createStaticMeshRenderable"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        StaticMeshRenderable* pComponent = (StaticMeshRenderable*)_componentPools[componentType].allocComponent(target);
-        addToComponentMask(target, componentType);
-        pComponent->meshID = meshAssetID;
-        pComponent->textureID = textureAssetID;
-
-        return pComponent;
-    }
-
-    GUIRenderable* Scene::createGUIRenderable(
-        entityID_t target,
-        const Vector4f color
-    )
-    {
-        if (!isValidEntity(target, "createGUIRenderable"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
-        if (!isValidComponent(componentType, "createGUIRenderable"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        GUIRenderable* pComponent = (GUIRenderable*)_componentPools[componentType].allocComponent(target);
-        addToComponentMask(target, componentType);
-        pComponent->color = color;
-        return pComponent;
-    }
-
-    Camera* Scene::createCamera(
-        entityID_t target,
-        const Matrix4f& perspectiveProjectionMatrix,
-        const Matrix4f& orthographicProjectionMatrix
-    )
-    {
-        if (!isValidEntity(target, "createCamera"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_CAMERA;
-        if (!isValidComponent(componentType, "createCamera"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        Camera* pComponent = (Camera*)_componentPools[componentType].allocComponent(target);
-        addToComponentMask(target, componentType);
-        pComponent->perspectiveProjectionMatrix = perspectiveProjectionMatrix;
-        pComponent->orthographicProjectionMatrix = orthographicProjectionMatrix;
-        return pComponent;
-    }
-
-    DirectionalLight* Scene::createDirectionalLight(
-        entityID_t target,
-        const Vector3f& direction,
-        const Vector3f& color
-    )
-    {
-        if (!isValidEntity(target, "createDirectionalLight"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT;
-        if (!isValidComponent(componentType, "createDirectionalLight"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        DirectionalLight* pComponent = (DirectionalLight*)_componentPools[componentType].allocComponent(target);
-        addToComponentMask(target, componentType);
-        pComponent->direction = direction;
-        pComponent->color = color;
-        return pComponent;
     }
 
     void Scene::addToComponentMask(entityID_t entityID, ComponentType componentType)

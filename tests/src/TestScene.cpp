@@ -1,13 +1,4 @@
 #include "TestScene.h"
-#include "platypus/core/Debug.h"
-#include "platypus/core/Application.h"
-#include "platypus/assets/Image.h"
-#include "platypus/assets/Texture.h"
-#include "platypus/assets/Font.h"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/core/Timing.h"
-
-#include <memory>
 
 
 using namespace platypus;
@@ -96,7 +87,7 @@ void TestScene::init()
     environmentProperties.clearColor = { 0.1f, 0.2f, 0.35f, 1.0f };
 
     _camEntity = createEntity();
-    createTransform(
+    create_transform(
         _camEntity,
         { 0.0f, 0.0f, 0.0f },
         { {0, 1, 0}, 0.0f },
@@ -127,7 +118,7 @@ void TestScene::init()
         100
     );
 
-    Camera* pCamera = createCamera(_camEntity, perspectiveProjMat, orthoProjMat);
+    Camera* pCamera = create_camera(_camEntity, perspectiveProjMat, orthoProjMat);
 
     _camController.init();
     _camController.set(
@@ -145,7 +136,9 @@ void TestScene::init()
     );
 
     entityID_t dirLightEntity = createEntity();
-    createDirectionalLight(dirLightEntity, { 0.5f, -0.5f, -0.5f }, { 1, 1, 1 });
+    Vector3f lightDir(-1, -0.75f, -1);
+    lightDir = lightDir.normalize();
+    create_directional_light(dirLightEntity, lightDir, { 3, 0, 0 });
 
     const float scaleModifier = 1;
     float areaScale = 60.0f * scaleModifier;
@@ -187,13 +180,13 @@ void TestScene::init()
 
     // Ground entity
     entityID_t groundEntity = createEntity();
-    createTransform(
+    create_transform(
         groundEntity,
         { 0, 0, 0 },
         { { 0, 1, 0 }, 0 },
         { 1, 1, 1 }
     );
-    createStaticMeshRenderable(
+    create_static_mesh_renderable(
         groundEntity,
         pGroundMesh->getID(),
         pTerrainGrassTexture->getID()
@@ -267,14 +260,14 @@ void TestScene::createEntities(
         float randZ = (int)(-halfAreaScale) + (std::rand() % (int)areaScale);
         float randRot = (float)(std::rand() % 255);
         randRot = (randRot / 255.0f) * (float)(PLATY_MATH_PI * 2.0);
-        createTransform(
+        create_transform(
             entity,
             { randX, 0, randZ },
             { {0, 1, 0}, randRot },
             transformScale
         );
 
-        createStaticMeshRenderable(
+        create_static_mesh_renderable(
             entity,
             meshID,
             textureID

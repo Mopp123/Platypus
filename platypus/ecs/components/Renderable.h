@@ -2,6 +2,7 @@
 
 #include "platypus/utils/ID.h"
 #include "platypus/utils/Maths.h"
+#include "platypus/ecs/Entity.h"
 
 
 namespace platypus
@@ -21,4 +22,15 @@ namespace platypus
         Vector4f color = Vector4f(1, 0, 1, 1);
         uint32_t layer = 0;
     };
+
+    StaticMeshRenderable* create_static_mesh_renderable(
+        entityID_t target,
+        ID_t meshAssetID,
+        ID_t textureAssetID
+    );
+
+    GUIRenderable* create_gui_renderable(
+        entityID_t target,
+        const Vector4f color
+    );
 }

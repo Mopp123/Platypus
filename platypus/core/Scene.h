@@ -3,12 +3,8 @@
 #include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/ComponentPool.h"
 #include "platypus/ecs/components/Component.h"
-#include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/ecs/components/Camera.h"
-#include "platypus/ecs/components/Lights.h"
-
 #include "platypus/ecs/systems/System.h"
+#include "platypus/utils/Maths.h"
 
 #include <unordered_map>
 #include <vector>
@@ -41,6 +37,8 @@ namespace platypus
         Scene();
         virtual ~Scene();
 
+        void* allocateComponent(entityID_t target, ComponentType componentType);
+
         entityID_t createEntity();
         Entity getEntity(entityID_t entity) const;
         void destroyEntity(entityID_t entityID);
@@ -66,40 +64,9 @@ namespace platypus
         // Returns first component of "type" found in "entity"'s child entities
         void* getComponentInChildren(entityID_t entityID, ComponentType type);
 
-        Transform* createTransform(
-            entityID_t target,
-            const Vector3f& position,
-            const Quaternion& rotation,
-            const Vector3f& scale
-        );
-
-        StaticMeshRenderable* createStaticMeshRenderable(
-            entityID_t target,
-            ID_t meshAssetID,
-            ID_t textureAssetID
-        );
-
-        GUIRenderable* createGUIRenderable(
-            entityID_t target,
-            const Vector4f color
-        );
-
-        Camera* createCamera(
-            entityID_t target,
-            const Matrix4f& perspectiveProjectionMatrix,
-            const Matrix4f& orthographicProjectionMatrix
-        );
-
-        DirectionalLight* createDirectionalLight(
-            entityID_t target,
-            const Vector3f& direction,
-            const Vector3f& color
-        );
-
         virtual void init() = 0;
         virtual void update() = 0;
 
-    private:
         void addToComponentMask(entityID_t entityID, ComponentType componentType);
         // @param errLocation This can be used to tell what func caused this to error
         bool isValidEntity(entityID_t entityID, const std::string& errLocation) const;

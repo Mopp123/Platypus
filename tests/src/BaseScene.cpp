@@ -17,6 +17,15 @@ void BaseScene::SceneWindowResizeEvent::func(int w, int h)
         _zNear,
         _zFar
     );
+
+    pCameraComponent->orthographicProjectionMatrix = create_orthographic_projection_matrix(
+        0,
+        w,
+        0,
+        useHeight,
+        0,
+        0.1f
+    );
 }
 
 
@@ -31,7 +40,7 @@ void BaseScene::initBase()
     environmentProperties.clearColor = { 0.5f, 0.5f, 0.5f, 1.0f };
 
     _cameraEntity = createEntity();
-    createTransform(
+    create_transform(
         _cameraEntity,
         { 0.0f, 0.0f, 0.0f },
         { {0, 1, 0}, 0.0f },
@@ -49,22 +58,22 @@ void BaseScene::initBase()
     Matrix4f perspectiveProjMat = create_perspective_projection_matrix(
         aspectRatio,
         1.3f * 0.75f,
-        0.1f,
-        1000.0f
+        0,
+        100.0f
     );
 
     Debug::log("___TEST___window scale: " + std::to_string(windowSurfaceWidth) + ", " + std::to_string(windowSurfaceHeight));
 
     Matrix4f orthoProjMat = create_orthographic_projection_matrix(
-        -1,
-        1, //windowSurfaceWidth,
-        1,
-        -1,//windowSurfaceHeight,
         0,
-        1
+        windowSurfaceWidth,
+        0,
+        windowSurfaceHeight,
+        0,
+        0.1f
     );
 
-    Camera* pCamera = createCamera(_cameraEntity, perspectiveProjMat, orthoProjMat);
+    Camera* pCamera = create_camera(_cameraEntity, perspectiveProjMat, orthoProjMat);
     /*
     _cameraController.init();
     _cameraController.set(

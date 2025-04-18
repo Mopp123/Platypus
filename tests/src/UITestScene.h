@@ -5,6 +5,8 @@
 class UITestScene : public BaseScene
 {
 private:
+    entityID_t _entity1;
+    entityID_t _entity2;
 
 public:
     UITestScene();

@@ -37,10 +37,10 @@ namespace platypus
     {
         // Create common vertex and index buffers
         std::vector<float> vertexData = {
-            -1, 1,   0, 1,
-            -1, -1,   0, 0,
-            1,  -1,   1, 0,
-            1, 1,   1, 1
+            0, 0,   0, 0,
+            0, -1,  0, 1,
+            1, -1,  1, 1,
+            1, 0,   1, 0
         };
         std::vector<uint16_t> indices = {
             0, 1, 2,
@@ -69,11 +69,11 @@ namespace platypus
         for (size_t i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
-            std::vector<Matrix4f> transformsBuffer(s_maxBatchLength);
+            std::vector<GUITransform> transformsBuffer(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
                 _commandPoolRef,
                 transformsBuffer.data(),
-                sizeof(Matrix4f),
+                sizeof(GUITransform),
                 transformsBuffer.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
@@ -111,10 +111,7 @@ namespace platypus
         };
         VertexBufferLayout instancedVbLayout = {
             {
-                { 2, ShaderDataType::Float4 },
-                { 3, ShaderDataType::Float4 },
-                { 4, ShaderDataType::Float4 },
-                { 5, ShaderDataType::Float4 }
+                { 2, ShaderDataType::Float4 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
             1
@@ -132,10 +129,10 @@ namespace platypus
             viewportWidth,
             viewportHeight,
             viewportScissor,
-            CullMode::CULL_MODE_NONE,
+            CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
+            DepthCompareOperation::COMPARE_OP_ALWAYS,
             false, // enable color blending
             sizeof(Matrix4f), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
@@ -147,10 +144,9 @@ namespace platypus
         const GUIRenderable* pRenderable = (const GUIRenderable*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
-        const Transform* pTransform = (const Transform*)pScene->getComponent(
-            entity, ComponentType::COMPONENT_TYPE_TRANSFORM
+        const GUITransform* pTransform = (const GUITransform*)pScene->getComponent(
+            entity, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
-        const Matrix4f transformationMatrix = pTransform->globalMatrix;
 
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         ID_t textureID = pRenderable->textureID;
@@ -158,7 +154,7 @@ namespace platypus
         int foundBatchIndex = findExistingBatchIndex(pRenderable->layer, textureID);
         if (foundBatchIndex != -1)
         {
-            addToBatch(_batches[foundBatchIndex], transformationMatrix);
+            addToBatch(_batches[foundBatchIndex], pTransform);
         }
         else
         {
@@ -182,7 +178,7 @@ namespace platypus
                 );
                 return;
             }
-            addToBatch(batchData, transformationMatrix);
+            addToBatch(batchData, pTransform);
         }
     }
 
@@ -210,6 +206,7 @@ namespace platypus
             }
         #endif
 
+        // The actual rendering stuff...
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(renderPass);
 
@@ -227,15 +224,22 @@ namespace platypus
             }
         );
 
+        std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
 
-        std::map<uint32_t, std::set<size_t>>::const_iterator layerIt;
+        std::map<uint32_t, std::set<size_t>>::iterator layerIt;
         for (layerIt = _toRender.begin(); layerIt != _toRender.end(); ++layerIt)
         {
-            const std::set<size_t>& layerBatches = layerIt->second;
-            std::set<size_t>::const_iterator layerBatchIt;
+            std::set<size_t>& layerBatches = layerIt->second;
+            std::set<size_t>::iterator layerBatchIt;
             for (layerBatchIt = layerBatches.begin(); layerBatchIt != layerBatches.end(); ++layerBatchIt)
             {
                 BatchData& batchData = _batches[*layerBatchIt];
+
+                if (_batches[*layerBatchIt].count == 0)
+                {
+                    unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    continue;
+                }
 
                 // This should never actually happen?
                 if (batchData.textureID == NULL_ID)
@@ -267,6 +271,19 @@ namespace platypus
                 //  TODO: Truly clear batches at least on scene switch
                 //      + maybe some clever way to deal with that withing the same scene too...
                 batchData.count = 0;
+            }
+        }
+
+        // Erase unused batches
+        std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>>::iterator eraseLayerIt;
+        for (eraseLayerIt = unusedBatches.begin(); eraseLayerIt != unusedBatches.end(); ++eraseLayerIt)
+        {
+            std::vector<std::set<size_t>::iterator>& layerBatches = eraseLayerIt->second;
+            std::vector<std::set<size_t>::iterator>::iterator eraseBatchIt;
+            for (eraseBatchIt = layerBatches.begin(); eraseBatchIt != layerBatches.end(); ++eraseBatchIt)
+            {
+                _toRender[eraseLayerIt->first].erase(*eraseBatchIt);
+                Debug::log("___TEST___ERASED UNUSED BATCH!");
             }
         }
 
@@ -308,13 +325,13 @@ namespace platypus
 
     void GUIRenderer::addToBatch(
         BatchData& batchData,
-        const Matrix4f& transformationMatrix
+        const GUITransform* pTransform
     )
     {
         batchData.pInstancedBuffer->update(
-            (void*)(&transformationMatrix),
-            sizeof(Matrix4f),
-            batchData.count * sizeof(Matrix4f)
+            (void*)(pTransform),
+            sizeof(GUITransform),
+            batchData.count * sizeof(GUITransform)
         );
         ++batchData.count;
     }

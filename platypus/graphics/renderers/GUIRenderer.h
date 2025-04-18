@@ -4,6 +4,7 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Transform.h"
 #include <cstdlib>
 #include <map>
 
@@ -74,7 +75,7 @@ namespace platypus
 
         void addToBatch(
             BatchData& batchData,
-            const Matrix4f& transformationMatrix
+            const GUITransform* pTransform
         );
         bool occupyBatch(
             size_t batchIndex,
