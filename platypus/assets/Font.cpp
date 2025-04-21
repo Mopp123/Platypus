@@ -22,16 +22,17 @@ namespace platypus
     bool Font::load(const std::string& filepath, unsigned int pixelSize)
     {
         _pixelSize = pixelSize;
-        // TODO: Iterate all available glyphs with FT_Get_First_Char and FT_Get_Next_Char
-        // instead of.... what ever the fuck this is...
+        // NOTE: Iterating all available glyphs with FT_Get_First_Char and FT_Get_Next_Char
+        // doesn't include all glyphs, like scands, so need to do it like this atm...
+        // TODO: Figure out a better way!
         return createFont(
             filepath,
-            " qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|äåöÄÅÖ"
+            L" qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|"
         );
     }
 
     // TODO: Put into constructor -> doesnt need to be own func anymore!
-    bool Font::createFont(const std::string& filepath, const std::string& charsToLoad)
+    bool Font::createFont(const std::string& filepath, const std::wstring& charsToLoad)
     {
         FT_Library freetypeLib;
         if (FT_Init_FreeType(&freetypeLib))
@@ -79,10 +80,13 @@ namespace platypus
         int maxGlyphWidth = 0;
         int maxGlyphHeight = 0;
 
+
+        FT_Select_Charmap(fontFace, FT_ENCODING_UNICODE);
+
         std::vector<std::pair<unsigned char*, FontGlyphData>> loadedGlyphs;
-        for (int i = 0; i < charsToLoad.size(); i++)
+        for (int i = 0; i < charsToLoad.size(); ++i)
         {
-            char c = charsToLoad[i];
+            wchar_t c = charsToLoad[i];
 
             if (FT_Load_Char(fontFace, c, FT_LOAD_RENDER))
             {
@@ -222,9 +226,9 @@ namespace platypus
         return (const Texture*)Application::get_instance()->getAssetManager().getAsset(_textureID, AssetType::ASSET_TYPE_TEXTURE);
     }
 
-    const FontGlyphData * const Font::getGlyph(char c) const
+    const FontGlyphData * const Font::getGlyph(wchar_t c) const
     {
-        std::unordered_map<char, FontGlyphData>::const_iterator it = _glyphMapping.find(c);
+        std::unordered_map<wchar_t, FontGlyphData>::const_iterator it = _glyphMapping.find(c);
         if (it != _glyphMapping.end())
             return &it->second;
         return nullptr;

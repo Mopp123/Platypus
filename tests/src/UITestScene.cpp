@@ -34,8 +34,8 @@ void UITestScene::init()
     pRenderable->fontID = pFont->getID();
     pRenderable->layer = 0;
 
-    pRenderable->text.resize(15);
-    pRenderable->text = "Test";
+    pRenderable->text.resize(32);
+    pRenderable->text = L"Web build testing, working?";
 
     // ---
     /*

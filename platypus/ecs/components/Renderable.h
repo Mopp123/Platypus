@@ -26,7 +26,7 @@ namespace platypus
         uint32_t layer = 0;
         // NOTE: Warning when initially allocating from component pool!
         // -> needs to be explicitly resized to have any space!
-        std::string text;
+        std::wstring text;
     };
 
     StaticMeshRenderable* create_static_mesh_renderable(

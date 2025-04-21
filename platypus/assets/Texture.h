@@ -71,5 +71,6 @@ namespace platypus
         inline const TextureImpl* getImpl() const { return _pImpl; }
         inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
         inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
+        inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
     };
 }

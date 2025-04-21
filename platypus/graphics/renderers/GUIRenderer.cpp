@@ -4,6 +4,7 @@
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 #include <cstring>
+#include <stdexcept>
 
 
 namespace platypus
@@ -134,7 +135,7 @@ namespace platypus
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_ALWAYS,
-            false, // enable color blending
+            true, // enable color blending
             sizeof(Matrix4f) + sizeof(float), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
@@ -183,7 +184,7 @@ namespace platypus
         if (pRenderable->fontID != NULL_ID)
             addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
         else
-            addToBatch(_batches[batchIndex], pTransform, pRenderable->textureOffset);
+            addToImageBatch(_batches[batchIndex], pTransform, pRenderable->textureOffset);
     }
 
     const CommandBuffer& GUIRenderer::recordCommandBuffer(
@@ -332,7 +333,7 @@ namespace platypus
         return -1;
     }
 
-    void GUIRenderer::addToBatch(
+    void GUIRenderer::addToImageBatch(
         BatchData& batchData,
         const GUITransform* pTransform,
         const Vector2f& textureOffset
@@ -357,17 +358,79 @@ namespace platypus
 
     void GUIRenderer::addToFontBatch(
         BatchData& batchData,
-        ID_t fontID,
         const GUIRenderable* pRenderable,
         const GUITransform* pTransform
     )
     {
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         const Font* pFont = (const Font*)assetManager.getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
-        const std::unordered_map<char, FontGlyphData>& glyphs = pFont->getGlyphMapping();
+        const std::unordered_map<wchar_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
 
-        Debug::log("@GUIRenderer::addToFontBatch NOT IMPLEMENTED", Debug::MessageType::PLATYPUS_ERROR);
-        PLATYPUS_ASSERT(false);
+
+        const float originalX = pTransform->position.x;
+        float posX = originalX;
+        float posY = pTransform->position.y;
+
+        // TODO: Support text scaling
+        float scaleFactorX = 1.0f;
+        float scaleFactorY = 1.0f;
+
+        float charWidth = pFont->getTilePixelWidth() * scaleFactorX;
+        float charHeight = pFont->getMaxCharHeight() * scaleFactorY;
+
+        for (wchar_t c : pRenderable->text)
+        {
+            // Check, do we want to change line?
+            if (c == '\n')
+            {
+                posY += charHeight;
+                posX = originalX;
+                continue;
+            }
+            // Empty space uses font specific details so no any special cases here..
+            else if (c == ' ')
+            {
+            }
+            // Make sure not draw nulldtm chars accidentally..
+            else if (c == 0)
+            {
+                break;
+            }
+
+            try
+            {
+                const FontGlyphData& glyphData = glyphMapping.at(c);
+
+                float x = (posX + (float)glyphData.bearingX);
+                // - ch because we want origin to be at 0,0 but we also need to add the bearingY so.. gets fucked without this..
+                float y = posY - (float)glyphData.bearingY + charHeight;
+
+                GUIRenderData renderData = {
+                    {
+                        (float)(int)x, (float)(int)y,
+                        (float)(int)charWidth, (float)(int)charHeight,
+                    },
+                    { (float)glyphData.textureOffsetX, (float)glyphData.textureOffsetY }
+                };
+                batchData.pInstancedBuffer->update(
+                    (void*)(&renderData),
+                    sizeof(GUIRenderData),
+                    batchData.count * sizeof(GUIRenderData)
+                );
+                ++batchData.count;
+
+                // NOTE: Don't quite understand this.. For some reason on some fonts >> 7 works better...
+                posX += ((float)(glyphData.advance >> 6)) * scaleFactorX; // now advance cursors for next glyph (note that advance is number of 1/64 pixels). bitshift by 6 to get value in pixels (2^6 = 64) | OLD COMMENT: 2^5 = 32 (pixel size of the font..)
+            }
+            catch (const std::out_of_range& e)
+            {
+                Debug::log(
+                    "@GUIRenderer::addToFontBatch "
+                    "No glyph data found for character: " + std::string(c, 1) + " (value: " + std::to_string(c) + ")",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+        }
     }
 
     bool GUIRenderer::occupyBatch(
