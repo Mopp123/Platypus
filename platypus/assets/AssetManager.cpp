@@ -2,6 +2,7 @@
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/utils/ModelLoading.h"
+#include "platypus/Common.h"
 
 
 namespace platypus
@@ -9,20 +10,46 @@ namespace platypus
     AssetManager::AssetManager(CommandPool& commandPool) :
         _commandPoolRef(commandPool)
     {
+        // Create white default texture
+        PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
+        Image* pWhiteImage = createImage(whitePixels, 1, 1, 4);
+        _persistentAssets[pWhiteImage->getID()] = pWhiteImage;
+
+        TextureSampler whiteTextureSampler(
+            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+            TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            1,
+            0
+        );
+        _pWhiteTexture = createTexture(pWhiteImage->getID(), whiteTextureSampler);
+        _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
+        Debug::log("___TEST___WHITE TEX ID: " + std::to_string(_pWhiteTexture->getID()));
     }
 
     AssetManager::~AssetManager()
-    {
-        destroyAssets();
-    }
-
-    void AssetManager::destroyAssets()
     {
         std::unordered_map<ID_t, Asset*>::iterator it;
         for (it = _assets.begin(); it != _assets.end(); ++it)
             delete it->second;
 
         _assets.clear();
+        _persistentAssets.clear();
+    }
+
+    void AssetManager::destroyAssets()
+    {
+        std::unordered_map<ID_t, Asset*>::iterator it;
+        for (it = _assets.begin(); it != _assets.end(); ++it)
+        {
+            if (_persistentAssets.find(it->first) == _persistentAssets.end())
+                delete it->second;
+        }
+        _assets.clear();
+
+        // Re add persistent assets to assets
+        std::unordered_map<ID_t, Asset*>::iterator persistentIt;
+        for (persistentIt = _persistentAssets.begin(); persistentIt != _persistentAssets.end(); ++persistentIt)
+            _assets[persistentIt->first] = persistentIt->second;
 
         Debug::log("Assets destroyed");
     }
@@ -84,9 +111,13 @@ namespace platypus
         return pImage;
     }
 
-    Texture* AssetManager::createTexture(ID_t imageID, const TextureSampler& sampler)
+    Texture* AssetManager::createTexture(
+        ID_t imageID,
+        const TextureSampler& sampler,
+        uint32_t textureAtlasRows
+    )
     {
-        Image* pImage = getImage(imageID);
+        Image* pImage = (Image*)getAsset(imageID, AssetType::ASSET_TYPE_IMAGE);
         if (!pImage)
         {
             Debug::log(
@@ -101,8 +132,10 @@ namespace platypus
         Texture* pTexture = new Texture(
             _commandPoolRef,
             pImage,
-            sampler
+            sampler,
+            textureAtlasRows
         );
+        Debug::log("___TEST___CREATED TEXTURE WITH: " + std::to_string(textureAtlasRows) + " ROWS");
         _assets[pTexture->getID()] = pTexture;
         return pTexture;
     }
@@ -193,74 +226,15 @@ namespace platypus
         return pFont;
     }
 
-    Image* AssetManager::getImage(ID_t assetID) const
-    {
-        Asset* pAsset = getAsset(assetID);
-        if (!pAsset)
-            return nullptr;
-
-        if (pAsset->getType() != AssetType::ASSET_TYPE_IMAGE)
-        {
-            Debug::log(
-                "@AssetManager::getImage "
-                "Found asset with id: " + std::to_string(assetID) + " "
-                "but it had invalid type: " + asset_type_to_string(pAsset->getType()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        return (Image*)pAsset;
-    }
-
-    Texture* AssetManager::getTexture(ID_t assetID) const
-    {
-        Asset* pAsset = getAsset(assetID);
-        if (!pAsset)
-            return nullptr;
-
-        if (pAsset->getType() != AssetType::ASSET_TYPE_TEXTURE)
-        {
-            Debug::log(
-                "@AssetManager::getTexture "
-                "Found asset with id: " + std::to_string(assetID) + " "
-                "but it had invalid type: " + asset_type_to_string(pAsset->getType()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        return (Texture*)pAsset;
-    }
-
-    Mesh* AssetManager::getMesh(ID_t assetID) const
-    {
-        Asset* pAsset = getAsset(assetID);
-        if (!pAsset)
-            return nullptr;
-
-        if (pAsset->getType() != AssetType::ASSET_TYPE_MESH)
-        {
-            Debug::log(
-                "@AssetManager::getMesh "
-                "Found asset with id: " + std::to_string(assetID) + " "
-                "but it had invalid type: " + asset_type_to_string(pAsset->getType()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        return (Mesh*)pAsset;
-    }
-
-    Asset* AssetManager::getAsset(ID_t assetID) const
+    Asset* AssetManager::getAsset(ID_t assetID, AssetType type) const
     {
         std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
         if (it == _assets.end())
         {
             Debug::log(
                 "@AssetManager::getAsset "
-                "Failed to find asset with id: " + std::to_string(assetID),
+                "Failed to find asset of type: " + asset_type_to_string(type) + " "
+                "with id: " + std::to_string(assetID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);

@@ -11,6 +11,13 @@
 
 namespace platypus
 {
+    // Per instance
+    struct GUIRenderData
+    {
+        Vector4f translation = Vector4f(0, 0, 1, 1);
+        Vector2f textureOffset = Vector2f(0, 0);
+    };
+
     class GUIRenderer : public Renderer
     {
     private:
@@ -27,6 +34,7 @@ namespace platypus
             ID_t textureID = NULL_ID;
             Buffer* pInstancedBuffer = nullptr;
             std::vector<DescriptorSet> textureDescriptorSets;
+            float textureAtlasRows = 1.0f;
             size_t count = 0;
         };
 
@@ -73,8 +81,14 @@ namespace platypus
 
         int findFreeBatchIndex();
 
-        void addToBatch(
+        void addToImageBatch(
             BatchData& batchData,
+            const GUITransform* pTransform,
+            const Vector2f& textureOffset
+        );
+        void addToFontBatch(
+            BatchData& batchData,
+            const GUIRenderable* pRenderable,
             const GUITransform* pTransform
         );
         bool occupyBatch(

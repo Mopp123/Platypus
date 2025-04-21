@@ -18,6 +18,9 @@ namespace platypus
     private:
         CommandPool& _commandPoolRef;
         std::unordered_map<ID_t, Asset*> _assets;
+        std::unordered_map<ID_t, Asset*> _persistentAssets;
+
+        Texture* _pWhiteTexture = nullptr;
 
     public:
         AssetManager(CommandPool& commandPool);
@@ -26,7 +29,11 @@ namespace platypus
 
         Image*  createImage(PE_ubyte* pData, int width, int height, int channels);
         Image* loadImage(const std::string& filepath);
-        Texture* createTexture(ID_t imageID, const TextureSampler& sampler);
+        Texture* createTexture(
+            ID_t imageID,
+            const TextureSampler& sampler,
+            uint32_t textureAtlasRows = 1
+        );
         Mesh* createMesh(
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
@@ -34,12 +41,8 @@ namespace platypus
         Model* loadModel(const std::string& filepath);
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
-        Image* getImage(ID_t assetID) const;
-        Texture* getTexture(ID_t assetID) const;
-        Mesh* getMesh(ID_t assetID) const;
-        Font* getFont(ID_t fontID) const;
+        Asset* getAsset(ID_t assetID, AssetType type) const;
 
-    private:
-        Asset* getAsset(ID_t assetID) const;
+        inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
     };
 }

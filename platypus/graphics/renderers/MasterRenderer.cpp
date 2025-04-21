@@ -5,6 +5,8 @@
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Component.h"
+#include "StaticMeshRenderer.h"
+#include "GUIRenderer.h"
 
 
 namespace platypus

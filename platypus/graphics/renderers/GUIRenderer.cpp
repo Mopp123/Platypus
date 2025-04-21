@@ -3,6 +3,7 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+#include <cstring>
 
 
 namespace platypus
@@ -30,17 +31,17 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 1 } }
+                    { { 2 } }
                 }
             }
         )
     {
         // Create common vertex and index buffers
         std::vector<float> vertexData = {
-            0, 0,   0, 0,
-            0, -1,  0, 1,
-            1, -1,  1, 1,
-            1, 0,   1, 0
+            0, 0,
+            0, -1,
+            1, -1,
+            1, 0
         };
         std::vector<uint16_t> indices = {
             0, 1, 2,
@@ -49,7 +50,7 @@ namespace platypus
         _pVertexBuffer = new Buffer(
             _commandPoolRef,
             vertexData.data(),
-            sizeof(float) * 4,
+            sizeof(float) * 2,
             4,
             BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
@@ -69,12 +70,12 @@ namespace platypus
         for (size_t i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
-            std::vector<GUITransform> transformsBuffer(s_maxBatchLength);
+            std::vector<GUIRenderData> instanceBufferData(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
                 _commandPoolRef,
-                transformsBuffer.data(),
+                instanceBufferData.data(),
                 sizeof(GUITransform),
-                transformsBuffer.size(),
+                instanceBufferData.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
             );
@@ -103,15 +104,15 @@ namespace platypus
     {
         VertexBufferLayout vbLayout = {
             {
-                { 0, ShaderDataType::Float2 },
-                { 1, ShaderDataType::Float2 }
+                { 0, ShaderDataType::Float2 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
         };
         VertexBufferLayout instancedVbLayout = {
             {
-                { 2, ShaderDataType::Float4 }
+                { 1, ShaderDataType::Float4 },
+                { 2, ShaderDataType::Float2 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
             1
@@ -134,7 +135,7 @@ namespace platypus
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_ALWAYS,
             false, // enable color blending
-            sizeof(Matrix4f), // push constants size
+            sizeof(Matrix4f) + sizeof(float), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
     }
@@ -150,16 +151,16 @@ namespace platypus
 
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         ID_t textureID = pRenderable->textureID;
-
-        int foundBatchIndex = findExistingBatchIndex(pRenderable->layer, textureID);
-        if (foundBatchIndex != -1)
+        if (textureID == NULL_ID)
         {
-            addToBatch(_batches[foundBatchIndex], pTransform);
+            textureID = assetManager.getWhiteTexture()->getID();
         }
-        else
+
+        int batchIndex = findExistingBatchIndex(pRenderable->layer, textureID);
+        if (batchIndex == -1)
         {
-            int freeBatchIndex = findFreeBatchIndex();
-            if (freeBatchIndex == -1)
+            batchIndex = findFreeBatchIndex();
+            if (batchIndex == -1)
             {
                 Debug::log(
                     "@GUIRenderer::submit "
@@ -168,8 +169,7 @@ namespace platypus
                 );
                 return;
             }
-            BatchData& batchData = _batches[freeBatchIndex];
-            if (!occupyBatch(freeBatchIndex, pRenderable->layer, textureID))
+            if (!occupyBatch(batchIndex, pRenderable->layer, textureID))
             {
                 Debug::log(
                     "@GUIRenderer::submit "
@@ -178,8 +178,12 @@ namespace platypus
                 );
                 return;
             }
-            addToBatch(batchData, pTransform);
         }
+
+        if (pRenderable->fontID != NULL_ID)
+            addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
+        else
+            addToBatch(_batches[batchIndex], pTransform, pRenderable->textureOffset);
     }
 
     const CommandBuffer& GUIRenderer::recordCommandBuffer(
@@ -213,16 +217,6 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
-        render::push_constants(
-            currentCommandBuffer,
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(Matrix4f),
-            orthographicProjectionMatrix.getRawArray(),
-            {
-                { 0, ShaderDataType::Mat4 }
-            }
-        );
 
         std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
 
@@ -244,6 +238,21 @@ namespace platypus
                 // This should never actually happen?
                 if (batchData.textureID == NULL_ID)
                     continue;
+
+                float pushConstantsData[20];
+                memcpy(pushConstantsData, orthographicProjectionMatrix.getRawArray(), sizeof(Matrix4f));
+                memcpy(((PE_byte*)pushConstantsData) + sizeof(Matrix4f), &batchData.textureAtlasRows, sizeof(float));
+                render::push_constants(
+                    currentCommandBuffer,
+                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                    0,
+                    sizeof(Matrix4f) + sizeof(float),
+                    pushConstantsData,
+                    {
+                        { 0, ShaderDataType::Mat4 },
+                        { 1, ShaderDataType::Float }
+                    }
+                );
 
                 render::bind_vertex_buffers(
                     currentCommandBuffer,
@@ -325,15 +334,40 @@ namespace platypus
 
     void GUIRenderer::addToBatch(
         BatchData& batchData,
+        const GUITransform* pTransform,
+        const Vector2f& textureOffset
+    )
+    {
+        GUIRenderData renderData = {
+            {
+                pTransform->position.x,
+                pTransform->position.y,
+                pTransform->scale.x,
+                pTransform->scale.y
+            },
+            textureOffset
+        };
+        batchData.pInstancedBuffer->update(
+            (void*)(&renderData),
+            sizeof(GUIRenderData),
+            batchData.count * sizeof(GUIRenderData)
+        );
+        ++batchData.count;
+    }
+
+    void GUIRenderer::addToFontBatch(
+        BatchData& batchData,
+        ID_t fontID,
+        const GUIRenderable* pRenderable,
         const GUITransform* pTransform
     )
     {
-        batchData.pInstancedBuffer->update(
-            (void*)(pTransform),
-            sizeof(GUITransform),
-            batchData.count * sizeof(GUITransform)
-        );
-        ++batchData.count;
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        const Font* pFont = (const Font*)assetManager.getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
+        const std::unordered_map<char, FontGlyphData>& glyphs = pFont->getGlyphMapping();
+
+        Debug::log("@GUIRenderer::addToFontBatch NOT IMPLEMENTED", Debug::MessageType::PLATYPUS_ERROR);
+        PLATYPUS_ASSERT(false);
     }
 
     bool GUIRenderer::occupyBatch(
@@ -344,7 +378,10 @@ namespace platypus
     {
         Application* pApp = Application::get_instance();
         AssetManager& assetManager = pApp->getAssetManager();
-        const Texture* pTexture = assetManager.getTexture(textureID);
+        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+            textureID,
+            AssetType::ASSET_TYPE_TEXTURE
+        );
         #ifdef PLATYPUS_DEBUG
             if (!pTexture)
             {
@@ -359,6 +396,7 @@ namespace platypus
 
         BatchData& batchData = _batches[batchIndex];
         batchData.textureID = textureID;
+        batchData.textureAtlasRows = (float)pTexture->getAtlasRowCount();
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
         {
@@ -370,7 +408,6 @@ namespace platypus
             );
         }
         _toRender[layer].insert(batchIndex);
-        Debug::log("___TEST___Occupied GUI Renderer batch!");
         return true;
     }
 }

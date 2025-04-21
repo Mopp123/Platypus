@@ -40,9 +40,11 @@ namespace platypus
     Texture::Texture(
         const CommandPool& commandPool,
         const Image* pImage,
-        const TextureSampler& sampler
+        const TextureSampler& sampler,
+        uint32_t atlasRowCount
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE)
+        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _atlasRowCount(atlasRowCount)
     {
         if (!pImage)
         {

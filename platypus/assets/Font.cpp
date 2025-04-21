@@ -204,7 +204,8 @@ namespace platypus
                 TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                 1,
                 0
-            )
+            ),
+            textureAtlasRowCount
         );
         _textureID = pTexture->getID();
 
@@ -218,7 +219,7 @@ namespace platypus
 
     const Texture* Font::getTexture() const
     {
-        return Application::get_instance()->getAssetManager().getTexture(_textureID);
+        return (const Texture*)Application::get_instance()->getAssetManager().getAsset(_textureID, AssetType::ASSET_TYPE_TEXTURE);
     }
 
     const FontGlyphData * const Font::getGlyph(char c) const

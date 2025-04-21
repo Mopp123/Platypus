@@ -31,9 +31,14 @@ void UITestScene::init()
         { 1, 0, 0, 1 }
     );
     pRenderable->textureID = pFont->getTextureID();
+    pRenderable->fontID = pFont->getID();
     pRenderable->layer = 0;
 
+    pRenderable->text.resize(15);
+    pRenderable->text = "Test";
+
     // ---
+    /*
     _entity2 = createEntity();
     float s2 = 300;
     create_gui_transform(
@@ -49,7 +54,7 @@ void UITestScene::init()
         1,
         0
     );
-    Texture* pTexture2 = assetManager.createTexture(pTexImage->getID(), texSampler);
+    Texture* pTexture2 = assetManager.createTexture(pTexImage->getID(), texSampler, 2);
 
     GUIRenderable* pRenderable2 = create_gui_renderable(
         _entity2,
@@ -57,6 +62,7 @@ void UITestScene::init()
     );
     pRenderable2->textureID = pTexture2->getID();
     pRenderable2->layer = 1;
+    pRenderable2->textureOffset = { 1, 1 };
 
 
     // ---
@@ -71,8 +77,8 @@ void UITestScene::init()
         entity3,
         { 1, 0, 0, 1 }
     );
-    pRenderable3->textureID = pTexture2->getID();
     pRenderable3->layer = 1;
+    */
 }
 
 void UITestScene::update()

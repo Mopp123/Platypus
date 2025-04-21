@@ -1,13 +1,12 @@
 #version 450
 
 layout(location = 0) in vec2 position;
-layout(location = 1) in vec4 transform;
-layout(location = 2) in vec2 textureOffset;
+layout(location = 1) in vec2 texCoord;
+layout(location = 2) in vec4 transform;
 
 layout(push_constant) uniform Constants
 {
     mat4 projectionMatrix;
-    float textureAtlasRows;
 } constants;
 
 layout(location = 0) out vec2 var_texCoord;
@@ -19,5 +18,5 @@ void main() {
     // TODO: Some better solution for this
     vec2 positionedVertex = vec2(scaledVertex.x + transform.x, scaledVertex.y - transform.y);
     gl_Position = constants.projectionMatrix * vec4(positionedVertex, 0, 1.0);
-    var_texCoord = vec2(position.x + textureOffset.x, -position.y + textureOffset.y) / constants.textureAtlasRows;
+    var_texCoord = texCoord;
 }

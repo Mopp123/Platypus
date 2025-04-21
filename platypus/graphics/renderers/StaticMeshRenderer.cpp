@@ -2,6 +2,7 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
+#include "platypus/ecs/components/Transform.h"
 #include "platypus/core/Debug.h"
 #include <string>
 #include <cmath>
@@ -287,8 +288,14 @@ namespace platypus
     {
         Application* pApp = Application::get_instance();
         AssetManager& assetManager = pApp->getAssetManager();
-        const Mesh* pMesh = assetManager.getMesh(meshID);
-        const Texture* pTexture = assetManager.getTexture(textureID);
+        const Mesh* pMesh = (const Mesh*)assetManager.getAsset(
+            meshID,
+            AssetType::ASSET_TYPE_MESH
+        );
+        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+            textureID,
+            AssetType::ASSET_TYPE_TEXTURE
+        );
         #ifdef PLATYPUS_DEBUG
             if (!pMesh)
             {

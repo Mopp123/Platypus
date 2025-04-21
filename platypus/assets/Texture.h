@@ -56,17 +56,20 @@ namespace platypus
     private:
         TextureImpl* _pImpl = nullptr;
         std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
+        uint32_t _atlasRowCount = 1;
 
     public:
         Texture(
             const CommandPool& commandPool,
             const Image* pImage,
-            const TextureSampler& sampler
+            const TextureSampler& sampler,
+            uint32_t atlasRowCount = 1
         );
         Texture(const Texture&) = delete;
         ~Texture();
 
-        inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
         inline const TextureImpl* getImpl() const { return _pImpl; }
+        inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
+        inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
     };
 }

@@ -265,10 +265,12 @@ namespace platypus
     Texture::Texture(
         const CommandPool& commandPool,
         const Image* pImage,
-        const TextureSampler& pSampler
+        const TextureSampler& pSampler,
+        uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pSamplerImpl(pSampler.getImpl())
+        _pSamplerImpl(pSampler.getImpl()),
+        _atlasRowCount(atlasRowCount)
     {
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
