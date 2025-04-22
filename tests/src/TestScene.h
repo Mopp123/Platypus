@@ -37,4 +37,20 @@ private:
         float areaScale,
         uint32_t count
     );
+
+    void createBox(
+        const platypus::Vector2f& pos,
+        const platypus::Vector2f& scale,
+        const platypus::Vector4f& color,
+        uint32_t layer
+    );
+
+    void createTextBox(
+        const std::wstring& txt,
+        const platypus::Vector2f& pos,
+        const platypus::Vector2f& scale,
+        const platypus::Vector4f& color,
+        uint32_t layer,
+        const platypus::Font* pFont
+    );
 };

@@ -24,7 +24,8 @@ namespace platypus
             requiredComponentsMask
         ),
         _vertexShader("GUIVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("GUIFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _guiFragmentShader("GUIFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _fontFragmentShader("FontFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _textureDescriptorSetLayout(
             {
                 {
@@ -113,7 +114,8 @@ namespace platypus
         VertexBufferLayout instancedVbLayout = {
             {
                 { 1, ShaderDataType::Float4 },
-                { 2, ShaderDataType::Float2 }
+                { 2, ShaderDataType::Float2 },
+                { 3, ShaderDataType::Float4 }
             },
             VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
             1
@@ -127,7 +129,7 @@ namespace platypus
             vertexBufferLayouts,
             descriptorSetLayouts,
             _vertexShader,
-            _fragmentShader,
+            _guiFragmentShader,
             viewportWidth,
             viewportHeight,
             viewportScissor,
@@ -139,6 +141,30 @@ namespace platypus
             sizeof(Matrix4f) + sizeof(float), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
+
+        _fontPipeline.create(
+            renderPass,
+            vertexBufferLayouts,
+            descriptorSetLayouts,
+            _vertexShader,
+            _fontFragmentShader,
+            viewportWidth,
+            viewportHeight,
+            viewportScissor,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_ALWAYS,
+            true, // enable color blending
+            sizeof(Matrix4f) + sizeof(float), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
+        );
+    }
+
+    void GUIRenderer::destroyPipeline()
+    {
+        _pipeline.destroy();
+        _fontPipeline.destroy();
     }
 
     void GUIRenderer::submit(const Scene* pScene, entityID_t entity)
@@ -170,7 +196,11 @@ namespace platypus
                 );
                 return;
             }
-            if (!occupyBatch(batchIndex, pRenderable->layer, textureID))
+            if (!occupyBatch(
+                    pRenderable->fontID != NULL_ID ? BatchType::TEXT : BatchType::IMAGE,
+                    batchIndex,
+                    pRenderable->layer, textureID
+                ))
             {
                 Debug::log(
                     "@GUIRenderer::submit "
@@ -184,7 +214,7 @@ namespace platypus
         if (pRenderable->fontID != NULL_ID)
             addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
         else
-            addToImageBatch(_batches[batchIndex], pTransform, pRenderable->textureOffset);
+            addToImageBatch(_batches[batchIndex], pRenderable, pTransform);
     }
 
     const CommandBuffer& GUIRenderer::recordCommandBuffer(
@@ -216,8 +246,6 @@ namespace platypus
         currentCommandBuffer.begin(renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-        render::bind_pipeline(currentCommandBuffer, _pipeline);
-
 
         std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
 
@@ -239,6 +267,11 @@ namespace platypus
                 // This should never actually happen?
                 if (batchData.textureID == NULL_ID)
                     continue;
+
+                render::bind_pipeline(
+                    currentCommandBuffer,
+                    batchData.type == BatchType::IMAGE ? _pipeline : _fontPipeline
+                );
 
                 float pushConstantsData[20];
                 memcpy(pushConstantsData, orthographicProjectionMatrix.getRawArray(), sizeof(Matrix4f));
@@ -335,8 +368,8 @@ namespace platypus
 
     void GUIRenderer::addToImageBatch(
         BatchData& batchData,
-        const GUITransform* pTransform,
-        const Vector2f& textureOffset
+        const GUIRenderable* pRenderable,
+        const GUITransform* pTransform
     )
     {
         GUIRenderData renderData = {
@@ -346,7 +379,8 @@ namespace platypus
                 pTransform->scale.x,
                 pTransform->scale.y
             },
-            textureOffset
+            pRenderable->textureOffset,
+            pRenderable->color
         };
         batchData.pInstancedBuffer->update(
             (void*)(&renderData),
@@ -365,7 +399,6 @@ namespace platypus
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         const Font* pFont = (const Font*)assetManager.getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
         const std::unordered_map<wchar_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
-
 
         const float originalX = pTransform->position.x;
         float posX = originalX;
@@ -410,7 +443,8 @@ namespace platypus
                         (float)(int)x, (float)(int)y,
                         (float)(int)charWidth, (float)(int)charHeight,
                     },
-                    { (float)glyphData.textureOffsetX, (float)glyphData.textureOffsetY }
+                    { (float)glyphData.textureOffsetX, (float)glyphData.textureOffsetY },
+                    pRenderable->color
                 };
                 batchData.pInstancedBuffer->update(
                     (void*)(&renderData),
@@ -434,6 +468,7 @@ namespace platypus
     }
 
     bool GUIRenderer::occupyBatch(
+        BatchType batchType,
         size_t batchIndex,
         uint32_t layer,
         ID_t textureID
@@ -458,6 +493,7 @@ namespace platypus
         #endif
 
         BatchData& batchData = _batches[batchIndex];
+        batchData.type = batchType;
         batchData.textureID = textureID;
         batchData.textureAtlasRows = (float)pTexture->getAtlasRowCount();
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();

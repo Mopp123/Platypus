@@ -21,7 +21,7 @@ namespace platypus
     {
         ID_t textureID = NULL_ID;
         ID_t fontID = NULL_ID;
-        Vector4f color = Vector4f(1, 0, 1, 1);
+        Vector4f color = Vector4f(1, 1, 1, 1);
         Vector2f textureOffset = Vector2f(0, 0);
         uint32_t layer = 0;
         // NOTE: Warning when initially allocating from component pool!

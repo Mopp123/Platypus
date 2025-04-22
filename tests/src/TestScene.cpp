@@ -138,7 +138,7 @@ void TestScene::init()
     entityID_t dirLightEntity = createEntity();
     Vector3f lightDir(-1, -0.75f, -1);
     lightDir = lightDir.normalize();
-    create_directional_light(dirLightEntity, lightDir, { 3, 0, 0 });
+    create_directional_light(dirLightEntity, lightDir, { 1, 1, 1 });
 
     const float scaleModifier = 1;
     float areaScale = 60.0f * scaleModifier;
@@ -221,6 +221,24 @@ void TestScene::init()
 
     size_t totalRenderableCount = grassCount + totalTreeCount + 1;
     Debug::log("___TEST___Total renderable count: " + std::to_string(totalRenderableCount));
+
+    // Test combining 2d and 3d rendering using text box
+    Font* pFont = assetManager.loadFont("assets/fonts/Ubuntu-R.ttf", 16);
+    createTextBox(
+        L"Testing text box",
+        { 400, 300 },
+        { 200, 50 },
+        { 0.3f, 0.3f, 0.3f, 0.5f },
+        1,
+        pFont
+    );
+
+    createBox(
+        { 400-10, 300-10 },
+        { 200+20, 50+20 },
+        { 0.25f, 0.25f, 0.25f, 0.5f },
+        0
+    );
 }
 
 static float s_TEST_value = 0.0f;
@@ -273,4 +291,54 @@ void TestScene::createEntities(
             textureID
         );
     }
+}
+
+void TestScene::createBox(
+    const Vector2f& pos,
+    const Vector2f& scale,
+    const Vector4f& color,
+    uint32_t layer
+)
+{
+    entityID_t boxEntity = createEntity();
+    create_gui_transform(
+        boxEntity,
+        pos,
+        scale
+    );
+    GUIRenderable* pBoxRenderable = create_gui_renderable(
+        boxEntity,
+        color
+    );
+    pBoxRenderable->layer = layer;
+}
+
+void TestScene::createTextBox(
+    const std::wstring& txt,
+    const Vector2f& pos,
+    const Vector2f& scale,
+    const Vector4f& color,
+    uint32_t layer,
+    const Font* pFont
+)
+{
+    createBox(pos, scale, color, layer);
+
+    float padding = 5.0f;
+    entityID_t textEntity = createEntity();
+    create_gui_transform(
+        textEntity,
+        { pos.x + padding, pos.y + padding },
+        { 1, 1 }
+    );
+    GUIRenderable* pTextRenderable = create_gui_renderable(
+        textEntity,
+        { 1, 1, 1, 1 }
+    );
+    pTextRenderable->textureID = pFont->getTextureID();
+    pTextRenderable->fontID = pFont->getID();
+    pTextRenderable->layer = layer + 1;
+
+    pTextRenderable->text.resize(32);
+    pTextRenderable->text = txt;
 }

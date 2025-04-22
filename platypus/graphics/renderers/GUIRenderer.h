@@ -11,26 +11,39 @@
 
 namespace platypus
 {
-    // Per instance
-    struct GUIRenderData
-    {
-        Vector4f translation = Vector4f(0, 0, 1, 1);
-        Vector2f textureOffset = Vector2f(0, 0);
-    };
 
     class GUIRenderer : public Renderer
     {
     private:
+        Pipeline _fontPipeline;
+
         Shader _vertexShader;
-        Shader _fragmentShader;
+        Shader _guiFragmentShader;
+        Shader _fontFragmentShader;
 
         const Buffer* _pVertexBuffer = nullptr;
         const Buffer* _pIndexBuffer = nullptr;
 
         DescriptorSetLayout _textureDescriptorSetLayout;
 
+        enum class BatchType
+        {
+            NONE,
+            IMAGE,
+            TEXT
+        };
+
+        // Per instance
+        struct GUIRenderData
+        {
+            Vector4f translation = Vector4f(0, 0, 1, 1);
+            Vector2f textureOffset = Vector2f(0, 0);
+            Vector4f color = Vector4f(1, 1, 1, 1);
+        };
+
         struct BatchData
         {
+            BatchType type = BatchType::NONE;
             ID_t textureID = NULL_ID;
             Buffer* pInstancedBuffer = nullptr;
             std::vector<DescriptorSet> textureDescriptorSets;
@@ -63,6 +76,8 @@ namespace platypus
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
 
+        virtual void destroyPipeline() override;
+
         virtual void submit(const Scene* pScene, entityID_t entity);
 
         virtual const CommandBuffer& recordCommandBuffer(
@@ -83,8 +98,8 @@ namespace platypus
 
         void addToImageBatch(
             BatchData& batchData,
-            const GUITransform* pTransform,
-            const Vector2f& textureOffset
+            const GUIRenderable* pRenderable,
+            const GUITransform* pTransform
         );
         void addToFontBatch(
             BatchData& batchData,
@@ -92,6 +107,7 @@ namespace platypus
             const GUITransform* pTransform
         );
         bool occupyBatch(
+            BatchType batchType,
             size_t batchIndex,
             uint32_t layer,
             ID_t textureID

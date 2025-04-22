@@ -80,6 +80,12 @@ namespace platypus
         )
         {
             CommandBufferImpl* pCommandBufferImpl = commandBuffer.getImpl();
+
+            // NOTE: Commented out since switching pipeline inside the same Command Buffer
+            // should be allowed!
+            //  -> Originally this was done to have gui img and font rendering happen using
+            //  the same CommandBuffer
+            /*
             #ifdef PLATYPUS_DEBUG
             if (commandBuffer.getImpl()->pipelineLayout != VK_NULL_HANDLE)
             {
@@ -92,6 +98,7 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
             #endif
+            */
             pCommandBufferImpl->pipelineLayout = pipeline.getImpl()->layout;
             vkCmdBindPipeline(
                 commandBuffer.getImpl()->handle,

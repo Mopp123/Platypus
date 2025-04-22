@@ -43,7 +43,7 @@ namespace platypus
             float viewportHeight,
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         ) = 0;
-        void destroyPipeline();
+        virtual void destroyPipeline();
 
         virtual void submit(const Scene* pScene, entityID_t entity) = 0;
 
