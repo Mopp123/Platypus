@@ -165,7 +165,6 @@ namespace platypus
         }
         else
         {
-            Debug::log("@Buffer::update(1)(non uniform buffer) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
             GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
             GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
             GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));

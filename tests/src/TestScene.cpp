@@ -19,6 +19,15 @@ void TestScene::SceneWindowResizeEvent::func(int w, int h)
         _zNear,
         _zFar
     );
+
+    pCameraComponent->orthographicProjectionMatrix = create_orthographic_projection_matrix(
+        0,
+        w,
+        0,
+        useHeight,
+        0,
+        0.1f
+    );
 }
 
 TestScene::TestScene()
@@ -115,7 +124,7 @@ void TestScene::init()
         0,
         windowSurfaceHeight,
         0,
-        100
+        0.1f
     );
 
     Camera* pCamera = create_camera(_camEntity, perspectiveProjMat, orthoProjMat);

@@ -5,6 +5,7 @@
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/core/Debug.h"
 #include <string>
+#include <cstring>
 #include <cmath>
 
 
@@ -51,8 +52,9 @@ namespace platypus
                 sizeof(Matrix4f),
                 transformsBuffer.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STREAM
             );
+            batchData.tempBuffer.resize(s_maxBatchLength);
         }
     }
 
@@ -208,6 +210,11 @@ namespace platypus
             if (batchData.identifier == NULL_ID)
                 continue;
 
+            batchData.pInstancedBuffer->update(
+                batchData.tempBuffer.data(),
+                batchData.tempBuffer.size() * sizeof(Matrix4f)
+            );
+
             render::bind_vertex_buffers(
                 currentCommandBuffer,
                 {
@@ -272,11 +279,14 @@ namespace platypus
         const Matrix4f& transformationMatrix
     )
     {
+        /*
         batchData.pInstancedBuffer->update(
             (void*)(&transformationMatrix),
             sizeof(Matrix4f),
             batchData.count * sizeof(Matrix4f)
-        );
+        );*/
+
+        batchData.tempBuffer[batchData.count] = transformationMatrix;
         ++batchData.count;
     }
 
