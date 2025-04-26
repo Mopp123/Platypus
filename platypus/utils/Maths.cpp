@@ -115,6 +115,16 @@ namespace platypus
         return { x * value, y * value, z * value, w * value };
     }
 
+    bool Vector4f::operator==(const Vector4f other) const
+    {
+        return memcmp(this, &other, sizeof(Vector4f)) == 0;
+    }
+
+    bool Vector4f::operator!=(const Vector4f other) const
+    {
+        return memcmp(this, &other, sizeof(Vector4f)) != 0;
+    }
+
     std::string Vector4f::toString() const
     {
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ", " + std::to_string(w) + ")";

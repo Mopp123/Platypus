@@ -55,6 +55,8 @@ file(GLOB SRC_FILES
     platypus/graphics/*.cpp
     platypus/graphics/platform/${BUILD_TARGET}/*.cpp
     platypus/graphics/renderers/*.cpp
+
+    platypus/ui/*.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})

@@ -43,3 +43,4 @@
 #include "core/Memory.h"
 #include "core/Timing.h"
 #include "core/Scene.h"
+#include "ui/LayoutUI.h"

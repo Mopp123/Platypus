@@ -17,14 +17,27 @@ void UITestScene::init()
 
     AssetManager& assetManager = Application::get_instance()->getAssetManager();
     Font* pFont = assetManager.loadFont("assets/fonts/Ubuntu-R.ttf", 16);
-    createTextBox(
-        L"Testing text box",
-        { 20,20 },
-        { 200, 50 },
-        { 0.3f, 0.3f, 0.3f, 1.0f },
-        0,
-        pFont
-    );
+
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+
+    ui::Layout layout {
+        { { ui::VType::PR, 0 } , { ui::VType::PR, 0 } }, // pos
+        { ui::VType::PR, 50 }, // width
+        { ui::VType::PR, 50 }, // height
+        { 0.4f, 0.4f, 0.4f, 1.0f } // color
+    };
+
+    _ui.init(this, inputManager);
+
+    ui::UIElement parentElem = _ui.createElement(layout);
+
+    ui::Layout layout2 {
+        { VPERCENT_T(50) , VPERCENT_T(50) }, // pos
+        VPIXEL_T(100), // width
+        VPIXEL_T(100), // height
+        { 0.0f, 0.0f, 0.6f, 1.0f } // color
+    };
+    _ui.addChild(parentElem, layout2);
 }
 
 void UITestScene::update()
@@ -72,7 +85,7 @@ void UITestScene::createTextBox(
     );
     GUIRenderable* pTextRenderable = create_gui_renderable(
         textEntity,
-        { 1, 1, 1, 1 }
+        { 1, 1, 0, 1 }
     );
     pTextRenderable->textureID = pFont->getTextureID();
     pTextRenderable->fontID = pFont->getID();

@@ -5,6 +5,7 @@
 class UITestScene : public BaseScene
 {
 private:
+    platypus::ui::LayoutUI _ui;
 
 public:
     UITestScene();
