@@ -232,13 +232,20 @@ namespace platypus
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
-        BufferUpdateFrequency updateFrequency
+        BufferUpdateFrequency updateFrequency,
+        bool storeHostSide
     ) :
         _dataElemSize(elementSize),
         _dataLength(dataLength),
         _bufferUsageFlags(usageFlags),
         _updateFrequency(updateFrequency)
     {
+        if (storeHostSide)
+        {
+            _pData = calloc(_dataLength, _dataElemSize);
+            memcpy(_pData, pData, getTotalSize());
+        }
+
         bool useStaging = usageFlags & BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT;
         Buffer* pStagingBuffer = nullptr;
         if (useStaging)
@@ -249,7 +256,8 @@ namespace platypus
                 elementSize,
                 dataLength,
                 BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
             );
         }
 
@@ -336,36 +344,22 @@ namespace platypus
         }
     }
 
-    void Buffer::update(void* pData, size_t dataSize)
+    void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        if (dataSize > getTotalSize())
+        if (!_hostSideUpdated)
         {
             Debug::log(
-                "@Buffer::update(1) "
-                "provided data size(" + std::to_string(dataSize) + ") too big! "
-                "Buffer size is " + std::to_string(getTotalSize()),
-                Debug::MessageType::PLATYPUS_ERROR
+                "@Buffer::updateDevice "
+                "Host side buffer exists but wasn't updated!",
+                Debug::MessageType::PLATYPUS_WARNING
             );
-            PLATYPUS_ASSERT(false);
-            return;
         }
-        vmaCopyMemoryToAllocation(
-            Context::get_instance()->getImpl()->vmaAllocator,
-            pData,
-            _pImpl->vmaAllocation,
-            0,
-            getTotalSize()
-        );
-    }
 
-    void Buffer::update(void* pData, size_t dataSize, size_t offset)
-    {
-        if (dataSize + offset > getTotalSize())
+        if (!validateUpdate(pData, dataSize, offset))
         {
             Debug::log(
-                "@Buffer::update(2) "
-                "provided data size(" + std::to_string(dataSize) + ") too big using offset: " + std::to_string(offset) + " "
-                "Buffer size is " + std::to_string(getTotalSize()),
+                "@Buffer::updateDevice "
+                "Failed to update buffer!",
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -378,5 +372,6 @@ namespace platypus
             offset,
             dataSize
         );
+        _hostSideUpdated = false;
     }
 }

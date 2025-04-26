@@ -135,6 +135,8 @@ namespace platypus
         uint32_t _bufferUsageFlags = 0;
         BufferUpdateFrequency _updateFrequency;
 
+        bool _hostSideUpdated = false;
+
     public:
         // NOTE:
         //  * "elementSize" single element's size in "data buffer"
@@ -148,15 +150,20 @@ namespace platypus
             size_t elementSize,
             size_t dataLength,
             uint32_t usageFlags,
-            BufferUpdateFrequency updateFrequency
+            BufferUpdateFrequency updateFrequency,
+            bool storeHostSide
         );
         Buffer(const Buffer&) = delete;
         ~Buffer();
 
-        void update(void* pData, size_t dataSize);
-        void update(void* pData, size_t dataSize, size_t offset);
+        // Functions updateHost and updateDeviceAndHost are platform agnostic
+        void updateHost(void* pData, size_t dataSize, size_t offset);
+        void updateDeviceAndHost(void* pData, size_t dataSize, size_t offset);
+        // Function updateDevice requires platform impl!
+        void updateDevice(void* pData, size_t dataSize, size_t offset);
 
         inline const void* getData() const { return _pData; }
+        inline void* accessData() { return _pData; }
         inline size_t getDataElemSize() const { return _dataElemSize; }
         inline size_t getDataLength() const { return _dataLength; }
         inline uint32_t getBufferUsage() const { return _bufferUsageFlags; }
@@ -164,5 +171,7 @@ namespace platypus
         inline BufferUpdateFrequency getUpdateFrequency() const { return _updateFrequency; }
 
         inline BufferImpl* getImpl() const { return _pImpl; }
+    private:
+        bool validateUpdate(void* pData, size_t dataSize, size_t offset);
     };
 }

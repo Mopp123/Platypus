@@ -42,7 +42,8 @@ namespace platypus
                 sizeof(DirLightUniformBufferData),
                 1,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
             );
             _dirLightUniformBuffer.push_back(pDirLightUniformBuffer);
 
@@ -243,9 +244,10 @@ namespace platypus
                 1.0f
             };
         }
-        _dirLightUniformBuffer[frame]->update(
+        _dirLightUniformBuffer[frame]->updateDeviceAndHost(
             &_useDirLightData,
-            sizeof(DirLightUniformBufferData)
+            sizeof(DirLightUniformBufferData),
+            0
         );
 
         const Extent2D swapchainExtent = _swapchain.getExtent();

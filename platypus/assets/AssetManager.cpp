@@ -151,7 +151,8 @@ namespace platypus
             sizeof(float),
             vertexData.size(),
             BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
         Buffer* pIndexBuffer = new Buffer(
             _commandPoolRef,
@@ -159,7 +160,8 @@ namespace platypus
             sizeof(uint32_t),
             indexData.size(),
             BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
         Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer);
         _assets[pMesh->getID()] = pMesh;

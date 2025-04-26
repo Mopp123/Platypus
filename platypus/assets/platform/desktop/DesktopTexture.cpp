@@ -279,7 +279,8 @@ namespace platypus
             1, // Single element size is 8 bit "pixel"
             pImage->getSize(),
             BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
 
         VkFormat imageFormat = channels_to_vk_format(pImage->getChannels());

@@ -52,9 +52,9 @@ namespace platypus
                 sizeof(Matrix4f),
                 transformsBuffer.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STREAM
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STREAM,
+                true
             );
-            batchData.tempBuffer.resize(s_maxBatchLength);
         }
     }
 
@@ -210,9 +210,10 @@ namespace platypus
             if (batchData.identifier == NULL_ID)
                 continue;
 
-            batchData.pInstancedBuffer->update(
-                batchData.tempBuffer.data(),
-                batchData.tempBuffer.size() * sizeof(Matrix4f)
+            batchData.pInstancedBuffer->updateDevice(
+                batchData.pInstancedBuffer->accessData(),
+                batchData.count * sizeof(Matrix4f),
+                0
             );
 
             render::bind_vertex_buffers(
@@ -279,14 +280,11 @@ namespace platypus
         const Matrix4f& transformationMatrix
     )
     {
-        /*
-        batchData.pInstancedBuffer->update(
+        batchData.pInstancedBuffer->updateHost(
             (void*)(&transformationMatrix),
             sizeof(Matrix4f),
             batchData.count * sizeof(Matrix4f)
-        );*/
-
-        batchData.tempBuffer[batchData.count] = transformationMatrix;
+        );
         ++batchData.count;
     }
 

@@ -25,7 +25,6 @@ namespace platypus
             const Buffer* pVertexBuffer = nullptr;
             const Buffer* pIndexBuffer = nullptr;
             Buffer* pInstancedBuffer = nullptr;
-            std::vector<Matrix4f> tempBuffer;
             std::vector<DescriptorSet> textureDescriptorSets;
             size_t count = 0;
         };

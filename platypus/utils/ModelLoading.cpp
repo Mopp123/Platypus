@@ -170,7 +170,8 @@ namespace platypus
             elementSize,
             bufferLength,
             BUFFER_USAGE_INDEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
-            BUFFER_UPDATE_FREQUENCY_STATIC
+            BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
     }
 
@@ -379,7 +380,8 @@ namespace platypus
             elementSize,
             bufferLength,
             BUFFER_USAGE_VERTEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
-            BUFFER_UPDATE_FREQUENCY_STATIC
+            BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
         delete[] pCombinedRawBuffer;
         return pBuffer;

@@ -55,7 +55,8 @@ namespace platypus
             sizeof(float) * 2,
             4,
             BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
         _pIndexBuffer = new Buffer(
             _commandPoolRef,
@@ -63,7 +64,8 @@ namespace platypus
             sizeof(uint16_t),
             indices.size(),
             BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
 
         // Alloc batches
@@ -79,7 +81,8 @@ namespace platypus
                 sizeof(GUITransform),
                 instanceBufferData.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
             );
         }
     }
@@ -268,6 +271,12 @@ namespace platypus
                 if (batchData.textureID == NULL_ID)
                     continue;
 
+                batchData.pInstancedBuffer->updateDevice(
+                    batchData.pInstancedBuffer->accessData(),
+                    batchData.count * sizeof(GUIRenderData),
+                    0
+                );
+
                 render::bind_pipeline(
                     currentCommandBuffer,
                     batchData.type == BatchType::IMAGE ? _pipeline : _fontPipeline
@@ -382,7 +391,7 @@ namespace platypus
             pRenderable->textureOffset,
             pRenderable->color
         };
-        batchData.pInstancedBuffer->update(
+        batchData.pInstancedBuffer->updateHost(
             (void*)(&renderData),
             sizeof(GUIRenderData),
             batchData.count * sizeof(GUIRenderData)
@@ -446,7 +455,7 @@ namespace platypus
                     { (float)glyphData.textureOffsetX, (float)glyphData.textureOffsetY },
                     pRenderable->color
                 };
-                batchData.pInstancedBuffer->update(
+                batchData.pInstancedBuffer->updateHost(
                     (void*)(&renderData),
                     sizeof(GUIRenderData),
                     batchData.count * sizeof(GUIRenderData)

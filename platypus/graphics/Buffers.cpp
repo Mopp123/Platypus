@@ -1,4 +1,7 @@
 #include "Buffers.h"
+#include "platypus/core/Debug.h"
+#include "platypus/Common.h"
+#include <cstring>
 
 
 // The reason for this file:
@@ -35,5 +38,65 @@ namespace platypus
             case ShaderDataType::Float4: return 4;
             default: return 0;
         }
+    }
+
+
+    void Buffer::updateHost(void* pData, size_t dataSize, size_t offset)
+    {
+        if (!_pData)
+        {
+            Debug::log(
+                "@Buffer::updateHost "
+                "No buffer allocated host side!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        if (!validateUpdate(pData, dataSize, offset))
+        {
+            Debug::log(
+                "@Buffer::updateHost "
+                "Failed to update buffer!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        memcpy((void*)((PE_byte*)_pData + offset), pData, dataSize);
+        _hostSideUpdated = true;
+    }
+
+    void Buffer::updateDeviceAndHost(void* pData, size_t dataSize, size_t offset)
+    {
+        updateHost(pData, dataSize, offset);
+        updateDevice(pData, dataSize, offset);
+    }
+
+    bool Buffer::validateUpdate(void* pData, size_t dataSize, size_t offset)
+    {
+        if ((dataSize) > getTotalSize())
+        {
+            Debug::log(
+                "@Buffer::validateUpdate "
+                "provided data size(" + std::to_string(dataSize) + ") too big! "
+                "Buffer size is " + std::to_string(getTotalSize()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        if (offset > getTotalSize())
+        {
+            Debug::log(
+                "@Buffer::validateUpdate "
+                "Offset " + std::to_string(offset) + " out of bounds "
+                "for buffer with size " + std::to_string(getTotalSize()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        return true;
     }
 }

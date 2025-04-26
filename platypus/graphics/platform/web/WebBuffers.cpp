@@ -92,13 +92,20 @@ namespace platypus
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
-        BufferUpdateFrequency updateFrequency
+        BufferUpdateFrequency updateFrequency,
+        bool storeHostSide
     ) :
         _dataElemSize(elementSize),
         _dataLength(dataLength),
         _bufferUsageFlags(usageFlags),
         _updateFrequency(updateFrequency)
     {
+        if (storeHostSide)
+        {
+            _pData = calloc(_dataLength, _dataElemSize);
+            memcpy(_pData, pData, getTotalSize());
+        }
+
         // Need to bind the common VAO
         GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
 
@@ -140,64 +147,33 @@ namespace platypus
         }
     }
 
-    // NOTE: With both update funcs, don't remember the reasoning behind waiting
-    // the actual buffer updating(glBufferData/glBufferSubData) until render commands...
-    // TODO: Test and figure out if it would be better to do it here!
-    void Buffer::update(void* pData, size_t dataSize)
+    void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        if (dataSize != getTotalSize())
+        // Since we just fake uniform buffers here, the host side buffer used as uniform data should
+        // already be updated at this point, so we don't need to do anything to those here...
+        if ((_bufferUsageFlags & BUFFER_USAGE_UNIFORM_BUFFER_BIT) != BUFFER_USAGE_UNIFORM_BUFFER_BIT)
         {
-            Debug::log(
-                "@Buffer::update(1) "
-                "provided data size(" + std::to_string(dataSize) + ") different "
-                "from original(" + std::to_string(getTotalSize()) + ") "
-                "Currently web implementation requires you to replace the original "
-                "completely with this function!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
+            if (!validateUpdate(pData, dataSize, offset))
+            {
+                Debug::log(
+                    "@Buffer::updateDevice "
+                    "Failed to update buffer!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
 
-        if ((_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-        {
-            memcpy(_pData, pData, dataSize);
-        }
-        else
-        {
             GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
             GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
-            GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
-        }
-    }
-
-    void Buffer::update(void* pData, size_t dataSize, size_t offset)
-    {
-        if (dataSize + offset > getTotalSize())
-        {
-            Debug::log(
-                "@Buffer::update(2) "
-                "provided data size(" + std::to_string(dataSize) + ") too big using offset: " + std::to_string(offset) + " "
-                "Buffer size is " + std::to_string(getTotalSize()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        if ((_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-        {
-            memcpy(((PE_byte*)_pData) + offset, pData, dataSize);
-        }
-        else
-        {
-            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
-            glBufferSubData(
-                GL_ARRAY_BUFFER,
-                (GLintptr)offset,
-                (GLsizeiptr) dataSize,
-                pData
-            );
+            if (getTotalSize() == dataSize)
+            {
+                GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
+            }
+            else
+            {
+                GL_FUNC(glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)dataSize, pData));
+            }
         }
     }
 }
