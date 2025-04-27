@@ -1,4 +1,5 @@
 #include "UITestScene.h"
+#include "platypus/ui/LayoutUI.h"
 
 using namespace platypus;
 
@@ -19,25 +20,64 @@ void UITestScene::init()
     Font* pFont = assetManager.loadFont("assets/fonts/Ubuntu-R.ttf", 16);
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
+    _ui.init(this, inputManager);
 
     ui::Layout layout {
-        { { ui::VType::PR, 0 } , { ui::VType::PR, 0 } }, // pos
+        { VPIXEL_T(200) , VPIXEL_T(100) }, // pos
         { ui::VType::PR, 50 }, // width
         { ui::VType::PR, 50 }, // height
         { 0.4f, 0.4f, 0.4f, 1.0f } // color
     };
 
-    _ui.init(this, inputManager);
+    layout.paddingX = VPIXEL_T(5);
+    layout.paddingY = VPIXEL_T(5);
 
-    ui::UIElement parentElem = _ui.createElement(layout);
+    layout.horizontalAlignment = ui::HorizontalAlignment::LEFT;
+    layout.verticalAlignment = ui::VerticalAlignment::TOP;
+    layout.expandElements = ui::ExpandElements::DOWN;
 
     ui::Layout layout2 {
-        { VPERCENT_T(50) , VPERCENT_T(50) }, // pos
-        VPIXEL_T(100), // width
-        VPIXEL_T(100), // height
+        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
+        VPERCENT_T(60), // width
+        VPERCENT_T(60), // height
         { 0.0f, 0.0f, 0.6f, 1.0f } // color
     };
-    _ui.addChild(parentElem, layout2);
+    layout2.paddingX = VPIXEL_T(5);
+    layout2.paddingY = VPIXEL_T(6);
+
+    layout2.horizontalAlignment = ui::HorizontalAlignment::RIGHT;
+    layout2.verticalAlignment = ui::VerticalAlignment::TOP;
+    layout2.elementGap = VPIXEL_T(10);
+    layout2.expandElements = ui::ExpandElements::LEFT;
+
+    ui::Layout layout3 {
+        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
+        VPIXEL_T(120), // width
+        VPIXEL_T(30), // height
+        { 0.6f, 0.0f, 0.6f, 1.0f } // color
+    };
+    ui::Layout layout4 {
+        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
+        VPIXEL_T(120), // width
+        VPIXEL_T(30), // height
+        { 0.6f, 0.6f, 0.0f, 1.0f } // color
+    };
+    ui::Layout layout5 {
+        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
+        VPIXEL_T(100), // width
+        VPIXEL_T(75), // height
+        { 0.6f, 0.6f, 0.6f, 1.0f } // color
+    };
+
+    layout2.children = { layout3, layout4, layout5 };
+
+    layout.children = { layout2 };
+
+    _ui.create(
+        layout,
+        nullptr,
+        NULL_ENTITY_ID
+    );
 }
 
 void UITestScene::update()

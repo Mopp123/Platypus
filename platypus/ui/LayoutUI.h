@@ -49,7 +49,6 @@ namespace platypus
 
         enum class HorizontalAlignment
         {
-            NONE,
             LEFT,
             CENTER,
             RIGHT
@@ -57,7 +56,6 @@ namespace platypus
 
         enum class VerticalAlignment
         {
-            NONE,
             TOP,
             CENTER,
             BOTTOM
@@ -80,11 +78,12 @@ namespace platypus
             Value paddingX;
             Value paddingY;
             // If align != NONE, it overrides position
-            HorizontalAlignment horizontalAlignment = HorizontalAlignment::NONE;
-            VerticalAlignment verticalAlignment = VerticalAlignment::NONE;
+            HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
+            VerticalAlignment verticalAlignment = VerticalAlignment::TOP;
             ExpandElements expandElements = ExpandElements::DOWN;
+            Value elementGap;
             uint32_t layer = 0;
-            bool visible = true;
+            std::vector<Layout> children;
         };
 
         struct UIElement
@@ -113,10 +112,29 @@ namespace platypus
 
         public:
             void init(Scene* pScene, InputManager& inputManager);
-            UIElement& createElement(const Layout& layout);
-            UIElement& addChild(UIElement& parent, const Layout& layout);
+
+            UIElement create(
+                const Layout& layout,
+                const Layout* pParentLayout,
+                entityID_t parentEntity,
+                const Vector2f& previousItemPosition = Vector2f(0, 0),
+                const Vector2f& previousItemScale = Vector2f(0, 0),
+                int childIndex = 0
+            );
 
         private:
+            Vector2f calcPosition(
+                const Layout& layout,
+                const Layout* pParentLayout,
+                entityID_t parentEntity,
+                const Vector2f& parentScale, // the actual scale, not it's layout scale
+                const Vector2f& scale,
+                const Vector2f& previousItemPosition,
+                const Vector2f& previousItemScale,
+                int childIndex = 0
+            );
+            Vector2f calcScale(const Layout& layout, const Vector2f& parentScale);
+            float calcElementGap(ExpandElements expandType, const Value& value);
             float toPercentage(float v1, float v2);
         };
     }
