@@ -22,62 +22,58 @@ void UITestScene::init()
     InputManager& inputManager = Application::get_instance()->getInputManager();
     _ui.init(this, inputManager);
 
+    // NOTE: This "base requirement" is fucking gay for being able to anchor at some pos
+    // -> make it possible to put parent like top,left up or bottom aligned or something!
+    ui::Layout baseLayout;
+    baseLayout.fullscreen = true;
+    baseLayout.horizontalAlignment = ui::HorizontalAlignment::CENTER;
+    baseLayout.verticalAlignment = ui::VerticalAlignment::BOTTOM;
+    baseLayout.expandElements = ui::ExpandElements::RIGHT;
+
+    // TODO: Some kind of "user id" thing to access created "container" afterwards
+
     ui::Layout layout {
-        { VPIXEL_T(200) , VPIXEL_T(100) }, // pos
-        { ui::VType::PR, 50 }, // width
-        { ui::VType::PR, 50 }, // height
+        { 0, 0 }, // pos
+        { 400, 200 }, // scale
         { 0.4f, 0.4f, 0.4f, 1.0f } // color
     };
-
-    layout.paddingX = VPIXEL_T(5);
-    layout.paddingY = VPIXEL_T(5);
-
+    layout.padding = { 10, 10 };
+    layout.elementGap = 10;
     layout.horizontalAlignment = ui::HorizontalAlignment::LEFT;
     layout.verticalAlignment = ui::VerticalAlignment::TOP;
-    layout.expandElements = ui::ExpandElements::DOWN;
+    layout.expandElements = ui::ExpandElements::RIGHT;
 
-    ui::Layout layout2 {
-        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
-        VPERCENT_T(60), // width
-        VPERCENT_T(60), // height
-        { 0.0f, 0.0f, 0.6f, 1.0f } // color
-    };
-    layout2.paddingX = VPIXEL_T(5);
-    layout2.paddingY = VPIXEL_T(6);
+    for (int i = 0; i < 4; ++i)
+    {
+        layout.children.push_back({
+            { 0, 0 }, // pos
+            { 50, 50 }, // scale
+            { 0.4f, 0.0f, 0.4f, 1.0f } // color
+        });
+    }
 
-    layout2.horizontalAlignment = ui::HorizontalAlignment::RIGHT;
-    layout2.verticalAlignment = ui::VerticalAlignment::TOP;
-    layout2.elementGap = VPIXEL_T(10);
-    layout2.expandElements = ui::ExpandElements::LEFT;
-
-    ui::Layout layout3 {
-        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
-        VPIXEL_T(120), // width
-        VPIXEL_T(30), // height
-        { 0.6f, 0.0f, 0.6f, 1.0f } // color
-    };
-    ui::Layout layout4 {
-        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
-        VPIXEL_T(120), // width
-        VPIXEL_T(30), // height
-        { 0.6f, 0.6f, 0.0f, 1.0f } // color
-    };
-    ui::Layout layout5 {
-        { VPERCENT_T(0) , VPERCENT_T(0) }, // pos
-        VPIXEL_T(100), // width
-        VPIXEL_T(75), // height
-        { 0.6f, 0.6f, 0.6f, 1.0f } // color
-    };
-
-    layout2.children = { layout3, layout4, layout5 };
-
-    layout.children = { layout2 };
+    baseLayout.children = { layout };
 
     _ui.create(
-        layout,
+        baseLayout,
         nullptr,
         NULL_ENTITY_ID
     );
+
+    /*
+    TODO: Make the shit work rather like below!
+
+    UIElement panel1 = _ui.createContainer(layout);
+    UIElement text = panel1.addText("Testing");
+
+    UIElement panel1Child1 = panel1.addContainer(layout2);
+    UIElement text2 = panel1Child1.addText("Testing child panel");
+    UIElement button = panel1Child1.addButton("Test Button", SIZE_AUTO);
+    UIElement button2 = panel1Child1.addButton("Test Button2", SIZE_FIXED, 100);
+
+    UIElement panel1Child2 = panel1.addContainer(layout3);
+    UIElement image = panel1Child2.addImage(pTestTexture);
+    */
 }
 
 void UITestScene::update()

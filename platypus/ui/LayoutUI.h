@@ -9,15 +9,14 @@
 
 
 #define NULL_COLOR Vector4f(0, 0, 0, 0)
-
-#define VPIXEL_T(x) {platypus::ui::VType::PX, x}
-#define VPERCENT_T(x) {platypus::ui::VType::PR, x}
-
 /*
     Issues with prev UI systems:
         *That fucked up constraint thing
         *Unable to specify "containers'" layout for it's elements / child components
 
+
+    NEXT UP:
+        *Make it possible for "container" to scale to fit all it's elements automatically
 
     TODO:
         *Create the full "layout composition", immediate mode style
@@ -34,17 +33,10 @@ namespace platypus
 {
     namespace ui
     {
-        enum class VType
+        enum class ValueType
         {
-            PX, // pixel
-            PR, // percent
-            F // float
-        };
-
-        struct Value
-        {
-            VType type = VType::PX;
-            float value = 0.0f;
+            PIXEL,
+            PERCENT
         };
 
         enum class HorizontalAlignment
@@ -64,24 +56,37 @@ namespace platypus
         enum class ExpandElements
         {
             DOWN,
-            RIGHT,
-            UP,
-            LEFT
+            RIGHT
+        };
+
+        enum class HorizontalConstraint
+        {
+            LEFT,
+            CENTER,
+            RIGHT
+        };
+
+        enum class VerticalConstraint
+        {
+            TOP,
+            CENTER,
+            BOTTOM
         };
 
         struct Layout
         {
-            Value position[2];
-            Value width;
-            Value height;
+            Vector2f position;
+            Vector2f scale;
             Vector4f color = NULL_COLOR;
-            Value paddingX;
-            Value paddingY;
-            // If align != NONE, it overrides position
+            Vector2f padding;
+
+            bool fullscreen = false;
+
             HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
             VerticalAlignment verticalAlignment = VerticalAlignment::TOP;
             ExpandElements expandElements = ExpandElements::DOWN;
-            Value elementGap;
+            float elementGap;
+            ValueType elementGapType = ValueType::PIXEL;
             uint32_t layer = 0;
             std::vector<Layout> children;
         };
@@ -90,6 +95,7 @@ namespace platypus
         {
             entityID_t entityID = NULL_ENTITY_ID;
             Layout layout;
+            std::vector<size_t> childIndices;
         };
 
         class LayoutUI
@@ -109,13 +115,23 @@ namespace platypus
             int _windowHeight = 0;
 
             std::vector<UIElement> _elements;
+            std::vector<size_t> _rootElements;
 
         public:
             void init(Scene* pScene, InputManager& inputManager);
 
-            UIElement create(
+            size_t create(
                 const Layout& layout,
                 const Layout* pParentLayout,
+                entityID_t parentEntity,
+                const Vector2f& previousItemPosition = Vector2f(0, 0),
+                const Vector2f& previousItemScale = Vector2f(0, 0),
+                int childIndex = 0
+            );
+
+            void update(
+                const UIElement& element,
+                const UIElement* pParentElement,
                 entityID_t parentEntity,
                 const Vector2f& previousItemPosition = Vector2f(0, 0),
                 const Vector2f& previousItemScale = Vector2f(0, 0),
@@ -127,14 +143,11 @@ namespace platypus
                 const Layout& layout,
                 const Layout* pParentLayout,
                 entityID_t parentEntity,
-                const Vector2f& parentScale, // the actual scale, not it's layout scale
                 const Vector2f& scale,
                 const Vector2f& previousItemPosition,
                 const Vector2f& previousItemScale,
                 int childIndex = 0
             );
-            Vector2f calcScale(const Layout& layout, const Vector2f& parentScale);
-            float calcElementGap(ExpandElements expandType, const Value& value);
             float toPercentage(float v1, float v2);
         };
     }

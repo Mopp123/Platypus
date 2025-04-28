@@ -214,7 +214,7 @@ namespace platypus
         if (_componentPools.find(type) == _componentPools.end())
         {
             Debug::log(
-                "@Scene::getComponent (1)"
+                "@Scene::getComponent (1) "
                 "No component pool exists for component type: " + std::to_string(type),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -230,7 +230,7 @@ namespace platypus
         if (!nestedSearch && enableWarning)
         {
             Debug::log(
-                "@Scene::getComponent (1)"
+                "@Scene::getComponent (1) "
                 "Couldn't find component of type: " + std::to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING
