@@ -5,7 +5,9 @@
 #include "platypus/core/InputManager.h"
 #include "platypus/core/InputEvent.h"
 #include "platypus/ecs/Entity.h"
+#include "platypus/assets/Font.h"
 #include <vector>
+#include <string>
 
 
 #define NULL_COLOR Vector4f(0, 0, 0, 0)
@@ -80,10 +82,13 @@ namespace platypus
             Vector4f color = NULL_COLOR;
             Vector2f padding;
 
-            bool fullscreen = false;
-
+            // NOTE: Parent's content alignment override child's own alignment
             HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
             VerticalAlignment verticalAlignment = VerticalAlignment::TOP;
+
+            HorizontalAlignment horizontalContentAlignment = HorizontalAlignment::LEFT;
+            VerticalAlignment verticalContentAlignment = VerticalAlignment::TOP;
+
             ExpandElements expandElements = ExpandElements::DOWN;
             float elementGap;
             ValueType elementGapType = ValueType::PIXEL;
@@ -91,15 +96,109 @@ namespace platypus
             std::vector<Layout> children;
         };
 
-        struct UIElement
+        class LayoutUI;
+        class UIElement
         {
-            entityID_t entityID = NULL_ENTITY_ID;
-            Layout layout;
-            std::vector<size_t> childIndices;
+        public:
+            class MouseEnterEvent
+            {
+            public:
+                virtual ~MouseEnterEvent() {}
+                virtual void func(int mx, int my) = 0;
+            };
+
+            class MouseOverEvent
+            {
+            public:
+                virtual ~MouseOverEvent() {}
+                virtual void func(int mx, int my) = 0;
+            };
+
+            class MouseExitEvent
+            {
+            public:
+                virtual ~MouseExitEvent() {}
+                virtual void func(int mx, int my) = 0;
+            };
+
+            class OnClickEvent
+            {
+            public:
+                virtual ~OnClickEvent() {}
+                virtual void func(MouseButtonName button, InputAction action) = 0;
+            };
+
+        private:
+            friend class LayoutUI;
+
+            class ElementCursorPosEvent : public CursorPosEvent
+            {
+            public:
+                Scene* _pScene = nullptr;
+                UIElement* _pElement = nullptr;
+
+                ElementCursorPosEvent(
+                    Scene* pScene,
+                    UIElement* pElement
+                ) :
+                    _pScene(pScene),
+                    _pElement(pElement)
+                {}
+                ~ElementCursorPosEvent() {}
+                virtual void func(int x, int y);
+            };
+
+            class ElementMouseButtonEvent : public MouseButtonEvent
+            {
+            public:
+                UIElement* _pElement = nullptr;
+                ElementMouseButtonEvent(UIElement* pElement) : _pElement(pElement) {}
+                ~ElementMouseButtonEvent() {}
+                virtual void func(MouseButtonName button, InputAction action, int mods);
+            };
+
+            entityID_t _entityID = NULL_ENTITY_ID;
+            Layout _layout;
+            std::vector<UIElement*> _children;
+
+            Vector2f _previousItemPosition;
+            Vector2f _previousItemScale;
+
+            MouseEnterEvent* _pMouseEnterEvent = nullptr;
+            MouseOverEvent* _pMouseOverEvent = nullptr;
+            MouseExitEvent* _pMouseExitEvent = nullptr;
+            OnClickEvent* _pOnClickEvent = nullptr;
+
+            bool _isMouseOver = false;
+
+        public:
+            UIElement(
+                entityID_t entityID,
+                Layout layout,
+                MouseEnterEvent* pMouseEnterEvent,
+                MouseOverEvent* pMouseOverEvent,
+                MouseExitEvent* pMouseExitEvent,
+                OnClickEvent* pOnClickEvent
+            );
+            ~UIElement();
+
+            const entityID_t getEntityID() const { return _entityID; }
+            const Layout& getLayout() const { return _layout; }
         };
 
         class LayoutUI
         {
+        public:
+            struct Config
+            {
+                Vector4f buttonColor = Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
+                Vector4f buttonHighlightColor = Vector4f(0.55f, 0.55f, 0.55f, 1.0f);
+                Vector4f buttonTextColor = Vector4f(1, 1, 1, 1);
+                Vector4f buttonTextHighlightColor = Vector4f(0.1f, 0.1f, 0.1f, 1);
+            };
+
+            static Config s_config;
+
         private:
             class ResizeEvent : public WindowResizeEvent
             {
@@ -114,29 +213,50 @@ namespace platypus
             int _windowWidth = 0;
             int _windowHeight = 0;
 
-            std::vector<UIElement> _elements;
-            std::vector<size_t> _rootElements;
+            std::vector<UIElement*> _elements;
+            std::vector<UIElement*> _rootElements;
 
         public:
             void init(Scene* pScene, InputManager& inputManager);
-
-            size_t create(
-                const Layout& layout,
-                const Layout* pParentLayout,
-                entityID_t parentEntity,
-                const Vector2f& previousItemPosition = Vector2f(0, 0),
-                const Vector2f& previousItemScale = Vector2f(0, 0),
-                int childIndex = 0
-            );
+            ~LayoutUI();
 
             void update(
-                const UIElement& element,
+                const UIElement* pElement,
                 const UIElement* pParentElement,
-                entityID_t parentEntity,
                 const Vector2f& previousItemPosition = Vector2f(0, 0),
                 const Vector2f& previousItemScale = Vector2f(0, 0),
                 int childIndex = 0
             );
+
+            UIElement* addContainer(
+                UIElement* pParent,
+                const Layout& layout,
+                UIElement::MouseEnterEvent* pMouseEnterEvent = nullptr,
+                UIElement::MouseOverEvent* pMouseOverEvent = nullptr,
+                UIElement::MouseExitEvent* pMouseExitEvent = nullptr,
+                UIElement::OnClickEvent* pOnClick = nullptr
+            );
+
+            void createImage(UIElement* pElement, ID_t textureID);
+            UIElement* addTextElement(
+                UIElement* pParent,
+                const std::wstring& text,
+                const Vector4f& color,
+                const Font* pFont,
+                UIElement::MouseEnterEvent* pMouseEnterEvent = nullptr,
+                UIElement::MouseOverEvent* pMouseOverEvent = nullptr,
+                UIElement::MouseExitEvent* pMouseExitEvent = nullptr,
+                UIElement::OnClickEvent* pOnClick = nullptr
+            );
+
+            UIElement* addButtonElement(
+                UIElement* pParent,
+                const std::wstring& text,
+                const Font* pFont,
+                UIElement::OnClickEvent* pOnClick = nullptr
+            );
+
+            static Vector2f get_text_scale(const std::wstring& text, const Font* pFont);
 
         private:
             Vector2f calcPosition(

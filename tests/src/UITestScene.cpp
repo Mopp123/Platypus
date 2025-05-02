@@ -4,6 +4,46 @@
 using namespace platypus;
 
 
+class MouseEnterTest : public ui::UIElement::MouseEnterEvent
+{
+public:
+    virtual void func(int x, int y)
+    {
+        Debug::log("___TEST___ENTER!");
+    }
+};
+
+class MouseOverTest : public ui::UIElement::MouseOverEvent
+{
+public:
+    virtual void func(int x, int y)
+    {
+        Debug::log("___TEST___OVER!");
+    }
+};
+
+class MouseExitTest : public ui::UIElement::MouseExitEvent
+{
+public:
+    virtual void func(int x, int y)
+    {
+        Debug::log("___TEST___EXIT!");
+    }
+};
+
+class OnClickTest : public ui::UIElement::OnClickEvent
+{
+public:
+    int index = 0;
+    OnClickTest(int i) : index(i) {}
+    virtual void func(MouseButtonName button, InputAction action)
+    {
+        if (action != InputAction::RELEASE)
+            Debug::log("___TEST___ON CLICK: " + std::to_string(index));
+    }
+};
+
+
 UITestScene::UITestScene()
 {
 }
@@ -22,43 +62,59 @@ void UITestScene::init()
     InputManager& inputManager = Application::get_instance()->getInputManager();
     _ui.init(this, inputManager);
 
-    // NOTE: This "base requirement" is fucking gay for being able to anchor at some pos
-    // -> make it possible to put parent like top,left up or bottom aligned or something!
-    ui::Layout baseLayout;
-    baseLayout.fullscreen = true;
-    baseLayout.horizontalAlignment = ui::HorizontalAlignment::CENTER;
-    baseLayout.verticalAlignment = ui::VerticalAlignment::BOTTOM;
-    baseLayout.expandElements = ui::ExpandElements::RIGHT;
-
     // TODO: Some kind of "user id" thing to access created "container" afterwards
-
     ui::Layout layout {
         { 0, 0 }, // pos
         { 400, 200 }, // scale
-        { 0.4f, 0.4f, 0.4f, 1.0f } // color
+        { 0.2f, 0.2f, 0.2f, 1.0f } // color
     };
     layout.padding = { 10, 10 };
     layout.elementGap = 10;
-    layout.horizontalAlignment = ui::HorizontalAlignment::LEFT;
-    layout.verticalAlignment = ui::VerticalAlignment::TOP;
-    layout.expandElements = ui::ExpandElements::RIGHT;
 
-    for (int i = 0; i < 4; ++i)
-    {
-        layout.children.push_back({
-            { 0, 0 }, // pos
-            { 50, 50 }, // scale
-            { 0.4f, 0.0f, 0.4f, 1.0f } // color
-        });
-    }
+    layout.horizontalAlignment = ui::HorizontalAlignment::CENTER;
+    layout.verticalAlignment = ui::VerticalAlignment::CENTER;
 
-    baseLayout.children = { layout };
+    layout.horizontalContentAlignment = ui::HorizontalAlignment::LEFT;
+    layout.verticalContentAlignment = ui::VerticalAlignment::TOP;
 
-    _ui.create(
-        baseLayout,
+    layout.expandElements = ui::ExpandElements::DOWN;
+
+
+    ui::UIElement* pContainer = _ui.addContainer(nullptr, layout);
+    _ui.createImage(pContainer, NULL_ID);
+    _ui.addTextElement(
+        pContainer,
+        L"Testing...",
+        { 1, 1, 1, 1 },
+        pFont,
         nullptr,
-        NULL_ENTITY_ID
+        nullptr,
+        nullptr,
+        new OnClickTest(0)
     );
+
+    _ui.addTextElement(
+        pContainer,
+        L"Testing Another one...",
+        { 1, 1, 1, 1 },
+        pFont,
+        nullptr,
+        nullptr,
+        nullptr,
+        new OnClickTest(1)
+    );
+
+    _ui.addTextElement(
+        pContainer,
+        L"Last one...",
+        { 1, 1, 0, 1 },
+        pFont,
+        nullptr,
+        nullptr,
+        nullptr,
+        new OnClickTest(2)
+    );
+
 
     /*
     TODO: Make the shit work rather like below!
