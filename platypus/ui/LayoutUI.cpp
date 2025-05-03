@@ -9,100 +9,6 @@ namespace platypus
 {
     namespace ui
     {
-        void UIElement::ElementCursorPosEvent::func(int x, int y)
-        {
-            GUITransform* pTransform = (GUITransform*)_pScene->getComponent(
-                _pElement->_entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-            );
-            GUIRenderable* pRenderable = (GUIRenderable*)_pScene->getComponent(
-                _pElement->_entityID,
-                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-            );
-            if (pTransform && pRenderable)
-            {
-                float fx = (float)x;
-                float fy = (float)y;
-                if (fx >= pTransform->position.x && fx <= pTransform->position.x + pTransform->scale.x &&
-                    fy >= pTransform->position.y && fy <= pTransform->position.y + pTransform->scale.y)
-                {
-                    if (!_pElement->_isMouseOver)
-                    {
-                        if (_pElement->_pMouseEnterEvent)
-                            _pElement->_pMouseEnterEvent->func(x, y);
-                    }
-
-                    if (_pElement->_pMouseOverEvent)
-                        _pElement->_pMouseOverEvent->func(x, y);
-
-                    _pElement->_isMouseOver = true;
-                }
-                else
-                {
-                    if (_pElement->_isMouseOver)
-                    {
-                        if (_pElement->_pMouseExitEvent)
-                            _pElement->_pMouseExitEvent->func(x, y);
-                    }
-                    _pElement->_isMouseOver = false;
-                }
-            }
-        }
-
-
-        void UIElement::ElementMouseButtonEvent::func(MouseButtonName button, InputAction action, int mods)
-        {
-            if (_pElement->_isMouseOver)
-            {
-                UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
-                if (pOnClickEvent)
-                    pOnClickEvent->func(button, action);
-            }
-        }
-
-
-        UIElement::UIElement(
-            entityID_t entityID,
-            Layout layout,
-            MouseEnterEvent* pMouseEnterEvent,
-            MouseOverEvent* pMouseOverEvent,
-            MouseExitEvent* pMouseExitEvent,
-            OnClickEvent* pOnClickEvent
-        ) :
-            _entityID(entityID),
-            _layout(layout),
-            _pMouseEnterEvent(pMouseEnterEvent),
-            _pMouseOverEvent(pMouseOverEvent),
-            _pMouseExitEvent(pMouseExitEvent),
-            _pOnClickEvent(pOnClickEvent)
-        {
-            Application* pApp = Application::get_instance();
-            Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-            InputManager& inputManager = pApp->getInputManager();
-            inputManager.addCursorPosEvent(
-                new ElementCursorPosEvent(
-                    pScene,
-                    this
-                )
-            );
-            inputManager.addMouseButtonEvent(
-                new ElementMouseButtonEvent(this)
-            );
-        }
-
-        UIElement::~UIElement()
-        {
-            if (_pMouseEnterEvent)
-                delete _pMouseEnterEvent;
-            if (_pMouseOverEvent)
-                delete _pMouseOverEvent;
-            if (_pMouseExitEvent)
-                delete _pMouseExitEvent;
-            if (_pOnClickEvent)
-                delete _pOnClickEvent;
-        }
-
-
         void LayoutUI::ResizeEvent::func(int w, int h)
         {
             _uiRef._windowWidth = (float)w;
@@ -116,7 +22,7 @@ namespace platypus
             }
         }
 
-        LayoutUI::Config s_config;
+        LayoutUI::Config LayoutUI::s_config;
         void LayoutUI::init(Scene* pScene, InputManager& inputManager)
         {
             _pScene = pScene;
@@ -240,134 +146,16 @@ namespace platypus
             return position;
         }
 
+        void LayoutUI::addElement(UIElement* pElement, bool isRoot)
+        {
+            _elements.push_back(pElement);
+            if (isRoot)
+                _rootElements.push_back(pElement);
+        }
+
         float LayoutUI::toPercentage(float v1, float v2)
         {
             return (float)((int)(v1 / 100.0f * v2));
-        }
-
-
-        UIElement* LayoutUI::addContainer(
-            UIElement* pParent,
-            const Layout& layout,
-            UIElement::MouseEnterEvent* pMouseEnterEvent,
-            UIElement::MouseOverEvent* pMouseOverEvent,
-            UIElement::MouseExitEvent* pMouseExitEvent,
-            UIElement::OnClickEvent* pOnClickEvent
-        )
-        {
-            Vector2f scale = layout.scale;
-
-            const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
-            entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
-            Vector2f previousItemPosition = pParent != nullptr ? pParent->_previousItemPosition : Vector2f(0, 0);
-            Vector2f previousItemScale = pParent != nullptr ? pParent->_previousItemScale : Vector2f(0, 0);
-            int childIndex = pParent != nullptr ? pParent->_children.size() : 0;
-
-            Vector2f position = calcPosition(
-                layout,
-                pParentLayout,
-                parentEntityID,
-                scale,
-                previousItemPosition,
-                previousItemScale,
-                childIndex
-            );
-
-            entityID_t entity = _pScene->createEntity();
-            GUITransform* pTransform = create_gui_transform(
-                entity,
-                position,
-                scale
-            );
-
-            UIElement* pElement = new UIElement(
-                entity,
-                layout,
-                pMouseEnterEvent,
-                pMouseOverEvent,
-                pMouseExitEvent,
-                pOnClickEvent
-            );
-            _elements.push_back(pElement);
-
-            if (pParent)
-            {
-                pParent->_children.push_back(pElement);
-                pParent->_previousItemPosition = position;
-                pParent->_previousItemScale = scale;
-            }
-            else
-            {
-                _rootElements.push_back(pElement);
-            }
-
-            return pElement;
-        }
-
-        void LayoutUI::createImage(UIElement* pElement, ID_t textureID)
-        {
-            create_gui_renderable(
-                pElement->_entityID,
-                pElement->_layout.color
-            );
-        }
-
-        UIElement* LayoutUI::addTextElement(
-            UIElement* pParent,
-            const std::wstring& text,
-            const Vector4f& color,
-            const Font* pFont,
-            UIElement::MouseEnterEvent* pMouseEnterEvent,
-            UIElement::MouseOverEvent* pMouseOverEvent,
-            UIElement::MouseExitEvent* pMouseExitEvent,
-            UIElement::OnClickEvent* pOnClickEvent
-        )
-        {
-            Layout layout = pParent->_layout;
-            layout.scale = get_text_scale(text, pFont);
-
-            UIElement* pElement = addContainer(
-                pParent,
-                layout,
-                pMouseEnterEvent,
-                pMouseOverEvent,
-                pMouseExitEvent,
-                pOnClickEvent
-            );
-            GUIRenderable* pTextRenderable = create_gui_renderable(
-                pElement->_entityID,
-                color
-            );
-            pTextRenderable->textureID = pFont->getTextureID();
-            pTextRenderable->fontID = pFont->getID();
-            pTextRenderable->text = text;
-
-            return pElement;
-        }
-
-        Vector2f LayoutUI::get_text_scale(const std::wstring& text, const Font* pFont)
-        {
-            Vector2f scale(0, (float)pFont->getMaxCharHeight());
-            for (wchar_t c : text)
-            {
-                const FontGlyphData * const glyph = pFont->getGlyph(c);
-                if (glyph)
-                {
-                    scale.x += ((float)(glyph->advance >> 6));
-                }
-            }
-            return scale;
-        }
-
-        UIElement* LayoutUI::addButtonElement(
-            UIElement* pParent,
-            const std::wstring& text,
-            const Font* pFont,
-            UIElement::OnClickEvent* pOnClick
-        )
-        {
-            // TODO: do it...
-            return nullptr;
         }
     }
 }

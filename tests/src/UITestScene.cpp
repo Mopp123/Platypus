@@ -1,5 +1,8 @@
 #include "UITestScene.h"
 #include "platypus/ui/LayoutUI.h"
+#include "platypus/ui/Text.h"
+#include "platypus/ui/Button.h"
+
 
 using namespace platypus;
 
@@ -71,7 +74,7 @@ void UITestScene::init()
     layout.padding = { 10, 10 };
     layout.elementGap = 10;
 
-    layout.horizontalAlignment = ui::HorizontalAlignment::CENTER;
+    layout.horizontalAlignment = ui::HorizontalAlignment::RIGHT;
     layout.verticalAlignment = ui::VerticalAlignment::CENTER;
 
     layout.horizontalContentAlignment = ui::HorizontalAlignment::LEFT;
@@ -80,40 +83,23 @@ void UITestScene::init()
     layout.expandElements = ui::ExpandElements::DOWN;
 
 
-    ui::UIElement* pContainer = _ui.addContainer(nullptr, layout);
-    _ui.createImage(pContainer, NULL_ID);
-    _ui.addTextElement(
+    ui::UIElement* pContainer = ui::add_container(_ui, nullptr, layout, true);
+
+    ui::UIElement* pButton = ui::add_button_element(
+        _ui,
         pContainer,
-        L"Testing...",
-        { 1, 1, 1, 1 },
-        pFont,
-        nullptr,
-        nullptr,
-        nullptr,
-        new OnClickTest(0)
+        L"Test button",
+        pFont
+    );
+    pButton->_pOnClickEvent = new OnClickTest(0);
+
+    ui::UIElement* pButton2 = ui::add_button_element(
+        _ui,
+        pContainer,
+        L"Another test button",
+        pFont
     );
 
-    _ui.addTextElement(
-        pContainer,
-        L"Testing Another one...",
-        { 1, 1, 1, 1 },
-        pFont,
-        nullptr,
-        nullptr,
-        nullptr,
-        new OnClickTest(1)
-    );
-
-    _ui.addTextElement(
-        pContainer,
-        L"Last one...",
-        { 1, 1, 0, 1 },
-        pFont,
-        nullptr,
-        nullptr,
-        nullptr,
-        new OnClickTest(2)
-    );
 
 
     /*
