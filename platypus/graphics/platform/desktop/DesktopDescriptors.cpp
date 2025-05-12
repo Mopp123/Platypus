@@ -351,4 +351,39 @@ namespace platypus
         createdDescriptorSet._pImpl->handle = descriptorSetHandle;
         return createdDescriptorSet;
     }
+
+    void DescriptorPool::freeDescriptorSets(
+        const std::vector<DescriptorSet>& descriptorSets
+    )
+    {
+        if (!_pImpl)
+        {
+            Debug::log(
+                "@DescriptorPool::freeDescriptorSets "
+                "Descriptor pool pimpl was nullptr!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        for (const DescriptorSet& descriptorSet : descriptorSets)
+        {
+            const DescriptorSetImpl* pDescriptorSetImpl = descriptorSet.getImpl();
+            if (!pDescriptorSetImpl)
+            {
+                Debug::log(
+                    "@DescriptorPool::freeDescriptorSets "
+                    "Descriptor set's impl was nullptr!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            vkFreeDescriptorSets(
+                Context::get_instance()->getImpl()->device,
+                _pImpl->handle,
+                1,
+                &pDescriptorSetImpl->handle
+            );
+            Debug::log("___TEST___descriptor set freed");
+        }
+    }
 }

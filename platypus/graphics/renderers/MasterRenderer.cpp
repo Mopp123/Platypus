@@ -86,6 +86,10 @@ namespace platypus
 
     void MasterRenderer::cleanUp()
     {
+
+        for (auto& it : _renderers)
+            it.second->freeBatches();
+
         destroyPipelines();
         freeCommandBuffers();
     }

@@ -51,6 +51,8 @@ namespace platypus
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
 
+        virtual void freeBatches();
+
         virtual void submit(const Scene* pScene, entityID_t entity);
 
         virtual const CommandBuffer& recordCommandBuffer(
@@ -82,5 +84,7 @@ namespace platypus
             ID_t meshID,
             ID_t textureID
         );
+
+        void freeBatch(BatchData& batch);
     };
 }

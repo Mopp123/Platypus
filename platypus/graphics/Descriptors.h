@@ -173,5 +173,6 @@ namespace platypus
             const DescriptorSetLayout* pLayout,
             const std::vector<const Texture*>& textures
         );
+        void freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets);
     };
 }

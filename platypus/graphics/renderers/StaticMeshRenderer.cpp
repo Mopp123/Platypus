@@ -120,6 +120,14 @@ namespace platypus
         );
     }
 
+    void StaticMeshRenderer::freeBatches()
+    {
+        for (BatchData& batch : _batches)
+            freeBatch(batch);
+
+        Debug::log("___TEST___STATIC MESH RENDERER BATCHES FREED");
+    }
+
     void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
     {
         const StaticMeshRenderable* pRenderable = (const StaticMeshRenderable*)pScene->getComponent(
@@ -340,5 +348,13 @@ namespace platypus
             );
         }
         return true;
+    }
+
+    void StaticMeshRenderer::freeBatch(BatchData& batch)
+    {
+        _descriptorPoolRef.freeDescriptorSets(batch.textureDescriptorSets);
+        batch.textureDescriptorSets.clear();
+        batch.identifier = NULL_ID;
+        batch.count = 0;
     }
 }
