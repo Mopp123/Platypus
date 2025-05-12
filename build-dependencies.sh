@@ -24,14 +24,3 @@ cd freetype
 ./autogen.sh
 ./configure --without-harfbuzz
 make
-
-# build HarfBuzz
-echo "Building harfbuzz"
-cd ../harfbuzz
-meson build
-meson compile -C build
-# finalize building Freetype
-cd ../freetype
-make distclean
-./configure
-make

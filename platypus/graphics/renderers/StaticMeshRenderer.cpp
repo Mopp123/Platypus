@@ -61,10 +61,9 @@ namespace platypus
     StaticMeshRenderer::~StaticMeshRenderer()
     {
         for (BatchData& b : _batches)
-        {
             delete b.pInstancedBuffer;
-            // NOTE: shouldn't we also delete descriptor sets?
-        }
+
+        freeBatches();
         _textureDescriptorSetLayout.destroy();
     }
 
@@ -123,9 +122,12 @@ namespace platypus
     void StaticMeshRenderer::freeBatches()
     {
         for (BatchData& batch : _batches)
-            freeBatch(batch);
-
-        Debug::log("___TEST___STATIC MESH RENDERER BATCHES FREED");
+        {
+            _descriptorPoolRef.freeDescriptorSets(batch.textureDescriptorSets);
+            batch.textureDescriptorSets.clear();
+            batch.identifier = NULL_ID;
+            batch.count = 0;
+        }
     }
 
     void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
@@ -348,13 +350,5 @@ namespace platypus
             );
         }
         return true;
-    }
-
-    void StaticMeshRenderer::freeBatch(BatchData& batch)
-    {
-        _descriptorPoolRef.freeDescriptorSets(batch.textureDescriptorSets);
-        batch.textureDescriptorSets.clear();
-        batch.identifier = NULL_ID;
-        batch.count = 0;
     }
 }

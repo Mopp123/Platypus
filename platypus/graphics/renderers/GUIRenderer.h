@@ -78,6 +78,8 @@ namespace platypus
 
         virtual void destroyPipeline() override;
 
+        virtual void freeBatches();
+
         virtual void submit(const Scene* pScene, entityID_t entity);
 
         virtual const CommandBuffer& recordCommandBuffer(

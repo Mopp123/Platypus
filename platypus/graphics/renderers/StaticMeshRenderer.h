@@ -84,7 +84,5 @@ namespace platypus
             ID_t meshID,
             ID_t textureID
         );
-
-        void freeBatch(BatchData& batch);
     };
 }

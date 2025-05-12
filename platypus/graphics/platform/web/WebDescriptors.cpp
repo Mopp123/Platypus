@@ -93,4 +93,8 @@ namespace platypus
         // NOTE: Not sure if works properly, not tested yet!
         return { textures, pLayout };
     }
+
+    void DescriptorPool::freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets)
+    {
+    }
 }

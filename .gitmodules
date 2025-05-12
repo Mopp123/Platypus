@@ -7,6 +7,3 @@
 [submodule "dependencies/freetype"]
 	path = dependencies/freetype
 	url = git@github.com:freetype/freetype.git
-[submodule "dependencies/harfbuzz"]
-	path = dependencies/harfbuzz
-	url = git@github.com:harfbuzz/harfbuzz.git

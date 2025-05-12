@@ -90,10 +90,9 @@ namespace platypus
     GUIRenderer::~GUIRenderer()
     {
         for (BatchData& b : _batches)
-        {
             delete b.pInstancedBuffer;
-            // NOTE: shouldn't we also delete descriptor sets?
-        }
+
+        freeBatches();
         _textureDescriptorSetLayout.destroy();
 
         delete _pVertexBuffer;
@@ -168,6 +167,18 @@ namespace platypus
     {
         _pipeline.destroy();
         _fontPipeline.destroy();
+    }
+
+    void GUIRenderer::freeBatches()
+    {
+        for (BatchData& batch : _batches)
+        {
+            _descriptorPoolRef.freeDescriptorSets(batch.textureDescriptorSets);
+            batch.textureDescriptorSets.clear();
+            batch.type = BatchType::NONE;
+            batch.textureID = NULL_ID;
+            batch.count = 0;
+        }
     }
 
     void GUIRenderer::submit(const Scene* pScene, entityID_t entity)

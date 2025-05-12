@@ -86,7 +86,6 @@ namespace platypus
 
     void MasterRenderer::cleanUp()
     {
-
         for (auto& it : _renderers)
             it.second->freeBatches();
 
@@ -291,6 +290,7 @@ namespace platypus
         {
             pContext->handleWindowResize();
             _swapchain.recreate(window);
+            // NOTE: This is quite inefficient atm to clean up also every renderer's batches on resize?
             cleanUp();
             allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
             createPipelines();

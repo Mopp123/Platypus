@@ -165,6 +165,7 @@ namespace platypus
         createInfo.poolSizeCount = (uint32_t)poolSizes.size();
         createInfo.pPoolSizes = poolSizes.data();
         createInfo.maxSets = maxDescriptorSets;
+        createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         VkDescriptorPool handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateDescriptorPool(
@@ -383,7 +384,6 @@ namespace platypus
                 1,
                 &pDescriptorSetImpl->handle
             );
-            Debug::log("___TEST___descriptor set freed");
         }
     }
 }
