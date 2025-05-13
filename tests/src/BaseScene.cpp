@@ -58,8 +58,8 @@ void BaseScene::initBase()
     Matrix4f perspectiveProjMat = create_perspective_projection_matrix(
         aspectRatio,
         1.3f * 0.75f,
-        0,
-        100.0f
+        0.1f,
+        1000.0f
     );
 
     Debug::log("___TEST___window scale: " + std::to_string(windowSurfaceWidth) + ", " + std::to_string(windowSurfaceHeight));
@@ -86,6 +86,15 @@ void BaseScene::initBase()
     );
     _cameraController.setOffsetPos({ 0, 4, 0});
     */
+
+    _lightEntity = createEntity();
+    Vector3f lightDir( 0.0f, -0.6f, -0.6f);
+    lightDir = lightDir.normalize();
+    DirectionalLight* pLight = create_directional_light(
+        _lightEntity,
+        lightDir,
+        { 1, 1, 1 }
+    );
 
     Application::get_instance()->getInputManager().addWindowResizeEvent(
         new SceneWindowResizeEvent(this, _cameraEntity)

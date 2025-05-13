@@ -27,7 +27,7 @@ namespace platypus
         ~AssetManager();
         void destroyAssets();
 
-        Image*  createImage(PE_ubyte* pData, int width, int height, int channels);
+        Image* createImage(PE_ubyte* pData, int width, int height, int channels);
         Image* loadImage(const std::string& filepath);
         Texture* createTexture(
             ID_t imageID,

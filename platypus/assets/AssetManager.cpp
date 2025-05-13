@@ -23,7 +23,6 @@ namespace platypus
         );
         _pWhiteTexture = createTexture(pWhiteImage->getID(), whiteTextureSampler);
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
-        Debug::log("___TEST___WHITE TEX ID: " + std::to_string(_pWhiteTexture->getID()));
     }
 
     AssetManager::~AssetManager()

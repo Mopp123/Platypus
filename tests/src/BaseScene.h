@@ -24,6 +24,7 @@ private:
 protected:
     platypus::CameraController _cameraController;
     entityID_t _cameraEntity = NULL_ENTITY_ID;
+    entityID_t _lightEntity = NULL_ENTITY_ID;
 
 public:
     BaseScene();

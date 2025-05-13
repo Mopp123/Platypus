@@ -1,6 +1,7 @@
 #include "platypus/Platypus.h"
 #include "UITestScene.h"
 #include "TestScene.h"
+#include "MeshTestScene.h"
 
 
 int main(int argc, const char** argv)
@@ -16,7 +17,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new TestScene
+        new MeshTestScene
     );
     app.run();
     return 0;

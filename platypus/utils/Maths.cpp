@@ -493,6 +493,18 @@ namespace platypus
         float zNear, float zFar
     )
     {
+        if (zNear == 0)
+        {
+            Debug::log(
+                "@create_perspective_projection_matrix "
+                "zNear 0 currently unacceptable value! "
+                "*At least on Vulkan side, for some reason, doesn't display anything "
+                "if zNear = 0... Don't know why..",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         Matrix4f matrix(1.0f);
         matrix[0 + 0 * 4] = 1.0f / (aspectRatio * tan(fov / 2.0f));
         matrix[1 + 1 * 4] = 1.0f / (tan(fov / 2.0f));
