@@ -150,7 +150,8 @@ namespace platypus
         const Matrix4f transformationMatrix = pTransform->globalMatrix;
 
         ID_t textureID = pRenderable->textureID;
-        int foundBatchIndex = findExistingBatchIndex(textureID);
+        ID_t identifier = ID::hash(pRenderable->meshID, textureID);
+        int foundBatchIndex = findExistingBatchIndex(identifier);
         if (foundBatchIndex != -1)
         {
             addToBatch(_batches[foundBatchIndex], transformationMatrix);
@@ -168,7 +169,7 @@ namespace platypus
                 return;
             }
             BatchData& batchData = _batches[freeBatchIndex];
-            if (!occupyBatch(batchData, pRenderable->meshID, textureID))
+            if (!occupyBatch(batchData, pRenderable->meshID, identifier))
             {
                 Debug::log(
                     "@StaticMeshRenderer::submit "
@@ -181,8 +182,8 @@ namespace platypus
         }
         // NOTE: Works only because using textures as identifiers and
         // only texture descriptor sets...
-        if (!hasDescriptorSets(textureID))
-            createDescriptorSets(textureID, textureID);
+        if (!hasDescriptorSets(identifier))
+            createDescriptorSets(identifier, textureID);
     }
 
     const CommandBuffer& StaticMeshRenderer::recordCommandBuffer(
@@ -325,7 +326,7 @@ namespace platypus
     bool StaticMeshRenderer::occupyBatch(
         BatchData& batchData,
         ID_t meshID,
-        ID_t textureID
+        ID_t identifier
     )
     {
         Application* pApp = Application::get_instance();
@@ -346,7 +347,7 @@ namespace platypus
             }
         #endif
 
-        batchData.identifier = textureID;
+        batchData.identifier = identifier;
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 

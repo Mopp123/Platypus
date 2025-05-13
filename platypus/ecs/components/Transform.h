@@ -18,6 +18,12 @@ namespace platypus
         Vector2f scale;
     };
 
+
+    Transform* create_transform(
+        entityID_t target,
+        Matrix4f matrix
+    );
+
     Transform* create_transform(
         entityID_t target,
         const Vector3f& position,

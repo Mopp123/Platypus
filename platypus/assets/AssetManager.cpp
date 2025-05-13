@@ -162,16 +162,17 @@ namespace platypus
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
             false
         );
-        Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer);
+        Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer, Matrix4f(1.0f));
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
     }
 
     Model* AssetManager::loadModel(const std::string& filepath)
     {
+        std::vector<std::vector<Buffer*>> indexBuffers;
         std::vector<Buffer*> vertexBuffers;
-        std::vector<Buffer*> indexBuffers;
-        if (!load_gltf_model(_commandPoolRef, filepath, vertexBuffers, indexBuffers))
+        std::vector<Matrix4f> transformationMatrices;
+        if (!load_gltf_model(_commandPoolRef, filepath, indexBuffers, vertexBuffers, transformationMatrices))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -200,7 +201,7 @@ namespace platypus
         std::vector<Mesh*> meshes(vertexBuffers.size());
         for (size_t i = 0; i < vertexBuffers.size(); ++i)
         {
-            Mesh* pMesh = new Mesh(vertexBuffers[i], indexBuffers[i]);
+            Mesh* pMesh = new Mesh(vertexBuffers[i], indexBuffers[i][0], transformationMatrices[i]);
             _assets[pMesh->getID()] = pMesh;
             meshes[i] = pMesh;
         }

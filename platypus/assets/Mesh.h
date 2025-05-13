@@ -2,6 +2,7 @@
 
 #include "Asset.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/utils/Maths.h"
 
 
 namespace platypus
@@ -12,12 +13,22 @@ namespace platypus
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
 
+        // Transformation from the file this was loaded from, if there was any.
+        // Not sure yet how I want to deal with this.
+        Matrix4f _transformationMatrix = Matrix4f(1.0f);
+
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
-        Mesh(Buffer* pVertexBuffer, Buffer* pIndexBuffer);
+        Mesh(
+            Buffer* pVertexBuffer,
+            Buffer* pIndexBuffer,
+            const Matrix4f& transformationMatrix
+        );
+
         ~Mesh();
 
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline const Buffer* getIndexBuffer() const { return _pIndexBuffer; }
+        inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }
     };
 }

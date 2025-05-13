@@ -83,7 +83,7 @@ namespace platypus
         bool occupyBatch(
             BatchData& batchData,
             ID_t meshID,
-            ID_t textureID
+            ID_t identifier
         );
 
         bool hasDescriptorSets(ID_t batchIdentifier) const;

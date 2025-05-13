@@ -8,9 +8,7 @@ namespace platypus
 {
     Transform* create_transform(
         entityID_t target,
-        const Vector3f& position,
-        const Quaternion& rotation,
-        const Vector3f& scale
+        Matrix4f matrix
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -24,7 +22,7 @@ namespace platypus
         if (!pComponent)
         {
             Debug::log(
-                "@create_transform "
+                "@create_transform(2) "
                 "Failed to allocate Transform component for entity: " + std::to_string(target),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -33,13 +31,25 @@ namespace platypus
         }
         pScene->addToComponentMask(target, componentType);
         Transform* pTransform = (Transform*)pComponent;
-        pTransform->globalMatrix = create_transformation_matrix(
+        pTransform->globalMatrix = matrix;
+
+        return pTransform;
+    }
+
+    Transform* create_transform(
+        entityID_t target,
+        const Vector3f& position,
+        const Quaternion& rotation,
+        const Vector3f& scale
+    )
+    {
+        Matrix4f transformationMatrix = create_transformation_matrix(
             position,
             rotation,
             scale
         );
 
-        return pTransform;
+        return create_transform(target, transformationMatrix);
     }
 
     GUITransform* create_gui_transform(

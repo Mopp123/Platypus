@@ -29,21 +29,24 @@ void MeshTestScene::init()
         pImage->getID(),
         textureSampler
     );
-    Model* pModel = assetManager.loadModel("assets/TestCube.glb");
+    Model* pModel = assetManager.loadModel("assets/models/MultiTest2.glb");
 
-    entityID_t entity = createEntity();
-    Transform* pTransform = create_transform(
-        entity,
-        { 0, -1.0f, -10 },
-        { { 0, 1, 0 }, 0 },
-        { 1, 1, 1}
-    );
+    for (Mesh* pMesh : pModel->getMeshes())
+    {
+        entityID_t entity = createEntity();
+        Transform* pTransform = create_transform(
+            entity,
+            pMesh->getTransformationMatrix()
+        );
 
-    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
-        entity,
-        pModel->getMeshes()[0]->getID(),
-        pTexture->getID()
-    );
+        pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
+
+        StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+            entity,
+            pMesh->getID(),
+            pTexture->getID()
+        );
+    }
 }
 
 void MeshTestScene::update()

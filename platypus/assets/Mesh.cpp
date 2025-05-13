@@ -3,10 +3,15 @@
 
 namespace platypus
 {
-    Mesh::Mesh(Buffer* pVertexBuffer, Buffer* pIndexBuffer) :
+    Mesh::Mesh(
+        Buffer* pVertexBuffer,
+        Buffer* pIndexBuffer,
+        const Matrix4f& transformationMatrix
+    ) :
         Asset(AssetType::ASSET_TYPE_MESH),
         _pVertexBuffer(pVertexBuffer),
-        _pIndexBuffer(pIndexBuffer)
+        _pIndexBuffer(pIndexBuffer),
+        _transformationMatrix(transformationMatrix)
     {}
 
     Mesh::~Mesh()

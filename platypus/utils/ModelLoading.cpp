@@ -128,51 +128,85 @@ namespace platypus
     }
 
 
-    static Buffer* load_index_buffer(
+    static Quaternion to_engine_quaternion(const std::vector<double>& gltfQuaternion)
+    {
+        if(gltfQuaternion.size() != 4)
+        {
+            Debug::log(
+                "@to_engine_quaternion "
+                "GLTF Quaternion had invalid component count: " + std::to_string(gltfQuaternion.size()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return { 0, 0, 0, 1 };
+        }
+
+        return Quaternion(
+            (float)gltfQuaternion[0],
+            (float)gltfQuaternion[1],
+            (float)gltfQuaternion[2],
+            (float)gltfQuaternion[3]
+        );
+    }
+
+    static Vector3f to_engine_vector3(const std::vector<double>& gltfVector)
+    {
+        if(gltfVector.size() != 3)
+        {
+            Debug::log(
+                "@to_engine_vector3 "
+                "GLTF Vector had invalid component count: " + std::to_string(gltfVector.size()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return { 0, 0, 0 };
+        }
+
+        return Vector3f(
+            (float)gltfVector[0],
+            (float)gltfVector[1],
+            (float)gltfVector[2]
+        );
+    }
+
+
+    static std::vector<Buffer*> load_index_buffers(
         const CommandPool& commandPool,
         tinygltf::Model& gltfModel,
-        tinygltf::Mesh& gltfMesh,
-        size_t primitiveIndex
+        tinygltf::Mesh& gltfMesh
     )
     {
-        if (primitiveIndex >= gltfMesh.primitives.size())
+        std::vector<Buffer*> indexBuffers;
+        for (size_t i = 0; i < gltfMesh.primitives.size(); ++i)
         {
-            Debug::log(
-                "@load_index_buffer "
-                "Invalid primitiveIndex: " + std::to_string(primitiveIndex) + " "
-                "mesh primitive count: " + std::to_string(gltfMesh.primitives.size()),
-                Debug::MessageType::PLATYPUS_ERROR
+            const tinygltf::Primitive& primitive = gltfMesh.primitives[i];
+            if (primitive.indices < 0 || primitive.indices >= gltfModel.accessors.size())
+            {
+                Debug::log(
+                    "@load_index_buffer "
+                    "Failed to find index buffer accessor using primitive.indices: " + std::to_string(primitive.indices),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return indexBuffers;
+            }
+
+            const tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
+            size_t bufferLength = accessor.count;
+
+            const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+            const size_t elementSize = bufferView.byteLength / accessor.count;
+            void* pData = gltfModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset;
+
+            indexBuffers.push_back(new Buffer(
+                    commandPool,
+                    pData,
+                    elementSize,
+                    bufferLength,
+                    BUFFER_USAGE_INDEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
+                    BUFFER_UPDATE_FREQUENCY_STATIC,
+                    false
+                )
             );
-            return nullptr;
         }
-
-        const tinygltf::Primitive& primitive = gltfMesh.primitives[primitiveIndex];
-        if (primitive.indices < 0 || primitive.indices >= gltfModel.accessors.size())
-        {
-            Debug::log(
-                "@load_index_buffer "
-                "Failed to find index buffer accessor using primitive.indices: " + std::to_string(primitive.indices),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            return nullptr;
-        }
-
-        const tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
-        size_t bufferLength = accessor.count;
-
-        const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-        const size_t elementSize = bufferView.byteLength / accessor.count;
-        void* pData = gltfModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset;
-
-        return new Buffer(
-            commandPool,
-            pData,
-            elementSize,
-            bufferLength,
-            BUFFER_USAGE_INDEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
-            BUFFER_UPDATE_FREQUENCY_STATIC,
-            false
-        );
+        return indexBuffers;
     }
 
 
@@ -403,8 +437,9 @@ namespace platypus
     bool load_gltf_model(
         const CommandPool& commandPool,
         const std::string& filepath,
+        std::vector<std::vector<Buffer*>>& outIndexBuffers,
         std::vector<Buffer*>& outVertexBuffers,
-        std::vector<Buffer*>& outIndexBuffers
+        std::vector<Matrix4f>& outTransformationMatrices
     )
     {
         tinygltf::Model gltfModel;
@@ -470,16 +505,35 @@ namespace platypus
         }
 
         // Load meshes
-        for (size_t i = 0; i < gltfModel.meshes.size(); ++i)
+        for (size_t i = 0; i < modelNodes.size(); ++i)
         {
-            tinygltf::Mesh& gltfMesh = gltfModel.meshes[i];
-            Buffer* pIndexBuffer = load_index_buffer(commandPool, gltfModel, gltfMesh, i);
+            const tinygltf::Node& node = modelNodes[i];
+            tinygltf::Mesh& gltfMesh = gltfModel.meshes[node.mesh];
+            Vector3f position;
+            Quaternion rotation;
+            Vector3f scale(1, 1, 1);
+            if (node.translation.size() == 3)
+                position = to_engine_vector3(node.translation);
+            if (node.rotation.size() == 4)
+                rotation = to_engine_quaternion(node.rotation);
+            if (node.scale.size() == 3)
+                scale = to_engine_vector3(node.scale);
+
+            outTransformationMatrices.push_back(
+                create_transformation_matrix(
+                    position,
+                    rotation,
+                    scale
+                )
+            );
+
+            std::vector<Buffer*> indexBuffers = load_index_buffers(commandPool, gltfModel, gltfMesh);
             Buffer* pVertexBuffer = load_vertex_buffer(commandPool, gltfModel, gltfMesh);
-            if (!pIndexBuffer)
+            if (indexBuffers.empty())
             {
                 Debug::log(
                     "@load_gltf_model "
-                    "Failed to load index buffer for mesh: " + std::to_string(i) + " "
+                    "Failed to load index buffers for mesh: " + std::to_string(i) + " "
                     "from file: " + filepath,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -493,7 +547,7 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_ERROR
                 );
             }
-            outIndexBuffers.push_back(pIndexBuffer);
+            outIndexBuffers.push_back(indexBuffers);
             outVertexBuffers.push_back(pVertexBuffer);
         }
         return true;
