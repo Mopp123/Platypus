@@ -173,12 +173,21 @@ namespace platypus
     {
         for (BatchData& batch : _batches)
         {
-            _descriptorPoolRef.freeDescriptorSets(batch.textureDescriptorSets);
-            batch.textureDescriptorSets.clear();
             batch.type = BatchType::NONE;
             batch.textureID = NULL_ID;
             batch.count = 0;
         }
+    }
+
+    void GUIRenderer::freeDescriptorSets()
+    {
+        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it;
+        for (it = _textureDescriptorSets.begin(); it != _textureDescriptorSets.end(); ++it)
+        {
+            _descriptorPoolRef.freeDescriptorSets(it->second);
+            it->second.clear();
+        }
+        _textureDescriptorSets.clear();
     }
 
     void GUIRenderer::submit(const Scene* pScene, entityID_t entity)
@@ -224,6 +233,9 @@ namespace platypus
                 return;
             }
         }
+
+        if (!hasDescriptorSets(textureID))
+            createTextureDescriptorSets(textureID);
 
         if (pRenderable->fontID != NULL_ID)
             addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
@@ -278,6 +290,17 @@ namespace platypus
                     continue;
                 }
 
+                // Make sure descriptor sets has been created
+                if (_textureDescriptorSets.find(batchData.textureID) == _textureDescriptorSets.end())
+                {
+                    Debug::log(
+                        "@GUIRenderer::recordCommandBuffer "
+                        "No descriptor sets found for batch with textureID: " + std::to_string(batchData.textureID),
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+
                 // This should never actually happen?
                 if (batchData.textureID == NULL_ID)
                     continue;
@@ -319,7 +342,7 @@ namespace platypus
 
                 render::bind_descriptor_sets(
                     currentCommandBuffer,
-                    { batchData.textureDescriptorSets[_currentFrame] },
+                    { _textureDescriptorSets[batchData.textureID][_currentFrame] },
                     { }
                 );
 
@@ -516,17 +539,52 @@ namespace platypus
         batchData.type = batchType;
         batchData.textureID = textureID;
         batchData.textureAtlasRows = (float)pTexture->getAtlasRowCount();
+        _toRender[layer].insert(batchIndex);
+        return true;
+    }
+
+    bool GUIRenderer::hasDescriptorSets(ID_t batchIdentifier) const
+    {
+        return _textureDescriptorSets.find(batchIdentifier) != _textureDescriptorSets.end();
+    }
+
+    void GUIRenderer::createTextureDescriptorSets(ID_t textureID)
+    {
+        Application* pApp = Application::get_instance();
+        AssetManager& assetManager = pApp->getAssetManager();
+        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+            textureID,
+            AssetType::ASSET_TYPE_TEXTURE
+        );
+        #ifdef PLATYPUS_DEBUG
+            if (!pTexture)
+            {
+                Debug::log(
+                    "@GUIRenderer::createDescriptorSets "
+                    "No texture found with ID: " + std::to_string(textureID),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        #endif
+
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
         {
-            batchData.textureDescriptorSets.push_back(
+            _textureDescriptorSets[textureID].push_back(
                 _descriptorPoolRef.createDescriptorSet(
                     &_textureDescriptorSetLayout,
                     { pTexture }
                 )
             );
         }
-        _toRender[layer].insert(batchIndex);
-        return true;
+        Debug::log("@GUIRenderer::createDescriptorSets New texture descriptor sets created for batch with textureID: " + std::to_string(textureID));
+    }
+
+    void GUIRenderer::freeTextureDescriptorSets(ID_t textureID)
+    {
+        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it = _textureDescriptorSets.find(textureID);
+        if (it != _textureDescriptorSets.end())
+            _descriptorPoolRef.freeDescriptorSets(it->second);
     }
 }

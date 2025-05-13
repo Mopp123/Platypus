@@ -46,6 +46,7 @@ namespace platypus
         virtual void destroyPipeline();
 
         virtual void freeBatches() = 0;
+        virtual void freeDescriptorSets() = 0;
 
         virtual void submit(const Scene* pScene, entityID_t entity) = 0;
 

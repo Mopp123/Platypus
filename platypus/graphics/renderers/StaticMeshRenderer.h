@@ -25,11 +25,11 @@ namespace platypus
             const Buffer* pVertexBuffer = nullptr;
             const Buffer* pIndexBuffer = nullptr;
             Buffer* pInstancedBuffer = nullptr;
-            std::vector<DescriptorSet> textureDescriptorSets;
             size_t count = 0;
         };
 
         std::vector<BatchData> _batches;
+        std::unordered_map<ID_t, std::vector<DescriptorSet>> _descriptorSets;
         size_t _currentFrame = 0;
 
         static size_t s_maxBatches;
@@ -52,6 +52,7 @@ namespace platypus
         );
 
         virtual void freeBatches();
+        virtual void freeDescriptorSets();
 
         virtual void submit(const Scene* pScene, entityID_t entity);
 
@@ -84,5 +85,9 @@ namespace platypus
             ID_t meshID,
             ID_t textureID
         );
+
+        bool hasDescriptorSets(ID_t batchIdentifier) const;
+        void createDescriptorSets(ID_t identifier, ID_t textureID);
+        void freeBatchDescriptorSets(ID_t identifier);
     };
 }

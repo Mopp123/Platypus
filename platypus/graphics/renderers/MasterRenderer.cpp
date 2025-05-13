@@ -84,11 +84,18 @@ namespace platypus
         _dirLightDescriptorSetLayout.destroy();
     }
 
-    void MasterRenderer::cleanUp()
+    void MasterRenderer::cleanRenderers()
     {
         for (auto& it : _renderers)
             it.second->freeBatches();
 
+        Context::get_instance()->waitForOperations();
+        freeDescriptorSets();
+    }
+
+    void MasterRenderer::cleanUp()
+    {
+        cleanRenderers();
         destroyPipelines();
         freeCommandBuffers();
     }
@@ -172,6 +179,12 @@ namespace platypus
     {
         for (auto& it : _renderers)
             it.second->destroyPipeline();
+    }
+
+    void MasterRenderer::freeDescriptorSets()
+    {
+        for (auto& it : _renderers)
+            it.second->freeDescriptorSets();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -290,8 +303,9 @@ namespace platypus
         {
             pContext->handleWindowResize();
             _swapchain.recreate(window);
-            // NOTE: This is quite inefficient atm to clean up also every renderer's batches on resize?
-            cleanUp();
+            freeDescriptorSets();
+            destroyPipelines();
+            freeCommandBuffers();
             allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
             createPipelines();
             window.resetResized();

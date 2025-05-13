@@ -42,6 +42,7 @@ namespace platypus
         MasterRenderer(const Window& window);
         ~MasterRenderer();
 
+        void cleanRenderers();
         void cleanUp();
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
@@ -54,6 +55,7 @@ namespace platypus
         void freeCommandBuffers();
         void createPipelines();
         void destroyPipelines();
+        void freeDescriptorSets();
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };

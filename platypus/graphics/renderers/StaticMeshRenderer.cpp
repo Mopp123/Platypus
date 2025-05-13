@@ -123,11 +123,20 @@ namespace platypus
     {
         for (BatchData& batch : _batches)
         {
-            _descriptorPoolRef.freeDescriptorSets(batch.textureDescriptorSets);
-            batch.textureDescriptorSets.clear();
             batch.identifier = NULL_ID;
             batch.count = 0;
         }
+    }
+
+    void StaticMeshRenderer::freeDescriptorSets()
+    {
+        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it;
+        for (it = _descriptorSets.begin(); it != _descriptorSets.end(); ++it)
+        {
+            _descriptorPoolRef.freeDescriptorSets(it->second);
+            it->second.clear();
+        }
+        _descriptorSets.clear();
     }
 
     void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
@@ -170,6 +179,10 @@ namespace platypus
             }
             addToBatch(batchData, transformationMatrix);
         }
+        // NOTE: Works only because using textures as identifiers and
+        // only texture descriptor sets...
+        if (!hasDescriptorSets(textureID))
+            createDescriptorSets(textureID, textureID);
     }
 
     const CommandBuffer& StaticMeshRenderer::recordCommandBuffer(
@@ -220,6 +233,17 @@ namespace platypus
             if (batchData.identifier == NULL_ID)
                 continue;
 
+            // Make sure descriptor sets has been created
+            if (_descriptorSets.find(batchData.identifier) == _descriptorSets.end())
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::recordCommandBuffer "
+                    "No descriptor sets found for batch with identifier: " + std::to_string(batchData.identifier),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
             batchData.pInstancedBuffer->updateDevice(
                 batchData.pInstancedBuffer->accessData(),
                 batchData.count * sizeof(Matrix4f),
@@ -237,7 +261,7 @@ namespace platypus
 
             std::vector<DescriptorSet> descriptorSetsToBind = {
                 dirLightDescriptorSet,
-                batchData.textureDescriptorSets[_currentFrame]
+                _descriptorSets[batchData.identifier][_currentFrame]
             };
 
             render::bind_descriptor_sets(
@@ -310,10 +334,6 @@ namespace platypus
             meshID,
             AssetType::ASSET_TYPE_MESH
         );
-        const Texture* pTexture = (const Texture*)assetManager.getAsset(
-            textureID,
-            AssetType::ASSET_TYPE_TEXTURE
-        );
         #ifdef PLATYPUS_DEBUG
             if (!pMesh)
             {
@@ -324,31 +344,57 @@ namespace platypus
                 );
                 return false;
             }
-            if (!pTexture)
-            {
-                Debug::log(
-                    "@StaticMeshRenderer::occupyBatch "
-                    "No texture found with ID: " + std::to_string(textureID),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                return false;
-            }
         #endif
 
         batchData.identifier = textureID;
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 
+        return true;
+    }
+
+    bool StaticMeshRenderer::hasDescriptorSets(ID_t batchIdentifier) const
+    {
+        return _descriptorSets.find(batchIdentifier) != _descriptorSets.end();
+    }
+
+    void StaticMeshRenderer::createDescriptorSets(ID_t identifier, ID_t textureID)
+    {
+        Application* pApp = Application::get_instance();
+        AssetManager& assetManager = pApp->getAssetManager();
+        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+            textureID,
+            AssetType::ASSET_TYPE_TEXTURE
+        );
+        #ifdef PLATYPUS_DEBUG
+            if (!pTexture)
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::createDescriptorSets "
+                    "No texture found with ID: " + std::to_string(textureID),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        #endif
+
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
         {
-            batchData.textureDescriptorSets.push_back(
+            _descriptorSets[identifier].push_back(
                 _descriptorPoolRef.createDescriptorSet(
                     &_textureDescriptorSetLayout,
                     { pTexture }
                 )
             );
         }
-        return true;
+        Debug::log("@StaticMeshRenderer::createDescriptorSets New descriptor sets created for batch with identifier: " + std::to_string(identifier));
+    }
+
+    void StaticMeshRenderer::freeBatchDescriptorSets(ID_t identifier)
+    {
+        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it = _descriptorSets.find(identifier);
+        if (it != _descriptorSets.end())
+            _descriptorPoolRef.freeDescriptorSets(it->second);
     }
 }

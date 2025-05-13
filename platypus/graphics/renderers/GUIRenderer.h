@@ -46,7 +46,6 @@ namespace platypus
             BatchType type = BatchType::NONE;
             ID_t textureID = NULL_ID;
             Buffer* pInstancedBuffer = nullptr;
-            std::vector<DescriptorSet> textureDescriptorSets;
             float textureAtlasRows = 1.0f;
             size_t count = 0;
         };
@@ -54,6 +53,13 @@ namespace platypus
         // key = layer, value = index to _batches, which batch to use
         std::map<uint32_t, std::set<size_t>> _toRender;
         std::vector<BatchData> _batches;
+
+        // NOTE: Works atm only because these are for textures -> multiple batches may
+        // use same texture descriptor sets.
+        //
+        // BUT! If want to have batch specific descriptor sets, needs some combined identifier
+        // for each batch that contains its' type and textureID
+        std::unordered_map<ID_t, std::vector<DescriptorSet>> _textureDescriptorSets;
 
         size_t _currentFrame = 0;
 
@@ -79,6 +85,7 @@ namespace platypus
         virtual void destroyPipeline() override;
 
         virtual void freeBatches();
+        virtual void freeDescriptorSets();
 
         virtual void submit(const Scene* pScene, entityID_t entity);
 
@@ -114,5 +121,9 @@ namespace platypus
             uint32_t layer,
             ID_t textureID
         );
+
+        bool hasDescriptorSets(ID_t textureID) const;
+        void createTextureDescriptorSets(ID_t textureID);
+        void freeTextureDescriptorSets(ID_t textureID);
     };
 }
