@@ -16,7 +16,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new UITestScene
+        new TestScene
     );
     app.run();
     return 0;

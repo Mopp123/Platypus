@@ -3,6 +3,8 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Shader.h"
 #include "platypus/core/Debug.h"
+#include <unordered_map>
+#include <set>
 
 
 #define GL_FUNC(func)	func;																				\
@@ -23,9 +25,16 @@ namespace platypus
     unsigned int to_gl_datatype(ShaderDataType shaderDataType);
     std::string gl_error_to_string(unsigned int error);
 
+    bool vao_deletion_allowed(ContextImpl* pContextImpl, uint32_t vaoID);
 
     struct ContextImpl
     {
-        uint32_t vaoID;
+        // key = vaoID, value = bufferIDs of that vao
+        std::unordered_map<uint32_t, std::set<uint32_t>> vaoBufferMapping;
+
+        // Some renderer's have their own "complementary buffers" like per instance buffers
+        // which aren't part of any actual mesh, so need to detect these in order to
+        // destroy VAOs correctly!
+        std::set<uint32_t> complementaryVbos;
     };
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/Platypus.h"
+#include "platypus/ui/LayoutUI.h"
 
 class TestScene : public platypus::Scene
 {
@@ -22,6 +23,8 @@ private:
 
     platypus::CameraController _camController;
     entityID_t _camEntity = NULL_ENTITY_ID;
+
+    platypus::ui::LayoutUI _ui;
 
 public:
     TestScene();

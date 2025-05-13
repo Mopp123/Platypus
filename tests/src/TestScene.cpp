@@ -1,8 +1,23 @@
 #include "TestScene.h"
+#include "UITestScene.h"
+#include "platypus/ui/Button.h"
 
 
 using namespace platypus;
 
+
+class OnClickSwitchToUIScene : public ui::UIElement::OnClickEvent
+{
+public:
+    OnClickSwitchToUIScene() {}
+    virtual void func(MouseButtonName button, InputAction action)
+    {
+        if (action != InputAction::RELEASE)
+        {
+            Application::get_instance()->getSceneManager().assignNextScene(new UITestScene);
+        }
+    }
+};
 
 void TestScene::SceneWindowResizeEvent::func(int w, int h)
 {
@@ -248,6 +263,22 @@ void TestScene::init()
         { 0.25f, 0.25f, 0.25f, 0.5f },
         0
     );
+
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+    _ui.init(this, inputManager);
+    ui::Layout layout {
+        { 0, 0 }, // pos
+        { 400, 200 }, // scale
+        { 0.2f, 0.2f, 0.2f, 1.0f } // color
+    };
+    ui::UIElement* pContainer = ui::add_container(_ui, nullptr, layout, true);
+    ui::UIElement* pButton = ui::add_button_element(
+        _ui,
+        pContainer,
+        L"Switch Scene",
+        pFont
+    );
+    pButton->_pOnClickEvent = new OnClickSwitchToUIScene;
 }
 
 static float s_TEST_value = 0.0f;

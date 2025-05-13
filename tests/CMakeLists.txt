@@ -63,6 +63,8 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/platypus/graphics/*.cpp
         ${PARENT_DIR}/platypus/graphics/platform/${BUILD_TARGET}/*.cpp
         ${PARENT_DIR}/platypus/graphics/renderers/*.cpp
+
+        ${PARENT_DIR}/platypus/ui/*.cpp
     )
 else()
     message(FATAL_ERROR "No build target specified")

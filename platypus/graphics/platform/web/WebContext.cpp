@@ -73,6 +73,22 @@ namespace platypus
     }
 
 
+    bool vao_deletion_allowed(ContextImpl* pContextImpl, uint32_t vaoID)
+    {
+        if (pContextImpl->vaoBufferMapping[vaoID].empty())
+            return true;
+
+        // If vaoBufferMapping contains only "complementary" buffer ids for the vao
+        // it can also be deleted
+        for (uint32_t bufferID : pContextImpl->vaoBufferMapping[vaoID])
+        {
+            if (pContextImpl->complementaryVbos.find(bufferID) == pContextImpl->complementaryVbos.end())
+                return false;
+        }
+        return true;
+    }
+
+
     Context* Context::s_pInstance = nullptr;
     Context::Context(const char* appName, Window* pWindow)
     {
@@ -124,13 +140,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        // Create a single vao and bind immediately to use for everything on opengl side
-        uint32_t vaoID = 0;
-        GL_FUNC(glGenVertexArrays(1, &vaoID));
-        GL_FUNC(glBindVertexArray(vaoID));
-
         _pImpl = new ContextImpl;
-        _pImpl->vaoID = vaoID;
 
         s_pInstance = this;
 
@@ -140,10 +150,7 @@ namespace platypus
     Context::~Context()
     {
         if (_pImpl)
-        {
-            GL_FUNC(glDeleteVertexArrays(1, &_pImpl->vaoID));
             delete _pImpl;
-        }
     }
 
     void Context::submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame)

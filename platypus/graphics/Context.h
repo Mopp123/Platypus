@@ -50,5 +50,6 @@ namespace platypus
         // For OpenGL this should be always 1
         inline size_t getMinUniformBufferOffsetAlignment() const { return _minUniformBufferOffsetAlignment; }
         inline const ContextImpl * const getImpl() const { return _pImpl; }
+        inline ContextImpl* getImpl() { return _pImpl; }
     };
 }

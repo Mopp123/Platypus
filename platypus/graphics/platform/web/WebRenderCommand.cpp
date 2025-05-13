@@ -204,13 +204,10 @@ namespace platypus
             // Scissor isn't used for now so whole window is included
         }
 
-        void bind_vertex_buffers(
-            const CommandBuffer& commandBuffer,
-            const std::vector<const Buffer*>& vertexBuffers
-        )
-        {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
 
+        static void create_vao(const PipelineImpl* pPipelineImpl, const std::vector<const Buffer*>& vertexBuffers)
+        {
+            ContextImpl* pContextImpl = Context::get_instance()->getImpl();
             const OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderAttribLocations = pShaderProgram->getAttribLocations();
             const std::vector<VertexBufferLayout>& vbLayouts = pPipelineImpl->vertexBufferLayouts;
@@ -218,10 +215,10 @@ namespace platypus
             // Not sure if this stuff works here well...
             std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vbLayouts.begin();
 
-            // Bind the common VAO
-            // NOTE: This could probably be done immediately after context creation and never touch again,
-            // since we use the same VAO throughout the whole program
-            GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
+            uint32_t vaoID = 0;
+            std::set<uint32_t> bufferIDs;
+            GL_FUNC(glGenVertexArrays(1, &vaoID));
+            GL_FUNC(glBindVertexArray(vaoID));
 
             for (const Buffer* pBuffer : vertexBuffers)
             {
@@ -268,10 +265,17 @@ namespace platypus
                     if (shaderDataType != ShaderDataType::Mat4)
                     {
                         GL_FUNC(glEnableVertexAttribArray(location));
+                        VertexInputRate inputRate = vbLayoutIt->getInputRate();
                         GL_FUNC(glVertexAttribDivisor(
                             location,
-                            vbLayoutIt->getInputRate() == VertexInputRate::VERTEX_INPUT_RATE_INSTANCE ? 1 : 0
+                            inputRate == VertexInputRate::VERTEX_INPUT_RATE_INSTANCE ? 1 : 0
                         ));
+                        // NOTE: This works atm since currently allow a single buffer to
+                        // be used for per vertex or per instance but never both.
+                        // TODO: Figure out should that ever change and what then?
+                        if (inputRate == VertexInputRate::VERTEX_INPUT_RATE_INSTANCE)
+                            pContextImpl->complementaryVbos.insert(bufferID);
+
                         GL_FUNC(glVertexAttribPointer(
                             location,
                             get_shader_datatype_component_count(shaderDataType),
@@ -306,7 +310,46 @@ namespace platypus
                     }
                 }
                 vbLayoutIt++;
+                pBuffer->getImpl()->vaos.insert(vaoID);
+                pContextImpl->vaoBufferMapping[vaoID].insert(bufferID);
             }
+        }
+
+
+        static uint32_t get_common_vao(const std::vector<const Buffer*>& vertexBuffers)
+        {
+            std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_instance()->getImpl()->vaoBufferMapping;
+            // Must be one of these...
+            for (uint32_t vaoID : vertexBuffers[0]->getImpl()->vaos)
+            {
+                bool foundAll = true;
+                for (const Buffer* pBuffer : vertexBuffers)
+                {
+                    if (vaoBufferMapping[vaoID].find(pBuffer->getImpl()->id) == vaoBufferMapping[vaoID].end())
+                    {
+                        foundAll = false;
+                        break;
+                    }
+                }
+                if (foundAll)
+                    return vaoID;
+            }
+            return 0;
+        }
+
+
+        void bind_vertex_buffers(
+            const CommandBuffer& commandBuffer,
+            const std::vector<const Buffer*>& vertexBuffers
+        )
+        {
+            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+
+            uint32_t vaoID = get_common_vao(vertexBuffers);
+            if (vaoID == 0)
+                create_vao(pPipelineImpl, vertexBuffers);
+
+            GL_FUNC(glBindVertexArray(vaoID));
         }
 
 

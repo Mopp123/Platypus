@@ -40,6 +40,7 @@ namespace platypus
         GL_FUNC(glActiveTexture(GL_TEXTURE0));
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
         GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, 0));
+        GL_FUNC(glBindVertexArray(0));
 
         // Make sure this cmd buf is unable to touch any pipeline until calling bindPipeline() again
         _pImpl->pPipelineImpl = nullptr;

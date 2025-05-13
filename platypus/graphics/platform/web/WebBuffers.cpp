@@ -106,9 +106,6 @@ namespace platypus
             memcpy(_pData, pData, getTotalSize());
         }
 
-        // Need to bind the common VAO
-        GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
-
         // in gl terms its the glBufferData's "usage"
         GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(updateFrequency);
         uint32_t id = 0;
@@ -142,7 +139,29 @@ namespace platypus
 
         if (_pImpl)
         {
-            GL_FUNC(glDeleteBuffers(1, &_pImpl->id));
+            uint32_t vboID = _pImpl->id;
+            GL_FUNC(glDeleteBuffers(1, &vboID));
+            if ((_bufferUsageFlags & BUFFER_USAGE_VERTEX_BUFFER_BIT) == BUFFER_USAGE_VERTEX_BUFFER_BIT)
+            {
+                // Remove from context impl's vaos
+                // -> IF context impl's vao doesn't have any buffers associated with it anymore
+                //  -> destroy the actual vao
+                ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+                if (!pContextImpl)
+                {
+                    Debug::log("@Buffer::~Buffer Context impl was nullptr", Debug::MessageType::PLATYPUS_ERROR);
+                    PLATYPUS_ASSERT(false);
+                }
+                for (uint32_t vaoID : _pImpl->vaos)
+                {
+                    pContextImpl->vaoBufferMapping[vaoID].erase(vboID);
+                    if (vao_deletion_allowed(pContextImpl, vaoID))
+                    {
+                        GL_FUNC(glDeleteVertexArrays(1, &vaoID));
+                        pContextImpl->vaoBufferMapping.erase(vaoID);
+                    }
+                }
+            }
             delete _pImpl;
         }
     }
