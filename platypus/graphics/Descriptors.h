@@ -112,8 +112,8 @@ namespace platypus
 
     struct DescriptorSetComponent
     {
-        const Buffer* pBuffer = nullptr;
-        const Texture* pTexture = nullptr;
+        DescriptorType type = DescriptorType::DESCRIPTOR_TYPE_NONE;
+        const void* pData = nullptr;
     };
 
 
@@ -125,8 +125,7 @@ namespace platypus
     private:
         friend class DescriptorPool;
         DescriptorSetImpl* _pImpl = nullptr;
-        std::vector<const Buffer*> _buffers;
-        std::vector<const Texture*> _textures;
+        std::vector<DescriptorSetComponent> _components;
 
         const DescriptorSetLayout* _pLayout;
 
@@ -134,18 +133,7 @@ namespace platypus
         DescriptorSet() = default;
 
         DescriptorSet(
-            const std::vector<const Buffer*>& buffers,
-            const DescriptorSetLayout* pLayout
-        );
-
-        DescriptorSet(
-            const std::vector<const Texture*>& textures,
-            const DescriptorSetLayout* pLayout
-        );
-
-        DescriptorSet(
-            const std::vector<const Buffer*>& buffers,
-            const std::vector<const Texture*>& textures,
+            const std::vector<DescriptorSetComponent>& components,
             const DescriptorSetLayout* pLayout
         );
 
@@ -154,8 +142,7 @@ namespace platypus
 
         ~DescriptorSet();
 
-        inline const std::vector<const Buffer*>& getBuffers() const { return _buffers; }
-        inline const std::vector<const Texture*>& getTextures() const { return _textures; }
+        inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
         inline const DescriptorSetLayout* getLayout() const { return _pLayout; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
     };
@@ -172,6 +159,7 @@ namespace platypus
         ~DescriptorPool();
 
         // Buffer and/or Texture has to be provided for each binding in the layout!
+        /*
         DescriptorSet createDescriptorSet(
             const DescriptorSetLayout* pLayout,
             const std::vector<const Buffer*>& buffers
@@ -180,12 +168,13 @@ namespace platypus
             const DescriptorSetLayout* pLayout,
             const std::vector<const Texture*>& textures
         );
+        */
 
-        /*
+
         DescriptorSet createDescriptorSet(
             const DescriptorSetLayout* pLayout,
-            const std::vector<DescriptorSetComponent>& component
-        );*/
+            const std::vector<DescriptorSetComponent>& components
+        );
 
         void freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets);
     };

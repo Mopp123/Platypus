@@ -31,29 +31,24 @@ namespace platypus
     {
     };
 
-    DescriptorSet::DescriptorSet(const std::vector<const Buffer*>& buffers, const DescriptorSetLayout* pLayout) :
-        _buffers(buffers),
-        _pLayout(pLayout)
-    {
-    }
-
-    DescriptorSet::DescriptorSet(const std::vector<const Texture*>& textures, const DescriptorSetLayout* pLayout) :
-        _textures(textures),
+    DescriptorSet::DescriptorSet(
+        const std::vector<DescriptorSetComponent>& components,
+        const DescriptorSetLayout* pLayout
+    ) :
+        _components(components),
         _pLayout(pLayout)
     {
     }
 
     DescriptorSet::DescriptorSet(const DescriptorSet& other) :
-        _buffers(other._buffers),
-        _textures(other._textures),
+        _components(other._components),
         _pLayout(other._pLayout)
     {
     }
 
     DescriptorSet& DescriptorSet::operator=(DescriptorSet&& other)
     {
-        _buffers = other._buffers;
-        _textures = other._textures;
+        _components = other._components;
         return *this;
     }
 
@@ -75,23 +70,13 @@ namespace platypus
     {
     };
 
-    // Buffer and/or Texture has to be provided for each binding in the layout!
     DescriptorSet DescriptorPool::createDescriptorSet(
         const DescriptorSetLayout* pLayout,
-        const std::vector<const Buffer*>& buffers
+        const std::vector<DescriptorSetComponent>& components
     )
     {
         // NOTE: Not sure if works properly, not tested yet!
-        return { buffers, pLayout };
-    }
-
-    DescriptorSet DescriptorPool::createDescriptorSet(
-        const DescriptorSetLayout* pLayout,
-        const std::vector<const Texture*>& textures
-    )
-    {
-        // NOTE: Not sure if works properly, not tested yet!
-        return { textures, pLayout };
+        return { components, pLayout };
     }
 
     void DescriptorPool::freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets)

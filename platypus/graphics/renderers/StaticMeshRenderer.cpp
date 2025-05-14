@@ -388,7 +388,6 @@ namespace platypus
 
         const Texture* pDiffuseTexture = pMaterial->getDiffuseTexture();
         const Texture* pSpecularTexture = pMaterial->getSpecularTexture();
-        std::vector<const Texture*> textures = { pDiffuseTexture, pSpecularTexture };
 
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
@@ -396,7 +395,10 @@ namespace platypus
             _descriptorSets[identifier].push_back(
                 _descriptorPoolRef.createDescriptorSet(
                     &_materialDescriptorSetLayout,
-                    textures
+                    {
+                        { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
+                        { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
+                    }
                 )
             );
         }

@@ -500,36 +500,52 @@ namespace platypus
             for (const DescriptorSet& descriptorSet : descriptorSets)
             {
                 const DescriptorSetLayout* pLayout = descriptorSet.getLayout();
-                // TODO: Validate that this descriptor set is layout compliant
+                const std::vector<DescriptorSetComponent>& descriptorSetComponents = descriptorSet.getComponents();
 
-                const std::vector<const Buffer*>& buffers = descriptorSet.getBuffers();
-                const std::vector<const Texture*>& textures = descriptorSet.getTextures();
                 // Not to be confused with binding number.
                 // This just index of the layout's bindings vector
+                //
+                // NOTE: UPDATE! Switched to use DescriptorSetComponents in descriptor sets
+                // instead of buffers and textures -> each component goes one to one with the layout
+                //  -> not sure do we really need the "bufferBindingIndex" thing with dynamic uniform
+                //  buffers anymore...
                 int bufferBindingIndex = 0;
-                int textureBindingIndex = 0;
-
+                int bindingIndex = 0;
                 for (const DescriptorSetLayoutBinding& binding : pLayout->getBindings())
                 {
                     const std::vector<UniformInfo>& uniformInfo = binding.getUniformInfo();
 
-                    if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-                         binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                    DescriptorType bindingType = binding.getType();
+                    #ifdef PLATYPUS_DEBUG
+                        if (descriptorSetComponents[bindingIndex].type != bindingType)
+                        {
+                            Debug::log(
+                                "@bind_descriptor_sets "
+                                "Invalid descriptor component type: " + std::to_string(descriptorSetComponents[bindingIndex].type) + " "
+                                "for binding index: " + std::to_string(bindingIndex) + " "
+                                "binding type: " + std::to_string(bindingType),
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                        }
+                        if (!descriptorSetComponents[bindingIndex].pData)
+                        {
+                            Debug::log(
+                                "@bind_descriptor_sets "
+                                "Descriptor set component's data was nullptr!"
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                        }
+                    #endif
+
+                    if (bindingType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                         bindingType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                     {
                         // TODO: some boundary checking..
-                        const Buffer* pBuf = buffers[bufferBindingIndex];
+                        const Buffer* pBuf = (const Buffer*)descriptorSetComponents[bindingIndex].pData;
                         const PE_byte* pBufData = (const PE_byte*)pBuf->getData();
-                        #ifdef PLATYPUS_DEBUG
-                            if (!pBuf)
-                            {
-                                Debug::log(
-                                    "@bind_descriptor_sets "
-                                    "Uniform buffer's data was nullptr!",
-                                    Debug::MessageType::PLATYPUS_ERROR
-                                );
-                                PLATYPUS_ASSERT(false);
-                            }
-                        #endif
+
                         size_t addDynamicOffset = 0;
                         if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                         {
@@ -647,25 +663,17 @@ namespace platypus
                         // TODO: some boundary checking..
                         for (const UniformInfo& layoutInfo : uniformInfo)
                         {
-                            if (!textures[textureBindingIndex])
-                            {
-                                Debug::log(
-                                    "@bind_descriptor_sets "
-                                    "Texture at binding index: " + std::to_string(textureBindingIndex) + " was nullptr",
-                                    Debug::MessageType::PLATYPUS_ERROR
-                                );
-                                PLATYPUS_ASSERT(false);
-                            }
                             GL_FUNC(glUniform1i(shaderUniformLocations[layoutInfo.locationIndex], binding.getBinding()));
                             // well following is quite fucking dumb.. dunno how could do this better
                             GL_FUNC(glActiveTexture(binding_to_gl_texture_unit(binding.getBinding())));
+                            const Texture* pTexture = (const Texture*)descriptorSetComponents[bindingIndex].pData;
                             GL_FUNC(glBindTexture(
                                 GL_TEXTURE_2D,
-                                textures[textureBindingIndex]->getImpl()->id
+                                pTexture->getImpl()->id
                             ));
-                            ++textureBindingIndex;
                         }
                     }
+                    ++bindingIndex;
                 }
             }
         }

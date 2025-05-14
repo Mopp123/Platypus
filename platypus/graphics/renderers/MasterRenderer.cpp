@@ -50,7 +50,7 @@ namespace platypus
             _dirLightDescriptorSets.push_back(
                 _descriptorPool.createDescriptorSet(
                     &_dirLightDescriptorSetLayout,
-                    { pDirLightUniformBuffer }
+                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pDirLightUniformBuffer } }
                 )
             );
         }

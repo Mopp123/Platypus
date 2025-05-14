@@ -574,7 +574,7 @@ namespace platypus
             _textureDescriptorSets[textureID].push_back(
                 _descriptorPoolRef.createDescriptorSet(
                     &_textureDescriptorSetLayout,
-                    { pTexture }
+                    { { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pTexture } }
                 )
             );
         }
