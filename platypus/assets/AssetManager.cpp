@@ -10,19 +10,25 @@ namespace platypus
     AssetManager::AssetManager(CommandPool& commandPool) :
         _commandPoolRef(commandPool)
     {
-        // Create white default texture
+        // Create black and white default textures
         PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
         Image* pWhiteImage = createImage(whitePixels, 1, 1, 4);
         _persistentAssets[pWhiteImage->getID()] = pWhiteImage;
 
-        TextureSampler whiteTextureSampler(
+        PE_ubyte blackPixels[4] = { 0, 0, 0, 255 };
+        Image* pBlackImage = createImage(blackPixels, 1, 1, 4);
+        _persistentAssets[pBlackImage->getID()] = pBlackImage;
+
+        TextureSampler defaultTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             1,
             0
         );
-        _pWhiteTexture = createTexture(pWhiteImage->getID(), whiteTextureSampler);
+        _pWhiteTexture = createTexture(pWhiteImage->getID(), defaultTextureSampler);
+        _pBlackTexture = createTexture(pBlackImage->getID(), defaultTextureSampler);
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
+        _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
     }
 
     AssetManager::~AssetManager()
@@ -103,7 +109,6 @@ namespace platypus
                 "Failed to load image from: " + filepath,
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
             return nullptr;
         }
         _assets[pImage->getID()] = pImage;
@@ -134,9 +139,92 @@ namespace platypus
             sampler,
             textureAtlasRows
         );
-        Debug::log("___TEST___CREATED TEXTURE WITH: " + std::to_string(textureAtlasRows) + " ROWS");
         _assets[pTexture->getID()] = pTexture;
         return pTexture;
+    }
+
+    Texture* AssetManager::loadTexture(
+        const std::string& filepath,
+        const TextureSampler& sampler,
+        uint32_t textureAtlasRows
+    )
+    {
+        Image* pImage = loadImage(filepath);
+        if (!pImage)
+        {
+            Debug::log(
+                "@AssetManager::loadTexture "
+                "Failed to load texture",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return nullptr;
+        }
+        return createTexture(pImage->getID(), sampler, textureAtlasRows);
+    }
+
+    Material* AssetManager::createMaterial(
+        ID_t diffuseTextureID,
+        ID_t specularTextureID,
+        float specularStrength,
+        float shininess,
+        bool shadeless
+    )
+    {
+
+        std::unordered_map<ID_t, Asset*>::const_iterator diffuseTextureIt = _assets.find(diffuseTextureID);
+        std::unordered_map<ID_t, Asset*>::const_iterator specularTextureIt = _assets.find(specularTextureID);
+
+        Texture* pDiffuseTexture = nullptr;
+        Texture* pSpecularTexture = nullptr;
+        if (diffuseTextureIt != _assets.end())
+        {
+            AssetType foundAssetType = _assets[diffuseTextureID]->getType();
+            if (foundAssetType != AssetType::ASSET_TYPE_TEXTURE)
+            {
+                Debug::log(
+                    "@AssetManager::createMaterial "
+                    "Invalid asset type: " + asset_type_to_string(foundAssetType) + " " +
+                    "for diffuse texture",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            pDiffuseTexture = (Texture*)_assets[diffuseTextureID];
+        }
+        else
+        {
+            pDiffuseTexture = _pWhiteTexture;
+        }
+
+        if (specularTextureIt != _assets.end())
+        {
+            AssetType foundAssetType = _assets[specularTextureID]->getType();
+            if (foundAssetType != AssetType::ASSET_TYPE_TEXTURE)
+            {
+                Debug::log(
+                    "@AssetManager::createMaterial "
+                    "Invalid asset type: " + asset_type_to_string(foundAssetType) + " " +
+                    "for specular texture",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            pSpecularTexture = (Texture*)_assets[specularTextureID];
+        }
+        else
+        {
+            pSpecularTexture = _pBlackTexture;
+        }
+
+        Material* pMaterial = new Material(
+            pDiffuseTexture->getID(),
+            pSpecularTexture->getID(),
+            specularStrength,
+            shininess,
+            shadeless
+        );
+        _assets[pMaterial->getID()] = pMaterial;
+        return pMaterial;
     }
 
     Mesh* AssetManager::createMesh(
@@ -239,7 +327,17 @@ namespace platypus
                 "with id: " + std::to_string(assetID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (it->second->getType() != type)
+        {
+            Debug::log(
+                "@AssetManager::getAsset "
+                "Requested asset of type " + asset_type_to_string(type) + " "
+                "Found asset with id: " + std::to_string(assetID) + " " +
+                "but the asset's type was " + asset_type_to_string(it->second->getType()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
             return nullptr;
         }
         return it->second;

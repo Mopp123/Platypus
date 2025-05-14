@@ -27,7 +27,7 @@ namespace platypus
         ),
         _vertexShader("TestVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
         _fragmentShader("TestFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
-        _textureDescriptorSetLayout(
+        _materialDescriptorSetLayout(
             {
                 {
                     0,
@@ -35,6 +35,13 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
                     { { 4 } }
+                },
+                {
+                    1,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 5 } }
                 }
             }
         )
@@ -64,7 +71,7 @@ namespace platypus
             delete b.pInstancedBuffer;
 
         freeBatches();
-        _textureDescriptorSetLayout.destroy();
+        _materialDescriptorSetLayout.destroy();
     }
 
     void StaticMeshRenderer::createPipeline(
@@ -96,7 +103,7 @@ namespace platypus
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
         std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
             &dirLightDescriptorSetLayout,
-            &_textureDescriptorSetLayout
+            &_materialDescriptorSetLayout
         };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
@@ -149,8 +156,8 @@ namespace platypus
         );
         const Matrix4f transformationMatrix = pTransform->globalMatrix;
 
-        ID_t textureID = pRenderable->textureID;
-        ID_t identifier = ID::hash(pRenderable->meshID, textureID);
+        ID_t materialID = pRenderable->materialID;
+        ID_t identifier = ID::hash(pRenderable->meshID, materialID);
         int foundBatchIndex = findExistingBatchIndex(identifier);
         if (foundBatchIndex != -1)
         {
@@ -183,7 +190,7 @@ namespace platypus
         // NOTE: Works only because using textures as identifiers and
         // only texture descriptor sets...
         if (!hasDescriptorSets(identifier))
-            createDescriptorSets(identifier, textureID);
+            createDescriptorSets(identifier, materialID);
     }
 
     const CommandBuffer& StaticMeshRenderer::recordCommandBuffer(
@@ -359,33 +366,37 @@ namespace platypus
         return _descriptorSets.find(batchIdentifier) != _descriptorSets.end();
     }
 
-    void StaticMeshRenderer::createDescriptorSets(ID_t identifier, ID_t textureID)
+    void StaticMeshRenderer::createDescriptorSets(ID_t identifier, ID_t materialID)
     {
         Application* pApp = Application::get_instance();
         AssetManager& assetManager = pApp->getAssetManager();
-        const Texture* pTexture = (const Texture*)assetManager.getAsset(
-            textureID,
-            AssetType::ASSET_TYPE_TEXTURE
+        const Material* pMaterial = (const Material*)assetManager.getAsset(
+            materialID,
+            AssetType::ASSET_TYPE_MATERIAL
         );
         #ifdef PLATYPUS_DEBUG
-            if (!pTexture)
+            if (!pMaterial)
             {
                 Debug::log(
                     "@StaticMeshRenderer::createDescriptorSets "
-                    "No texture found with ID: " + std::to_string(textureID),
+                    "No material found with ID: " + std::to_string(materialID),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
             }
         #endif
 
+        const Texture* pDiffuseTexture = pMaterial->getDiffuseTexture();
+        const Texture* pSpecularTexture = pMaterial->getSpecularTexture();
+        std::vector<const Texture*> textures = { pDiffuseTexture, pSpecularTexture };
+
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
         {
             _descriptorSets[identifier].push_back(
                 _descriptorPoolRef.createDescriptorSet(
-                    &_textureDescriptorSetLayout,
-                    { pTexture }
+                    &_materialDescriptorSetLayout,
+                    textures
                 )
             );
         }

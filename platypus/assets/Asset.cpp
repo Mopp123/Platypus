@@ -10,6 +10,7 @@ namespace platypus
             case AssetType::ASSET_TYPE_MODEL: return "ASSET_TYPE_MODEL";
             case AssetType::ASSET_TYPE_IMAGE: return "ASSET_TYPE_IMAGE";
             case AssetType::ASSET_TYPE_TEXTURE: return "ASSET_TYPE_TEXTURE";
+            case AssetType::ASSET_TYPE_MATERIAL: return "ASSET_TYPE_MATERIAL";
             case AssetType::ASSET_TYPE_FONT: return "ASSET_TYPE_FONT";
             default: return "ASSET_TYPE_NONE";
         }

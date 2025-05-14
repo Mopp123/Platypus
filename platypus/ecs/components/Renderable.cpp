@@ -9,10 +9,11 @@ namespace platypus
     StaticMeshRenderable* create_static_mesh_renderable(
         entityID_t target,
         ID_t meshAssetID,
-        ID_t textureAssetID
+        ID_t materialAssetID
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        Application* pApp = Application::get_instance();
+        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
         if (!pScene->isValidEntity(target, "create_static_mesh_renderable"))
         {
             PLATYPUS_ASSERT(false);
@@ -33,7 +34,7 @@ namespace platypus
         pScene->addToComponentMask(target, componentType);
         StaticMeshRenderable* pRenderable = (StaticMeshRenderable*)pComponent;
         pRenderable->meshID = meshAssetID;
-        pRenderable->textureID = textureAssetID;
+        pRenderable->materialID = materialAssetID;
 
         return pRenderable;
     }

@@ -17,7 +17,7 @@ namespace platypus
         Shader _vertexShader;
         Shader _fragmentShader;
 
-        DescriptorSetLayout _textureDescriptorSetLayout;
+        DescriptorSetLayout _materialDescriptorSetLayout;
 
         struct BatchData
         {
@@ -87,7 +87,7 @@ namespace platypus
         );
 
         bool hasDescriptorSets(ID_t batchIdentifier) const;
-        void createDescriptorSets(ID_t identifier, ID_t textureID);
+        void createDescriptorSets(ID_t identifier, ID_t materialID);
         void freeBatchDescriptorSets(ID_t identifier);
     };
 }

@@ -13,6 +13,7 @@ namespace platypus
         ASSET_TYPE_MODEL,
         ASSET_TYPE_IMAGE,
         ASSET_TYPE_TEXTURE,
+        ASSET_TYPE_MATERIAL,
         ASSET_TYPE_FONT
     };
 

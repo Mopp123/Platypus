@@ -113,6 +113,18 @@ namespace platypus
         _pImpl = new DescriptorSetImpl;
     }
 
+    DescriptorSet::DescriptorSet(
+        const std::vector<const Buffer*>& buffers,
+        const std::vector<const Texture*>& textures,
+        const DescriptorSetLayout* pLayout
+    ) :
+        _buffers(buffers),
+        _textures(textures),
+        _pLayout(pLayout)
+    {
+        _pImpl = new DescriptorSetImpl;
+    }
+
     DescriptorSet::DescriptorSet(const DescriptorSet& other) :
         _buffers(other._buffers),
         _textures(other._textures),
@@ -135,6 +147,38 @@ namespace platypus
     {
         if (_pImpl)
             delete _pImpl;
+    }
+
+
+    static VkDescriptorSet alloc_descriptor_set(
+        VkDescriptorPool vkDescriptorPool,
+        const DescriptorSetLayout* pLayout
+    )
+    {
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = vkDescriptorPool;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &pLayout->getImpl()->handle;
+
+        VkDescriptorSet descriptorSetHandle;
+        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkResult allocResult = vkAllocateDescriptorSets(
+            device,
+            &allocInfo,
+            &descriptorSetHandle
+        );
+        if (allocResult != VK_SUCCESS)
+        {
+            const std::string resultStr(string_VkResult(allocResult));
+            Debug::log(
+                "@alloc_descriptor_set "
+                "Failed to allocate descriptor set! VkResult: " + resultStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return descriptorSetHandle;
     }
 
 
@@ -352,6 +396,15 @@ namespace platypus
         createdDescriptorSet._pImpl->handle = descriptorSetHandle;
         return createdDescriptorSet;
     }
+
+    /*
+    DescriptorSet DescriptorPool::createDescriptorSet(
+        const DescriptorSetLayout* pLayout,
+        const std::vector<DescriptorSetComponent>& component
+    )
+    {
+
+    }*/
 
     void DescriptorPool::freeDescriptorSets(
         const std::vector<DescriptorSet>& descriptorSets

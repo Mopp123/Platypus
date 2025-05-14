@@ -15,6 +15,17 @@ void MeshTestScene::init()
 {
     initBase();
 
+    _camController.init();
+    _camController.set(
+        0, // pitch
+        0.0f,    // yaw
+        0.0025f, // rot speed
+        40.0f,   // zoom
+        80.0f,   // max zoom
+        1.25f    // zoom speed
+    );
+    _camController.setOffsetPos({ 0, 0, 0});
+
     AssetManager& assetManager = Application::get_instance()->getAssetManager();
 
     TextureSampler textureSampler(
@@ -24,11 +35,16 @@ void MeshTestScene::init()
         0
     );
 
-    Image* pImage = assetManager.loadImage("assets/test.png");
-    Texture* pTexture = assetManager.createTexture(
-        pImage->getID(),
+    Texture* pTexture = assetManager.loadTexture(
+        "assets/textures/DiffuseTest.png",
         textureSampler
     );
+
+    Material* pMaterial = assetManager.createMaterial(
+        pTexture->getID(),
+        assetManager.getWhiteTexture()->getID()
+    );
+
     Model* pModel = assetManager.loadModel("assets/models/MultiTest2.glb");
 
     for (Mesh* pMesh : pModel->getMeshes())
@@ -44,12 +60,19 @@ void MeshTestScene::init()
         StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
             entity,
             pMesh->getID(),
-            pTexture->getID()
+            pMaterial->getID()
         );
     }
 }
 
+
 void MeshTestScene::update()
 {
     updateBase();
+
+    Transform* pCamTransform = (Transform*)getComponent(
+        _cameraEntity,
+        ComponentType::COMPONENT_TYPE_TRANSFORM
+    );
+    _camController.update(pCamTransform);
 }

@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "Model.h"
 #include "Texture.h"
+#include "Material.h"
 #include "Font.h"
 #include "platypus/graphics/CommandBuffer.h"
 #include <unordered_map>
@@ -21,6 +22,7 @@ namespace platypus
         std::unordered_map<ID_t, Asset*> _persistentAssets;
 
         Texture* _pWhiteTexture = nullptr;
+        Texture* _pBlackTexture = nullptr;
 
     public:
         AssetManager(CommandPool& commandPool);
@@ -34,6 +36,18 @@ namespace platypus
             const TextureSampler& sampler,
             uint32_t textureAtlasRows = 1
         );
+        Texture* loadTexture(
+            const std::string& filepath,
+            const TextureSampler& sampler,
+            uint32_t textureAtlasRows = 1
+        );
+        Material* createMaterial(
+            ID_t diffuseTextureID,
+            ID_t specularTextureID,
+            float specularStrength = 1.0f,
+            float shininess = 1.0f,
+            bool shadeless = false
+        );
         Mesh* createMesh(
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
@@ -44,5 +58,6 @@ namespace platypus
         Asset* getAsset(ID_t assetID, AssetType type) const;
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
+        inline Texture* getBlackTexture() const { return _pBlackTexture; }
     };
 }

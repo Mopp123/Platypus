@@ -11,7 +11,7 @@ namespace platypus
     struct StaticMeshRenderable
     {
         ID_t meshID = NULL_ID;
-        ID_t textureID = NULL_ID;
+        ID_t materialID = NULL_ID;
     };
 
     // NOTE: When adding strings, make sure to take into accout
@@ -32,7 +32,7 @@ namespace platypus
     StaticMeshRenderable* create_static_mesh_renderable(
         entityID_t target,
         ID_t meshAssetID,
-        ID_t textureAssetID
+        ID_t materialAssetID
     );
 
     GUIRenderable* create_gui_renderable(

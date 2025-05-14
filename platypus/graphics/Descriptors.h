@@ -110,6 +110,13 @@ namespace platypus
     };
 
 
+    struct DescriptorSetComponent
+    {
+        const Buffer* pBuffer = nullptr;
+        const Texture* pTexture = nullptr;
+    };
+
+
     class DescriptorPool;
 
     struct DescriptorSetImpl;
@@ -126,24 +133,24 @@ namespace platypus
     public:
         DescriptorSet() = default;
 
-        DescriptorSet(const std::vector<const Buffer*>& buffers, const DescriptorSetLayout* pLayout);
+        DescriptorSet(
+            const std::vector<const Buffer*>& buffers,
+            const DescriptorSetLayout* pLayout
+        );
 
-        DescriptorSet(const std::vector<const Texture*>& textures, const DescriptorSetLayout* pLayout);
+        DescriptorSet(
+            const std::vector<const Texture*>& textures,
+            const DescriptorSetLayout* pLayout
+        );
+
+        DescriptorSet(
+            const std::vector<const Buffer*>& buffers,
+            const std::vector<const Texture*>& textures,
+            const DescriptorSetLayout* pLayout
+        );
 
         DescriptorSet(const DescriptorSet& other);
         DescriptorSet& operator=(DescriptorSet&& other);
-
-        /*
-        DescriptorSet(
-            DescriptorSetLayout layout,
-            std::vector<const Texture*> pTextures,
-            std::vector<const Buffer*> pBuffers
-        ) :
-            _layout(layout),
-            _pBuffers(pBuffers),
-            _pTextures(pTextures)
-        {}
-        */
 
         ~DescriptorSet();
 
@@ -173,6 +180,13 @@ namespace platypus
             const DescriptorSetLayout* pLayout,
             const std::vector<const Texture*>& textures
         );
+
+        /*
+        DescriptorSet createDescriptorSet(
+            const DescriptorSetLayout* pLayout,
+            const std::vector<DescriptorSetComponent>& component
+        );*/
+
         void freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets);
     };
 }
