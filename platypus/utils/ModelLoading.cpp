@@ -31,8 +31,9 @@
 #define GLTF_ATTRIB_LOCATION_POSITION   0
 #define GLTF_ATTRIB_LOCATION_NORMAL     1
 #define GLTF_ATTRIB_LOCATION_TEX_COORD0 2
-#define GLTF_ATTRIB_LOCATION_WEIGHTS0   3
-#define GLTF_ATTRIB_LOCATION_JOINTS0    4
+#define GLTF_ATTRIB_LOCATION_TANGENT    3
+#define GLTF_ATTRIB_LOCATION_WEIGHTS0   4
+#define GLTF_ATTRIB_LOCATION_JOINTS0    5
 
 
 namespace platypus
@@ -259,6 +260,7 @@ namespace platypus
                 if (attrib.first == "POSITION")     attribLocation = GLTF_ATTRIB_LOCATION_POSITION;
                 if (attrib.first == "NORMAL")       attribLocation = GLTF_ATTRIB_LOCATION_NORMAL;
                 if (attrib.first == "TEXCOORD_0")   attribLocation = GLTF_ATTRIB_LOCATION_TEX_COORD0;
+                if (attrib.first == "TANGENT")      attribLocation = GLTF_ATTRIB_LOCATION_TANGENT;
 
                 if (attrib.first == "WEIGHTS_0")    attribLocation = GLTF_ATTRIB_LOCATION_WEIGHTS0;
                 if (attrib.first == "JOINTS_0")     attribLocation = GLTF_ATTRIB_LOCATION_JOINTS0;

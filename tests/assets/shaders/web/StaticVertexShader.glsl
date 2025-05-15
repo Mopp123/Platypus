@@ -20,15 +20,15 @@ uniform Camera camera;
 
 varying vec3 var_normal;
 varying vec2 var_texCoord;
-
+varying vec3 var_fragPos;
 varying vec3 var_cameraPos;
 
 void main() {
     vec4 translatedPos = transformationMatrix * vec4(position, 1.0);
     gl_Position = constants.projectionMatrix * camera.viewMatrix * translatedPos;
-    vec4 translatedNormal = transformationMatrix * vec4(normal, 0.0);
-    var_normal = translatedNormal.xyz;
+    vec4 rotatedNormal = transformationMatrix * vec4(normal, 0.0);
+    var_normal = rotatedNormal.xyz;
     var_texCoord = texCoord;
-
+    var_fragPos = translatedPos.xyz;
     var_cameraPos = camera.position.xyz;
 }
