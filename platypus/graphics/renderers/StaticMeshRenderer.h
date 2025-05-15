@@ -14,10 +14,15 @@ namespace platypus
     class StaticMeshRenderer : public Renderer
     {
     private:
+        Pipeline _normalMappingPipeline;
+
         Shader _vertexShader;
         Shader _fragmentShader;
+        Shader _normalMappingVertexShader;
+        Shader _normalMappingFragmentShader;
 
         DescriptorSetLayout _materialDescriptorSetLayout;
+        DescriptorSetLayout _materialDescriptorSetLayoutHD;
 
         struct BatchData
         {
@@ -32,6 +37,7 @@ namespace platypus
             //  w = don't know yet...
             std::vector<Buffer*> materialUniformBuffers;
             std::vector<DescriptorSet> materialDescriptorSets;
+            bool normalMapping = false;
             size_t count = 0;
         };
 
@@ -58,6 +64,8 @@ namespace platypus
             const DescriptorSetLayout& cameraDescriptorSetLayout,
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
+
+        virtual void destroyPipeline() override;
 
         virtual void freeBatches();
         virtual void freeDescriptorSets();

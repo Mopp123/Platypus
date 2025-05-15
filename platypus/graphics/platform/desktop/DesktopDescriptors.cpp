@@ -96,6 +96,7 @@ namespace platypus
             _pImpl->handle,
             nullptr
         );
+        _pImpl->handle = VK_NULL_HANDLE;
     }
 
 

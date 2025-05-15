@@ -126,10 +126,10 @@ namespace platypus
 
     void MasterRenderer::cleanRenderers()
     {
+        Context::get_instance()->waitForOperations();
         for (auto& it : _renderers)
             it.second->freeBatches();
 
-        Context::get_instance()->waitForOperations();
         freeDescriptorSets();
     }
 

@@ -2,7 +2,7 @@
 #include "platypus/ui/LayoutUI.h"
 #include "platypus/ui/Text.h"
 #include "platypus/ui/Button.h"
-#include "TestScene.h"
+#include "MeshTestScene.h"
 
 
 using namespace platypus;
@@ -44,7 +44,7 @@ public:
     {
         if (action != InputAction::RELEASE)
         {
-            Application::get_instance()->getSceneManager().assignNextScene(new TestScene);
+            Application::get_instance()->getSceneManager().assignNextScene(new MeshTestScene);
             Debug::log("___TEST___ON CLICK: " + std::to_string(index));
         }
     }

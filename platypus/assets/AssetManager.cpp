@@ -165,6 +165,7 @@ namespace platypus
     Material* AssetManager::createMaterial(
         ID_t diffuseTextureID,
         ID_t specularTextureID,
+        ID_t normalTextureID,
         float specularStrength,
         float shininess,
         bool shadeless
@@ -219,6 +220,7 @@ namespace platypus
         Material* pMaterial = new Material(
             pDiffuseTexture->getID(),
             pSpecularTexture->getID(),
+            normalTextureID,
             specularStrength,
             shininess,
             shadeless

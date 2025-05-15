@@ -1,4 +1,5 @@
 #include "MeshTestScene.h"
+#include "UITestScene.h"
 
 using namespace platypus;
 
@@ -80,16 +81,22 @@ void MeshTestScene::init()
         "assets/textures/FloorSpecular.png",
         textureSampler
     );
+    Texture* pFloorNormalTexture = assetManager.loadTexture(
+        "assets/textures/FloorNormal.png",
+        textureSampler
+    );
 
     Material* pMaterial = assetManager.createMaterial(
         pDiffuseTexture->getID(),
         assetManager.getWhiteTexture()->getID(),
+        NULL_ID,
         0.8f,
         16.0f
     );
     Material* pFloorMaterial = assetManager.createMaterial(
         pFloorTexture->getID(),
         pFloorSpecularTexture->getID(),
+        pFloorNormalTexture->getID(),
         0.8f,
         64.0f
     );
@@ -148,4 +155,10 @@ void MeshTestScene::update()
         ComponentType::COMPONENT_TYPE_TRANSFORM
     );
     _camController.update(pCamTransform);
+
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+    if(inputManager.isKeyDown(KeyName::KEY_0))
+    {
+        Application::get_instance()->getSceneManager().assignNextScene(new UITestScene);
+    }
 }

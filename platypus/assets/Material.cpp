@@ -8,6 +8,7 @@ namespace platypus
     Material::Material(
         ID_t diffuseTextureID,
         ID_t specularTextureID,
+        ID_t normalTextureID,
         float specularStrength,
         float shininess,
         bool shadeless
@@ -15,6 +16,7 @@ namespace platypus
         Asset(AssetType::ASSET_TYPE_MATERIAL),
         _diffuseTextureID(diffuseTextureID),
         _specularTextureID(specularTextureID),
+        _normalTextureID(normalTextureID),
         _specularStrength(specularStrength),
         _shininess(shininess),
         _shadeless(shadeless)
@@ -39,6 +41,15 @@ namespace platypus
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         return (Texture*)assetManager.getAsset(
             _specularTextureID,
+            AssetType::ASSET_TYPE_TEXTURE
+        );
+    }
+
+    Texture* Material::getNormalTexture() const
+    {
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        return (Texture*)assetManager.getAsset(
+            _normalTextureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
     }

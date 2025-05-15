@@ -1,5 +1,6 @@
 #include "StaticMeshRenderer.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
 #include "platypus/ecs/components/Transform.h"
@@ -27,6 +28,8 @@ namespace platypus
         ),
         _vertexShader("StaticVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
         _fragmentShader("StaticFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _normalMappingVertexShader("StaticHDVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
+        _normalMappingFragmentShader("StaticHDFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _materialDescriptorSetLayout(
             {
                 {
@@ -49,6 +52,38 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
                     { { 7, ShaderDataType::Float4 } }
+                }
+            }
+        ),
+        _materialDescriptorSetLayoutHD(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 5 } }
+                },
+                {
+                    1,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 6 } }
+                },
+                {
+                    2,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 7 } }
+                },
+                {
+                    3,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 8, ShaderDataType::Float4 } }
                 }
             }
         )
@@ -79,6 +114,7 @@ namespace platypus
 
         freeBatches();
         _materialDescriptorSetLayout.destroy();
+        _materialDescriptorSetLayoutHD.destroy();
     }
 
     void StaticMeshRenderer::createPipeline(
@@ -98,7 +134,7 @@ namespace platypus
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
         };
-        VertexBufferLayout instancedVbLayout = {
+        VertexBufferLayout vbLayoutInstanced = {
             {
                 { 3, ShaderDataType::Float4 },
                 { 4, ShaderDataType::Float4 },
@@ -108,7 +144,6 @@ namespace platypus
             VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
             1
         };
-        std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
         std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
             &cameraDescriptorSetLayout,
             &dirLightDescriptorSetLayout,
@@ -118,7 +153,7 @@ namespace platypus
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
         _pipeline.create(
             renderPass,
-            vertexBufferLayouts,
+            { vbLayout, vbLayoutInstanced },
             descriptorSetLayouts,
             _vertexShader,
             _fragmentShader,
@@ -133,6 +168,55 @@ namespace platypus
             sizeof(Matrix4f), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
+
+        VertexBufferLayout vbLayoutHD = {
+            {
+                { 0, ShaderDataType::Float3 },
+                { 1, ShaderDataType::Float3 },
+                { 2, ShaderDataType::Float2 },
+                { 3, ShaderDataType::Float4 }
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
+        VertexBufferLayout vbLayoutInstancedHD = {
+            {
+                { 4, ShaderDataType::Float4 },
+                { 5, ShaderDataType::Float4 },
+                { 6, ShaderDataType::Float4 },
+                { 7, ShaderDataType::Float4 }
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+            1
+        };
+        std::vector<const DescriptorSetLayout*> descriptorSetLayoutsHD = {
+            &cameraDescriptorSetLayout,
+            &dirLightDescriptorSetLayout,
+            &_materialDescriptorSetLayoutHD
+        };
+        _normalMappingPipeline.create(
+            renderPass,
+            { vbLayoutHD, vbLayoutInstancedHD },
+            descriptorSetLayoutsHD,
+            _normalMappingVertexShader,
+            _normalMappingFragmentShader,
+            viewportWidth,
+            viewportHeight,
+            viewportScissor,
+            CullMode::CULL_MODE_NONE,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
+            false, // enable color blending
+            sizeof(Matrix4f), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
+        );
+    }
+
+    void StaticMeshRenderer::destroyPipeline()
+    {
+        _pipeline.destroy();
+        _normalMappingPipeline.destroy();
     }
 
     void StaticMeshRenderer::freeBatches()
@@ -141,6 +225,7 @@ namespace platypus
         {
             batchData.identifier = NULL_ID;
             batchData.count = 0;
+            batchData.normalMapping = false;
             freeBatchDescriptorSets(batchData);
         }
         _identifierBatchMapping.clear();
@@ -258,19 +343,6 @@ namespace platypus
         currentCommandBuffer.begin(renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-        render::bind_pipeline(currentCommandBuffer, _pipeline);
-
-        Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };
-        render::push_constants(
-            currentCommandBuffer,
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(Matrix4f),
-            pushConstants,
-            {
-                { 0, ShaderDataType::Mat4 }
-            }
-        );
 
         for (BatchData& batchData : _batches)
         {
@@ -292,6 +364,23 @@ namespace platypus
                 batchData.pInstancedBuffer->accessData(),
                 batchData.count * sizeof(Matrix4f),
                 0
+            );
+
+            render::bind_pipeline(
+                currentCommandBuffer,
+                batchData.normalMapping ? _normalMappingPipeline : _pipeline
+            );
+
+            Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };
+            render::push_constants(
+                currentCommandBuffer,
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                0,
+                sizeof(Matrix4f),
+                pushConstants,
+                {
+                    { 0, ShaderDataType::Mat4 }
+                }
             );
 
             render::bind_vertex_buffers(
@@ -417,15 +506,26 @@ namespace platypus
             }
         #endif
 
+        DescriptorSetLayout* pUseDescriptorSetLayout = &_materialDescriptorSetLayout;
+
         const Texture* pDiffuseTexture = pMaterial->getDiffuseTexture();
         const Texture* pSpecularTexture = pMaterial->getSpecularTexture();
-
+        const Texture* pNormalTexture = nullptr;
         Vector4f materialProperties(
             pMaterial->getSpecularStrength(),
             pMaterial->getShininess(),
             pMaterial->isShadeless(),
             0
         );
+
+        if (pMaterial->hasNormalMap())
+        {
+            pUseDescriptorSetLayout = &_materialDescriptorSetLayoutHD;
+            batchData.normalMapping = true;
+            pNormalTexture = pMaterial->getNormalTexture();
+            Debug::log("___TEST___FOUND NORMAL MAP (create descriptors)");
+        }
+
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (size_t i = 0; i < maxFramesInFlight; ++i)
         {
@@ -440,16 +540,34 @@ namespace platypus
             );
             batchData.materialUniformBuffers.push_back(pMaterialUniformBuffer);
 
-            batchData.materialDescriptorSets.push_back(
-                _descriptorPoolRef.createDescriptorSet(
-                    &_materialDescriptorSetLayout,
-                    {
-                        { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
-                        { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
-                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pMaterialUniformBuffer }
-                    }
-                )
-            );
+            std::vector<DescriptorSetComponent> descriptorSetComponents;
+            if (batchData.normalMapping)
+            {
+                batchData.materialDescriptorSets.push_back(
+                    _descriptorPoolRef.createDescriptorSet(
+                        pUseDescriptorSetLayout,
+                        {
+                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
+                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
+                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pNormalTexture },
+                            { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pMaterialUniformBuffer }
+                        }
+                    )
+                );
+            }
+            else
+            {
+                batchData.materialDescriptorSets.push_back(
+                    _descriptorPoolRef.createDescriptorSet(
+                        pUseDescriptorSetLayout,
+                        {
+                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
+                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
+                            { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pMaterialUniformBuffer }
+                        }
+                    )
+                );
+            }
         }
 
         Debug::log(

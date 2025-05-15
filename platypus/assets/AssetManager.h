@@ -44,6 +44,7 @@ namespace platypus
         Material* createMaterial(
             ID_t diffuseTextureID,
             ID_t specularTextureID,
+            ID_t normalTextureID,
             float specularStrength = 1.0f,
             float shininess = 1.0f,
             bool shadeless = false
