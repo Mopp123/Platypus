@@ -7,6 +7,7 @@
 class MeshTestScene : public BaseScene
 {
 private:
+    platypus::ui::LayoutUI _ui;
     platypus::CameraController _camController;
 
 public:

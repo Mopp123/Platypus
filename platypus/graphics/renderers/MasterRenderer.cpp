@@ -16,6 +16,20 @@ namespace platypus
     ) :
         _swapchain(window),
         _descriptorPool(_swapchain),
+        _cameraDescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                    {
+                        { 1, ShaderDataType::Float4 },
+                        { 2, ShaderDataType::Mat4 }
+                    }
+                }
+            }
+        ),
         _dirLightDescriptorSetLayout(
             {
                 {
@@ -24,16 +38,37 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
                     {
-                        { 2, ShaderDataType::Float4 },
-                        { 3, ShaderDataType::Float4 }
+                        { 3, ShaderDataType::Float4 },
+                        { 4, ShaderDataType::Float4 }
                     }
                 }
             }
         )
     {
         // Create common uniform buffers and descriptor sets
-        DirLightUniformBufferData dirLightUniformBufferData;
+        CameraUniformBufferData cameraUniformBufferData;
+        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
+        {
+            Buffer* pCameraUniformBuffer = new Buffer(
+                _commandPool,
+                &cameraUniformBufferData,
+                sizeof(CameraUniformBufferData),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            _cameraUniformBuffer.push_back(pCameraUniformBuffer);
 
+            _cameraDescriptorSets.push_back(
+                _descriptorPool.createDescriptorSet(
+                    &_cameraDescriptorSetLayout,
+                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pCameraUniformBuffer } }
+                )
+            );
+        }
+
+        DirLightUniformBufferData dirLightUniformBufferData;
         for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
         {
             Buffer* pDirLightUniformBuffer = new Buffer(
@@ -54,6 +89,7 @@ namespace platypus
                 )
             );
         }
+
 
         _pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
             *this,
@@ -77,10 +113,14 @@ namespace platypus
 
     MasterRenderer::~MasterRenderer()
     {
-        for (Buffer* pUniformBuffer : _dirLightUniformBuffer)
-            delete pUniformBuffer;
-        _dirLightUniformBuffer.clear();
+        for (Buffer* pBuffer : _cameraUniformBuffer)
+            delete pBuffer;
+        _cameraUniformBuffer.clear();
+        _cameraDescriptorSetLayout.destroy();
 
+        for (Buffer* pBuffer : _dirLightUniformBuffer)
+            delete pBuffer;
+        _dirLightUniformBuffer.clear();
         _dirLightDescriptorSetLayout.destroy();
     }
 
@@ -170,6 +210,7 @@ namespace platypus
                 _swapchain.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
+                _cameraDescriptorSetLayout,
                 _dirLightDescriptorSetLayout
             );
         }
@@ -229,13 +270,27 @@ namespace platypus
 
         Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
         Transform* pCameraTransform = (Transform*)pScene->getComponent(ComponentType::COMPONENT_TYPE_TRANSFORM);
+        Vector4f cameraPosition;
         if (pCamera)
         {
             perspectiveProjectionMatrix = pCamera->perspectiveProjectionMatrix;
             orthographicProjectionMatrix = pCamera->orthographicProjectionMatrix;
         }
         if (pCameraTransform)
-            viewMatrix = pCameraTransform->globalMatrix.inverse();
+        {
+            const Matrix4f cameraTransformationMatrix = pCameraTransform->globalMatrix;
+            cameraPosition.x = cameraTransformationMatrix[0 + 3 * 4];
+            cameraPosition.y = cameraTransformationMatrix[1 + 3 * 4];
+            cameraPosition.z = cameraTransformationMatrix[2 + 3 * 4];
+            viewMatrix = cameraTransformationMatrix.inverse();
+        }
+
+        CameraUniformBufferData cameraUniformBufferData = { cameraPosition, viewMatrix };
+        _cameraUniformBuffer[frame]->updateDeviceAndHost(
+            &cameraUniformBufferData,
+            sizeof(CameraUniformBufferData),
+            0
+        );
 
         const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(
             ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
@@ -277,7 +332,7 @@ namespace platypus
                     swapchainExtent.height,
                     perspectiveProjectionMatrix,
                     orthographicProjectionMatrix,
-                    viewMatrix,
+                    _cameraDescriptorSets[frame],
                     _dirLightDescriptorSets[frame],
                     frame // NOTE: no idea should this be the "frame index" or "image index"
                 )

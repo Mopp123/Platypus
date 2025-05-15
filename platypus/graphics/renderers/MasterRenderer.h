@@ -12,11 +12,19 @@
 
 namespace platypus
 {
+    struct CameraUniformBufferData
+    {
+        Vector4f position;
+        Matrix4f viewMatrix = Matrix4f(1.0f);
+    };
+
+
     struct DirLightUniformBufferData
     {
         Vector4f direction = Vector4f(0, 0, 0, 1);
         Vector4f color = Vector4f(1, 1, 1, 1);
     };
+
 
     class MasterRenderer
     {
@@ -27,10 +35,15 @@ namespace platypus
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
         // Shared descriptor sets among multiple renderers
+        std::vector<Buffer*> _cameraUniformBuffer;
+        DescriptorSetLayout _cameraDescriptorSetLayout;
+        std::vector<DescriptorSet> _cameraDescriptorSets;
+
         DirLightUniformBufferData _useDirLightData;
         std::vector<Buffer*> _dirLightUniformBuffer;
         DescriptorSetLayout _dirLightDescriptorSetLayout;
         std::vector<DescriptorSet> _dirLightDescriptorSets;
+
 
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
         std::unique_ptr<Renderer> _pGUIRenderer;

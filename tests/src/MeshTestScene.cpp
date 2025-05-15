@@ -15,6 +15,36 @@ void MeshTestScene::init()
 {
     initBase();
 
+    AssetManager& assetManager = Application::get_instance()->getAssetManager();
+
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+    _ui.init(this, inputManager);
+    ui::Layout layout {
+        { 0, 0 }, // pos
+        { 120, 40 }, // scale
+        { 0.2f, 0.2f, 0.2f, 1.0f } // color
+    };
+    layout.padding = { 10, 10 };
+    layout.elementGap = 10;
+    layout.horizontalContentAlignment = ui::HorizontalAlignment::LEFT;
+    layout.verticalContentAlignment = ui::VerticalAlignment::TOP;
+
+    ui::UIElement* pUIContainer = add_container(
+        _ui,
+        nullptr,
+        layout,
+        true
+    );
+
+    Font* pFont = assetManager.loadFont("assets/fonts/Ubuntu-R.ttf", 16);
+    ui::UIElement* pText =  ui::add_text_element(
+        _ui,
+        pUIContainer,
+        L"Mesh testing",
+        { 1, 1, 1, 1 },
+        pFont
+    );
+
     _camController.init();
     _camController.set(
         0, // pitch
@@ -26,7 +56,6 @@ void MeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0});
 
-    AssetManager& assetManager = Application::get_instance()->getAssetManager();
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -35,18 +64,40 @@ void MeshTestScene::init()
         0
     );
 
-    Texture* pTexture = assetManager.loadTexture(
+    Texture* pDiffuseTexture = assetManager.loadTexture(
         "assets/textures/DiffuseTest.png",
+        textureSampler
+    );
+    Texture* pSpecularTexture = assetManager.loadTexture(
+        "assets/textures/SpecularTest.png",
+        textureSampler
+    );
+    Texture* pFloorTexture = assetManager.loadTexture(
+        "assets/textures/Floor.png",
+        textureSampler
+    );
+    Texture* pFloorSpecularTexture = assetManager.loadTexture(
+        "assets/textures/FloorSpecular.png",
         textureSampler
     );
 
     Material* pMaterial = assetManager.createMaterial(
-        pTexture->getID(),
-        assetManager.getWhiteTexture()->getID()
+        pDiffuseTexture->getID(),
+        assetManager.getWhiteTexture()->getID(),
+        0.8f,
+        16.0f
+    );
+    Material* pFloorMaterial = assetManager.createMaterial(
+        pFloorTexture->getID(),
+        pFloorSpecularTexture->getID(),
+        0.8f,
+        64.0f
     );
 
-    Model* pModel = assetManager.loadModel("assets/models/MultiTest2.glb");
+    Model* pModel = assetManager.loadModel("assets/TestCube.glb");
+    Model* pFloorModel = assetManager.loadModel("assets/models/Floor.glb");
 
+    // Create box entities
     for (Mesh* pMesh : pModel->getMeshes())
     {
         entityID_t entity = createEntity();
@@ -62,7 +113,29 @@ void MeshTestScene::init()
             pMesh->getID(),
             pMaterial->getID()
         );
+        break;
     }
+
+    // Create floor entity
+    entityID_t floorEntity = createEntity();
+    Transform* pFloorTransform = create_transform(
+        floorEntity,
+        { 0, 0, -12 },
+        { { 0, 1, 0 }, 0 },
+        { 1, 1, 1 }
+    );
+    StaticMeshRenderable* pFloorRenderable = create_static_mesh_renderable(
+        floorEntity,
+        pFloorModel->getMeshes()[0]->getID(),
+        pFloorMaterial->getID()
+    );
+
+
+    DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+        _lightEntity,
+        ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+    );
+    pDirLight->direction = { 0.75f, -1.5f, -1.0f };
 }
 
 

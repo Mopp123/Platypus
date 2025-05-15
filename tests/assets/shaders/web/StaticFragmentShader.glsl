@@ -2,6 +2,7 @@ precision mediump float;
 
 varying vec3 var_normal;
 varying vec2 var_texCoord;
+varying vec3 var_cameraPos;
 
 const vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1);
 
@@ -32,5 +33,5 @@ void main() {
         discard;
     }
 
-    gl_FragColor = finalColor;
+    gl_FragColor = finalColor + (vec4(var_cameraPos, 1.0) * 0.0);
 }

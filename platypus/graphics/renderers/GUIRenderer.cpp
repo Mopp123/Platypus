@@ -103,6 +103,7 @@ namespace platypus
         const RenderPass& renderPass,
         float viewportWidth,
         float viewportHeight,
+        const DescriptorSetLayout& cameraDescriptorSetLayout,
         const DescriptorSetLayout& dirLightDescriptorSetLayout
     )
     {
@@ -123,7 +124,9 @@ namespace platypus
             1
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = { &_textureDescriptorSetLayout };
+        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
+            &_textureDescriptorSetLayout
+        };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
         _pipeline.create(
@@ -249,7 +252,7 @@ namespace platypus
         uint32_t viewportHeight,
         const Matrix4f& perspectiveProjectionMatrix,
         const Matrix4f& orthographicProjectionMatrix,
-        const Matrix4f& viewMatrix,
+        const DescriptorSet& cameraDescriptorSet,
         const DescriptorSet& dirLightDescriptorSet,
         size_t frame
     )

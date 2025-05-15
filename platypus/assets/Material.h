@@ -21,7 +21,7 @@ namespace platypus
         Material(
             ID_t diffuseTextureID,
             ID_t specularTextureID,
-            float speculiarStrength = 1.0f,
+            float specularStrength = 1.0f,
             float shininess = 1.0f,
             bool shadeless = false
         );

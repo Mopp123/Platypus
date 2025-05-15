@@ -25,11 +25,18 @@ namespace platypus
             const Buffer* pVertexBuffer = nullptr;
             const Buffer* pIndexBuffer = nullptr;
             Buffer* pInstancedBuffer = nullptr;
+            // Material properties are in a single vec4
+            //  x = specular strength
+            //  y = shininess
+            //  z = isShadeless (0.0 or 1.0)
+            //  w = don't know yet...
+            std::vector<Buffer*> materialUniformBuffers;
+            std::vector<DescriptorSet> materialDescriptorSets;
             size_t count = 0;
         };
 
         std::vector<BatchData> _batches;
-        std::unordered_map<ID_t, std::vector<DescriptorSet>> _descriptorSets;
+        std::unordered_map<ID_t, size_t> _identifierBatchMapping;
         size_t _currentFrame = 0;
 
         static size_t s_maxBatches;
@@ -48,6 +55,7 @@ namespace platypus
             const RenderPass& renderPass,
             float viewportWidth,
             float viewportHeight,
+            const DescriptorSetLayout& cameraDescriptorSetLayout,
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
 
@@ -62,18 +70,13 @@ namespace platypus
             uint32_t viewportHeight,
             const Matrix4f& perspectiveProjectionMatrix,
             const Matrix4f& orthographicProjectionMatrix,
-            const Matrix4f& viewMatrix,
+            const DescriptorSet& cameraDescriptorSet,
             const DescriptorSet& dirLightDescriptorSet,
             size_t frame
         );
 
     private:
-        // returns index in _batches if already occupied batch found with enough space.
-        // returns -1 if no existing batch found.
-        int findExistingBatchIndex(ID_t identifier);
-
-        // returns index in _batches if free found
-        // returns -1 if no free batch was found.
+        BatchData* findExistingBatch(ID_t identifier);
         int findFreeBatchIndex();
 
         void addToBatch(
@@ -81,13 +84,12 @@ namespace platypus
             const Matrix4f& transformationMatrix
         );
         bool occupyBatch(
-            BatchData& batchData,
+            int batchIndex,
             ID_t meshID,
             ID_t identifier
         );
 
-        bool hasDescriptorSets(ID_t batchIdentifier) const;
-        void createDescriptorSets(ID_t identifier, ID_t materialID);
-        void freeBatchDescriptorSets(ID_t identifier);
+        void createDescriptorSets(BatchData& batchData, ID_t materialID);
+        void freeBatchDescriptorSets(BatchData& batchData);
     };
 }

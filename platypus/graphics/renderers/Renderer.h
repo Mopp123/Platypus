@@ -41,6 +41,7 @@ namespace platypus
             const RenderPass& renderPass,
             float viewportWidth,
             float viewportHeight,
+            const DescriptorSetLayout& cameraDescriptorSetLayout,
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         ) = 0;
         virtual void destroyPipeline();
@@ -56,7 +57,7 @@ namespace platypus
             uint32_t viewportHeight,
             const Matrix4f& perspectiveProjectionMatrix,
             const Matrix4f& orthographicProjectionMatrix,
-            const Matrix4f& viewMatrix,
+            const DescriptorSet& cameraDescriptorSet,
             const DescriptorSet& dirLightDescriptorSet,
             size_t frame
         ) = 0;

@@ -25,8 +25,8 @@ namespace platypus
             descriptorPool,
             requiredComponentsMask
         ),
-        _vertexShader("TestVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("TestFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _vertexShader("StaticVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
+        _fragmentShader("StaticFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _materialDescriptorSetLayout(
             {
                 {
@@ -34,21 +34,28 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 4 } }
+                    { { 5 } }
                 },
                 {
                     1,
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 5 } }
+                    { { 6 } }
+                },
+                {
+                    2,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { 7, ShaderDataType::Float4 } }
                 }
             }
         )
     {
         // Alloc batches
         _batches.resize(s_maxBatches);
-        // Create empty instanced buffers for batches
+        // Create empty instanced buffers and material uniform buffers for batches
         for (size_t i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
@@ -78,6 +85,7 @@ namespace platypus
         const RenderPass& renderPass,
         float viewportWidth,
         float viewportHeight,
+        const DescriptorSetLayout& cameraDescriptorSetLayout,
         const DescriptorSetLayout& dirLightDescriptorSetLayout
     )
     {
@@ -102,6 +110,7 @@ namespace platypus
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
         std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
+            &cameraDescriptorSetLayout,
             &dirLightDescriptorSetLayout,
             &_materialDescriptorSetLayout
         };
@@ -121,29 +130,26 @@ namespace platypus
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
             false, // enable color blending
-            sizeof(Matrix4f) * 2, // push constants size
+            sizeof(Matrix4f), // push constants size
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         );
     }
 
     void StaticMeshRenderer::freeBatches()
     {
-        for (BatchData& batch : _batches)
+        for (BatchData& batchData : _batches)
         {
-            batch.identifier = NULL_ID;
-            batch.count = 0;
+            batchData.identifier = NULL_ID;
+            batchData.count = 0;
+            freeBatchDescriptorSets(batchData);
         }
+        _identifierBatchMapping.clear();
     }
 
     void StaticMeshRenderer::freeDescriptorSets()
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it;
-        for (it = _descriptorSets.begin(); it != _descriptorSets.end(); ++it)
-        {
-            _descriptorPoolRef.freeDescriptorSets(it->second);
-            it->second.clear();
-        }
-        _descriptorSets.clear();
+        for (BatchData& batchData : _batches)
+            freeBatchDescriptorSets(batchData);
     }
 
     void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
@@ -158,6 +164,38 @@ namespace platypus
 
         ID_t materialID = pRenderable->materialID;
         ID_t identifier = ID::hash(pRenderable->meshID, materialID);
+
+        BatchData* pBatch = findExistingBatch(identifier);
+        if (!pBatch)
+        {
+            int freeBatchIndex = findFreeBatchIndex();
+            if (freeBatchIndex == -1)
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::submit "
+                    "No free batches found!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return;
+            }
+            if (!occupyBatch(freeBatchIndex, pRenderable->meshID, identifier))
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::submit "
+                    "Failed to occupy batch!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return;
+            }
+            pBatch = &_batches[freeBatchIndex];
+        }
+
+        if (pBatch->materialDescriptorSets.empty())
+            createDescriptorSets(*pBatch, materialID);
+
+        addToBatch(*pBatch, transformationMatrix);
+
+        /*
         int foundBatchIndex = findExistingBatchIndex(identifier);
         if (foundBatchIndex != -1)
         {
@@ -187,10 +225,9 @@ namespace platypus
             }
             addToBatch(batchData, transformationMatrix);
         }
-        // NOTE: Works only because using textures as identifiers and
-        // only texture descriptor sets...
         if (!hasDescriptorSets(identifier))
             createDescriptorSets(identifier, materialID);
+            */
     }
 
     const CommandBuffer& StaticMeshRenderer::recordCommandBuffer(
@@ -199,7 +236,7 @@ namespace platypus
         uint32_t viewportHeight,
         const Matrix4f& perspectiveProjectionMatrix,
         const Matrix4f& orthographicProjectionMatrix,
-        const Matrix4f& viewMatrix,
+        const DescriptorSet& cameraDescriptorSet,
         const DescriptorSet& dirLightDescriptorSet,
         size_t frame
     )
@@ -223,16 +260,15 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
         render::bind_pipeline(currentCommandBuffer, _pipeline);
 
-        Matrix4f pushConstants[2] = { perspectiveProjectionMatrix, viewMatrix };
+        Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };
         render::push_constants(
             currentCommandBuffer,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
             0,
-            sizeof(Matrix4f) * 2,
+            sizeof(Matrix4f),
             pushConstants,
             {
-                { 0, ShaderDataType::Mat4 },
-                { 1, ShaderDataType::Mat4 }
+                { 0, ShaderDataType::Mat4 }
             }
         );
 
@@ -242,7 +278,7 @@ namespace platypus
                 continue;
 
             // Make sure descriptor sets has been created
-            if (_descriptorSets.find(batchData.identifier) == _descriptorSets.end())
+            if (batchData.materialDescriptorSets.empty())
             {
                 Debug::log(
                     "@StaticMeshRenderer::recordCommandBuffer "
@@ -268,8 +304,9 @@ namespace platypus
             render::bind_index_buffer(currentCommandBuffer, batchData.pIndexBuffer);
 
             std::vector<DescriptorSet> descriptorSetsToBind = {
+                cameraDescriptorSet,
                 dirLightDescriptorSet,
-                _descriptorSets[batchData.identifier][_currentFrame]
+                batchData.materialDescriptorSets[_currentFrame]
             };
 
             render::bind_descriptor_sets(
@@ -295,24 +332,20 @@ namespace platypus
         return currentCommandBuffer;
     }
 
-    int StaticMeshRenderer::findExistingBatchIndex(ID_t identifier)
+    StaticMeshRenderer::BatchData* StaticMeshRenderer::findExistingBatch(ID_t identifier)
     {
-        for (int  i = 0; i < _batches.size(); ++i)
-        {
-            BatchData& batchData = _batches[i];
-            if (batchData.identifier == identifier && batchData.count + 1 <= s_maxBatchLength)
-                return i;
-        }
-        return -1;
+        if (_identifierBatchMapping.find(identifier) != _identifierBatchMapping.end())
+            return &_batches[_identifierBatchMapping[identifier]];
+        return nullptr;
     }
 
     int StaticMeshRenderer::findFreeBatchIndex()
     {
-        for (int  i = 0; i < _batches.size(); ++i)
+        for (size_t  i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
             if (batchData.identifier == NULL_ID)
-                return i;
+                return (int)i;
         }
         return -1;
     }
@@ -331,7 +364,7 @@ namespace platypus
     }
 
     bool StaticMeshRenderer::occupyBatch(
-        BatchData& batchData,
+        int batchIndex,
         ID_t meshID,
         ID_t identifier
     )
@@ -354,19 +387,17 @@ namespace platypus
             }
         #endif
 
+        BatchData& batchData = _batches[batchIndex];
         batchData.identifier = identifier;
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 
+        _identifierBatchMapping[identifier] = batchIndex;
+
         return true;
     }
 
-    bool StaticMeshRenderer::hasDescriptorSets(ID_t batchIdentifier) const
-    {
-        return _descriptorSets.find(batchIdentifier) != _descriptorSets.end();
-    }
-
-    void StaticMeshRenderer::createDescriptorSets(ID_t identifier, ID_t materialID)
+    void StaticMeshRenderer::createDescriptorSets(BatchData& batchData, ID_t materialID)
     {
         Application* pApp = Application::get_instance();
         AssetManager& assetManager = pApp->getAssetManager();
@@ -389,26 +420,52 @@ namespace platypus
         const Texture* pDiffuseTexture = pMaterial->getDiffuseTexture();
         const Texture* pSpecularTexture = pMaterial->getSpecularTexture();
 
+        Vector4f materialProperties(
+            pMaterial->getSpecularStrength(),
+            pMaterial->getShininess(),
+            pMaterial->isShadeless(),
+            0
+        );
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        for (int i = 0; i < maxFramesInFlight; ++i)
+        for (size_t i = 0; i < maxFramesInFlight; ++i)
         {
-            _descriptorSets[identifier].push_back(
+            Buffer* pMaterialUniformBuffer = new Buffer(
+                _commandPoolRef,
+                &materialProperties,
+                sizeof(Vector4f),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            batchData.materialUniformBuffers.push_back(pMaterialUniformBuffer);
+
+            batchData.materialDescriptorSets.push_back(
                 _descriptorPoolRef.createDescriptorSet(
                     &_materialDescriptorSetLayout,
                     {
                         { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
                         { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
+                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pMaterialUniformBuffer }
                     }
                 )
             );
         }
-        Debug::log("@StaticMeshRenderer::createDescriptorSets New descriptor sets created for batch with identifier: " + std::to_string(identifier));
+
+        Debug::log(
+            "@StaticMeshRenderer::createDescriptorSets "
+            "New descriptor sets created for batch with identifier: " + std::to_string(batchData.identifier)
+        );
     }
 
-    void StaticMeshRenderer::freeBatchDescriptorSets(ID_t identifier)
+    void StaticMeshRenderer::freeBatchDescriptorSets(BatchData& batchData)
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it = _descriptorSets.find(identifier);
-        if (it != _descriptorSets.end())
-            _descriptorPoolRef.freeDescriptorSets(it->second);
+        for (Buffer* pBuffer : batchData.materialUniformBuffers)
+            delete pBuffer;
+
+        batchData.materialUniformBuffers.clear();
+
+        _descriptorPoolRef.freeDescriptorSets(batchData.materialDescriptorSets);
+        batchData.materialDescriptorSets.clear();
     }
 }

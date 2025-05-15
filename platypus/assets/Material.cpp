@@ -8,14 +8,14 @@ namespace platypus
     Material::Material(
         ID_t diffuseTextureID,
         ID_t specularTextureID,
-        float speculiarStrength,
+        float specularStrength,
         float shininess,
         bool shadeless
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
         _diffuseTextureID(diffuseTextureID),
         _specularTextureID(specularTextureID),
-        _specularStrength(specularTextureID),
+        _specularStrength(specularStrength),
         _shininess(shininess),
         _shadeless(shadeless)
     {
