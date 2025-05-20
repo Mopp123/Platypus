@@ -3,7 +3,6 @@
 #include "platypus/graphics/platform/web/WebContext.h"
 #include "platypus/core/Debug.h"
 
-
 #include <GL/glew.h>
 
 

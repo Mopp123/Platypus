@@ -13,7 +13,7 @@ layout(push_constant) uniform Constants
 
 layout(set = 0, binding = 0) uniform Camera
 {
-    vec3 position;
+    vec4 position;
     mat4 viewMatrix;
 } camera;
 

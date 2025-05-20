@@ -24,10 +24,6 @@ layout(set = 2, binding = 3) uniform MaterialData
     // w = dunno...
 } materialData;
 
-vec3 srgb_to_linear(vec3 c) {
-    return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
-}
-
 layout(location = 0) out vec4 fragColor;
 
 void main() {

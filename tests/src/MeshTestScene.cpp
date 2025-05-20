@@ -135,7 +135,6 @@ void MeshTestScene::init()
         pModel->getMeshes()[0]->getID(),
         pMaterial->getID()
     );
-    /*
     // Non normal mapped
     entityID_t entity2 = createEntity();
     Transform* pTransform2 = create_transform(
@@ -143,12 +142,12 @@ void MeshTestScene::init()
         pModel2->getMeshes()[0]->getTransformationMatrix()
     );
     pTransform2->globalMatrix[2 + 3 * 4] = -12.0f;
-    pTransform2->globalMatrix[0 + 3 * 4] = -5.0f;
+    pTransform2->globalMatrix[0 + 3 * 4] = -6.0f;
     StaticMeshRenderable* pRenderable2 = create_static_mesh_renderable(
         entity2,
         pModel2->getMeshes()[0]->getID(),
         pMaterial2->getID()
-    );*/
+    );
 
     // Create floor entity
     entityID_t floorEntity = createEntity();

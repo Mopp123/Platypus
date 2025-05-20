@@ -11,6 +11,7 @@ struct Constants
 };
 uniform Constants constants;
 
+
 struct Camera
 {
     vec4 position;
@@ -18,10 +19,22 @@ struct Camera
 };
 uniform Camera camera;
 
+
+struct DirectionalLight
+{
+    vec4 direction;
+    vec4 color;
+};
+uniform DirectionalLight directionalLight;
+
+
 varying vec3 var_normal;
 varying vec2 var_texCoord;
 varying vec3 var_fragPos;
 varying vec3 var_cameraPos;
+varying vec4 var_lightDir;
+varying vec4 var_lightColor;
+
 
 void main() {
     vec4 translatedPos = transformationMatrix * vec4(position, 1.0);
@@ -31,4 +44,7 @@ void main() {
     var_texCoord = texCoord;
     var_fragPos = translatedPos.xyz;
     var_cameraPos = camera.position.xyz;
+
+    var_lightDir = directionalLight.direction;
+    var_lightColor = directionalLight.color;
 }

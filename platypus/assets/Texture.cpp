@@ -1,14 +1,14 @@
-#include "Texture.h""
+#include "Texture.h"
 
 namespace platypus
 {
     bool is_image_format_valid(ImageFormat imageFormat, int imageColorChannels)
     {
-        if (imageFormat == ImageFormat::R8_SRGB && imageColorChannels == 1)
+        if ((imageFormat == ImageFormat::R8_SRGB || imageFormat == ImageFormat::R8_UNORM) && imageColorChannels == 1)
             return true;
-        else if (imageFormat == ImageFormat::R8G8B8_SRGB && imageColorChannels == 3)
+        else if ((imageFormat == ImageFormat::R8G8B8_SRGB || imageFormat == ImageFormat::R8G8B8_UNORM) && imageColorChannels == 3)
             return true;
-        else if (imageFormat == ImageFormat::R8G8B8A8_SRGB && imageColorChannels == 4)
+        else if ((imageFormat == ImageFormat::R8G8B8A8_SRGB || imageFormat == ImageFormat::R8G8B8A8_UNORM) && imageColorChannels == 4)
             return true;
         else
             return false;

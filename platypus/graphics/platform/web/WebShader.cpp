@@ -171,6 +171,7 @@ namespace platypus
                     );
                     findLocationsESSL1(_pVertexShader->source);
                     findLocationsESSL1(_pFragmentShader->source);
+
                 }
             }
         }

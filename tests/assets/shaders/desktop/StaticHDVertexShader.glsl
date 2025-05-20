@@ -14,7 +14,7 @@ layout(push_constant) uniform Constants
 
 layout(set = 0, binding = 0) uniform Camera
 {
-    vec3 position;
+    vec4 position;
     mat4 viewMatrix;
 } camera;
 
@@ -56,7 +56,7 @@ void main() {
 
     var_toTangentSpace = transpose(mat3(transformedTangent, biTangent, transformedNormal));
 
-    vec3 toCam = camera.position - transformedPos.xyz;
+    vec3 toCam = camera.position.xyz - transformedPos.xyz;
     var_toCamera = normalize(var_toTangentSpace * (camera.viewMatrix * vec4(toCam, 0.0)).xyz);
 
     var_lightDir = var_toTangentSpace * (camera.viewMatrix * vec4(directionalLight.direction.xyz, 0.0)).xyz;
