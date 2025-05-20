@@ -2,6 +2,8 @@
 
 #include "Asset.h"
 #include "Texture.h"
+#include "platypus/graphics/Descriptors.h"
+#include "platypus/graphics/Pipeline.h"
 
 
 namespace platypus
@@ -17,6 +19,9 @@ namespace platypus
         float _shininess = 1.0f;
 
         bool _shadeless = false;
+
+        DescriptorSetLayout _descriptorSetLayout;
+        Pipeline _pipeline;
 
     public:
         Material(
