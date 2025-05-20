@@ -40,12 +40,23 @@ namespace platypus
     Texture::Texture(
         const CommandPool& commandPool,
         const Image* pImage,
+        ImageFormat targetFormat,
         const TextureSampler& sampler,
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
         _atlasRowCount(atlasRowCount)
     {
+        if (!is_image_format_valid(targetFormat, pImage->getChannels()))
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "Invalid target format: " + image_format_to_string(targetFormat) + " "
+                "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+
         if (!pImage)
         {
             Debug::log(

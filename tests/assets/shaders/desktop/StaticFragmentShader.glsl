@@ -4,12 +4,8 @@ layout(location = 0) in vec3 var_normal;
 layout(location = 1) in vec2 var_texCoord;
 layout(location = 2) in vec3 var_fragPos;
 layout(location = 3) in vec3 var_cameraPos;
-
-layout(set = 1, binding = 0) uniform DirectionalLight
-{
-    vec4 direction;
-    vec4 color;
-} directionalLight;
+layout(location = 4) in vec3 var_lightDir;
+layout(location = 5) in vec4 var_lightColor;
 
 const vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1);
 
@@ -37,11 +33,11 @@ void main() {
     float shininess = materialData.data.y;
     float isShadeless = materialData.data.z;
 
-    vec3 unitLightDir = normalize(directionalLight.direction.xyz);
+    vec3 unitLightDir = normalize(var_lightDir.xyz);
     vec3 toLight = -unitLightDir;
     vec3 unitNormal = normalize(var_normal);
     vec3 toCamera = normalize(var_cameraPos - var_fragPos);
-    vec4 lightColor = vec4(directionalLight.color.rgb, 1.0);
+    vec4 lightColor = vec4(var_lightColor.rgb, 1.0);
 
     float diffuseFactor = max(dot(toLight, unitNormal), 0.0);
     vec4 lightDiffuseColor = diffuseFactor * lightColor;

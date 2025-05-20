@@ -203,6 +203,7 @@ namespace platypus
 
         Texture* pTexture = assetManager.createTexture(
             _imageID,
+            ImageFormat::R8_UNORM,
             TextureSampler(
                 TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
                 TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,

@@ -10,6 +10,8 @@ private:
     platypus::ui::LayoutUI _ui;
     platypus::CameraController _camController;
 
+    entityID_t _boxEntity;
+
 public:
     MeshTestScene();
     ~MeshTestScene();

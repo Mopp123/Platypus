@@ -97,21 +97,17 @@ namespace platypus
 
     // NOTE: If formats' *_SRGB not supported by the device whole texture creation fails!
     // TODO: Query supported formats and handle depending on requested channels that way
-    static VkFormat channels_to_vk_format(int channels)
+    static VkFormat to_vk_format(ImageFormat imageFormat)
     {
-        switch (channels)
+        switch (imageFormat)
         {
-            case 1: return VK_FORMAT_R8_SRGB;
-            case 2: return VK_FORMAT_R8G8_SRGB;
-            case 3: return VK_FORMAT_R8G8B8_SRGB;
-            case 4: return VK_FORMAT_R8G8B8A8_SRGB;
-            default:
-                Debug::log(
-                    "@channels_to_vk_format "
-                    "Invalid channel count: " + std::to_string(channels) + " "
-                    "Supported range is 1-4",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
+            case ImageFormat::R8_SRGB: return VK_FORMAT_R8_SRGB;
+            case ImageFormat::R8G8B8_SRGB: return VK_FORMAT_R8G8B8_SRGB;
+            case ImageFormat::R8G8B8A8_SRGB: return VK_FORMAT_R8G8B8A8_SRGB;
+
+            case ImageFormat::R8_UNORM: return VK_FORMAT_R8_UNORM;
+            case ImageFormat::R8G8B8_UNORM: return VK_FORMAT_R8G8B8_UNORM;
+            case ImageFormat::R8G8B8A8_UNORM: return VK_FORMAT_R8G8B8A8_UNORM;
         }
         PLATYPUS_ASSERT(false);
         return VK_FORMAT_UNDEFINED;
@@ -265,6 +261,7 @@ namespace platypus
     Texture::Texture(
         const CommandPool& commandPool,
         const Image* pImage,
+        ImageFormat targetFormat,
         const TextureSampler& pSampler,
         uint32_t atlasRowCount
     ) :
@@ -272,6 +269,16 @@ namespace platypus
         _pSamplerImpl(pSampler.getImpl()),
         _atlasRowCount(atlasRowCount)
     {
+        if (!is_image_format_valid(targetFormat, pImage->getChannels()))
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "Invalid target format: " + image_format_to_string(targetFormat) + " "
+                "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
             commandPool,
@@ -283,7 +290,7 @@ namespace platypus
             false
         );
 
-        VkFormat imageFormat = channels_to_vk_format(pImage->getChannels());
+        VkFormat imageFormat = to_vk_format(targetFormat);
         if (imageFormat == VK_FORMAT_R8G8B8_SRGB)
         {
             Debug::log(

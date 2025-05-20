@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <vulkan/vk_enum_string_helper.h>
 #include <map>
-#include <vulkan/vulkan_core.h>
 
 
 namespace platypus

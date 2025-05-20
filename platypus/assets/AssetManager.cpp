@@ -25,8 +25,16 @@ namespace platypus
             1,
             0
         );
-        _pWhiteTexture = createTexture(pWhiteImage->getID(), defaultTextureSampler);
-        _pBlackTexture = createTexture(pBlackImage->getID(), defaultTextureSampler);
+        _pWhiteTexture = createTexture(
+            pWhiteImage->getID(),
+            ImageFormat::R8G8B8A8_SRGB,
+            defaultTextureSampler
+        );
+        _pBlackTexture = createTexture(
+            pBlackImage->getID(),
+            ImageFormat::R8G8B8A8_SRGB,
+            defaultTextureSampler
+        );
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
     }
@@ -117,6 +125,7 @@ namespace platypus
 
     Texture* AssetManager::createTexture(
         ID_t imageID,
+        ImageFormat targetFormat,
         const TextureSampler& sampler,
         uint32_t textureAtlasRows
     )
@@ -136,6 +145,7 @@ namespace platypus
         Texture* pTexture = new Texture(
             _commandPoolRef,
             pImage,
+            targetFormat,
             sampler,
             textureAtlasRows
         );
@@ -145,6 +155,7 @@ namespace platypus
 
     Texture* AssetManager::loadTexture(
         const std::string& filepath,
+        ImageFormat targetFormat,
         const TextureSampler& sampler,
         uint32_t textureAtlasRows
     )
@@ -159,7 +170,7 @@ namespace platypus
             );
             return nullptr;
         }
-        return createTexture(pImage->getID(), sampler, textureAtlasRows);
+        return createTexture(pImage->getID(), targetFormat, sampler, textureAtlasRows);
     }
 
     Material* AssetManager::createMaterial(

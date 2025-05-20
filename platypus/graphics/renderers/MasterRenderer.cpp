@@ -36,7 +36,7 @@ namespace platypus
                     0,
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     {
                         { 3, ShaderDataType::Float4 },
                         { 4, ShaderDataType::Float4 }

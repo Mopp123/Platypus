@@ -67,26 +67,43 @@ void MeshTestScene::init()
 
     Texture* pDiffuseTexture = assetManager.loadTexture(
         "assets/textures/DiffuseTest.png",
+        ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
     Texture* pSpecularTexture = assetManager.loadTexture(
         "assets/textures/SpecularTest.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        textureSampler
+    );
+    Texture* pNormalTexture = assetManager.loadTexture(
+        "assets/textures/NormalTest.png",
+        ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
     Texture* pFloorTexture = assetManager.loadTexture(
         "assets/textures/Floor.png",
+        ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
     Texture* pFloorSpecularTexture = assetManager.loadTexture(
         "assets/textures/FloorSpecular.png",
+        ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
     Texture* pFloorNormalTexture = assetManager.loadTexture(
         "assets/textures/FloorNormal.png",
+        ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
 
     Material* pMaterial = assetManager.createMaterial(
+        pDiffuseTexture->getID(),
+        assetManager.getWhiteTexture()->getID(),
+        pNormalTexture->getID(),
+        0.8f,
+        16.0f
+    );
+    Material* pMaterial2 = assetManager.createMaterial(
         pDiffuseTexture->getID(),
         assetManager.getWhiteTexture()->getID(),
         NULL_ID,
@@ -101,27 +118,37 @@ void MeshTestScene::init()
         64.0f
     );
 
-    Model* pModel = assetManager.loadModel("assets/TestCube.glb");
+    Model* pModel = assetManager.loadModel("assets/TestCubeTangents.glb");
+    Model* pModel2 = assetManager.loadModel("assets/TestCube.glb");
     Model* pFloorModel = assetManager.loadModel("assets/models/Floor.glb");
 
     // Create box entities
-    for (Mesh* pMesh : pModel->getMeshes())
-    {
-        entityID_t entity = createEntity();
-        Transform* pTransform = create_transform(
-            entity,
-            pMesh->getTransformationMatrix()
-        );
-
-        pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
-
-        StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
-            entity,
-            pMesh->getID(),
-            pMaterial->getID()
-        );
-        break;
-    }
+    // Normal mapped
+    _boxEntity = createEntity();
+    Transform* pTransform = create_transform(
+        _boxEntity,
+        pModel->getMeshes()[0]->getTransformationMatrix()
+    );
+    pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
+    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+        _boxEntity,
+        pModel->getMeshes()[0]->getID(),
+        pMaterial->getID()
+    );
+    /*
+    // Non normal mapped
+    entityID_t entity2 = createEntity();
+    Transform* pTransform2 = create_transform(
+        entity2,
+        pModel2->getMeshes()[0]->getTransformationMatrix()
+    );
+    pTransform2->globalMatrix[2 + 3 * 4] = -12.0f;
+    pTransform2->globalMatrix[0 + 3 * 4] = -5.0f;
+    StaticMeshRenderable* pRenderable2 = create_static_mesh_renderable(
+        entity2,
+        pModel2->getMeshes()[0]->getID(),
+        pMaterial2->getID()
+    );*/
 
     // Create floor entity
     entityID_t floorEntity = createEntity();
@@ -145,10 +172,25 @@ void MeshTestScene::init()
     pDirLight->direction = { 0.75f, -1.5f, -1.0f };
 }
 
-
+static float s_anim = 0.0f;
 void MeshTestScene::update()
 {
     updateBase();
+
+    // Rotate box
+    Transform* pBoxTransform = (Transform*)getComponent(
+        _boxEntity,
+        ComponentType::COMPONENT_TYPE_TRANSFORM
+    );
+    Vector3f rotationAngle(0, 1, 1);
+    rotationAngle = rotationAngle.normalize();
+    Matrix4f boxTransformationMatrix = create_transformation_matrix(
+        { -2, 3, -12 },
+        { rotationAngle, s_anim },
+        { 1, 1, 1 }
+    );
+    s_anim += 2.0f * Timing::get_delta_time();
+    pBoxTransform->globalMatrix = boxTransformationMatrix;
 
     Transform* pCamTransform = (Transform*)getComponent(
         _cameraEntity,

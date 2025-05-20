@@ -3,6 +3,7 @@
 #include "Asset.h"
 #include "platypus/assets/Image.h"
 #include "platypus/graphics/CommandBuffer.h"
+#include <string>
 #include <memory>
 
 
@@ -20,6 +21,21 @@ namespace platypus
         SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
         SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
     };
+
+    enum class ImageFormat
+    {
+        R8_SRGB,
+        R8G8B8_SRGB,
+        R8G8B8A8_SRGB,
+
+        R8_UNORM,
+        R8G8B8_UNORM,
+        R8G8B8A8_UNORM
+    };
+
+    std::string image_format_to_string(ImageFormat format);
+
+    bool is_image_format_valid(ImageFormat imageFormat, int imageColorChannels);
 
 
     // NOTE: Atm TextureSampler is supposed to be passed around as const ref!
@@ -62,6 +78,7 @@ namespace platypus
         Texture(
             const CommandPool& commandPool,
             const Image* pImage,
+            ImageFormat targetFormat,
             const TextureSampler& sampler,
             uint32_t atlasRowCount = 1
         );
