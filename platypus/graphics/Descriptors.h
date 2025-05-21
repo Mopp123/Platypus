@@ -102,7 +102,7 @@ namespace platypus
         DescriptorSetLayout();
         DescriptorSetLayout(const std::vector<DescriptorSetLayoutBinding>& bindings);
         DescriptorSetLayout(const DescriptorSetLayout& other);
-        DescriptorSetLayout& operator=(DescriptorSetLayout&& other) = delete;
+        DescriptorSetLayout& operator=(DescriptorSetLayout&& other);
         DescriptorSetLayout& operator=(DescriptorSetLayout& other) = delete;
         ~DescriptorSetLayout();
 

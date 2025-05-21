@@ -369,4 +369,15 @@ namespace platypus
         }
         return it->second;
     }
+
+    std::vector<Asset*> AssetManager::getAssets(AssetType type) const
+    {
+        std::vector<Asset*> foundAssets;
+        for (const auto& asset : _assets)
+        {
+            if (asset.second->getType() == type)
+                foundAssets.push_back(asset.second);
+        }
+        return foundAssets;
+    }
 }

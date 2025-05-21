@@ -108,7 +108,6 @@ namespace platypus
         _renderers[_pGUIRenderer->getRequiredComponentsMask()] = _pGUIRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
-        createPipelines();
     }
 
     MasterRenderer::~MasterRenderer()
@@ -214,18 +213,41 @@ namespace platypus
                 _dirLightDescriptorSetLayout
             );
         }
+
+        Debug::log("___TEST___ATTEMPT CREATE EXISTING MATERIAL PIPELINES...");
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->recreateExistingPipeline();
     }
 
     void MasterRenderer::destroyPipelines()
     {
         for (auto& it : _renderers)
             it.second->destroyPipeline();
+
+        Debug::log("___TEST___ATTEMPT DESTROY EXISTING MATERIAL PIPELINES...");
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->destroyPipeline();
     }
 
     void MasterRenderer::freeDescriptorSets()
     {
         for (auto& it : _renderers)
             it.second->freeDescriptorSets();
+
+        Debug::log("___TEST___ATTEMPT FREE MATERIAL DESCRIPTOR SETS...");
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->freeDescriptorSets();
+    }
+
+    void MasterRenderer::createDescriptorSets()
+    {
+        Debug::log("___TEST___ATTEMPT CREATE MATERIAL DESCRIPTOR SETS...");
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->createDescriptorSets();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -363,6 +385,7 @@ namespace platypus
             freeCommandBuffers();
             allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
             createPipelines();
+            createDescriptorSets();
             window.resetResized();
         }
         else

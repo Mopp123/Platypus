@@ -4,6 +4,7 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/assets/Mesh.h"
+#include "platypus/assets/Material.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Lights.h"
 #include <cstdlib>
@@ -14,30 +15,13 @@ namespace platypus
     class StaticMeshRenderer : public Renderer
     {
     private:
-        Pipeline _normalMappingPipeline;
-
-        Shader _vertexShader;
-        Shader _fragmentShader;
-        Shader _normalMappingVertexShader;
-        Shader _normalMappingFragmentShader;
-
-        DescriptorSetLayout _materialDescriptorSetLayout;
-        DescriptorSetLayout _materialDescriptorSetLayoutHD;
-
         struct BatchData
         {
             ID_t identifier = NULL_ID;
+            Material* pMaterial = nullptr;
             const Buffer* pVertexBuffer = nullptr;
             const Buffer* pIndexBuffer = nullptr;
             Buffer* pInstancedBuffer = nullptr;
-            // Material properties are in a single vec4
-            //  x = specular strength
-            //  y = shininess
-            //  z = isShadeless (0.0 or 1.0)
-            //  w = don't know yet...
-            std::vector<Buffer*> materialUniformBuffers;
-            std::vector<DescriptorSet> materialDescriptorSets;
-            bool normalMapping = false;
             size_t count = 0;
         };
 
@@ -64,7 +48,6 @@ namespace platypus
             const DescriptorSetLayout& cameraDescriptorSetLayout,
             const DescriptorSetLayout& dirLightDescriptorSetLayout
         );
-
         virtual void destroyPipeline() override;
 
         virtual void freeBatches();
@@ -94,10 +77,8 @@ namespace platypus
         bool occupyBatch(
             int batchIndex,
             ID_t meshID,
+            ID_t materialID,
             ID_t identifier
         );
-
-        void createDescriptorSets(BatchData& batchData, ID_t materialID);
-        void freeBatchDescriptorSets(BatchData& batchData);
     };
 }

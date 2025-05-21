@@ -124,8 +124,8 @@ namespace platypus
             1
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
-            &_textureDescriptorSetLayout
+        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
+            _textureDescriptorSetLayout
         };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };

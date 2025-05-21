@@ -226,8 +226,11 @@ namespace platypus
         MeshBufferData& outBufferData
     )
     {
+        // key = location
+        std::map<uint32_t, ShaderDataType> orderedBufferElements;
         size_t combinedVertexBufferSize = 0;
         size_t elementSize = 0;
+
         // sortedvertexbufferattributes is used to create single vertex buffer containing:
         //  * vertex positions
         //  * normals
@@ -318,6 +321,8 @@ namespace platypus
                     // NOTE: Don't remember wtf this elemCount is...
                     size_t elemCount = accessor.count;
                     combinedVertexBufferSize += elemCount * attribSize;
+
+                    orderedBufferElements[(uint32_t)attribLocation] = shaderDataType;
                 }
                 else
                 {
@@ -410,14 +415,18 @@ namespace platypus
         }
         size_t bufferLength = combinedVertexBufferSize / elementSize;
         outBufferData = { elementSize, bufferLength, combinedRawBuffer };
+
+        std::vector<VertexBufferElement> sortedVertexBufferElements;
+        for (const auto& elem : orderedBufferElements)
+            sortedVertexBufferElements.push_back({ elem.first, elem.second});
+
+        outLayout = { sortedVertexBufferElements, VertexInputRate::VERTEX_INPUT_RATE_VERTEX, 0 };
         return true;
     }
 
 
     // NOTE:
     // Current limitations:
-    //  * single mesh only
-    //      - also excluding any camera, light nodes, etc..
     //  * no skeleton loading
     //  * no material loading
 

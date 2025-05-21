@@ -25,72 +25,11 @@ namespace platypus
             commandPool,
             descriptorPool,
             requiredComponentsMask
-        ),
-        _vertexShader("StaticVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("StaticFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
-        _normalMappingVertexShader("StaticHDVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _normalMappingFragmentShader("StaticHDFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
-        _materialDescriptorSetLayout(
-            {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 5 } }
-                },
-                {
-                    1,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 6 } }
-                },
-                {
-                    2,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 7, ShaderDataType::Float4 } }
-                }
-            }
-        ),
-        _materialDescriptorSetLayoutHD(
-            {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 5 } }
-                },
-                {
-                    1,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 6 } }
-                },
-                {
-                    2,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 7 } }
-                },
-                {
-                    3,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 8, ShaderDataType::Float4 } }
-                }
-            }
         )
     {
         // Alloc batches
         _batches.resize(s_maxBatches);
-        // Create empty instanced buffers and material uniform buffers for batches
+        // Create empty instanced buffers for batches
         for (size_t i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
@@ -113,8 +52,6 @@ namespace platypus
             delete b.pInstancedBuffer;
 
         freeBatches();
-        _materialDescriptorSetLayout.destroy();
-        _materialDescriptorSetLayoutHD.destroy();
     }
 
     void StaticMeshRenderer::createPipeline(
@@ -125,98 +62,10 @@ namespace platypus
         const DescriptorSetLayout& dirLightDescriptorSetLayout
     )
     {
-        VertexBufferLayout vbLayout = {
-            {
-                { 0, ShaderDataType::Float3 },
-                { 1, ShaderDataType::Float3 },
-                { 2, ShaderDataType::Float2 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-            0
-        };
-        VertexBufferLayout vbLayoutInstanced = {
-            {
-                { 3, ShaderDataType::Float4 },
-                { 4, ShaderDataType::Float4 },
-                { 5, ShaderDataType::Float4 },
-                { 6, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-            1
-        };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
-            &cameraDescriptorSetLayout,
-            &dirLightDescriptorSetLayout,
-            &_materialDescriptorSetLayout
-        };
-
-        Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
-        _pipeline.create(
-            renderPass,
-            { vbLayout, vbLayoutInstanced },
-            descriptorSetLayouts,
-            _vertexShader,
-            _fragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_NONE,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
-            false, // enable color blending
-            sizeof(Matrix4f), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
-
-        VertexBufferLayout vbLayoutHD = {
-            {
-                { 0, ShaderDataType::Float3 },
-                { 1, ShaderDataType::Float3 },
-                { 2, ShaderDataType::Float2 },
-                { 3, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-            0
-        };
-        VertexBufferLayout vbLayoutInstancedHD = {
-            {
-                { 4, ShaderDataType::Float4 },
-                { 5, ShaderDataType::Float4 },
-                { 6, ShaderDataType::Float4 },
-                { 7, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-            1
-        };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayoutsHD = {
-            &cameraDescriptorSetLayout,
-            &dirLightDescriptorSetLayout,
-            &_materialDescriptorSetLayoutHD
-        };
-        _normalMappingPipeline.create(
-            renderPass,
-            { vbLayoutHD, vbLayoutInstancedHD },
-            descriptorSetLayoutsHD,
-            _normalMappingVertexShader,
-            _normalMappingFragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_NONE,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
-            false, // enable color blending
-            sizeof(Matrix4f), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
     }
 
     void StaticMeshRenderer::destroyPipeline()
     {
-        _pipeline.destroy();
-        _normalMappingPipeline.destroy();
     }
 
     void StaticMeshRenderer::freeBatches()
@@ -224,17 +73,14 @@ namespace platypus
         for (BatchData& batchData : _batches)
         {
             batchData.identifier = NULL_ID;
+            batchData.pMaterial = nullptr;
             batchData.count = 0;
-            batchData.normalMapping = false;
-            freeBatchDescriptorSets(batchData);
         }
         _identifierBatchMapping.clear();
     }
 
     void StaticMeshRenderer::freeDescriptorSets()
     {
-        for (BatchData& batchData : _batches)
-            freeBatchDescriptorSets(batchData);
     }
 
     void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
@@ -263,7 +109,7 @@ namespace platypus
                 );
                 return;
             }
-            if (!occupyBatch(freeBatchIndex, pRenderable->meshID, identifier))
+            if (!occupyBatch(freeBatchIndex, pRenderable->meshID, materialID, identifier))
             {
                 Debug::log(
                     "@StaticMeshRenderer::submit "
@@ -275,44 +121,7 @@ namespace platypus
             pBatch = &_batches[freeBatchIndex];
         }
 
-        if (pBatch->materialDescriptorSets.empty())
-            createDescriptorSets(*pBatch, materialID);
-
         addToBatch(*pBatch, transformationMatrix);
-
-        /*
-        int foundBatchIndex = findExistingBatchIndex(identifier);
-        if (foundBatchIndex != -1)
-        {
-            addToBatch(_batches[foundBatchIndex], transformationMatrix);
-        }
-        else
-        {
-            int freeBatchIndex = findFreeBatchIndex();
-            if (freeBatchIndex == -1)
-            {
-                Debug::log(
-                    "@StaticMeshRenderer::submit "
-                    "No free batches found!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                return;
-            }
-            BatchData& batchData = _batches[freeBatchIndex];
-            if (!occupyBatch(batchData, pRenderable->meshID, identifier))
-            {
-                Debug::log(
-                    "@StaticMeshRenderer::submit "
-                    "Failed to occupy batch!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                return;
-            }
-            addToBatch(batchData, transformationMatrix);
-        }
-        if (!hasDescriptorSets(identifier))
-            createDescriptorSets(identifier, materialID);
-            */
     }
 
     const CommandBuffer& StaticMeshRenderer::recordCommandBuffer(
@@ -349,8 +158,18 @@ namespace platypus
             if (batchData.identifier == NULL_ID)
                 continue;
 
+            // Make sure valid material
+            if (!batchData.pMaterial)
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::recordCommandBuffer "
+                    "Batch material was nullptr",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
             // Make sure descriptor sets has been created
-            if (batchData.materialDescriptorSets.empty())
+            if (batchData.pMaterial->getDescriptorSets().empty())
             {
                 Debug::log(
                     "@StaticMeshRenderer::recordCommandBuffer "
@@ -368,7 +187,7 @@ namespace platypus
 
             render::bind_pipeline(
                 currentCommandBuffer,
-                batchData.normalMapping ? _normalMappingPipeline : _pipeline
+                batchData.pMaterial->getPipelineData()->pipeline
             );
 
             Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };
@@ -395,7 +214,7 @@ namespace platypus
             std::vector<DescriptorSet> descriptorSetsToBind = {
                 cameraDescriptorSet,
                 dirLightDescriptorSet,
-                batchData.materialDescriptorSets[_currentFrame]
+                batchData.pMaterial->getDescriptorSets()[_currentFrame]
             };
 
             render::bind_descriptor_sets(
@@ -455,6 +274,7 @@ namespace platypus
     bool StaticMeshRenderer::occupyBatch(
         int batchIndex,
         ID_t meshID,
+        ID_t materialID,
         ID_t identifier
     )
     {
@@ -478,112 +298,12 @@ namespace platypus
 
         BatchData& batchData = _batches[batchIndex];
         batchData.identifier = identifier;
+        batchData.pMaterial = (Material*)assetManager.getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 
         _identifierBatchMapping[identifier] = batchIndex;
 
         return true;
-    }
-
-    void StaticMeshRenderer::createDescriptorSets(BatchData& batchData, ID_t materialID)
-    {
-        Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Material* pMaterial = (const Material*)assetManager.getAsset(
-            materialID,
-            AssetType::ASSET_TYPE_MATERIAL
-        );
-        #ifdef PLATYPUS_DEBUG
-            if (!pMaterial)
-            {
-                Debug::log(
-                    "@StaticMeshRenderer::createDescriptorSets "
-                    "No material found with ID: " + std::to_string(materialID),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-        #endif
-
-        DescriptorSetLayout* pUseDescriptorSetLayout = &_materialDescriptorSetLayout;
-
-        const Texture* pDiffuseTexture = pMaterial->getDiffuseTexture();
-        const Texture* pSpecularTexture = pMaterial->getSpecularTexture();
-        const Texture* pNormalTexture = nullptr;
-        Vector4f materialProperties(
-            pMaterial->getSpecularStrength(),
-            pMaterial->getShininess(),
-            pMaterial->isShadeless(),
-            0
-        );
-
-        if (pMaterial->hasNormalMap())
-        {
-            pUseDescriptorSetLayout = &_materialDescriptorSetLayoutHD;
-            batchData.normalMapping = true;
-            pNormalTexture = pMaterial->getNormalTexture();
-            Debug::log("___TEST___FOUND NORMAL MAP (create descriptors)");
-        }
-
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        for (size_t i = 0; i < maxFramesInFlight; ++i)
-        {
-            Buffer* pMaterialUniformBuffer = new Buffer(
-                _commandPoolRef,
-                &materialProperties,
-                sizeof(Vector4f),
-                1,
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            batchData.materialUniformBuffers.push_back(pMaterialUniformBuffer);
-
-            std::vector<DescriptorSetComponent> descriptorSetComponents;
-            if (batchData.normalMapping)
-            {
-                batchData.materialDescriptorSets.push_back(
-                    _descriptorPoolRef.createDescriptorSet(
-                        pUseDescriptorSetLayout,
-                        {
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pNormalTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pMaterialUniformBuffer }
-                        }
-                    )
-                );
-            }
-            else
-            {
-                batchData.materialDescriptorSets.push_back(
-                    _descriptorPoolRef.createDescriptorSet(
-                        pUseDescriptorSetLayout,
-                        {
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pMaterialUniformBuffer }
-                        }
-                    )
-                );
-            }
-        }
-
-        Debug::log(
-            "@StaticMeshRenderer::createDescriptorSets "
-            "New descriptor sets created for batch with identifier: " + std::to_string(batchData.identifier)
-        );
-    }
-
-    void StaticMeshRenderer::freeBatchDescriptorSets(BatchData& batchData)
-    {
-        for (Buffer* pBuffer : batchData.materialUniformBuffers)
-            delete pBuffer;
-
-        batchData.materialUniformBuffers.clear();
-
-        _descriptorPoolRef.freeDescriptorSets(batchData.materialDescriptorSets);
-        batchData.materialDescriptorSets.clear();
     }
 }

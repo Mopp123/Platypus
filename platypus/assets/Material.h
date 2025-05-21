@@ -11,12 +11,12 @@ namespace platypus
     struct MaterialPipelineData
     {
         std::vector<VertexBufferLayout> vertexBufferLayouts;
-        // The material descriptor set layout, NOT including all common descriptor set layouts
-        // used by the pipeline as well
-        DescriptorSetLayout descriptorSetLayout;
-        Shader _vertexShader;
-        Shader _fragmentShader;
-        Pipeline _pipeline;
+        // NOTE: This contains ALL descriptor set layouts for pipeline!
+        // Currently the last one is the actual material's layout!
+        std::vector<DescriptorSetLayout> descriptorSetLayouts;
+        Shader vertexShader;
+        Shader fragmentShader;
+        Pipeline pipeline;
     };
 
     class Material : public Asset
@@ -31,8 +31,9 @@ namespace platypus
 
         bool _shadeless = false;
 
-        MaterialPipelineData _pipelineData;
-        MaterialPipelineData _normalMappedPipelineData;
+        MaterialPipelineData* _pPipelineData = nullptr;
+        std::vector<Buffer*> _uniformBuffers;
+        std::vector<DescriptorSet> _descriptorSets;
 
     public:
         Material(
@@ -45,8 +46,14 @@ namespace platypus
         );
         ~Material();
 
-        void createPipeline();
-        void createNormalMappedPipeline();
+        void createPipeline(
+            const VertexBufferLayout& meshVertexBufferLayout,
+            bool skinned
+        );
+        void recreateExistingPipeline();
+        void destroyPipeline();
+        void createDescriptorSets();
+        void freeDescriptorSets();
 
         Texture* getDiffuseTexture() const;
         Texture* getSpecularTexture() const;
@@ -56,5 +63,11 @@ namespace platypus
         inline float getShininess() const { return _shininess; }
         inline bool isShadeless() const { return _shadeless; }
         inline bool hasNormalMap() const { return _normalTextureID != NULL_ID;  }
+        inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
+        inline const std::vector<Buffer*>& getUniformBuffers() const { return _uniformBuffers; }
+        inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }
+
+    private:
+        std::string getVertexShaderFilename(uint32_t shaderStage, bool normalMapping);
     };
 }

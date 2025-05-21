@@ -87,6 +87,14 @@ namespace platypus
         _pImpl->handle = other._pImpl->handle;
     }
 
+    DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout&& other)
+    {
+        _pImpl = new DescriptorSetLayoutImpl;
+        _pImpl->handle = other._pImpl->handle;
+        _bindings = other._bindings;
+        return *this;
+    }
+
     DescriptorSetLayout::~DescriptorSetLayout()
     {
         // NOTE: Shouldn't call destroy here since this may have been copied to another

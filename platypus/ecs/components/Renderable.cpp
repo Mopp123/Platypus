@@ -36,6 +36,20 @@ namespace platypus
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 
+        // Create material pipeline and initial descriptor sets
+        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        Material* pMaterial = (Material*)assetManager.getAsset(materialAssetID, AssetType::ASSET_TYPE_MATERIAL);
+        if (!pMaterial->getPipelineData())
+        {
+            Mesh* pMesh = (Mesh*)assetManager.getAsset(meshAssetID, AssetType::ASSET_TYPE_MESH);
+            Debug::log(
+                "@create_static_mesh_renderable "
+                "Material didn't have pipeline data yet -> creating..."
+            );
+            pMaterial->createPipeline(pMesh->getVertexBufferLayout(), false);
+            pMaterial->createDescriptorSets();
+        }
+
         return pRenderable;
     }
 

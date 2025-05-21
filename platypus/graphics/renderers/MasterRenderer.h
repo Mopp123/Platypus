@@ -54,6 +54,7 @@ namespace platypus
     public:
         MasterRenderer(const Window& window);
         ~MasterRenderer();
+        void createPipelines();
 
         void cleanRenderers();
         void cleanUp();
@@ -62,6 +63,7 @@ namespace platypus
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }
+        inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getCameraDescriptorSetLayout() const { return _cameraDescriptorSetLayout; }
         inline const DescriptorSetLayout& getDirectionalLightDescriptorSetLayout() const { return _dirLightDescriptorSetLayout; }
@@ -69,9 +71,9 @@ namespace platypus
     private:
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
-        void createPipelines();
         void destroyPipelines();
         void freeDescriptorSets();
+        void createDescriptorSets();
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };

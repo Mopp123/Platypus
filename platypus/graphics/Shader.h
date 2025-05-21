@@ -22,6 +22,8 @@ namespace platypus
         ESSL1
     };
 
+    std::string shader_stage_to_string(uint32_t shaderStage);
+
 
     class Pipeline;
 

@@ -92,6 +92,7 @@ namespace platypus
 
     void Application::run()
     {
+        _masterRenderer.createPipelines();
         #ifdef PLATYPUS_BUILD_DESKTOP
             while (!_window.isCloseRequested())
             {
