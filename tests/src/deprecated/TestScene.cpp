@@ -197,7 +197,7 @@ void TestScene::init()
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
-        3,
+        true,
         0
     );
     Texture* pTerrainGrassTexture = assetManager.loadTexture(

@@ -48,6 +48,7 @@ namespace platypus
         VkDevice device,
         const std::vector<VkImage>& images,
         VkFormat format,
-        VkImageAspectFlags aspectFlags
+        VkImageAspectFlags aspectFlags,
+        uint32_t mipLevelCount
     );
 }

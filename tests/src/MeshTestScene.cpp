@@ -61,7 +61,7 @@ void MeshTestScene::init()
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
-        1,
+        true,
         0
     );
 
