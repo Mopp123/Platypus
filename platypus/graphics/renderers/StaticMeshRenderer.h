@@ -27,7 +27,6 @@ namespace platypus
 
         std::vector<BatchData> _batches;
         std::unordered_map<ID_t, size_t> _identifierBatchMapping;
-        size_t _currentFrame = 0;
 
         static size_t s_maxBatches;
         static size_t s_maxBatchLength;
@@ -41,17 +40,7 @@ namespace platypus
         );
         ~StaticMeshRenderer();
 
-        virtual void createPipeline(
-            const RenderPass& renderPass,
-            float viewportWidth,
-            float viewportHeight,
-            const DescriptorSetLayout& cameraDescriptorSetLayout,
-            const DescriptorSetLayout& dirLightDescriptorSetLayout
-        );
-        virtual void destroyPipeline() override;
-
         virtual void freeBatches();
-        virtual void freeDescriptorSets();
 
         virtual void submit(const Scene* pScene, entityID_t entity);
 

@@ -35,7 +35,7 @@ public:
 private:
     void createEntities(
         ID_t meshID,
-        ID_t textureID,
+        ID_t materialID,
         const platypus::Vector3f transformScale,
         float areaScale,
         uint32_t count

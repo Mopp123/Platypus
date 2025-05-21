@@ -5,6 +5,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "Renderer.h"
+#include "GUIRenderer.h"
 
 #include <map>
 #include <memory>
@@ -44,9 +45,10 @@ namespace platypus
         DescriptorSetLayout _dirLightDescriptorSetLayout;
         std::vector<DescriptorSet> _dirLightDescriptorSets;
 
-
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
-        std::unique_ptr<Renderer> _pGUIRenderer;
+        // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
+        // *This was due to Renderer and Material rework
+        std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         // Key is the required component mask for submitted components of the renderer
         std::map<uint64_t, Renderer*> _renderers;

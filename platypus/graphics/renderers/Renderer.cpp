@@ -33,9 +33,4 @@ namespace platypus
             buffer.free();
         _commandBuffers.clear();
     }
-
-    void Renderer::destroyPipeline()
-    {
-        _pipeline.destroy();
-    }
 }

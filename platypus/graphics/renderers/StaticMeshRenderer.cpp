@@ -54,20 +54,6 @@ namespace platypus
         freeBatches();
     }
 
-    void StaticMeshRenderer::createPipeline(
-        const RenderPass& renderPass,
-        float viewportWidth,
-        float viewportHeight,
-        const DescriptorSetLayout& cameraDescriptorSetLayout,
-        const DescriptorSetLayout& dirLightDescriptorSetLayout
-    )
-    {
-    }
-
-    void StaticMeshRenderer::destroyPipeline()
-    {
-    }
-
     void StaticMeshRenderer::freeBatches()
     {
         for (BatchData& batchData : _batches)
@@ -77,10 +63,6 @@ namespace platypus
             batchData.count = 0;
         }
         _identifierBatchMapping.clear();
-    }
-
-    void StaticMeshRenderer::freeDescriptorSets()
-    {
     }
 
     void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)

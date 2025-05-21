@@ -159,7 +159,7 @@ namespace platypus
             viewportWidth,
             viewportHeight,
             viewportScissor,
-            CullMode::CULL_MODE_NONE,
+            CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

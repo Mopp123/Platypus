@@ -19,10 +19,8 @@ namespace platypus
         CommandPool& _commandPoolRef;
         std::vector<CommandBuffer> _commandBuffers;
         DescriptorPool& _descriptorPoolRef;
-        Pipeline _pipeline;
 
         size_t _currentFrame = 0;
-
         uint64_t _requiredComponentsMask = 0;
 
     public:
@@ -37,17 +35,7 @@ namespace platypus
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
 
-        virtual void createPipeline(
-            const RenderPass& renderPass,
-            float viewportWidth,
-            float viewportHeight,
-            const DescriptorSetLayout& cameraDescriptorSetLayout,
-            const DescriptorSetLayout& dirLightDescriptorSetLayout
-        ) = 0;
-        virtual void destroyPipeline();
-
         virtual void freeBatches() = 0;
-        virtual void freeDescriptorSets() = 0;
 
         virtual void submit(const Scene* pScene, entityID_t entity) = 0;
 

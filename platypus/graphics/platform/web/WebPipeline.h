@@ -10,7 +10,7 @@ namespace platypus
     struct PipelineImpl
     {
         std::vector<VertexBufferLayout> vertexBufferLayouts;
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts;
+        std::vector<DescriptorSetLayout> descriptorSetLayouts;
         float viewportWidth = 0.0f;
         float viewportHeight = 0.0f;
 

@@ -119,6 +119,7 @@ namespace platypus
         );
         VertexBufferLayout(const VertexBufferLayout& other);
         VertexBufferLayout& operator=(VertexBufferLayout&& other);
+        VertexBufferLayout& operator=(VertexBufferLayout& other);
         ~VertexBufferLayout();
 
         inline const std::vector<VertexBufferElement>& getElements() const { return _elements; }

@@ -6,7 +6,6 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Component.h"
 #include "StaticMeshRenderer.h"
-#include "GUIRenderer.h"
 
 
 namespace platypus
@@ -105,7 +104,6 @@ namespace platypus
         );
 
         _renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
-        _renderers[_pGUIRenderer->getRequiredComponentsMask()] = _pGUIRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
     }
@@ -129,6 +127,8 @@ namespace platypus
         for (auto& it : _renderers)
             it.second->freeBatches();
 
+        _pGUIRenderer->freeBatches();
+
         freeDescriptorSets();
     }
 
@@ -146,6 +146,8 @@ namespace platypus
             if ((entity.componentMask & it.second->getRequiredComponentsMask()) == it.second->getRequiredComponentsMask())
                 it.second->submit(pScene, entity.id);
         }
+        if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
+            _pGUIRenderer->submit(pScene, entity.id);
     }
 
     void MasterRenderer::render(const Window& window)
@@ -187,12 +189,16 @@ namespace platypus
         );
         for (const auto& renderer : _renderers)
             renderer.second->allocCommandBuffers(count);
+
+        _pGUIRenderer->allocCommandBuffers(count);
     }
 
     void MasterRenderer::freeCommandBuffers()
     {
         for (auto& it : _renderers)
             it.second->freeCommandBuffers();
+
+        _pGUIRenderer->freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
@@ -203,18 +209,12 @@ namespace platypus
     {
         const Extent2D swapchainExtent = _swapchain.getExtent();
 
-        for (auto& it : _renderers)
-        {
-            it.second->createPipeline(
-                _swapchain.getRenderPass(),
-                swapchainExtent.width,
-                swapchainExtent.height,
-                _cameraDescriptorSetLayout,
-                _dirLightDescriptorSetLayout
-            );
-        }
+        _pGUIRenderer->createPipeline(
+            _swapchain.getRenderPass(),
+            swapchainExtent.width,
+            swapchainExtent.height
+        );
 
-        Debug::log("___TEST___ATTEMPT CREATE EXISTING MATERIAL PIPELINES...");
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->recreateExistingPipeline();
@@ -222,10 +222,8 @@ namespace platypus
 
     void MasterRenderer::destroyPipelines()
     {
-        for (auto& it : _renderers)
-            it.second->destroyPipeline();
+        _pGUIRenderer->destroyPipeline();
 
-        Debug::log("___TEST___ATTEMPT DESTROY EXISTING MATERIAL PIPELINES...");
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
@@ -233,10 +231,6 @@ namespace platypus
 
     void MasterRenderer::freeDescriptorSets()
     {
-        for (auto& it : _renderers)
-            it.second->freeDescriptorSets();
-
-        Debug::log("___TEST___ATTEMPT FREE MATERIAL DESCRIPTOR SETS...");
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->freeDescriptorSets();
@@ -244,7 +238,6 @@ namespace platypus
 
     void MasterRenderer::createDescriptorSets()
     {
-        Debug::log("___TEST___ATTEMPT CREATE MATERIAL DESCRIPTOR SETS...");
         AssetManager& assetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->createDescriptorSets();
@@ -360,6 +353,16 @@ namespace platypus
                 )
             );
         }
+
+        secondaryCommandBuffers.push_back(
+            _pGUIRenderer->recordCommandBuffer(
+                _swapchain.getRenderPass(),
+                swapchainExtent.width,
+                swapchainExtent.height,
+                orthographicProjectionMatrix,
+                frame
+            )
+        );
 
         render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
 

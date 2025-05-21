@@ -54,6 +54,20 @@ namespace platypus
     {
     }
 
+    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement&& other)
+    {
+        _location = other._location;
+        _type = other._type;
+        return *this;
+    }
+
+    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement& other)
+    {
+        _location = other._location;
+        _type = other._type;
+        return *this;
+    }
+
     VertexBufferElement::~VertexBufferElement()
     {
     }
@@ -62,6 +76,10 @@ namespace platypus
     struct VertexBufferLayoutImpl
     {
     };
+
+    VertexBufferLayout::VertexBufferLayout()
+    {
+    }
 
     VertexBufferLayout::VertexBufferLayout(
         std::vector<VertexBufferElement> elements,
@@ -80,6 +98,32 @@ namespace platypus
         _inputRate(other._inputRate),
         _stride(other._stride)
     {
+    }
+
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout&& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        return *this;
+    }
+
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        return *this;
     }
 
     VertexBufferLayout::~VertexBufferLayout()

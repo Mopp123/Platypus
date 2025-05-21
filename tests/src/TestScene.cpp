@@ -57,10 +57,10 @@ static Mesh* create_ground_mesh(AssetManager& assetManager, float scale)
 {
     float t = scale * 0.5f;
     std::vector<float> vertexData = {
-       -scale * 0.5f, 0, -scale * 0.5f, 0, 1, 0,  0, 0,
-       -scale * 0.5f, 0,  scale * 0.5f, 0, 1, 0,  0, t,
-        scale * 0.5f, 0,  scale * 0.5f, 0, 1, 0,  t, t,
-        scale * 0.5f, 0, -scale * 0.5f, 0, 1, 0,  t, 0
+       -scale * 0.5f, 0, -scale * 0.5f,  0, 1, 0,  0, 0,  1, 0, 0, 1,
+       -scale * 0.5f, 0,  scale * 0.5f,  0, 1, 0,  0, t,  1, 0, 0, 1,
+        scale * 0.5f, 0,  scale * 0.5f,  0, 1, 0,  t, t,  1, 0, 0, 1,
+        scale * 0.5f, 0, -scale * 0.5f,  0, 1, 0,  t, 0,  1, 0, 0, 1
     };
 
     std::vector<uint32_t> indices = {
@@ -68,7 +68,18 @@ static Mesh* create_ground_mesh(AssetManager& assetManager, float scale)
         2, 3, 0
     };
 
+    VertexBufferLayout layout(
+        {
+            { 0, ShaderDataType::Float3 },
+            { 1, ShaderDataType::Float3 },
+            { 2, ShaderDataType::Float2 },
+            { 3, ShaderDataType::Float4 }
+        },
+        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+        0
+    );
     return assetManager.createMesh(
+        layout,
         vertexData,
         indices
     );
@@ -97,7 +108,17 @@ static Mesh* create_grass_mesh(AssetManager& assetManager, float scale)
         6, 7, 4
     };
 
+    VertexBufferLayout layout(
+        {
+            { 0, ShaderDataType::Float3 },
+            { 1, ShaderDataType::Float3 },
+            { 2, ShaderDataType::Float2 },
+        },
+        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+        0
+    );
     return assetManager.createMesh(
+        layout,
         vertexData,
         indices
     );
@@ -170,31 +191,61 @@ void TestScene::init()
     // Load/generate all assets
     AssetManager& assetManager = Application::get_instance()->getAssetManager();
 
-    Image* pTerrainGrassImage = assetManager.loadImage("assets/textures/TerrainGrass.png");
     Image* pGrassImage = assetManager.loadImage("assets/textures/Grass.png");
     Image* pTreeTextureImage = assetManager.loadImage("assets/textures/FirTreeTexture.png");
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
-        1,
+        3,
         0
     );
-    Texture* pTerrainGrassTexture = assetManager.createTexture(
-        pTerrainGrassImage->getID(),
+    Texture* pTerrainGrassTexture = assetManager.loadTexture(
+        "assets/textures/TerrainGrass.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        textureSampler
+    );
+    Texture* pTerrainGrassSpecularTexture = assetManager.loadTexture(
+        "assets/textures/TerrainGrassSpecular.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        textureSampler
+    );
+    Texture* pTerrainGrassNormalTexture = assetManager.loadTexture(
+        "assets/textures/TerrainGrassNormal.png",
+        ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
     Texture* pGrassTexture = assetManager.createTexture(
         pGrassImage->getID(),
+        ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pFirTreeTexture = assetManager.createTexture(
+    Texture* pTreeTexture = assetManager.createTexture(
         pTreeTextureImage->getID(),
+        ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pPineTreeTexture = assetManager.createTexture(
-        pTreeTextureImage->getID(),
-        textureSampler
+
+    Material* pTerrainGrassMaterial = assetManager.createMaterial(
+        pTerrainGrassTexture->getID(),
+        pTerrainGrassSpecularTexture->getID(),
+        pTerrainGrassNormalTexture->getID(),
+        0.8f, // specular strength
+        32.0f // shininess
+    );
+    Material* pGrassMaterial = assetManager.createMaterial(
+        pGrassTexture->getID(),
+        assetManager.getWhiteTexture()->getID(),
+        NULL_ID,
+        0.5f, // specular strength
+        1.0f // shininess
+    );
+    Material* pTreeMaterial = assetManager.createMaterial(
+        pTreeTexture->getID(),
+        assetManager.getWhiteTexture()->getID(),
+        NULL_ID,
+        0.5f, // specular strength
+        1.0f // shininess
     );
 
     Mesh* pGroundMesh = create_ground_mesh(assetManager, areaScale);
@@ -213,14 +264,14 @@ void TestScene::init()
     create_static_mesh_renderable(
         groundEntity,
         pGroundMesh->getID(),
-        pTerrainGrassTexture->getID()
+        pTerrainGrassMaterial->getID()
     );
 
     // Grass entities
     size_t grassCount = 100 * scaleModifier * scaleModifier;
     createEntities(
         pGrassMesh->getID(),
-        pGrassTexture->getID(),
+        pGrassMaterial->getID(),
         { 2, 2, 2 },
         areaScale,
         grassCount
@@ -230,14 +281,14 @@ void TestScene::init()
     size_t totalTreeCount = 50 * scaleModifier * scaleModifier;
     createEntities(
         pTreeModel1->getMeshes()[0]->getID(),
-        pFirTreeTexture->getID(),
+        pTreeMaterial->getID(),
         { 0.5f, 0.5f, 0.5f },
         areaScale,
         totalTreeCount / 2
     );
     createEntities(
         pTreeModel2->getMeshes()[0]->getID(),
-        pPineTreeTexture->getID(),
+        pTreeMaterial->getID(),
         { 0.5f, 0.5f, 0.5f },
         areaScale,
         totalTreeCount / 2
@@ -304,7 +355,7 @@ void TestScene::update()
 
 void TestScene::createEntities(
     ID_t meshID,
-    ID_t textureID,
+    ID_t materialID,
     const Vector3f transformScale,
     float areaScale,
     uint32_t count
@@ -328,7 +379,7 @@ void TestScene::createEntities(
         create_static_mesh_renderable(
             entity,
             meshID,
-            textureID
+            materialID
         );
     }
 }
