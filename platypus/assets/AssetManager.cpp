@@ -241,6 +241,7 @@ namespace platypus
     }
 
     Mesh* AssetManager::createMesh(
+        const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
         const std::vector<uint32_t>& indexData
     )
@@ -263,17 +264,20 @@ namespace platypus
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
             false
         );
-        Mesh* pMesh = new Mesh(pVertexBuffer, pIndexBuffer, Matrix4f(1.0f));
+        Mesh* pMesh = new Mesh(
+            vertexBufferLayout,
+            pVertexBuffer,
+            pIndexBuffer,
+            Matrix4f(1.0f)
+        );
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
     }
 
     Model* AssetManager::loadModel(const std::string& filepath)
     {
-        std::vector<std::vector<Buffer*>> indexBuffers;
-        std::vector<Buffer*> vertexBuffers;
-        std::vector<Matrix4f> transformationMatrices;
-        if (!load_gltf_model(_commandPoolRef, filepath, indexBuffers, vertexBuffers, transformationMatrices))
+        std::vector<MeshData> loadedMeshes;
+        if (!load_gltf_model(_commandPoolRef, filepath, loadedMeshes))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -283,30 +287,40 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        // Currently supporting only loading single mesh from file for model!
-        // TODO: Multiple meshes and buffers per model!
-        if (vertexBuffers.size() != indexBuffers.size())
-        {
-            Debug::log(
-                "@AssetManager::loadModel "
-                "Failed to load model using filepath: " + filepath + " "
-                "Mismatch in meshes' index buffers and vertex buffers' sizes! "
-                "It is currently required to have a single index buffer and vertex buffer"
-                "for a single mesh!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
 
-        std::vector<Mesh*> meshes(vertexBuffers.size());
-        for (size_t i = 0; i < vertexBuffers.size(); ++i)
+        std::vector<Mesh*> createdMeshes;
+        for (const MeshData& meshData : loadedMeshes)
         {
-            Mesh* pMesh = new Mesh(vertexBuffers[i], indexBuffers[i][0], transformationMatrices[i]);
+            Buffer* pVertexBuffer = new Buffer(
+                _commandPoolRef,
+                (void*)meshData.vertexBufferData.data.data(),
+                meshData.vertexBufferData.elementSize,
+                meshData.vertexBufferData.length,
+                BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+            MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
+            Buffer* pIndexBuffer = new Buffer(
+                _commandPoolRef,
+                (void*)useIndexBuffer.data.data(),
+                useIndexBuffer.elementSize,
+                useIndexBuffer.length,
+                BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+
+            Mesh* pMesh = new Mesh(
+                meshData.vertexBufferLayout,
+                pVertexBuffer,
+                pIndexBuffer,
+                meshData.transformationMatrix
+            );
             _assets[pMesh->getID()] = pMesh;
-            meshes[i] = pMesh;
+            createdMeshes.push_back(pMesh);
         }
-        Model* pModel = new Model(meshes);
+        Model* pModel = new Model(createdMeshes);
         _assets[pModel->getID()] = pModel;
         return pModel;
     }

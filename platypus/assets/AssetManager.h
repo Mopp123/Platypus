@@ -52,6 +52,7 @@ namespace platypus
             bool shadeless = false
         );
         Mesh* createMesh(
+            const VertexBufferLayout& vertexBufferLayout,
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
         );

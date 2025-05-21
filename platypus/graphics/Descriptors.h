@@ -99,6 +99,7 @@ namespace platypus
         std::vector<DescriptorSetLayoutBinding> _bindings;
 
     public:
+        DescriptorSetLayout();
         DescriptorSetLayout(const std::vector<DescriptorSetLayoutBinding>& bindings);
         DescriptorSetLayout(const DescriptorSetLayout& other);
         DescriptorSetLayout& operator=(DescriptorSetLayout&& other) = delete;

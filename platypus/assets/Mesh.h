@@ -10,6 +10,7 @@ namespace platypus
     class Mesh : public Asset
     {
     private:
+        VertexBufferLayout _vertexBufferLayout;
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
 
@@ -20,6 +21,7 @@ namespace platypus
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
+            VertexBufferLayout vertexBufferLayout,
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
             const Matrix4f& transformationMatrix
@@ -27,6 +29,7 @@ namespace platypus
 
         ~Mesh();
 
+        inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline const Buffer* getIndexBuffer() const { return _pIndexBuffer; }
         inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }

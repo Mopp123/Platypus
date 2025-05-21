@@ -108,6 +108,7 @@ namespace platypus
         int32_t _stride = 0;
 
     public:
+        VertexBufferLayout();
         // NOTE: Not sure if copying elems goes correctly here..
         VertexBufferLayout(
             std::vector<VertexBufferElement> elements, // Why not const ref?

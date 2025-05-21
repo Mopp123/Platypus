@@ -63,6 +63,9 @@ namespace platypus
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }
 
+        inline const DescriptorSetLayout& getCameraDescriptorSetLayout() const { return _cameraDescriptorSetLayout; }
+        inline const DescriptorSetLayout& getDirectionalLightDescriptorSetLayout() const { return _dirLightDescriptorSetLayout; }
+
     private:
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();

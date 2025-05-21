@@ -33,6 +33,11 @@ namespace platypus
     }
 
 
+    DescriptorSetLayout::DescriptorSetLayout()
+    {
+        _pImpl = new DescriptorSetLayoutImpl;
+    }
+
     DescriptorSetLayout::DescriptorSetLayout(const std::vector<DescriptorSetLayoutBinding>& bindings) :
         _bindings(bindings)
     {
@@ -84,7 +89,8 @@ namespace platypus
 
     DescriptorSetLayout::~DescriptorSetLayout()
     {
-        // NOTE: Why not calling destroy() here!?!?
+        // NOTE: Shouldn't call destroy here since this may have been copied to another
+        // layout which still uses the vk handle
         if(_pImpl)
             delete _pImpl;
     }

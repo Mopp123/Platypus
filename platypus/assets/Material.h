@@ -8,6 +8,17 @@
 
 namespace platypus
 {
+    struct MaterialPipelineData
+    {
+        std::vector<VertexBufferLayout> vertexBufferLayouts;
+        // The material descriptor set layout, NOT including all common descriptor set layouts
+        // used by the pipeline as well
+        DescriptorSetLayout descriptorSetLayout;
+        Shader _vertexShader;
+        Shader _fragmentShader;
+        Pipeline _pipeline;
+    };
+
     class Material : public Asset
     {
     private:
@@ -20,8 +31,8 @@ namespace platypus
 
         bool _shadeless = false;
 
-        DescriptorSetLayout _descriptorSetLayout;
-        Pipeline _pipeline;
+        MaterialPipelineData _pipelineData;
+        MaterialPipelineData _normalMappedPipelineData;
 
     public:
         Material(
@@ -33,6 +44,9 @@ namespace platypus
             bool shadeless = false
         );
         ~Material();
+
+        void createPipeline();
+        void createNormalMappedPipeline();
 
         Texture* getDiffuseTexture() const;
         Texture* getSpecularTexture() const;

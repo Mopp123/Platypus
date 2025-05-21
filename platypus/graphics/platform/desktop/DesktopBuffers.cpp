@@ -171,6 +171,11 @@ namespace platypus
     }
 
 
+    VertexBufferLayout::VertexBufferLayout()
+    {
+        _pImpl = new VertexBufferLayoutImpl;
+    }
+
     // NOTE: Not sure if copying elems goes correctly here..
     VertexBufferLayout::VertexBufferLayout(
         std::vector<VertexBufferElement> elements,
