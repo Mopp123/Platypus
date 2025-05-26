@@ -98,21 +98,6 @@ namespace platypus
         if (webglContext >= 0)
         {
             emscripten_webgl_make_context_current(webglContext);
-
-            // NOTE: GLEW isn't actually required here!
-            /*
-            GLenum glewInitStatus = glewInit();
-            // TODO: Query some limits using glGetIntegerv
-            if (glewInitStatus != GLEW_OK)
-            {
-                Debug::log(
-                    "@Context::Context "
-                    "Failed to init glew",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            */
         }
         else
         {

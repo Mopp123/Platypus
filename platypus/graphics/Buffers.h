@@ -22,7 +22,6 @@ namespace platypus
         Float3,
         Float4,
 
-        // NOTE: Only used by opengl(?)
         Mat4
     };
 
@@ -108,9 +107,8 @@ namespace platypus
         int32_t _stride = 0;
 
     public:
-        // NOTE: Not sure if copying elems goes correctly here..
         VertexBufferLayout(
-            std::vector<VertexBufferElement> elements, // Why not const ref?
+            const std::vector<VertexBufferElement>& elements,
             VertexInputRate inputRate,
             uint32_t binding
         );
@@ -130,18 +128,12 @@ namespace platypus
         BufferImpl* _pImpl = nullptr;
         // NOTE: On OpenGL side, we need to save the _pData "on host side" to get "descriptor sets" working
         void* _pData = nullptr;
-        size_t _dataElemSize = 0; // size of a single entry in data
-        size_t _dataLength = 0; // number of elements in the data
+        size_t _dataElemSize = 0;
+        size_t _dataLength = 0;
         uint32_t _bufferUsageFlags = 0;
         BufferUpdateFrequency _updateFrequency;
 
     public:
-        // NOTE:
-        //  * "elementSize" single element's size in "data buffer"
-        //  * "dataLength" number of "elements" in the "data buffer" (NOT total size)
-        //  * "Data" gets just copied here! Ownership of the data doesn't get transferred here!
-        //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
-        //  and destroy staging buffer
         Buffer(
             const CommandPool& commandPool,
             void* pData,

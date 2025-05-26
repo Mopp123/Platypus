@@ -64,7 +64,7 @@ namespace platypus
     };
 
     VertexBufferLayout::VertexBufferLayout(
-        std::vector<VertexBufferElement> elements,
+        const std::vector<VertexBufferElement>& elements,
         VertexInputRate inputRate,
         uint32_t binding
     ) :
@@ -86,6 +86,7 @@ namespace platypus
     {
     }
 
+
     Buffer::Buffer(
         const CommandPool& commandPool,
         void* pData,
@@ -99,10 +100,6 @@ namespace platypus
         _bufferUsageFlags(usageFlags),
         _updateFrequency(updateFrequency)
     {
-        // Need to bind the common VAO
-        GL_FUNC(glBindVertexArray(Context::get_instance()->getImpl()->vaoID));
-
-        // in gl terms its the glBufferData's "usage"
         GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(updateFrequency);
         uint32_t id = 0;
         if ((usageFlags & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT)

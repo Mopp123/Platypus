@@ -171,9 +171,8 @@ namespace platypus
     }
 
 
-    // NOTE: Not sure if copying elems goes correctly here..
     VertexBufferLayout::VertexBufferLayout(
-        std::vector<VertexBufferElement> elements,
+        const std::vector<VertexBufferElement>& elements,
         VertexInputRate inputRate,
         uint32_t binding
     ) :
@@ -194,7 +193,7 @@ namespace platypus
             VkVertexInputAttributeDescription& attribDescRef = cpyElem._pImpl->attribDescription;
             attribDescRef.binding = binding;
             attribDescRef.location = cpyElem.getLocation();
-            attribDescRef.offset = _stride; // *the "current stride", where we havent yet added this attribute's size.. that kind of IS the offset..
+            attribDescRef.offset = _stride; // *the "current stride", where we havent yet added this attribute's size.. that IS the offset..
             attribDescRef.format = to_vk_format_from_shader_datatype(elemType);
 
             _stride += (uint32_t)elemSize;
@@ -220,12 +219,6 @@ namespace platypus
     }
 
 
-    // NOTE:
-    //  * "elementSize" single element's size in "data buffer"
-    //  * "dataLength" number of "elements" in the "data buffer" (NOT total size)
-    //  * "Data" gets just copied here! Ownership of the data doesn't get transferred here!
-    //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
-    //  and destroy staging buffer!
     Buffer::Buffer(
         const CommandPool& commandPool,
         void* pData,

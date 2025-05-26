@@ -619,8 +619,7 @@ namespace platypus
         VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(instance, surface, _minUniformBufferOffsetAlignment);
         ContextImpl::QueueFamilyIndices deviceQueueFamilyIndices = find_queue_families(selectedPhysicalDevice, surface);
         ContextImpl::SwapchainSupportDetails swapchainDetails = query_swapchain_support_details(selectedPhysicalDevice, surface);
-        // NOTE: Not sure if should actually give queues as ptrs to ptrs here?
-        // Not tested does this actually work...
+
         VkQueue graphicsQueue;
         VkQueue presentQueue;
         VkDevice device = create_device(

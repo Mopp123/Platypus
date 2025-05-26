@@ -174,9 +174,7 @@ namespace platypus
             true
         );
 
-        // NOTE: We create new copies of secondary command buffers here!
-        // Fucking stupid, since the actual command buffers we are using/refering to lives inside the
-        // renderer producing the secondary command buffer.
+        // NOTE: We create new copies of secondary command buffers here
         // TODO: Figure out some nice way to optimize this!
         std::vector<CommandBuffer> secondaryCommandBuffers;
 
@@ -224,7 +222,7 @@ namespace platypus
                 perspectiveProjectionMatrix,
                 viewMatrix,
                 _dirLightDescriptorSets[frame],
-                frame // NOTE: no idea should this be the "frame index" or "image index"
+                frame
             )
         );
 

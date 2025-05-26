@@ -3,7 +3,6 @@
 #include "platypus/graphics/CommandBuffer.h"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
-#include "TestRenderer.h"
 #include "StaticMeshRenderer.h"
 
 #include "platypus/ecs/components/Renderable.h"
