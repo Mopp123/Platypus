@@ -126,7 +126,7 @@ void TestScene::init()
         80.0f,   // max zoom
         1.25f    // zoom speed
     );
-    _camController.setOffsetPos({ 0, 4, 0});
+    _camController.setOffsetPos({ 0, 0, 0});
 
     Application::get_instance()->getInputManager().addWindowResizeEvent(
         new SceneWindowResizeEvent(this, _camEntity)
@@ -218,24 +218,22 @@ void TestScene::init()
     Debug::log("___TEST___Total renderable count: " + std::to_string(totalRenderableCount));
 }
 
-static float s_TEST_value = 0.0f;
+static float s_testAnim = 0.0f;
 void TestScene::update()
 {
-    /*
-    s_TEST_value += 1.0f * Timing::get_delta_time();
-    Matrix4f newMatrix = create_transformation_matrix(
-        { 0.0f, 1.0f, -5.0f },
-        { { 0, 1, 1 }, s_TEST_value },
-        { 1, 1, 1 }
-    );
-    Transform* pTransform = (Transform*)getComponent(
-        testEntity2,
-        ComponentType::COMPONENT_TYPE_TRANSFORM
-    );
-    pTransform->globalMatrix = newMatrix;
-    */
-
     Transform* pCamTransform = (Transform*)getComponent(_camEntity, ComponentType::COMPONENT_TYPE_TRANSFORM);
+
+    s_testAnim += 0.5f * Timing::get_delta_time();
+
+    _camController.set(
+        PLATY_MATH_PI * 0.15f, // pitch
+        s_testAnim,    // yaw
+        0.0025f, // rot speed
+        70.0f,   // zoom
+        80.0f,   // max zoom
+        1.25f    // zoom speed
+    );
+
     _camController.update(pCamTransform);
 }
 

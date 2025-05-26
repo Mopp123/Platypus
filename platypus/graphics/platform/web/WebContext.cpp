@@ -89,9 +89,7 @@ namespace platypus
 
         contextAttribs.enableExtensionsByDefault = 1;
 
-        // using webgl 1.0 (widest support?)
-        // NOTE: UPDATE: This is outdated since forcing webgl2 in CMakeLists?
-        contextAttribs.majorVersion = 1;
+        contextAttribs.majorVersion = 2;
         contextAttribs.majorVersion = 0;
 
         EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webglContext = emscripten_webgl_create_context("#canvas", &contextAttribs);
