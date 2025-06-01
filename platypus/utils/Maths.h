@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cstring>
 
 #define PLATY_MATH_PI 3.14159265358979323846
 
@@ -112,6 +113,7 @@ namespace platypus
         inline float& operator[](int index) { return _data[index]; }
         inline float operator[](int index) const { return _data[index]; }
         inline const float* getRawArray() const { return _data; }
+        inline bool operator==(const Matrix4f& other) const { return memcmp(_data, other._data, sizeof(float) * 16) == 0; }
     };
 
 

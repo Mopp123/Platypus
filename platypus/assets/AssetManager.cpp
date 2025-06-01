@@ -315,7 +315,8 @@ namespace platypus
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,
-                meshData.transformationMatrix
+                meshData.transformationMatrix,
+                meshData.bindPose
             );
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);

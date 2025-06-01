@@ -23,7 +23,7 @@ namespace platypus
         std::vector<MeshBufferData> indexBufferData;
         Matrix4f transformationMatrix = Matrix4f(1.0f);
 
-        std::vector<Pose> animationPoses;
+        Pose bindPose;
     };
 
 }

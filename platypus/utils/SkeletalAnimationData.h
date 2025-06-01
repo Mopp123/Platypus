@@ -11,6 +11,7 @@ namespace platypus
         Vector3f translation;
         Quaternion rotation;
         Vector3f scale;
+        Matrix4f matrix; // NOTE: Don't remember was this actually used for anything anymore...
         Matrix4f inverseMatrix; // Created only for the bind pose
     };
 

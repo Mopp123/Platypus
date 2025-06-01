@@ -3,9 +3,10 @@
 #include <unordered_map>
 #include <algorithm>
 
-// NOTE: This includes tinygltf as well and needs to be included before below
-// defines and tinygltf include!
+// NOTE: GLTFVertexParsing and GLTFSkeletonParsing includes tinygltf as well
+// and needs to be included before below defines and tinygltf include!
 #include "GLTFVertexParsing.h"
+#include "GLTFSkeletonParsing.h"
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -98,6 +99,11 @@ namespace platypus
         for (size_t i = 0; i < modelNodes.size(); ++i)
         {
             const tinygltf::Node& node = modelNodes[i];
+            // NOTE: Could also loop just the gltfModel.meshes
+            // BUT atm I want to get also the meshes' transform from their node
+            if (node.mesh == -1)
+                continue;
+
             tinygltf::Mesh& gltfMesh = gltfModel.meshes[node.mesh];
             Vector3f position;
             Quaternion rotation;
@@ -148,11 +154,6 @@ namespace platypus
                 );
             }
 
-            // Load skeleton (bind pose) (if found)
-            Pose bindPose;
-
-            // Load animations (if found)
-
             outMeshes.push_back({
                 vertexBufferLayout,
                 vertexBuffer,
@@ -161,6 +162,28 @@ namespace platypus
                 {}
             });
         }
+
+        // Indexing should follow above meshes indices
+        for (size_t i = 0; i < gltfModel.skins.size(); ++i)
+        {
+            // Load skeleton (bind pose) (if found)
+            Pose bindPose;
+            // NOTE: Not sure is this skin index correct
+            int rootJointNodeIndex = gltfModel.skins[0].joints[0];
+            // Mapping from gltf joint node index to our pose struct's joint index
+            std::unordered_map<int, int> nodeJointMapping;
+            add_gltf_joint(
+                gltfModel,
+                bindPose,
+                -1, // index to pose struct's parent joint. NOT glTF node index!
+                rootJointNodeIndex,
+                nodeJointMapping
+            );
+            outMeshes[i].bindPose = bindPose;
+
+            // Load animations (if found)
+        }
+
         return true;
     }
 }

@@ -3,6 +3,45 @@
 
 using namespace platypus;
 
+static void create_joint_boxes(
+    Scene* pScene,
+    const Mesh* pMesh,
+    const Material* pMaterial,
+    const Pose& pose,
+    const Matrix4f& parentMatrix,
+    int jointIndex
+)
+{
+    Matrix4f matrix = parentMatrix * pose.joints[jointIndex].matrix;
+
+    entityID_t entity = pScene->createEntity();
+    Transform* pTransform = create_transform(
+        entity,
+        matrix
+    );
+    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+        entity,
+        pMesh->getID(),
+        pMaterial->getID()
+    );
+
+    const Joint& currentJoint = pose.joints[jointIndex];
+
+    if (jointIndex != 0)
+        pTransform->globalMatrix = parentMatrix * currentJoint.matrix;
+
+    for (int childJointIndex : pose.jointChildMapping[jointIndex])
+    {
+        create_joint_boxes(
+            pScene,
+            pMesh,
+            pMaterial,
+            pose,
+            matrix,
+            childJointIndex
+        );
+    }
+}
 
 SkinnedMeshTestScene::SkinnedMeshTestScene()
 {
@@ -30,6 +69,10 @@ void SkinnedMeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
+    Model* pAnimatedModel = assetManager.loadModel("assets/models/SkeletonTest.glb");
+    Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
+
+    // Create box entity for all skeleton model's joints
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
@@ -50,18 +93,15 @@ void SkinnedMeshTestScene::init()
         0.8f,
         16.0f
     );
-
     Model* pModel = assetManager.loadModel("assets/TestCube.glb");
 
-    entityID_t entity = createEntity();
-    Transform* pTransform = create_transform(
-        entity,
-        pModel->getMeshes()[0]->getTransformationMatrix()
-    );
-    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
-        entity,
-        pModel->getMeshes()[0]->getID(),
-        pMaterial->getID()
+    create_joint_boxes(
+        this,
+        pModel->getMeshes()[0],
+        pMaterial,
+        pAnimatedMesh->getBindPose(),
+        Matrix4f(1.0f),
+        0
     );
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
