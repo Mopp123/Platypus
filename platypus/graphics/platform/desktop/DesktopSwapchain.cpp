@@ -145,7 +145,8 @@ namespace platypus
             device,
             { *outImage },
             format,
-            VK_IMAGE_ASPECT_DEPTH_BIT
+            VK_IMAGE_ASPECT_DEPTH_BIT,
+            1
         );
         *outImageView = imageViews[0];
     }
@@ -362,7 +363,8 @@ namespace platypus
             device,
             createdImages,
             selectedFormat.format,
-            VK_IMAGE_ASPECT_COLOR_BIT
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            1
         );
         _pImpl->maxFramesInFlight = _imageCount - 1;
 

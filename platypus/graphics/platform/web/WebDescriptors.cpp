@@ -18,6 +18,18 @@ namespace platypus
     {
     }
 
+    DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout&& other)
+    {
+        _bindings = other._bindings;
+        return *this;
+    }
+
+    DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout& other)
+    {
+        _bindings = other._bindings;
+        return *this;
+    }
+
     DescriptorSetLayout::~DescriptorSetLayout()
     {
     }

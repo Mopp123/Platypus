@@ -52,6 +52,7 @@ namespace platypus
             bool shadeless = false
         );
         Mesh* createMesh(
+            const VertexBufferLayout& vertexBufferLayout,
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
         );
@@ -59,6 +60,7 @@ namespace platypus
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
         Asset* getAsset(ID_t assetID, AssetType type) const;
+        std::vector<Asset*> getAssets(AssetType type) const;
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }

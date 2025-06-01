@@ -15,12 +15,12 @@ namespace platypus
     TextureSampler::TextureSampler(
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
-        uint32_t mipLevelCount,
+        bool mipmapping,
         uint32_t anisotropicFiltering
     ) :
         _filterMode(filterMode),
         _addressMode(addressMode),
-        _mipLevelCount(mipLevelCount)
+        _mipmapping(mipmapping)
     {
     }
 
@@ -31,7 +31,7 @@ namespace platypus
     TextureSampler::TextureSampler(const TextureSampler& other) :
         _filterMode(other._filterMode),
         _addressMode(other._addressMode),
-        _mipLevelCount(other._mipLevelCount)
+        _mipmapping(other._mipmapping)
     {
     }
 
@@ -146,7 +146,7 @@ namespace platypus
                 break;
         }
 
-        if (sampler.getMipLevelCount() > 1)
+        if (sampler.isMipmapped())
         {
             if(sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {

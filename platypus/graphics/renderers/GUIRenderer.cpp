@@ -17,14 +17,12 @@ namespace platypus
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
-        Renderer(
-            masterRenderer,
-            commandPool,
-            descriptorPool,
-            requiredComponentsMask
-        ),
+        _masterRendererRef(masterRenderer),
+        _commandPoolRef(commandPool),
+        _descriptorPoolRef(descriptorPool),
+        _requiredComponentsMask(requiredComponentsMask),
         _vertexShader("GUIVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _guiFragmentShader("GUIFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+        _imgFragmentShader("GUIFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _fontFragmentShader("FontFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
         _textureDescriptorSetLayout(
             {
@@ -99,12 +97,25 @@ namespace platypus
         delete _pIndexBuffer;
     }
 
+    void GUIRenderer::allocCommandBuffers(uint32_t count)
+    {
+        _commandBuffers = _commandPoolRef.allocCommandBuffers(
+            count,
+            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
+        );
+    }
+
+    void GUIRenderer::freeCommandBuffers()
+    {
+        for (CommandBuffer& buffer : _commandBuffers)
+            buffer.free();
+        _commandBuffers.clear();
+    }
+
     void GUIRenderer::createPipeline(
         const RenderPass& renderPass,
         float viewportWidth,
-        float viewportHeight,
-        const DescriptorSetLayout& cameraDescriptorSetLayout,
-        const DescriptorSetLayout& dirLightDescriptorSetLayout
+        float viewportHeight
     )
     {
         VertexBufferLayout vbLayout = {
@@ -124,17 +135,17 @@ namespace platypus
             1
         };
         std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
-            &_textureDescriptorSetLayout
+        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
+            _textureDescriptorSetLayout
         };
 
         Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
-        _pipeline.create(
+        _imgPipeline.create(
             renderPass,
             vertexBufferLayouts,
             descriptorSetLayouts,
             _vertexShader,
-            _guiFragmentShader,
+            _imgFragmentShader,
             viewportWidth,
             viewportHeight,
             viewportScissor,
@@ -168,7 +179,7 @@ namespace platypus
 
     void GUIRenderer::destroyPipeline()
     {
-        _pipeline.destroy();
+        _imgPipeline.destroy();
         _fontPipeline.destroy();
     }
 
@@ -250,10 +261,7 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
-        const Matrix4f& perspectiveProjectionMatrix,
         const Matrix4f& orthographicProjectionMatrix,
-        const DescriptorSet& cameraDescriptorSet,
-        const DescriptorSet& dirLightDescriptorSet,
         size_t frame
     )
     {
@@ -316,7 +324,7 @@ namespace platypus
 
                 render::bind_pipeline(
                     currentCommandBuffer,
-                    batchData.type == BatchType::IMAGE ? _pipeline : _fontPipeline
+                    batchData.type == BatchType::IMAGE ? _imgPipeline : _fontPipeline
                 );
 
                 float pushConstantsData[20];

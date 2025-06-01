@@ -1,5 +1,4 @@
 #include "ModelLoading.h"
-#include "platypus/Common.h"
 #include "platypus/core/Debug.h"
 #include "Maths.h"
 #include <unordered_map>
@@ -169,13 +168,13 @@ namespace platypus
     }
 
 
-    static std::vector<Buffer*> load_index_buffers(
+    static bool load_index_buffers(
         const CommandPool& commandPool,
         tinygltf::Model& gltfModel,
-        tinygltf::Mesh& gltfMesh
+        tinygltf::Mesh& gltfMesh,
+        std::vector<MeshBufferData>& outBufferData
     )
     {
-        std::vector<Buffer*> indexBuffers;
         for (size_t i = 0; i < gltfMesh.primitives.size(); ++i)
         {
             const tinygltf::Primitive& primitive = gltfMesh.primitives[i];
@@ -186,7 +185,7 @@ namespace platypus
                     "Failed to find index buffer accessor using primitive.indices: " + std::to_string(primitive.indices),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
-                return indexBuffers;
+                return false;
             }
 
             const tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
@@ -194,20 +193,18 @@ namespace platypus
 
             const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
             const size_t elementSize = bufferView.byteLength / accessor.count;
-            void* pData = gltfModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset;
+            size_t bufferSize = elementSize * bufferLength;
 
-            indexBuffers.push_back(new Buffer(
-                    commandPool,
-                    pData,
-                    elementSize,
-                    bufferLength,
-                    BUFFER_USAGE_INDEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
-                    BUFFER_UPDATE_FREQUENCY_STATIC,
-                    false
-                )
+            std::vector<PE_byte> rawBuffer(bufferSize);
+            memcpy(
+                rawBuffer.data(),
+                gltfModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset,
+                bufferSize
             );
+
+            outBufferData.push_back({ elementSize, bufferLength, rawBuffer });
         }
-        return indexBuffers;
+        return true;
     }
 
 
@@ -221,14 +218,19 @@ namespace platypus
     // Current limitations!
     // * Expecting to have only a single set of primitives for single mesh!
     //  -> if thats not the case shit gets fucked!
-    static Buffer* load_vertex_buffer(
+    static bool load_vertex_buffer(
         const CommandPool& commandPool,
         tinygltf::Model& gltfModel,
-        tinygltf::Mesh& gltfMesh
+        tinygltf::Mesh& gltfMesh,
+        VertexBufferLayout& outLayout,
+        MeshBufferData& outBufferData
     )
     {
+        // key = location
+        std::map<uint32_t, ShaderDataType> orderedBufferElements;
         size_t combinedVertexBufferSize = 0;
         size_t elementSize = 0;
+
         // sortedvertexbufferattributes is used to create single vertex buffer containing:
         //  * vertex positions
         //  * normals
@@ -278,7 +280,7 @@ namespace platypus
                             "but engine doesnt currently support this!",
                             Debug::MessageType::PLATYPUS_ERROR
                         );
-                        return nullptr;
+                        return false;
                     }
 
                     // Joint indices may come as unsigned bytes -> switch those to float for now..
@@ -308,7 +310,7 @@ namespace platypus
                                 "attributes of type: JOINTS_0",
                                 Debug::MessageType::PLATYPUS_ERROR
                             );
-                            return nullptr;
+                            return false;
                         }
                     }
                     sortedVertexBufferAttributes[attribLocation] = { attribLocation, shaderDataType, accessor.bufferView };
@@ -319,6 +321,8 @@ namespace platypus
                     // NOTE: Don't remember wtf this elemCount is...
                     size_t elemCount = accessor.count;
                     combinedVertexBufferSize += elemCount * attribSize;
+
+                    orderedBufferElements[(uint32_t)attribLocation] = shaderDataType;
                 }
                 else
                 {
@@ -332,7 +336,7 @@ namespace platypus
         }
 
         // Combine all into single raw buffer
-        PE_byte* pCombinedRawBuffer = new PE_byte[combinedVertexBufferSize];
+        std::vector<PE_byte> combinedRawBuffer(combinedVertexBufferSize);
         const size_t attribCount = sortedVertexBufferAttributes.size();
         size_t srcOffsets[attribCount];
         memset(srcOffsets, 0, sizeof(size_t) * attribCount);
@@ -365,7 +369,7 @@ namespace platypus
                 val.w = (float)*(pSrcBuffer + 3);
                 vertexJointData[vertexIndex].second = val;
 
-                memcpy(pCombinedRawBuffer + dstOffset, &val, sizeof(Vector4f));
+                memcpy(combinedRawBuffer.data() + dstOffset, &val, sizeof(Vector4f));
             }
             else
             {
@@ -391,11 +395,11 @@ namespace platypus
                     }
                     vertexJointData[vertexIndex].first = val;
 
-                    memcpy(pCombinedRawBuffer + dstOffset, &val, sizeof(Vector4f));
+                    memcpy(combinedRawBuffer.data() + dstOffset, &val, sizeof(Vector4f));
                 }
                 else
                 {
-                    memcpy(pCombinedRawBuffer + dstOffset, pSrcBuffer, gltfInternalSize);
+                    memcpy(combinedRawBuffer.data() + dstOffset, pSrcBuffer, gltfInternalSize);
                 }
             }
 
@@ -410,24 +414,19 @@ namespace platypus
                 ++vertexIndex;
         }
         size_t bufferLength = combinedVertexBufferSize / elementSize;
-        Buffer* pBuffer = new Buffer(
-            commandPool,
-            pCombinedRawBuffer,
-            elementSize,
-            bufferLength,
-            BUFFER_USAGE_VERTEX_BUFFER_BIT | BUFFER_USAGE_TRANSFER_DST_BIT,
-            BUFFER_UPDATE_FREQUENCY_STATIC,
-            false
-        );
-        delete[] pCombinedRawBuffer;
-        return pBuffer;
+        outBufferData = { elementSize, bufferLength, combinedRawBuffer };
+
+        std::vector<VertexBufferElement> sortedVertexBufferElements;
+        for (const auto& elem : orderedBufferElements)
+            sortedVertexBufferElements.push_back({ elem.first, elem.second});
+
+        outLayout = { sortedVertexBufferElements, VertexInputRate::VERTEX_INPUT_RATE_VERTEX, 0 };
+        return true;
     }
 
 
     // NOTE:
     // Current limitations:
-    //  * single mesh only
-    //      - also excluding any camera, light nodes, etc..
     //  * no skeleton loading
     //  * no material loading
 
@@ -439,9 +438,7 @@ namespace platypus
     bool load_gltf_model(
         const CommandPool& commandPool,
         const std::string& filepath,
-        std::vector<std::vector<Buffer*>>& outIndexBuffers,
-        std::vector<Buffer*>& outVertexBuffers,
-        std::vector<Matrix4f>& outTransformationMatrices
+        std::vector<MeshData>& outMeshes
     )
     {
         tinygltf::Model gltfModel;
@@ -521,17 +518,16 @@ namespace platypus
             if (node.scale.size() == 3)
                 scale = to_engine_vector3(node.scale);
 
-            outTransformationMatrices.push_back(
-                create_transformation_matrix(
-                    position,
-                    rotation,
-                    scale
-                )
+            Matrix4f transformationMatrix = create_transformation_matrix(
+                position,
+                rotation,
+                scale
             );
 
-            std::vector<Buffer*> indexBuffers = load_index_buffers(commandPool, gltfModel, gltfMesh);
-            Buffer* pVertexBuffer = load_vertex_buffer(commandPool, gltfModel, gltfMesh);
-            if (indexBuffers.empty())
+            std::vector<MeshBufferData> indexBuffers;
+            MeshBufferData vertexBuffer;
+            VertexBufferLayout vertexBufferLayout;
+            if (!load_index_buffers(commandPool, gltfModel, gltfMesh, indexBuffers))
             {
                 Debug::log(
                     "@load_gltf_model "
@@ -540,7 +536,18 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_ERROR
                 );
             }
-            else if (!pVertexBuffer)
+            // Don't support multiple index buffers for single mesh atm
+            if (indexBuffers.size() != 1)
+            {
+                Debug::log(
+                    "@load_gltf_model "
+                    "Mesh had " + std::to_string(indexBuffers.size()) + " index buffers. "
+                    "Currently supporting only single index buffer per mesh",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (!load_vertex_buffer(commandPool, gltfModel, gltfMesh, vertexBufferLayout, vertexBuffer))
             {
                 Debug::log(
                     "@load_gltf_model "
@@ -549,8 +556,12 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_ERROR
                 );
             }
-            outIndexBuffers.push_back(indexBuffers);
-            outVertexBuffers.push_back(pVertexBuffer);
+            outMeshes.push_back({
+                vertexBufferLayout,
+                vertexBuffer,
+                indexBuffers,
+                transformationMatrix
+            });
         }
         return true;
     }

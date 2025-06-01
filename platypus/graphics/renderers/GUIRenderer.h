@@ -1,8 +1,11 @@
 #pragma once
 
-#include "Renderer.h"
+
+#include "platypus/core/Scene.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
+#include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/Shader.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
 #include <cstdlib>
@@ -11,14 +14,23 @@
 
 namespace platypus
 {
-
-    class GUIRenderer : public Renderer
+    class MasterRenderer;
+    class GUIRenderer
     {
     private:
+        const MasterRenderer& _masterRendererRef;
+        CommandPool& _commandPoolRef;
+        std::vector<CommandBuffer> _commandBuffers;
+        DescriptorPool& _descriptorPoolRef;
+
+        size_t _currentFrame = 0;
+        uint64_t _requiredComponentsMask = 0;
+
+        Pipeline _imgPipeline;
         Pipeline _fontPipeline;
 
         Shader _vertexShader;
-        Shader _guiFragmentShader;
+        Shader _imgFragmentShader;
         Shader _fontFragmentShader;
 
         const Buffer* _pVertexBuffer = nullptr;
@@ -61,8 +73,6 @@ namespace platypus
         // for each batch that contains its' type and textureID
         std::unordered_map<ID_t, std::vector<DescriptorSet>> _textureDescriptorSets;
 
-        size_t _currentFrame = 0;
-
         static size_t s_maxBatches;
         static size_t s_maxBatchLength;
 
@@ -75,31 +85,31 @@ namespace platypus
         );
         ~GUIRenderer();
 
-        virtual void createPipeline(
+        void allocCommandBuffers(uint32_t count);
+        void freeCommandBuffers();
+
+        void createPipeline(
             const RenderPass& renderPass,
             float viewportWidth,
-            float viewportHeight,
-            const DescriptorSetLayout& cameraDescriptorSetLayout,
-            const DescriptorSetLayout& dirLightDescriptorSetLayout
+            float viewportHeight
         );
 
-        virtual void destroyPipeline() override;
+        void destroyPipeline();
 
-        virtual void freeBatches();
-        virtual void freeDescriptorSets();
+        void freeBatches();
+        void freeDescriptorSets();
 
-        virtual void submit(const Scene* pScene, entityID_t entity);
+        void submit(const Scene* pScene, entityID_t entity);
 
-        virtual const CommandBuffer& recordCommandBuffer(
+        const CommandBuffer& recordCommandBuffer(
             const RenderPass& renderPass,
             uint32_t viewportWidth,
             uint32_t viewportHeight,
-            const Matrix4f& perspectiveProjectionMatrix,
             const Matrix4f& orthographicProjectionMatrix,
-            const DescriptorSet& cameraDescriptorSet,
-            const DescriptorSet& dirLightDescriptorSet,
             size_t frame
         );
+
+        inline uint64_t getRequiredComponentsMask() const { return _requiredComponentsMask; }
 
     private:
         int findExistingBatchIndex(uint32_t layer, ID_t textureID);

@@ -84,7 +84,7 @@ namespace platypus
     void Pipeline::create(
         const RenderPass& renderPass,
         const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-        const std::vector<const DescriptorSetLayout*>& descriptorLayouts,
+        const std::vector<DescriptorSetLayout>& descriptorLayouts,
         const Shader& vertexShader,
         const Shader& fragmentShader,
         float viewportWidth,
@@ -256,7 +256,7 @@ namespace platypus
         // *Combine the VkDescriptorLayouts from the descriptor layouts into a single contiguous container
         std::vector<VkDescriptorSetLayout> vkDescSetLayouts;
         for (int i = 0; i < descriptorLayouts.size(); ++i)
-            vkDescSetLayouts.push_back(descriptorLayouts[i]->getImpl()->handle);
+            vkDescSetLayouts.push_back(descriptorLayouts[i].getImpl()->handle);
         // *Push constants:
         VkPushConstantRange pushConstantRange{};
 

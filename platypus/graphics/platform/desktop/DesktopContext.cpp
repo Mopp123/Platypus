@@ -552,7 +552,8 @@ namespace platypus
         VkDevice device,
         const std::vector<VkImage>& images,
         VkFormat format,
-        VkImageAspectFlags aspectFlags
+        VkImageAspectFlags aspectFlags,
+        uint32_t mipLevelCount
     )
     {
         std::vector<VkImageView> imageViews(images.size());
@@ -570,7 +571,7 @@ namespace platypus
             createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.subresourceRange.aspectMask = aspectFlags;
             createInfo.subresourceRange.baseMipLevel = 0; // TODO: Mipmapping!
-            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.levelCount = mipLevelCount;
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
 

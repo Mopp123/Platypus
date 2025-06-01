@@ -57,8 +57,8 @@ namespace platypus
         bool _initialized = false;
 
     public:
-        void init();
-        void update(Transform* pCameraTransform);
+        void init(entityID_t cameraEntity);
+        void update();
 
         void set(
             float pitch,

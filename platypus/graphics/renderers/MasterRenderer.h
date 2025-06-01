@@ -5,6 +5,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "Renderer.h"
+#include "GUIRenderer.h"
 
 #include <map>
 #include <memory>
@@ -44,9 +45,10 @@ namespace platypus
         DescriptorSetLayout _dirLightDescriptorSetLayout;
         std::vector<DescriptorSet> _dirLightDescriptorSets;
 
-
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
-        std::unique_ptr<Renderer> _pGUIRenderer;
+        // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
+        // *This was due to Renderer and Material rework
+        std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         // Key is the required component mask for submitted components of the renderer
         std::map<uint64_t, Renderer*> _renderers;
@@ -54,6 +56,7 @@ namespace platypus
     public:
         MasterRenderer(const Window& window);
         ~MasterRenderer();
+        void createPipelines();
 
         void cleanRenderers();
         void cleanUp();
@@ -62,13 +65,17 @@ namespace platypus
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }
+        inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
+
+        inline const DescriptorSetLayout& getCameraDescriptorSetLayout() const { return _cameraDescriptorSetLayout; }
+        inline const DescriptorSetLayout& getDirectionalLightDescriptorSetLayout() const { return _dirLightDescriptorSetLayout; }
 
     private:
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
-        void createPipelines();
         void destroyPipelines();
         void freeDescriptorSets();
+        void createDescriptorSets();
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };
