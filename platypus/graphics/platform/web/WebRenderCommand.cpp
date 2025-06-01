@@ -532,7 +532,7 @@ namespace platypus
                         {
                             Debug::log(
                                 "@bind_descriptor_sets "
-                                "Descriptor set component's data was nullptr!"
+                                "Descriptor set component's data was nullptr!",
                                 Debug::MessageType::PLATYPUS_ERROR
                             );
                             PLATYPUS_ASSERT(false);

@@ -47,6 +47,7 @@ file(GLOB SRC_FILES
 
     platypus/ecs/components/*.cpp
     platypus/utils/*.cpp
+    platypus/utils/modelLoading/*.cpp
     platypus/utils/controllers/*.cpp
 
     platypus/assets/*.cpp
