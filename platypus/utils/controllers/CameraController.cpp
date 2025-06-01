@@ -53,8 +53,9 @@ namespace platypus
     }
 
 
-    void CameraController::init()
+    void CameraController::init(entityID_t cameraEntity)
     {
+        _cameraEntity = cameraEntity;
         Application* pApp = Application::get_instance();
         InputManager& inputManager = pApp->getInputManager();
 
@@ -63,7 +64,7 @@ namespace platypus
         _initialized = true;
     }
 
-    void CameraController::update(Transform* pCameraTransform)
+    void CameraController::update()
     {
         if (!_initialized)
         {
@@ -80,7 +81,8 @@ namespace platypus
         float halfPI = PLATY_MATH_PI * 0.5f;
         float useYaw = _yaw + halfPI;
 
-        InputManager& inputManager = Application::get_instance()->getInputManager();
+        Application* pApp = Application::get_instance();
+        InputManager& inputManager = pApp->getInputManager();
 
         float moveAmount = _movementSpeed * Timing::get_delta_time();
         if (inputManager.isKeyDown(KeyName::KEY_W))
@@ -113,7 +115,11 @@ namespace platypus
         translationMatrix[1 + 3 * 4] = _offsetPosition.y + verticalDist ;
         translationMatrix[2 + 3 * 4] = _offsetPosition.z + sin(useYaw) * horizontalDist;
 
-        pCameraTransform->globalMatrix = translationMatrix * create_rotation_matrix(-_pitch, -_yaw);
+        Transform* pTransform = (Transform*)pApp->getSceneManager().getCurrentScene()->getComponent(
+            _cameraEntity,
+            ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+        pTransform->globalMatrix = translationMatrix * create_rotation_matrix(-_pitch, -_yaw);
     }
 
     void CameraController::set(

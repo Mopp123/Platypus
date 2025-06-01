@@ -1,18 +1,18 @@
-#include "MeshTestScene.h"
+#include "MaterialTestScene.h"
 #include "UITestScene.h"
 
 using namespace platypus;
 
 
-MeshTestScene::MeshTestScene()
+MaterialTestScene::MaterialTestScene()
 {
 }
 
-MeshTestScene::~MeshTestScene()
+MaterialTestScene::~MaterialTestScene()
 {
 }
 
-void MeshTestScene::init()
+void MaterialTestScene::init()
 {
     initBase();
 
@@ -41,12 +41,12 @@ void MeshTestScene::init()
     ui::UIElement* pText =  ui::add_text_element(
         _ui,
         pUIContainer,
-        L"Mesh testing",
+        L"Material Test",
         { 1, 1, 1, 1 },
         pFont
     );
 
-    _camController.init();
+    _camController.init(_cameraEntity);
     _camController.set(
         0, // pitch
         0.0f,    // yaw
@@ -172,7 +172,7 @@ void MeshTestScene::init()
 }
 
 static float s_anim = 0.0f;
-void MeshTestScene::update()
+void MaterialTestScene::update()
 {
     updateBase();
 
@@ -191,11 +191,7 @@ void MeshTestScene::update()
     s_anim += 2.0f * Timing::get_delta_time();
     pBoxTransform->globalMatrix = boxTransformationMatrix;
 
-    Transform* pCamTransform = (Transform*)getComponent(
-        _cameraEntity,
-        ComponentType::COMPONENT_TYPE_TRANSFORM
-    );
-    _camController.update(pCamTransform);
+    _camController.update();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
     if(inputManager.isKeyDown(KeyName::KEY_0))
