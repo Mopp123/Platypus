@@ -15,4 +15,10 @@ namespace platypus
         int jointNodeIndex,
         std::unordered_map<int, int>& outNodeJointMapping
     );
+
+    std::vector<Pose> load_gltf_anim_poses(
+        tinygltf::Model& gltfModel,
+        const Pose& bindPose,
+        std::unordered_map<int, int> nodePoseJointMapping
+    );
 }

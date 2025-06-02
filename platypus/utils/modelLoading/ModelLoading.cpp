@@ -6,7 +6,7 @@
 // NOTE: GLTFVertexParsing and GLTFSkeletonParsing includes tinygltf as well
 // and needs to be included before below defines and tinygltf include!
 #include "GLTFVertexParsing.h"
-#include "GLTFSkeletonParsing.h"
+#include "GLTFAnimationParsing.h"
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -182,6 +182,30 @@ namespace platypus
             outMeshes[i].bindPose = bindPose;
 
             // Load animations (if found)
+            // NOTE: For now supporting just a single animation
+            // TODO: Support multiple animations for multiple meshes
+            size_t animCount = gltfModel.animations.size();
+            std::vector<Pose> animationPoses;
+            if (animCount > 1)
+            {
+                Debug::log(
+                    "@load_gltf_model "
+                    "Multiple animations(" + std::to_string(animCount) + ") "
+                    "found from file: " + filepath + " Currently only a single animation is supported",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            else if (animCount == 1)
+            {
+                animationPoses = load_gltf_anim_poses(
+                    gltfModel,
+                    bindPose,
+                    nodeJointMapping
+                );
+                Debug::log("___TEST___LOADED ANIM KEYFRAME COUNT:" + std::to_string(animationPoses.size()));
+                outMeshes[i].animationPoses = animationPoses;
+            }
         }
 
         return true;

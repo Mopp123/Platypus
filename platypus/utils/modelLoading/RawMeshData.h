@@ -24,6 +24,7 @@ namespace platypus
         Matrix4f transformationMatrix = Matrix4f(1.0f);
 
         Pose bindPose;
+        std::vector<Pose> animationPoses;
     };
 
 }

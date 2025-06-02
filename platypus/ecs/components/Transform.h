@@ -2,6 +2,8 @@
 
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/Entity.h"
+#include "platypus/utils/SkeletalAnimationData.h"
+#include <vector>
 
 
 namespace platypus
@@ -29,6 +31,12 @@ namespace platypus
         const Vector3f& position,
         const Quaternion& rotation,
         const Vector3f& scale
+    );
+
+    // Creates Transform hierarchy for joints
+    std::vector<entityID_t> create_skeleton(
+        const std::vector<Joint>& joints,
+        const std::vector<std::vector<int>>& jointChildMapping
     );
 
     GUITransform* create_gui_transform(

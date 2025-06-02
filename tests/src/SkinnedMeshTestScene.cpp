@@ -1,47 +1,9 @@
 #include "SkinnedMeshTestScene.h"
+#include "platypus/ecs/components/Renderable.h"
 #include <string>
 
 using namespace platypus;
 
-static void create_joint_boxes(
-    Scene* pScene,
-    const Mesh* pMesh,
-    const Material* pMaterial,
-    const Pose& pose,
-    const Matrix4f& parentMatrix,
-    int jointIndex
-)
-{
-    Matrix4f matrix = parentMatrix * pose.joints[jointIndex].matrix;
-
-    entityID_t entity = pScene->createEntity();
-    Transform* pTransform = create_transform(
-        entity,
-        matrix
-    );
-    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
-        entity,
-        pMesh->getID(),
-        pMaterial->getID()
-    );
-
-    const Joint& currentJoint = pose.joints[jointIndex];
-
-    if (jointIndex != 0)
-        pTransform->globalMatrix = parentMatrix * currentJoint.matrix;
-
-    for (int childJointIndex : pose.jointChildMapping[jointIndex])
-    {
-        create_joint_boxes(
-            pScene,
-            pMesh,
-            pMaterial,
-            pose,
-            matrix,
-            childJointIndex
-        );
-    }
-}
 
 SkinnedMeshTestScene::SkinnedMeshTestScene()
 {
@@ -95,14 +57,20 @@ void SkinnedMeshTestScene::init()
     );
     Model* pModel = assetManager.loadModel("assets/TestCube.glb");
 
-    create_joint_boxes(
-        this,
-        pModel->getMeshes()[0],
-        pMaterial,
-        pAnimatedMesh->getBindPose(),
-        Matrix4f(1.0f),
-        0
+    const Pose& bindPose = pAnimatedMesh->getBindPose();
+    std::vector<entityID_t> jointEntities = create_skeleton(
+        bindPose.joints,
+        bindPose.jointChildMapping
     );
+    // Create renderables representing joints
+    for (entityID_t entity : jointEntities)
+    {
+        create_static_mesh_renderable(
+            entity,
+            pModel->getMeshes()[0]->getID(),
+            pMaterial->getID()
+        );
+    }
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,
