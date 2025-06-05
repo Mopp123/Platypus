@@ -12,7 +12,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
 #define JSON_NOEXCEPTION
-#include "tiny_gltf.h"
+#include <tiny_gltf.h>
 
 #include "GLTFFileUtils.h"
 
@@ -32,7 +32,9 @@ namespace platypus
     bool load_gltf_model(
         const CommandPool& commandPool,
         const std::string& filepath,
-        std::vector<MeshData>& outMeshes
+        std::vector<MeshData>& outMeshes,
+        std::vector<Pose>& outBindPoses,
+        std::vector<std::vector<Pose>>& outAnimations
     )
     {
         tinygltf::Model gltfModel;
@@ -158,8 +160,7 @@ namespace platypus
                 vertexBufferLayout,
                 vertexBuffer,
                 indexBuffers,
-                transformationMatrix,
-                {}
+                transformationMatrix
             });
         }
 
@@ -179,7 +180,7 @@ namespace platypus
                 rootJointNodeIndex,
                 nodeJointMapping
             );
-            outMeshes[i].bindPose = bindPose;
+            outBindPoses.push_back(bindPose);
 
             // Load animations (if found)
             // NOTE: For now supporting just a single animation
@@ -204,7 +205,7 @@ namespace platypus
                     nodeJointMapping
                 );
                 Debug::log("___TEST___LOADED ANIM KEYFRAME COUNT:" + std::to_string(animationPoses.size()));
-                outMeshes[i].animationPoses = animationPoses;
+                outAnimations.push_back(animationPoses);
             }
         }
 

@@ -2,6 +2,8 @@
 #include "platypus/core/Debug.h"
 #include "GLTFFileUtils.h"
 
+#include <tiny_gltf.h>
+
 
 namespace platypus
 {

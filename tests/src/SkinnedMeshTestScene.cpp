@@ -31,7 +31,13 @@ void SkinnedMeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    Model* pAnimatedModel = assetManager.loadModel("assets/models/SkeletonTest.glb");
+    std::vector<Pose> bindPoses;
+    std::vector<std::vector<Pose>> animations;
+    Model* pAnimatedModel = assetManager.loadModel(
+        "assets/models/SkeletonTest.glb",
+        bindPoses,
+        animations
+    );
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
 
     // Create box entity for all skeleton model's joints
@@ -57,7 +63,7 @@ void SkinnedMeshTestScene::init()
     );
     Model* pModel = assetManager.loadModel("assets/TestCube.glb");
 
-    const Pose& bindPose = pAnimatedMesh->getBindPose();
+    const Pose& bindPose = bindPoses[0];
     std::vector<entityID_t> jointEntities = create_skeleton(
         bindPose.joints,
         bindPose.jointChildMapping
@@ -71,6 +77,18 @@ void SkinnedMeshTestScene::init()
             pMaterial->getID()
         );
     }
+    SkeletalAnimationData* pAnimationAsset = assetManager.createSkeletalAnimation(
+        1.0f,
+        bindPoses[0],
+        animations[0]
+    );
+
+    SkeletalAnimation* pAnimationComponent = create_skeletal_animation(
+        jointEntities[0],
+        pAnimationAsset->getID(),
+        1.0f
+    );
+
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,

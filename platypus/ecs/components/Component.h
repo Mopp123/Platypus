@@ -13,7 +13,8 @@ namespace platypus
         COMPONENT_TYPE_STATIC_MESH_RENDERABLE = 0x4,
         COMPONENT_TYPE_GUI_RENDERABLE = 0x8,
         COMPONENT_TYPE_CAMERA = 0x10,
-        COMPONENT_TYPE_DIRECTIONAL_LIGHT = 0x20
+        COMPONENT_TYPE_DIRECTIONAL_LIGHT = 0x20,
+        COMPONENT_TYPE_SKELETAL_ANIMATION = 0x40
     };
 
     std::string component_type_to_string(ComponentType type);

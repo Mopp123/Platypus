@@ -3,8 +3,10 @@
 #include "Debug.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/SkeletalAnimation.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
+#include "platypus/ecs/systems/SkeletalAnimationSystem.h"
 
 
 namespace platypus
@@ -22,6 +24,9 @@ namespace platypus
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
             sizeof(Transform), maxEntityCount, true
         );
+        _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
+            sizeof(SkeletalAnimation), maxEntityCount, true
+        );
         _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = ComponentPool(
             sizeof(GUIRenderable), maxEntityCount, true
         );
@@ -31,6 +36,8 @@ namespace platypus
         _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
             sizeof(DirectionalLight), 1, true
         );
+
+        _systems.push_back(new SkeletalAnimationSystem);
     }
 
     Scene::~Scene()

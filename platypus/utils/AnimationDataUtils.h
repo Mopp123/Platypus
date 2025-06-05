@@ -19,6 +19,6 @@ namespace platypus
     struct Pose
     {
         std::vector<Joint> joints;
-        std::vector<std::vector<int>> jointChildMapping;
+        std::vector<std::vector<uint32_t>> jointChildMapping;
     };
 }

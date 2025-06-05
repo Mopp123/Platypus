@@ -56,7 +56,7 @@ namespace platypus
 
     static void create_transform_entity_hierarchy(
         const std::vector<Joint>& joints,
-        const std::vector<std::vector<int>>& jointChildMapping,
+        const std::vector<std::vector<uint32_t>>& jointChildMapping,
         const Matrix4f& parentMatrix,
         int jointIndex,
         std::vector<entityID_t>& outEntities
@@ -91,7 +91,7 @@ namespace platypus
 
     std::vector<entityID_t> create_skeleton(
         const std::vector<Joint>& joints,
-        const std::vector<std::vector<int>>& jointChildMapping
+        const std::vector<std::vector<uint32_t>>& jointChildMapping
     )
     {
         std::vector<entityID_t> entities;

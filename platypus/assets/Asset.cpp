@@ -12,6 +12,7 @@ namespace platypus
             case AssetType::ASSET_TYPE_TEXTURE: return "ASSET_TYPE_TEXTURE";
             case AssetType::ASSET_TYPE_MATERIAL: return "ASSET_TYPE_MATERIAL";
             case AssetType::ASSET_TYPE_FONT: return "ASSET_TYPE_FONT";
+            case AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA: return "ASSET_TYPE_SKELETAL_ANIMATION_DATA";
             default: return "ASSET_TYPE_NONE";
         }
     }

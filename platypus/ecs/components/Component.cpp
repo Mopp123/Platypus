@@ -12,6 +12,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE: return "StaticMeshRenderable";
             case ComponentType::COMPONENT_TYPE_CAMERA: return "Camera";
             case ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT: return "DirectionalLight";
+            case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return "SkeletalAnimation";
             default: return "Invalid Type";
         }
     }

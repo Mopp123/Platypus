@@ -2,7 +2,7 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/utils/Maths.h"
-#include "platypus/utils/SkeletalAnimationData.h"
+#include "platypus/utils/AnimationDataUtils.h"
 #include "platypus/Common.h"
 #include <vector>
 
@@ -22,9 +22,6 @@ namespace platypus
         MeshBufferData vertexBufferData;
         std::vector<MeshBufferData> indexBufferData;
         Matrix4f transformationMatrix = Matrix4f(1.0f);
-
-        Pose bindPose;
-        std::vector<Pose> animationPoses;
     };
 
 }

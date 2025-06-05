@@ -3,6 +3,8 @@
 #include "platypus/Common.h"
 #include "platypus/core/Debug.h"
 
+#include <tiny_gltf.h>
+
 
 namespace platypus
 {

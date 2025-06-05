@@ -4,8 +4,13 @@
 #include "platypus/graphics/CommandBuffer.h"
 #include "RawMeshData.h"
 
-#include "tiny_gltf.h"
 
+// Nasty shit to be able to use here...
+namespace tinygltf
+{
+    class Model;
+    class Mesh;
+}
 
 namespace platypus
 {

@@ -58,8 +58,10 @@ namespace platypus
         float length() const;
         Vector3f normalize() const;
         Vector3f cross(const Vector3f& other) const;
+        Vector3f lerp(const Vector3f& other, float amount) const;
 
         Vector3f operator+(const Vector3f& other) const;
+        Vector3f operator-(const Vector3f& other) const;
         Vector3f operator*(const Vector3f& other) const;
         Vector3f operator*(float value) const;
 
@@ -135,10 +137,17 @@ namespace platypus
             x(other.x), y(other.y), z(other.z), w(other.w)
         {}
 
+        float dotp(const Quaternion& other) const;
         float length() const;
         Quaternion normalize() const;
         Quaternion conjugate() const;
         Matrix4f toRotationMatrix() const;
+        Quaternion slerp(const Quaternion& other, float amount) const;
+
+        Quaternion operator+(const Quaternion& other) const;
+        Quaternion operator-(const Quaternion& other) const;
+        Quaternion operator*(const Quaternion& other) const;
+        Quaternion operator*(float other) const;
 
         std::string toString() const;
     };

@@ -54,6 +54,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/platypus/core/platform/${BUILD_TARGET}/*.cpp
 
         ${PARENT_DIR}/platypus/ecs/components/*.cpp
+        ${PARENT_DIR}/platypus/ecs/systems/*.cpp
         ${PARENT_DIR}/platypus/utils/*.cpp
         ${PARENT_DIR}/platypus/utils/modelLoading/*.cpp
         ${PARENT_DIR}/platypus/utils/controllers/*.cpp

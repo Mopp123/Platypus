@@ -1,10 +1,15 @@
 #pragma once
 
-#include "platypus/utils/SkeletalAnimationData.h"
-
-#include <tiny_gltf.h>
+#include "platypus/utils/AnimationDataUtils.h"
 #include <unordered_map>
 
+
+// Nasty shit to be able to use here...
+namespace tinygltf
+{
+    class Model;
+    class Mesh;
+}
 
 namespace platypus
 {
