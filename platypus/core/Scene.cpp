@@ -13,7 +13,7 @@ namespace platypus
 {
     Scene::Scene()
     {
-        size_t maxEntityCount = 1000000;
+        size_t maxEntityCount = 10000;
 
         _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
             sizeof(Transform), maxEntityCount, true

@@ -296,7 +296,7 @@ namespace platypus
         {
             Buffer* pVertexBuffer = new Buffer(
                 _commandPoolRef,
-                (void*)meshData.vertexBufferData.data.data(),
+                (void*)meshData.vertexBufferData.rawData.data(),
                 meshData.vertexBufferData.elementSize,
                 meshData.vertexBufferData.length,
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -306,7 +306,7 @@ namespace platypus
             MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
             Buffer* pIndexBuffer = new Buffer(
                 _commandPoolRef,
-                (void*)useIndexBuffer.data.data(),
+                (void*)useIndexBuffer.rawData.data(),
                 useIndexBuffer.elementSize,
                 useIndexBuffer.length,
                 BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -351,7 +351,7 @@ namespace platypus
         {
             Buffer* pVertexBuffer = new Buffer(
                 _commandPoolRef,
-                (void*)meshData.vertexBufferData.data.data(),
+                (void*)meshData.vertexBufferData.rawData.data(),
                 meshData.vertexBufferData.elementSize,
                 meshData.vertexBufferData.length,
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -361,7 +361,7 @@ namespace platypus
             MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
             Buffer* pIndexBuffer = new Buffer(
                 _commandPoolRef,
-                (void*)useIndexBuffer.data.data(),
+                (void*)useIndexBuffer.rawData.data(),
                 useIndexBuffer.elementSize,
                 useIndexBuffer.length,
                 BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,

@@ -33,6 +33,8 @@ void SkinnedMeshTestScene::init()
 
     std::vector<Pose> bindPoses;
     std::vector<std::vector<Pose>> animations;
+
+    Debug::log("___TEST___ATTEMPT LOAD ANIM MODEL");
     Model* pAnimatedModel = assetManager.loadModel(
         "assets/models/SkeletonTest.glb",
         bindPoses,

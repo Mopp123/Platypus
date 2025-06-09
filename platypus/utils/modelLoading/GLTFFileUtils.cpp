@@ -59,6 +59,7 @@ namespace platypus
                         "Component count: " + std::to_string(gltfComponentCount),
                         Debug::MessageType::PLATYPUS_ERROR
                     );
+                    PLATYPUS_ASSERT(false);
                     return ShaderDataType::None;
             }
         }
@@ -81,6 +82,7 @@ namespace platypus
                         "invalid accessor component type: " + std::to_string(gltfAccessorComponentType),
                         Debug::MessageType::PLATYPUS_ERROR
                     );
+                    PLATYPUS_ASSERT(false);
                     return ShaderDataType::None;
             }
         }
@@ -91,6 +93,7 @@ namespace platypus
             "Component count:  " + std::to_string(gltfComponentCount),
             Debug::MessageType::PLATYPUS_ERROR
         );
+        PLATYPUS_ASSERT(false);
         return ShaderDataType::None;
     }
 

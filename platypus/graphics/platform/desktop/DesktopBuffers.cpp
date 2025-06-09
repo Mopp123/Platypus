@@ -253,6 +253,23 @@ namespace platypus
         return *this;
     }
 
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        _pImpl = new VertexBufferLayoutImpl;
+        _pImpl->bindingDescription.binding = other._pImpl->bindingDescription.binding;
+        _pImpl->bindingDescription.inputRate = other._pImpl->bindingDescription.inputRate;
+
+        return *this;
+    }
+
     VertexBufferLayout::~VertexBufferLayout()
     {
         if (_pImpl)

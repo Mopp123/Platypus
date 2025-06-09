@@ -83,6 +83,11 @@ namespace platypus
     {
         free(_pStorage);
         _pStorage = nullptr;
+
+        Debug::log(
+            "@MemoryPool::freeStorage freed " + std::to_string(_totalSize)
+        );
+
         _totalSize = 0;
         _occupiedSize = 0;
     }

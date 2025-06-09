@@ -13,7 +13,7 @@ namespace platypus
     {
         size_t elementSize = 0;
         size_t length = 0; // length in elements. NOT SIZE IN BYTES!
-        std::vector<PE_byte> data;
+        std::vector<PE_byte> rawData;
     };
 
     struct MeshData

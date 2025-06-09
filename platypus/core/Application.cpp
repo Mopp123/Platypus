@@ -105,6 +105,8 @@ namespace platypus
         _context.waitForOperations();
         // NOTE: Why the fuck was this commented out earlier!?!?!
         _masterRenderer.cleanUp();
+        _inputManager.destroyEvents();
+        _assetManager.destroyAssets();
     }
 
     Application* Application::get_instance()

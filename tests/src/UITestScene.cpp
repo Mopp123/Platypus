@@ -100,7 +100,7 @@ void UITestScene::init()
     ui::UIElement* pButton2 = ui::add_button_element(
         _ui,
         pContainer,
-        L"Another test button",
+        L"Öääö scand test",
         pFont
     );
 

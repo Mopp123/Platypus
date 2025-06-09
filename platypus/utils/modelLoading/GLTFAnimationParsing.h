@@ -8,7 +8,7 @@
 namespace tinygltf
 {
     class Model;
-    class Mesh;
+    struct Mesh;
 }
 
 namespace platypus

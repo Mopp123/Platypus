@@ -3,10 +3,79 @@
 #include "GLTFFileUtils.h"
 
 #include <tiny_gltf.h>
+#include <cstring>
+#include <utility>
 
 
 namespace platypus
 {
+    // Sorts attributes in a way that the indices gravitate towards "preferred locations"
+    static bool sort_gltf_attributes(
+        const std::string gltfAttribName,
+        std::vector<std::string>& outAttribs
+    )
+    {
+        // Preferred location for inputted attrib
+        std::unordered_map<std::string, int> preferredLocations =
+        {
+            { "POSITION",   0 },
+            { "NORMAL",     1 },
+            { "TEXCOORD_0", 2 },
+            { "TANGENT",    3 },
+            { "WEIGHTS_0",  4 },
+            { "JOINTS_0",   5 },
+            { "none",   666 }
+        };
+
+        int preferredLocation = preferredLocations[gltfAttribName];
+        bool ready = false;
+        for (int i = 0; i < (int)outAttribs.size(); ++i)
+        {
+            if (ready)
+                return true;
+
+            const std::string foundAttribName = outAttribs[i];
+            int foundAttribPreferredLocation = preferredLocations[foundAttribName];
+            if (preferredLocation < foundAttribPreferredLocation)
+            {
+                outAttribs[i] = gltfAttribName;
+                if (foundAttribName != "none")
+                    ready = sort_gltf_attributes(foundAttribName, outAttribs);
+                else
+                    break;
+            }
+        }
+        return true;
+    }
+
+    static void solve_gltf_attribs(
+        tinygltf::Mesh& gltfMesh,
+        std::unordered_map<std::string, int>& outAttribLocationMapping
+    )
+    {
+        const size_t maxAttribs = 6;
+        std::vector<std::string> sortedAttribNames(maxAttribs);
+        for (size_t i = 0; i < maxAttribs; ++i)
+            sortedAttribNames[i] = "none";
+
+        for (size_t i = 0; i < gltfMesh.primitives.size(); ++i)
+        {
+            for (auto &attrib : gltfMesh.primitives[i].attributes)
+            {
+                sort_gltf_attributes(attrib.first, sortedAttribNames);
+            }
+        }
+        for (size_t i = 0; i < sortedAttribNames.size(); ++i)
+        {
+            const std::string& attribName = sortedAttribNames[i];
+            if (attribName == "none")
+                break;
+
+            outAttribLocationMapping[attribName] = i;
+        }
+    }
+
+
     bool load_index_buffers(
         const CommandPool& commandPool,
         tinygltf::Model& gltfModel,
@@ -64,19 +133,28 @@ namespace platypus
         size_t combinedVertexBufferSize = 0;
         size_t elementSize = 0;
 
-        // sortedvertexbufferattributes is used to create single vertex buffer containing:
-        //  * vertex positions
-        //  * normals
-        //  * uv coords
-        //  * joint weights(if mesh has those)
-        //  * joint indices(if mesh has those)
-        // in that order starting from location = 0.
+        // sortedvertexbufferattributes is used to create single vertex buffer
         //
         // key: attrib location
         // value:
         //  first: pretty obvious...
         //  second: index in gltfBufferViews
         std::unordered_map<int, GLTFVertexBufferAttrib> sortedVertexBufferAttributes;
+        std::unordered_map<std::string, int> gltfAttribNameToLocation;
+
+        solve_gltf_attribs(
+            gltfMesh,
+            gltfAttribNameToLocation
+        );
+        std::unordered_map<std::string, int>::iterator testIt;
+
+        Debug::log("___TEST___SOLVED ATTRIBS");
+        for (testIt = gltfAttribNameToLocation.begin(); testIt != gltfAttribNameToLocation.end(); ++testIt)
+        {
+            Debug::log("    " + testIt->first + " location: " + std::to_string(testIt->second));
+        }
+
+
         std::unordered_map<int, tinygltf::Accessor> attribAccessorMapping;
         std::unordered_map<int, size_t> actualAttribElemSize;
         for (size_t i = 0; i < gltfMesh.primitives.size(); ++i)
@@ -91,14 +169,7 @@ namespace platypus
 
                 // NOTE: using this expects shader having vertex attribs in same order
                 // as here starting from pos 0
-                int attribLocation = -1; // NOTE: attribLocation is more like attrib index here!
-                if (attrib.first == "POSITION")     attribLocation = GLTF_ATTRIB_LOCATION_POSITION;
-                if (attrib.first == "NORMAL")       attribLocation = GLTF_ATTRIB_LOCATION_NORMAL;
-                if (attrib.first == "TEXCOORD_0")   attribLocation = GLTF_ATTRIB_LOCATION_TEX_COORD0;
-                if (attrib.first == "TANGENT")      attribLocation = GLTF_ATTRIB_LOCATION_TANGENT;
-
-                if (attrib.first == "WEIGHTS_0")    attribLocation = GLTF_ATTRIB_LOCATION_WEIGHTS0;
-                if (attrib.first == "JOINTS_0")     attribLocation = GLTF_ATTRIB_LOCATION_JOINTS0;
+                int attribLocation = gltfAttribNameToLocation[attrib.first];
 
                 if (attribLocation > -1)
                 {
@@ -132,7 +203,7 @@ namespace platypus
                                 TINYGLTF_COMPONENT_TYPE_FLOAT,
                                 componentCount
                             );
-                            actualAttribElemSize[attribLocation] = 1 * 4; // 1 byte for each vec4 component
+                            //actualAttribElemSize[attribLocation] = 1 * 4; // 1 byte for each vec4 component
                         }
                         else
                         {
@@ -155,6 +226,14 @@ namespace platypus
                     size_t elemCount = accessor.count;
                     combinedVertexBufferSize += elemCount * attribSize;
 
+                    Debug::log(
+                        "___TEST___loaded attrib: \n"
+                        "   location: " + std::to_string(attribLocation) + "\n"
+                        "   data type: " + std::to_string(shaderDataType) + "\n"
+                        "   attrib size: " + std::to_string(attribSize) + "\n"
+                        "   accessor count: " + std::to_string(elemCount)
+                    );
+
                     orderedBufferElements[(uint32_t)attribLocation] = shaderDataType;
                 }
                 else
@@ -168,11 +247,15 @@ namespace platypus
             }
         }
 
+        Debug::log("___TEST___START COMBINING VERTEX BUFFER! Using size: " + std::to_string(combinedVertexBufferSize));
+        // NOTE: SOMETHING FUCKS UP HERE IF LOADING SKINNED MODEL
+        // Attribs go 0, 1, 2, to 0 again...  doesnt include skinning attribs?
+
         // Combine all into single raw buffer
         std::vector<PE_byte> combinedRawBuffer(combinedVertexBufferSize);
         const size_t attribCount = sortedVertexBufferAttributes.size();
-        size_t srcOffsets[attribCount];
-        memset(srcOffsets, 0, sizeof(size_t) * attribCount);
+        std::vector<size_t> srcOffsets(attribCount);
+        memset(srcOffsets.data(), 0, sizeof(size_t) * attribCount);
         size_t dstOffset = 0;
 
         size_t currentAttribIndex = 0;
@@ -181,12 +264,20 @@ namespace platypus
         int i = 0;
         while (dstOffset < combinedVertexBufferSize)
         {
+            // NOTE; FOUND *THE* ISSUE HERE!!
+            // If model not having tangents -> can't access below at currentAttribIndex
+            // since index 3 isn't defined if having skinning but no tangents!
             const GLTFVertexBufferAttrib& currentAttrib = sortedVertexBufferAttributes[currentAttribIndex];
             size_t currentAttribElemSize = get_shader_datatype_size(currentAttrib.dataType);
+            Debug::log(
+                "___TEST___using dst offset: " + std::to_string(dstOffset) +
+                " buffer size: " + std::to_string(combinedVertexBufferSize) + " "
+                "current attrib size: " + std::to_string(currentAttribElemSize)
+            );
 
             size_t gltfInternalSize = currentAttribElemSize;
-            if (actualAttribElemSize.find(currentAttribIndex) != actualAttribElemSize.end())
-                gltfInternalSize = actualAttribElemSize[currentAttribIndex];
+            //if (actualAttribElemSize.find(currentAttribIndex) != actualAttribElemSize.end())
+            //    gltfInternalSize = actualAttribElemSize[currentAttribIndex];
 
             tinygltf::BufferView& bufView = gltfModel.bufferViews[currentAttrib.bufferViewIndex];
             PE_ubyte* pSrcBuffer = (PE_ubyte*)(gltfModel.buffers[bufView.buffer].data.data() + bufView.byteOffset + attribAccessorMapping[currentAttribIndex].byteOffset + srcOffsets[currentAttribIndex]);
@@ -201,6 +292,10 @@ namespace platypus
                 val.z = (float)*(pSrcBuffer + 2);
                 val.w = (float)*(pSrcBuffer + 3);
                 vertexJointData[vertexIndex].second = val;
+
+
+                if (dstOffset + sizeof(Vector4f) > combinedVertexBufferSize)
+                    PLATYPUS_ASSERT(false);
 
                 memcpy(combinedRawBuffer.data() + dstOffset, &val, sizeof(Vector4f));
             }
@@ -228,16 +323,33 @@ namespace platypus
                     }
                     vertexJointData[vertexIndex].first = val;
 
+                    if (dstOffset + sizeof(Vector4f) > combinedVertexBufferSize)
+                        PLATYPUS_ASSERT(false);
+
                     memcpy(combinedRawBuffer.data() + dstOffset, &val, sizeof(Vector4f));
                 }
                 else
                 {
+                    if (dstOffset + gltfInternalSize > combinedVertexBufferSize)
+                    {
+                        Debug::log(
+                            "Writing out of bounds! "
+                            "range: " + std::to_string(dstOffset) + " to"
+                            " " + std::to_string(dstOffset + gltfInternalSize) + " "
+                            "attrib location: " + std::to_string(currentAttrib.location) + " "
+                            "attrib size: " + std::to_string(gltfInternalSize),
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
+                    }
+
                     memcpy(combinedRawBuffer.data() + dstOffset, pSrcBuffer, gltfInternalSize);
                 }
             }
 
             srcOffsets[currentAttribIndex] += gltfInternalSize;
             dstOffset += currentAttribElemSize;
+            Debug::log("___TEST___DST OFFSET ADVANCED TO: " + std::to_string(dstOffset));
 
             currentAttribIndex += 1;
             currentAttribIndex = currentAttribIndex % attribCount;
@@ -247,13 +359,19 @@ namespace platypus
                 ++vertexIndex;
         }
         size_t bufferLength = combinedVertexBufferSize / elementSize;
+        Debug::log("___TEST___VERTEX BUFFER COMBINED! size = " + std::to_string(combinedVertexBufferSize));
+        Debug::log("___TEST___VERTEX BUFFER ELEM SIZE = " + std::to_string(elementSize));
+        Debug::log("___TEST___VERTEX BUFFER ATTRIB COUNT = " + std::to_string(attribCount));
         outBufferData = { elementSize, bufferLength, combinedRawBuffer };
 
+        Debug::log("___TEST___SORTING VERTEX BUFFER ELEMENTS...");
         std::vector<VertexBufferElement> sortedVertexBufferElements;
         for (const auto& elem : orderedBufferElements)
             sortedVertexBufferElements.push_back({ elem.first, elem.second});
 
+        Debug::log("___TEST___CREATING VERTEX BUFFER LAYOUT");
         outLayout = { sortedVertexBufferElements, VertexInputRate::VERTEX_INPUT_RATE_VERTEX, 0 };
+        Debug::log("___TEST___CREATED VERTEX BUFFER LAYOUT SUCCESSFULLY");
         return true;
     }
 }

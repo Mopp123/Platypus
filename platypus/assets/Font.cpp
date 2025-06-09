@@ -27,11 +27,11 @@ namespace platypus
         // TODO: Figure out a better way!
         return createFont(
             filepath,
-            L" qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|"
+            L" qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|ÖöÄä"
         );
     }
 
-    // TODO: Put into constructor -> doesnt need to be own func anymore!
+    // TODO: Put into constructor -> doesnt need to be own func anymore?
     bool Font::createFont(const std::string& filepath, const std::wstring& charsToLoad)
     {
         FT_Library freetypeLib;
@@ -83,7 +83,9 @@ namespace platypus
 
         FT_Select_Charmap(fontFace, FT_ENCODING_UNICODE);
 
-        std::vector<std::pair<unsigned char*, FontGlyphData>> loadedGlyphs;
+        // NOTE: Originally the pair's first was ptr to heap allocated bitmap data
+        // -> sanitizer complained about it so switched to vector for now...
+        std::vector<std::pair<std::vector<unsigned char>, FontGlyphData>> loadedGlyphs;
         for (int i = 0; i < charsToLoad.size(); ++i)
         {
             wchar_t c = charsToLoad[i];
@@ -121,12 +123,12 @@ namespace platypus
             maxGlyphHeight = std::max(maxGlyphHeight, currentGlyphHeight);
 
             const int glyphBitmapSize = currentGlyphWidth * currentGlyphHeight;
-            unsigned char* bitmap = new unsigned char[glyphBitmapSize];
+            std::vector<unsigned char> bitmap(glyphBitmapSize);
             // If empty space -> make some empty tile, otherwise get the glyph bitmap
             if (c == ' ')
-                memset(bitmap, 0, glyphBitmapSize);
+                memset(bitmap.data(), 0, glyphBitmapSize);
             else
-                memcpy(bitmap, ftGlyph->bitmap.buffer, sizeof(unsigned char) * glyphBitmapSize);
+                memcpy(bitmap.data(), ftGlyph->bitmap.buffer, sizeof(unsigned char) * glyphBitmapSize);
 
             loadedGlyphs.push_back(std::make_pair(bitmap, gd));
 
@@ -160,8 +162,8 @@ namespace platypus
 
                 if (glyphIndexX + glyphIndexY * textureAtlasRowCount < (unsigned int)loadedGlyphs.size())
                 {
-                    std::pair<unsigned char*, FontGlyphData>& g = loadedGlyphs[glyphIndexX + glyphIndexY * textureAtlasRowCount];
-                    if (g.first == nullptr)
+                    std::pair<std::vector<unsigned char>, FontGlyphData>& g = loadedGlyphs[glyphIndexX + glyphIndexY * textureAtlasRowCount];
+                    if (g.first.empty())
                         continue;
 
                     unsigned int glyphPixelX = apx % _textureAtlasTileWidth;
@@ -172,12 +174,15 @@ namespace platypus
                 }
             }
         }
+        // NOTE: loadedGlyphs bitmaps were allocated using new previously -> switched to std::vector since sanitizer complained..
         // delete all heap allocated glyph bitmaps
+        /*
         for (std::pair<unsigned char*, FontGlyphData>& p : loadedGlyphs)
         {
             delete p.first;
             p.first = nullptr;
         }
+        */
 
         // Create resources through AssetManager
         Application* pApp = Application::get_instance();

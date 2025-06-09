@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(PROJECT_NAME "test")
+set(PROJECT_NAME "userTest")
 project(${PROJECT_NAME})
 
 # Need to have absolute dirs so we cannot use '../' to get the engine directory here!
@@ -44,9 +44,9 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # NOTE: This gets converted to camel case for some reason...
     # NOTE: html_out becomes the PROJ_NAME for some reason... was too afraid to delete it from here since
     # Emscripten recommends using the -o out.html
-    set(HTML_OUT "test.html")
+    set(HTML_OUT "userTest.html")
 
-    set(ADDITIONAL_LINK_FLAGS "-fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH -l websocket.js")
+    set(ADDITIONAL_LINK_FLAGS "--emrun -fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH=1 -sMALLOC=\"emmalloc-debug\" -l websocket.js")
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here
     list(APPEND SRC_FILES

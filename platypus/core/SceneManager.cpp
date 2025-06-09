@@ -121,8 +121,8 @@ namespace platypus
             Debug::log("Switching scene");
 
             Application* pApp = Application::get_instance();
-            pApp->getMasterRenderer().cleanRenderers();
             pApp->getContext().waitForOperations();
+            pApp->getMasterRenderer().cleanRenderers();
             pApp->getInputManager().destroyEvents();
             pApp->getAssetManager().destroyAssets();
 

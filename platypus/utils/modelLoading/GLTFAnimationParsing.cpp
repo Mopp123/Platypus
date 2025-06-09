@@ -194,6 +194,7 @@ namespace platypus
         std::unordered_map<int, std::vector<tinygltf::AnimationChannel>>::const_iterator ncIt;
         for (ncIt = nodeChannelsMapping.begin(); ncIt != nodeChannelsMapping.end(); ++ncIt)
         {
+            Debug::log("___TEST___CREATING ANIM JOINTS");
             for (int keyframeIndex = 0; keyframeIndex < maxKeyframes; ++keyframeIndex)
             {
                 int poseJointIndex = nodePoseJointMapping[ncIt->first];
