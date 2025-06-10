@@ -46,7 +46,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # Emscripten recommends using the -o out.html
     set(HTML_OUT "userTest.html")
 
-    set(ADDITIONAL_LINK_FLAGS "--emrun -fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH=1 -sMALLOC=\"emmalloc-debug\" -l websocket.js")
+    set(ADDITIONAL_LINK_FLAGS "-fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH=1 -l websocket.js")
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here
     list(APPEND SRC_FILES

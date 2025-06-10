@@ -137,7 +137,6 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_ERROR
                 );
             }
-            Debug::log("___TEST___INDEX BUFFER LOADED");
             // Don't support multiple index buffers for single mesh atm
             if (indexBuffers.size() != 1)
             {
@@ -159,25 +158,15 @@ namespace platypus
                 );
             }
 
-            Debug::log("___TEST___VERTEX BUFFER LOADED");
             MeshData m;
             m.vertexBufferLayout = vertexBufferLayout;
-            m.vertexBufferData.elementSize = vertexBuffer.elementSize;
-            m.vertexBufferData.length = vertexBuffer.length;
-            Debug::log("___TEST___RESIZE MESH DATA VERTEX BUFFER");
-            m.vertexBufferData.rawData.resize(vertexBuffer.elementSize * vertexBuffer.length);
-            Debug::log("___TEST___ASSIGN MESH DATA VERTEX BUFFER");
-            memcpy(m.vertexBufferData.rawData.data(), vertexBuffer.rawData.data(), vertexBuffer.elementSize * vertexBuffer.length);
-
-            Debug::log("___TEST___ASSIGN MESH DATA INDEX BUFFER");
+            m.vertexBufferData = vertexBuffer;
             m.indexBufferData = indexBuffers;
 
             m.transformationMatrix = transformationMatrix;
 
             outMeshes.push_back(m);
         }
-
-        Debug::log("___TEST___START ANIMATION LOADING");
 
         // Indexing should follow above meshes indices
         for (size_t i = 0; i < gltfModel.skins.size(); ++i)

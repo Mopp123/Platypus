@@ -23,7 +23,7 @@ add_compile_definitions(
 
 # -g to to use gdb debugger
 add_compile_options(
-    -Wall -std=c++17 -g
+    -Wall -std=c++17 -g -fsanitize=address
 )
 
 if(${BUILD_TARGET} MATCHES "desktop")

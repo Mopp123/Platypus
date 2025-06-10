@@ -33,6 +33,7 @@ namespace platypus
 {
     struct GLTFVertexBufferAttrib
     {
+        std::string name;
         int location;
         ShaderDataType dataType;
         int bufferViewIndex;

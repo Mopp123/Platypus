@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
+#include <string>
 #include "CommandBuffer.h"
 
 
@@ -63,6 +64,7 @@ namespace platypus
 
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
+    std::string shader_datatype_to_string(ShaderDataType type);
 
     // Requires platform impl
     //  On Vulkan side this returns required actual size for inputted requestSize
