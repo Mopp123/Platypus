@@ -93,8 +93,13 @@ namespace platypus
     Material::~Material()
     {
         freeDescriptorSets();
-        size_t materialDescriptorSetLayoutIndex = _pPipelineData->descriptorSetLayouts.size() - 1;
-        _pPipelineData->descriptorSetLayouts[materialDescriptorSetLayoutIndex].destroy();
+
+        if (_pPipelineData)
+        {
+            size_t materialDescriptorSetLayoutIndex = _pPipelineData->descriptorSetLayouts.size() - 1;
+            _pPipelineData->descriptorSetLayouts[materialDescriptorSetLayoutIndex].destroy();
+        }
+
         delete _pPipelineData;
     }
 
@@ -175,10 +180,11 @@ namespace platypus
         {
             Debug::log(
                 "@Material::recreateExistingPipeline "
-                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()),
-                Debug::MessageType::PLATYPUS_ERROR
+                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()) + " "
+                "This material may have been created but never used by any renderable component!",
+                Debug::MessageType::PLATYPUS_WARNING
             );
-            PLATYPUS_ASSERT(false);
+            return;
         }
 
         const Swapchain& swapchain = Application::get_instance()->getMasterRenderer().getSwapchain();
@@ -211,16 +217,28 @@ namespace platypus
         {
             Debug::log(
                 "@Material::destroyPipeline "
-                "Pipeline data was nullptr!",
-                Debug::MessageType::PLATYPUS_ERROR
+                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()) + " "
+                "This material may have been created but never used by any renderable component!",
+                Debug::MessageType::PLATYPUS_WARNING
             );
-            PLATYPUS_ASSERT(false);
+            return;
         }
         _pPipelineData->pipeline.destroy();
     }
 
     void Material::createDescriptorSets()
     {
+        if (!_pPipelineData)
+        {
+            Debug::log(
+                "@Material::createDescriptorSets "
+                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()) + " "
+                "This material may have been created but never used by any renderable component!",
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+            return;
+        }
+
         if (!_descriptorSets.empty())
         {
             Debug::log(
@@ -306,6 +324,17 @@ namespace platypus
 
     void Material::freeDescriptorSets()
     {
+        if (!_pPipelineData)
+        {
+            Debug::log(
+                "@Material::freeDescriptorSets "
+                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()) + " "
+                "This material may have been created but never used by any renderable component!",
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+            return;
+        }
+
         DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer().getDescriptorPool();
         for (Buffer* pBuffer : _uniformBuffers)
             delete pBuffer;
