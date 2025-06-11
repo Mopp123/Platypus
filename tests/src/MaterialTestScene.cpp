@@ -132,8 +132,8 @@ void MaterialTestScene::init()
     pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
     StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
         _boxEntity,
-        pModel->getMeshes()[0]->getID(),
-        pMaterial->getID()
+        pModel2->getMeshes()[0]->getID(),
+        pMaterial2->getID()
     );
     // Non normal mapped
     entityID_t entity2 = createEntity();
