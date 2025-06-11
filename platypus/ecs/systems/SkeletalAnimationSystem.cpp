@@ -45,12 +45,14 @@ namespace platypus
         );
         pJointTransform->globalMatrix = resultMatrix;
 
+        /*
         pAnimationComponent->resultPose.joints[currentJointIndex] = {
             interpolatedTranslation,
             interpolatedRotation,
             { 1.0f, 1.0f, 1.0f }, // Atm scaling is disabled!
             resultMatrix
         };
+        */
         /*
         pAnimationComponent->setResultPoseJoint(
             {

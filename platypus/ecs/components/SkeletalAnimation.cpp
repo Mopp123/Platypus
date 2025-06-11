@@ -43,15 +43,6 @@ namespace platypus
         pAnimation->speed = speed;
         pAnimation->stopped = false;
 
-        // Pose struct has std::vector of joints and we need to alloc
-        // -> alloc to match joints of animationAsset's bind pose
-        SkeletalAnimationData* pAnimationAsset = (SkeletalAnimationData*)pApp->getAssetManager().getAsset(
-            animationAssetID,
-            AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
-        );
-        pAnimation->resultPose = pAnimationAsset->getBindPose();
-
-
         return pAnimation;
     }
 }

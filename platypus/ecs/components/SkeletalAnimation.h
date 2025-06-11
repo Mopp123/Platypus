@@ -26,8 +26,6 @@ namespace platypus
         float speed = 1.0f;
 
         bool stopped = false;
-
-        Pose resultPose;
     };
 
     SkeletalAnimation* create_skeletal_animation(
