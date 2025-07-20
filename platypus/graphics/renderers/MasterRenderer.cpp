@@ -1,5 +1,6 @@
 #include "MasterRenderer.h"
 #include "platypus/core/Application.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
@@ -123,7 +124,7 @@ namespace platypus
 
     void MasterRenderer::cleanRenderers()
     {
-        Context::waitForOperations();
+        Device::wait_for_operations();
         for (auto& it : _renderers)
             it.second->freeBatches();
 
@@ -169,7 +170,7 @@ namespace platypus
         else
         {
             const CommandBuffer& cmdBuf = recordCommandBuffer();
-            Context::submitPrimaryCommandBuffer(
+            Device::submit_primary_command_buffer(
                 _swapchain,
                 cmdBuf,
                 _swapchain.getCurrentFrame()
@@ -375,12 +376,12 @@ namespace platypus
     void MasterRenderer::handleWindowResize()
     {
         Application* pApp = Application::get_instance();
-        Context::waitForOperations();
+        Device::wait_for_operations();
 
         Window& window = pApp->getWindow();
         if (!window.isMinimized())
         {
-            Context::handleWindowResize();
+            Device::handle_window_resize();
             _swapchain.recreate(window);
             freeDescriptorSets();
             destroyPipelines();

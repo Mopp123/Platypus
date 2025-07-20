@@ -1,7 +1,7 @@
 #include "platypus/graphics/RenderPass.h"
 #include "platypus/graphics/Swapchain.h"
-#include "platypus/graphics/Context.hpp"
-#include "DesktopContext.hpp"
+#include "platypus/graphics/Device.hpp"
+#include "DesktopDevice.hpp"
 #include "DesktopRenderPass.h"
 #include "DesktopSwapchain.h"
 #include "platypus/core/Debug.h"
@@ -94,7 +94,7 @@ namespace platypus
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(
-            Context::get_impl()->device,
+            Device::get_impl()->device,
             &createInfo,
             nullptr,
             &renderPass
@@ -117,7 +117,7 @@ namespace platypus
 
     void RenderPass::destroy()
     {
-        vkDestroyRenderPass(Context::get_impl()->device, _pImpl->handle, nullptr);
+        vkDestroyRenderPass(Device::get_impl()->device, _pImpl->handle, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;
     }
 }

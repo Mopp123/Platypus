@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 #include "Application.h"
+#include "platypus/graphics/Device.hpp"
 #include "Debug.h"
 
 
@@ -120,7 +121,7 @@ namespace platypus
             Debug::log("Switching scene");
 
             Application* pApp = Application::get_instance();
-            Context::waitForOperations();
+            Device::wait_for_operations();
             pApp->getMasterRenderer()->cleanRenderers();
             pApp->getInputManager().destroyEvents();
             pApp->getAssetManager()->destroyAssets();

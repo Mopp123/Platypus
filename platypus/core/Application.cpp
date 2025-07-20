@@ -1,5 +1,5 @@
 #include "Application.h"
-#include "platypus/graphics/Swapchain.h"
+#include "platypus/graphics/Device.hpp"
 #include "Debug.h"
 #include "Timing.h"
 
@@ -60,6 +60,7 @@ namespace platypus
         _inputManager(_window)
     {
         Context::create(name.c_str(), &_window);
+        Device::create(&_window);
         _pMasterRenderer = new MasterRenderer(_window);
         // NOTE: MasterRenderer shouldn't "own" commandPool since the commandPool is
         // used for non rendering related stuff as well!
@@ -103,7 +104,7 @@ namespace platypus
             emscripten_set_main_loop(update, 0, 1);
         #endif
 
-        Context::waitForOperations();
+        Device::wait_for_operations();
         // NOTE: Why the fuck was this commented out earlier!?!?!
         _pMasterRenderer->cleanUp();
         _inputManager.destroyEvents();
@@ -111,6 +112,7 @@ namespace platypus
 
         delete _pAssetManager;
         delete _pMasterRenderer;
+        Device::destroy();
         Context::destroy();
     }
 

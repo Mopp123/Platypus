@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include "platypus/graphics/Context.hpp"
 
 
 namespace platypus

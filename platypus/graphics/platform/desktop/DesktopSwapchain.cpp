@@ -1,5 +1,7 @@
 #include "platypus/graphics/Swapchain.h"
 #include "DesktopSwapchain.h"
+#include "platypus/graphics/Device.hpp"
+#include "DesktopDevice.hpp"
 #include "DesktopContext.hpp"
 #include "DesktopRenderPass.h"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
@@ -289,11 +291,11 @@ namespace platypus
 
     void Swapchain::create(const Window& window)
     {
-        const ContextImpl* pContextImpl = Context::get_impl();
-        const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = pContextImpl->deviceSwapchainSupportDetails;
-        const VkSurfaceCapabilitiesKHR& surfaceCapabilities = swapchainSupportDetails.surfaceCapabilities;
-        VkSurfaceFormatKHR selectedFormat = select_surface_format(swapchainSupportDetails.surfaceFormats);
-        VkPresentModeKHR selectedPresentMode = select_present_mode(swapchainSupportDetails.presentModes);
+        DeviceImpl* pDeviceImpl = Device::get_impl();
+        const DeviceImpl::SurfaceDetails& surfaceDetails = pDeviceImpl->surfaceDetails;
+        const VkSurfaceCapabilitiesKHR& surfaceCapabilities = surfaceDetails.capabilities;
+        VkSurfaceFormatKHR selectedFormat = select_surface_format(surfaceDetails.formats);
+        VkPresentModeKHR selectedPresentMode = select_present_mode(surfaceDetails.presentModes);
         VkExtent2D selectedExtent = select_extent(surfaceCapabilities, window);
 
         // "For maximum efficiency" ...on some lesser systems cause mem to run out?
@@ -311,8 +313,11 @@ namespace platypus
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        const ContextImpl::QueueFamilyIndices& deviceQueueFamilyIndices = pContextImpl->deviceQueueFamilyIndices;
-        uint32_t usedIndices[2] = { deviceQueueFamilyIndices.graphicsFamily, deviceQueueFamilyIndices.presentFamily };
+        const DeviceImpl::QueueFamilyIndices& deviceQueueFamilyIndices = pDeviceImpl->queueFamilyIndices;
+        uint32_t usedIndices[2] = {
+            deviceQueueFamilyIndices.graphicsFamily,
+            deviceQueueFamilyIndices.presentFamily
+        };
 
         if (usedIndices[0] == usedIndices[1])
         {
@@ -337,7 +342,7 @@ namespace platypus
         // NOTE: Used when dealing with recreating swapchain due to window resizing, or something else!
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        VkDevice device = pContextImpl->device;
+        VkDevice device = pDeviceImpl->device;
         VkSwapchainKHR swapchain;
         VkResult createResult = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
         if (createResult != VK_SUCCESS)
@@ -370,9 +375,9 @@ namespace platypus
 
         create_depth_texture(
             device,
-            pContextImpl->physicalDevice,
+            pDeviceImpl->physicalDevice,
             selectedExtent,
-            pContextImpl->vmaAllocator,
+            pDeviceImpl->vmaAllocator,
             &_pImpl->depthImageFormat,
             &_pImpl->depthImage,
             &_pImpl->depthImageView,
@@ -404,9 +409,8 @@ namespace platypus
 
     void Swapchain::destroy()
     {
-        // NOTE: Not sure is this the best way to throw the device around...
-        const ContextImpl* pContextImpl = Context::get_impl();
-        VkDevice device = pContextImpl->device;
+        DeviceImpl* pDeviceImpl = Device::get_impl();
+        VkDevice device = pDeviceImpl->device;
 
         for (size_t i = 0; i < _pImpl->maxFramesInFlight; ++i)
         {
@@ -425,7 +429,7 @@ namespace platypus
 
         vkDestroyImageView(device, _pImpl->depthImageView, nullptr);
         vmaDestroyImage(
-            pContextImpl->vmaAllocator,
+            pDeviceImpl->vmaAllocator,
             _pImpl->depthImage,
             _pImpl->depthImageAllocation
         );
@@ -453,7 +457,7 @@ namespace platypus
 
     SwapchainResult Swapchain::acquireImage()
     {
-        VkDevice device = Context::get_impl()->device;
+        VkDevice device = Device::get_impl()->device;
         vkWaitForFences(
             device,
             1,
@@ -509,7 +513,7 @@ namespace platypus
         presentInfo.pImageIndices = &_currentImageIndex;
 
         VkResult presentResult = vkQueuePresentKHR(
-            Context::get_impl()->presentQueue,
+            Device::get_impl()->presentQueue,
             &presentInfo
         );
         SwapchainResult retResult = SwapchainResult::ERROR;
@@ -521,12 +525,6 @@ namespace platypus
         else if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
         {
             retResult = SwapchainResult::RESIZE_REQUIRED;
-            Debug::log(
-                "@Swapchain::present "
-                "Unable to present. Window may have been resized. "
-                "Resize handling not yet implemented!",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
         }
         _currentFrame = (_currentFrame + 1) % _pImpl->maxFramesInFlight;
         return retResult;

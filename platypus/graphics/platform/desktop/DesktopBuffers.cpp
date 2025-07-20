@@ -1,7 +1,8 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 #include "DesktopBuffers.h"
-#include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "DesktopContext.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
@@ -122,7 +123,7 @@ namespace platypus
 
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
     {
-        size_t alignRequirement = Context::get_min_uniform_buffer_offset_align();
+        size_t alignRequirement = Device::get_min_uniform_buffer_offset_align();
         size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
         return  alignRequirement * (diff + 1);
     }
@@ -339,7 +340,7 @@ namespace platypus
             allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
 
-        VmaAllocator vmaAllocator = Context::get_impl()->vmaAllocator;
+        VmaAllocator vmaAllocator = Device::get_impl()->vmaAllocator;
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createResult = vmaCreateBuffer(
@@ -393,7 +394,7 @@ namespace platypus
         if (_pImpl)
         {
             vmaDestroyBuffer(
-                Context::get_impl()->vmaAllocator,
+                Device::get_impl()->vmaAllocator,
                 _pImpl->handle,
                 _pImpl->vmaAllocation
             );
@@ -423,7 +424,7 @@ namespace platypus
             return;
         }
         vmaCopyMemoryToAllocation(
-            Context::get_impl()->vmaAllocator,
+            Device::get_impl()->vmaAllocator,
             pData,
             _pImpl->vmaAllocation,
             offset,

@@ -3,7 +3,8 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"
-#include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 
@@ -260,7 +261,7 @@ namespace platypus
     TextureSamplerImpl::~TextureSamplerImpl()
     {
         vkDestroySampler(
-            Context::get_impl()->device,
+            Device::get_impl()->device,
             handle,
             nullptr
         );
@@ -330,7 +331,7 @@ namespace platypus
 
         VkSampler handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateSampler(
-            Context::get_impl()->device,
+            Device::get_impl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -394,12 +395,10 @@ namespace platypus
 
         VkFormat imageFormat = to_vk_format(targetFormat);
 
-        const ContextImpl* pContextImpl = Context::get_impl();
-
         // Using vkCmdBlit to create mipmaps, so make sure this is supported
         VkFormatProperties imageFormatProperties;
         vkGetPhysicalDeviceFormatProperties(
-            pContextImpl->physicalDevice,
+            Device::get_impl()->physicalDevice,
             imageFormat,
             &imageFormatProperties
         );
@@ -460,7 +459,7 @@ namespace platypus
         VkImage imageHandle = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createImageResult = vmaCreateImage(
-            pContextImpl->vmaAllocator,
+            Device::get_impl()->vmaAllocator,
             &imageCreateInfo,
             &allocCreateInfo,
             &imageHandle,
@@ -525,7 +524,7 @@ namespace platypus
         //  -> The updating probably breaks the system since the same texture may be in use at the time
         //  of the update by the descriptor sets!
         VkImageView imageView = create_image_views(
-            pContextImpl->device,
+            Device::get_impl()->device,
             { imageHandle },
             imageFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -544,9 +543,9 @@ namespace platypus
     {
         if (_pImpl)
         {
-            const ContextImpl* pContextImpl = Context::get_impl();
-            vkDestroyImageView(pContextImpl->device, _pImpl->imageView, nullptr);
-            vmaDestroyImage(pContextImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+            DeviceImpl* pDeviceImpl = Device::get_impl();
+            vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
+            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
             delete _pImpl;
         }
     }

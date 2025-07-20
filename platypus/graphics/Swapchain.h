@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Context.hpp"
 #include "platypus/core/Window.hpp"
 #include "RenderPass.h"
 #include <platypus/Common.h>
@@ -20,7 +19,6 @@ namespace platypus
     class Swapchain
     {
     private:
-        friend class Context;
         friend class RenderPass;
         SwapchainImpl* _pImpl = nullptr;
 
@@ -50,5 +48,6 @@ namespace platypus
         inline uint32_t getCurrentImageIndex() const { return _currentImageIndex; }
         inline size_t getCurrentFrame() const { return _currentFrame; }
         inline const SwapchainImpl* getImpl() const { return _pImpl; }
+        inline SwapchainImpl* getImpl() { return _pImpl; }
     };
 }
