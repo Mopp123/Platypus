@@ -1,0 +1,56 @@
+#pragma once
+
+#include "Renderer.h"
+#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Descriptors.h"
+#include "platypus/assets/Mesh.h"
+#include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Lights.h"
+#include <cstdlib>
+
+
+namespace platypus
+{
+    class SkinnedMeshRenderer : public Renderer
+    {
+    private:
+        struct RenderData
+        {
+            ID_t meshID = NULL_ID;
+            ID_t materialID = NULL_ID;
+            Matrix4f transformationMatrix;
+        };
+
+        static size_t s_maxJoints;
+
+        std::vector<Buffer*> _jointUniformBuffer;
+        DescriptorSetLayout _jointDescriptorSetLayout;
+        std::vector<DescriptorSet> _jointDescriptorSet;
+        std::vector<RenderData> _renderData;
+
+    public:
+        SkinnedMeshRenderer(
+            const MasterRenderer& masterRenderer,
+            CommandPool& commandPool,
+            DescriptorPool& descriptorPool,
+            uint64_t requiredComponentsMask
+        );
+        ~SkinnedMeshRenderer();
+
+        virtual void freeBatches();
+        virtual void submit(const Scene* pScene, entityID_t entity);
+
+        virtual const CommandBuffer& recordCommandBuffer(
+            const RenderPass& renderPass,
+            uint32_t viewportWidth,
+            uint32_t viewportHeight,
+            const Matrix4f& perspectiveProjectionMatrix,
+            const Matrix4f& orthographicProjectionMatrix,
+            const DescriptorSet& cameraDescriptorSet,
+            const DescriptorSet& dirLightDescriptorSet,
+            size_t frame
+        );
+
+        static size_t get_max_joints();
+    };
+}

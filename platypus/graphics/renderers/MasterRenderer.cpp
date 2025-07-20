@@ -7,6 +7,7 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Component.h"
 #include "StaticMeshRenderer.h"
+#include "SkinnedMeshRenderer.hpp"
 
 
 namespace platypus
@@ -97,6 +98,12 @@ namespace platypus
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
         );
+        _pSkinnedMeshRenderer = std::make_unique<SkinnedMeshRenderer>(
+            *this,
+            _commandPool,
+            _descriptorPool,
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
             _commandPool,
@@ -105,6 +112,7 @@ namespace platypus
         );
 
         _renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
+        _renderers[_pSkinnedMeshRenderer->getRequiredComponentsMask()] = _pSkinnedMeshRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
     }

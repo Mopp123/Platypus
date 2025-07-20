@@ -46,6 +46,7 @@ namespace platypus
         std::vector<DescriptorSet> _dirLightDescriptorSets;
 
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
+        std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
         // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
         // *This was due to Renderer and Material rework
         std::unique_ptr<GUIRenderer> _pGUIRenderer;

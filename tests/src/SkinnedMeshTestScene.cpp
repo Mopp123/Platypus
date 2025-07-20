@@ -1,5 +1,6 @@
 #include "SkinnedMeshTestScene.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Transform.h"
 #include <string>
 
 using namespace platypus;
@@ -70,7 +71,16 @@ void SkinnedMeshTestScene::init()
         bindPose.joints,
         bindPose.jointChildMapping
     );
+    // Create the skinned mesh renderable
+    entityID_t skinnedEntity = createEntity();
+    create_transform(skinnedEntity, Matrix4f(1.0f));
+    create_skinned_mesh_renderable(
+        skinnedEntity,
+        pAnimatedMesh->getID(),
+        pMaterial->getID()
+    );
     // Create renderables representing joints
+    /*
     for (entityID_t entity : jointEntities)
     {
         create_static_mesh_renderable(
@@ -90,7 +100,7 @@ void SkinnedMeshTestScene::init()
         pAnimationAsset->getID(),
         1.0f
     );
-
+    */
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,

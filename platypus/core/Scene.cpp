@@ -22,7 +22,10 @@ namespace platypus
             sizeof(GUITransform), maxEntityCount, true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
-            sizeof(Transform), maxEntityCount, true
+            sizeof(StaticMeshRenderable), maxEntityCount, true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE] = ComponentPool(
+            sizeof(SkinnedMeshRenderable), maxEntityCount, true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
             sizeof(SkeletalAnimation), maxEntityCount, true
@@ -262,7 +265,7 @@ namespace platypus
         if (poolIt == _componentPools.end())
         {
             Debug::log(
-                "@Scene::getComponent (2)"
+                "@Scene::getComponent (2) "
                 "No component pool exists for component type: " + std::to_string(type),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -278,7 +281,7 @@ namespace platypus
         if (!nestedSearch && enableWarning)
         {
             Debug::log(
-                "@Scene::getComponent (2)"
+                "@Scene::getComponent (2) "
                 "Couldn't find component of type: " + std::to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING
