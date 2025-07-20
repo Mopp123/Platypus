@@ -1,6 +1,6 @@
 #include "platypus/graphics/RenderCommand.h"
-#include "platypus/graphics/Context.h"
-#include "WebContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "WebContext.hpp"
 #include "platypus/graphics/CommandBuffer.h"
 #include "WebCommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
@@ -207,7 +207,7 @@ namespace platypus
 
         static void create_vao(const PipelineImpl* pPipelineImpl, const std::vector<const Buffer*>& vertexBuffers)
         {
-            ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+            ContextImpl* pContextImpl = Context::get_impl();
             const OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderAttribLocations = pShaderProgram->getAttribLocations();
             const std::vector<VertexBufferLayout>& vbLayouts = pPipelineImpl->vertexBufferLayouts;
@@ -318,7 +318,7 @@ namespace platypus
 
         static uint32_t get_common_vao(const std::vector<const Buffer*>& vertexBuffers)
         {
-            std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_instance()->getImpl()->vaoBufferMapping;
+            std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_impl()->vaoBufferMapping;
             // Must be one of these...
             for (uint32_t vaoID : vertexBuffers[0]->getImpl()->vaos)
             {

@@ -1,7 +1,7 @@
 #include "platypus/core/InputManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
-#include "DesktopWindow.h"
+#include "DesktopWindow.hpp"
 #include <GLFW/glfw3.h>
 
 

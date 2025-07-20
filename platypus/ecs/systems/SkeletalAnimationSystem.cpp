@@ -95,7 +95,7 @@ namespace platypus
     void SkeletalAnimationSystem::update(Scene* pScene)
     {
         const uint64_t requiredComponentMask = ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION;
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
 
         for (const Entity& entity : pScene->getEntities())
         {
@@ -106,7 +106,7 @@ namespace platypus
                 entity.id,
                 ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
             );
-            SkeletalAnimationData* pAnimationAsset = (SkeletalAnimationData*)assetManager.getAsset(
+            SkeletalAnimationData* pAnimationAsset = (SkeletalAnimationData*)pAssetManager->getAsset(
                 pAnimationComponent->animationID,
                 AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
             );

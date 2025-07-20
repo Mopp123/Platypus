@@ -1,6 +1,6 @@
 #include "platypus/graphics/CommandBuffer.h"
 #include "WebCommandBuffer.h"
-#include "WebContext.h"
+#include "WebContext.hpp"
 #include <GL/glew.h>
 
 

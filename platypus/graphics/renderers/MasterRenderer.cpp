@@ -1,5 +1,6 @@
 #include "MasterRenderer.h"
 #include "platypus/core/Application.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
@@ -123,7 +124,7 @@ namespace platypus
 
     void MasterRenderer::cleanRenderers()
     {
-        Context::get_instance()->waitForOperations();
+        Device::wait_for_operations();
         for (auto& it : _renderers)
             it.second->freeBatches();
 
@@ -169,7 +170,7 @@ namespace platypus
         else
         {
             const CommandBuffer& cmdBuf = recordCommandBuffer();
-            Context::get_instance()->submitPrimaryCommandBuffer(
+            Device::submit_primary_command_buffer(
                 _swapchain,
                 cmdBuf,
                 _swapchain.getCurrentFrame()
@@ -215,8 +216,8 @@ namespace platypus
             swapchainExtent.height
         );
 
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->recreateExistingPipeline();
     }
 
@@ -224,22 +225,22 @@ namespace platypus
     {
         _pGUIRenderer->destroyPipeline();
 
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
     }
 
     void MasterRenderer::freeDescriptorSets()
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->freeDescriptorSets();
     }
 
     void MasterRenderer::createDescriptorSets()
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : assetManager.getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->createDescriptorSets();
     }
 
@@ -374,14 +375,13 @@ namespace platypus
 
     void MasterRenderer::handleWindowResize()
     {
-        Context* pContext = Context::get_instance();
         Application* pApp = Application::get_instance();
-        pContext->waitForOperations();
+        Device::wait_for_operations();
 
         Window& window = pApp->getWindow();
         if (!window.isMinimized())
         {
-            pContext->handleWindowResize();
+            Device::handle_window_resize();
             _swapchain.recreate(window);
             freeDescriptorSets();
             destroyPipelines();

@@ -48,6 +48,7 @@ namespace platypus
         void getSurfaceExtent(int* pWidth, int* pHeight) const;
 
         WindowImpl* getImpl();
+        const WindowImpl* getImpl() const;
 
         // @handleWindowResizeEvent:
         //  *Needed to have some way to handle window resizing outside of regular events.

@@ -1,4 +1,4 @@
-#include "platypus/core/Window.h"
+#include "platypus/core/Window.hpp"
 #include "platypus/Common.h"
 #include "platypus/core/Debug.h"
 

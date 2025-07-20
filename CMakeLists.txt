@@ -26,11 +26,7 @@ add_compile_options(
     -Wall -std=c++17 -g
 )
 
-if(${BUILD_TARGET} MATCHES "desktop")
-    add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
-elseif(${BUILD_TARGET} MATCHES "web")
-    add_compile_definitions(PLATYPUS_BUILD_WEB=1)
-endif()
+add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}

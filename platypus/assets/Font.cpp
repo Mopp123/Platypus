@@ -196,9 +196,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return false;
         }
-        AssetManager& assetManager = pApp->getAssetManager();
+        AssetManager* pAssetManager = pApp->getAssetManager();
 
-        Image* pFontImgData = assetManager.createImage(
+        Image* pFontImgData = pAssetManager->createImage(
             combinedGlyphBitmap,
             combinedGlyphBitmapWidth,
             combinedGlyphBitmapWidth,
@@ -206,7 +206,7 @@ namespace platypus
         );
         _imageID = pFontImgData->getID();
 
-        Texture* pTexture = assetManager.createTexture(
+        Texture* pTexture = pAssetManager->createTexture(
             _imageID,
             ImageFormat::R8_UNORM,
             TextureSampler(
@@ -229,7 +229,7 @@ namespace platypus
 
     const Texture* Font::getTexture() const
     {
-        return (const Texture*)Application::get_instance()->getAssetManager().getAsset(_textureID, AssetType::ASSET_TYPE_TEXTURE);
+        return (const Texture*)Application::get_instance()->getAssetManager()->getAsset(_textureID, AssetType::ASSET_TYPE_TEXTURE);
     }
 
     const FontGlyphData * const Font::getGlyph(wchar_t c) const

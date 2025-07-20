@@ -1,4 +1,5 @@
 #include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/Context.hpp"
 #include "WebPipeline.h"
 #include "WebShader.h"
 #include "platypus/core/Debug.h"

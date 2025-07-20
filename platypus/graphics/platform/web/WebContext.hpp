@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emscripten/html5.h>
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Shader.h"
 #include "platypus/core/Debug.h"
@@ -28,10 +29,10 @@ namespace platypus
     unsigned int to_gl_datatype(ShaderDataType shaderDataType);
     std::string gl_error_to_string(unsigned int error);
 
-    bool vao_deletion_allowed(ContextImpl* pContextImpl, uint32_t vaoID);
-
     struct ContextImpl
     {
+        EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webglContext;
+
         // key = vaoID, value = bufferIDs of that vao
         std::unordered_map<uint32_t, std::set<uint32_t>> vaoBufferMapping;
 
@@ -40,4 +41,6 @@ namespace platypus
         // destroy VAOs correctly!
         std::set<uint32_t> complementaryVbos;
     };
+
+    bool vao_deletion_allowed(ContextImpl* pContextImpl, uint32_t vaoID);
 }

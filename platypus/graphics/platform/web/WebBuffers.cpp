@@ -1,8 +1,8 @@
 #include "platypus/graphics/Buffers.h"
 #include "WebBuffers.h"
 #include "platypus/core/Debug.h"
-#include "platypus/graphics/Context.h"
-#include "WebContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "WebContext.hpp"
 #include "platypus/Common.h"
 #include <cstdlib>
 #include <GL/glew.h>
@@ -190,7 +190,7 @@ namespace platypus
                 // Remove from context impl's vaos
                 // -> IF context impl's vao doesn't have any buffers associated with it anymore
                 //  -> destroy the actual vao
-                ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+                ContextImpl* pContextImpl = Context::get_impl();
                 if (!pContextImpl)
                 {
                     Debug::log("@Buffer::~Buffer Context impl was nullptr", Debug::MessageType::PLATYPUS_ERROR);
