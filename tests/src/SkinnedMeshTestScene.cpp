@@ -17,7 +17,7 @@ void SkinnedMeshTestScene::init()
 {
     initBase();
 
-    AssetManager& assetManager = Application::get_instance()->getAssetManager();
+    AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
     InputManager& inputManager = Application::get_instance()->getInputManager();
 
     _camController.init(_cameraEntity);
@@ -35,7 +35,7 @@ void SkinnedMeshTestScene::init()
     std::vector<std::vector<Pose>> animations;
 
     Debug::log("___TEST___ATTEMPT LOAD ANIM MODEL");
-    Model* pAnimatedModel = assetManager.loadModel(
+    Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/SkeletonTest.glb",
         bindPoses,
         animations
@@ -50,20 +50,20 @@ void SkinnedMeshTestScene::init()
         0
     );
 
-    Texture* pDiffuseTexture = assetManager.loadTexture(
+    Texture* pDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/DiffuseTest.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
 
-    Material* pMaterial = assetManager.createMaterial(
+    Material* pMaterial = pAssetManager->createMaterial(
         pDiffuseTexture->getID(),
-        assetManager.getWhiteTexture()->getID(),
+        pAssetManager->getWhiteTexture()->getID(),
         NULL_ID,
         0.8f,
         16.0f
     );
-    Model* pModel = assetManager.loadModel("assets/TestCube.glb");
+    Model* pModel = pAssetManager->loadModel("assets/TestCube.glb");
 
     const Pose& bindPose = bindPoses[0];
     std::vector<entityID_t> jointEntities = create_skeleton(
@@ -79,7 +79,7 @@ void SkinnedMeshTestScene::init()
             pMaterial->getID()
         );
     }
-    SkeletalAnimationData* pAnimationAsset = assetManager.createSkeletalAnimation(
+    SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
         1.0f,
         bindPoses[0],
         animations[0]

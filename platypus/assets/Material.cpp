@@ -131,13 +131,13 @@ namespace platypus
             1
         };
 
-        MasterRenderer& masterRenderer = Application::get_instance()->getMasterRenderer();
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         bool normalMapping = _normalTextureID != NULL_ID;
         _pPipelineData = new MaterialPipelineData{
             { meshVertexBufferLayout, instancedVertexBufferLayout },
             {
-                masterRenderer.getCameraDescriptorSetLayout(),
-                masterRenderer.getDirectionalLightDescriptorSetLayout(),
+                pMasterRenderer->getCameraDescriptorSetLayout(),
+                pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
                 { create_descriptor_set_layout_bindings(normalMapping) },
             },
             {
@@ -150,7 +150,7 @@ namespace platypus
             }
         };
 
-        const Swapchain& swapchain = masterRenderer.getSwapchain();
+        const Swapchain& swapchain = pMasterRenderer->getSwapchain();
         const Extent2D swapchainExtent = swapchain.getExtent();
         const uint32_t viewportWidth = (uint32_t)swapchainExtent.width;
         const uint32_t viewportHeight = (uint32_t)swapchainExtent.height;
@@ -187,7 +187,7 @@ namespace platypus
             return;
         }
 
-        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer().getSwapchain();
+        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
         const Extent2D swapchainExtent = swapchain.getExtent();
         const uint32_t viewportWidth = (uint32_t)swapchainExtent.width;
         const uint32_t viewportHeight = (uint32_t)swapchainExtent.height;
@@ -257,9 +257,9 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        MasterRenderer& masterRenderer = Application::get_instance()->getMasterRenderer();
-        CommandPool& commandPool = masterRenderer.getCommandPool();
-        DescriptorPool& descriptorPool = masterRenderer.getDescriptorPool();
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        CommandPool& commandPool = pMasterRenderer->getCommandPool();
+        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
 
         const Texture* pDiffuseTexture = getDiffuseTexture();
         const Texture* pSpecularTexture = getSpecularTexture();
@@ -271,7 +271,7 @@ namespace platypus
             0
         );
 
-        size_t maxFramesInFlight = Application::get_instance()->getMasterRenderer().getSwapchain().getMaxFramesInFlight();
+        size_t maxFramesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
         for (size_t i = 0; i < maxFramesInFlight; ++i)
         {
             Buffer* pUniformBuffer = new Buffer(
@@ -335,7 +335,7 @@ namespace platypus
             return;
         }
 
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer().getDescriptorPool();
+        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
         for (Buffer* pBuffer : _uniformBuffers)
             delete pBuffer;
 
@@ -347,8 +347,8 @@ namespace platypus
 
     Texture* Material::getDiffuseTexture() const
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        return (Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        return (Texture*)pAssetManager->getAsset(
             _diffuseTextureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
@@ -356,8 +356,8 @@ namespace platypus
 
     Texture* Material::getSpecularTexture() const
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        return (Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        return (Texture*)pAssetManager->getAsset(
             _specularTextureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
@@ -365,8 +365,8 @@ namespace platypus
 
     Texture* Material::getNormalTexture() const
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        return (Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        return (Texture*)pAssetManager->getAsset(
             _normalTextureID,
             AssetType::ASSET_TYPE_TEXTURE
         );

@@ -79,10 +79,9 @@ namespace platypus
         // NOTE: This has to be done here since need quarantee that all necessary components have been
         // properly updated before submission!
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        MasterRenderer& masterRenderer = pApp->getMasterRenderer();
+        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
         for (const Entity& entity : _pCurrentScene->_entities)
-            masterRenderer.submit(_pCurrentScene, entity);
+            pMasterRenderer->submit(_pCurrentScene, entity);
 
         /*
         ComponentPool& transformPool = _pCurrentScene->componentPools[ComponentType::PK_TRANSFORM];
@@ -121,10 +120,10 @@ namespace platypus
             Debug::log("Switching scene");
 
             Application* pApp = Application::get_instance();
-            pApp->getContext().waitForOperations();
-            pApp->getMasterRenderer().cleanRenderers();
+            Context::waitForOperations();
+            pApp->getMasterRenderer()->cleanRenderers();
             pApp->getInputManager().destroyEvents();
-            pApp->getAssetManager().destroyAssets();
+            pApp->getAssetManager()->destroyAssets();
 
             delete _pCurrentScene;
             _pCurrentScene = _pNextScene;

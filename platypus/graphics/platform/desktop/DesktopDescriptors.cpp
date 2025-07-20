@@ -1,8 +1,8 @@
 #include "DesktopDescriptors.h"
 #include "platypus/core/Debug.h"
 #include "DesktopShader.h"
-#include "platypus/graphics/Context.h"
-#include "DesktopContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "DesktopContext.hpp"
 #include "DesktopSwapchain.h"
 #include "DesktopBuffers.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
@@ -59,7 +59,7 @@ namespace platypus
 
         VkDescriptorSetLayout handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateDescriptorSetLayout(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -106,7 +106,7 @@ namespace platypus
     void DescriptorSetLayout::destroy()
     {
         vkDestroyDescriptorSetLayout(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             _pImpl->handle,
             nullptr
         );
@@ -159,7 +159,7 @@ namespace platypus
         allocInfo.pSetLayouts = &pLayout->getImpl()->handle;
 
         VkDescriptorSet descriptorSetHandle;
-        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkDevice device = Context::get_impl()->device;
         VkResult allocResult = vkAllocateDescriptorSets(
             device,
             &allocInfo,
@@ -210,7 +210,7 @@ namespace platypus
 
         VkDescriptorPool handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateDescriptorPool(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -236,7 +236,7 @@ namespace platypus
         if (_pImpl)
         {
             vkDestroyDescriptorPool(
-                Context::get_instance()->getImpl()->device,
+                Context::get_impl()->device,
                 _pImpl->handle,
                 nullptr
             );
@@ -487,7 +487,7 @@ namespace platypus
             descriptorWrite.pTexelBufferView = nullptr; // what this?
 
             vkUpdateDescriptorSets(
-                Context::get_instance()->getImpl()->device,
+                Context::get_impl()->device,
                 1,
                 &descriptorWrite,
                 0,
@@ -527,7 +527,7 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
             vkFreeDescriptorSets(
-                Context::get_instance()->getImpl()->device,
+                Context::get_impl()->device,
                 _pImpl->handle,
                 1,
                 &pDescriptorSetImpl->handle

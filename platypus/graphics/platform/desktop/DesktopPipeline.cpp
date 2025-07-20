@@ -3,8 +3,8 @@
 #include "platypus/graphics/Buffers.h"
 #include "DesktopBuffers.h"
 #include "DesktopShader.h"
-#include "platypus/graphics/Context.h"
-#include "DesktopContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "DesktopContext.hpp"
 #include "platypus/core/Debug.h"
 #include "DesktopRenderPass.h"
 #include "DesktopDescriptors.h"
@@ -99,7 +99,7 @@ namespace platypus
         uint32_t pushConstantStageFlags
     )
     {
-        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkDevice device = Context::get_impl()->device;
         // Get vulkan handles from out vertexBufferLayouts
         std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
         std::vector<VkVertexInputAttributeDescription> vertexAttribDescriptions;
@@ -353,7 +353,7 @@ namespace platypus
 
     void Pipeline::destroy()
     {
-        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkDevice device = Context::get_impl()->device;
         vkDestroyPipeline(device, _pImpl->handle, nullptr);
         vkDestroyPipelineLayout(device, _pImpl->layout, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;

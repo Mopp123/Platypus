@@ -34,7 +34,6 @@ namespace platypus
         #ifdef PLATYPUS_DEBUG
             VkDebugUtilsMessengerEXT debugMessenger;
         #endif
-        VkSurfaceKHR surface;
         VkPhysicalDevice physicalDevice;
         VkDevice device;
         VmaAllocator vmaAllocator;

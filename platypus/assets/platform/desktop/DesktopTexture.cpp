@@ -3,8 +3,8 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"
-#include "platypus/graphics/Context.h"
-#include "platypus/graphics/platform/desktop/DesktopContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 
 #include "platypus/core/Debug.h"
@@ -260,7 +260,7 @@ namespace platypus
     TextureSamplerImpl::~TextureSamplerImpl()
     {
         vkDestroySampler(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             handle,
             nullptr
         );
@@ -330,7 +330,7 @@ namespace platypus
 
         VkSampler handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateSampler(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -394,7 +394,7 @@ namespace platypus
 
         VkFormat imageFormat = to_vk_format(targetFormat);
 
-        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+        const ContextImpl* pContextImpl = Context::get_impl();
 
         // Using vkCmdBlit to create mipmaps, so make sure this is supported
         VkFormatProperties imageFormatProperties;
@@ -544,7 +544,7 @@ namespace platypus
     {
         if (_pImpl)
         {
-            const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+            const ContextImpl* pContextImpl = Context::get_impl();
             vkDestroyImageView(pContextImpl->device, _pImpl->imageView, nullptr);
             vmaDestroyImage(pContextImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
             delete _pImpl;

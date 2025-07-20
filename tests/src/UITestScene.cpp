@@ -63,8 +63,8 @@ void UITestScene::init()
 {
     initBase();
 
-    AssetManager& assetManager = Application::get_instance()->getAssetManager();
-    Font* pFont = assetManager.loadFont("assets/fonts/Ubuntu-R.ttf", 16);
+    AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+    Font* pFont = pAssetManager->loadFont("assets/fonts/Ubuntu-R.ttf", 16);
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
     _ui.init(this, inputManager);

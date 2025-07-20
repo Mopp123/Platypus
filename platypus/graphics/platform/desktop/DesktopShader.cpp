@@ -1,6 +1,6 @@
 #include "platypus/graphics/Shader.h"
 #include "DesktopShader.h"
-#include "DesktopContext.h"
+#include "DesktopContext.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/utils/FileUtils.h"
 #include <vulkan/vk_enum_string_helper.h>
@@ -64,7 +64,7 @@ namespace platypus
 
         VkShaderModule shaderModule;
         VkResult createResult = vkCreateShaderModule(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             &createInfo,
             nullptr,
             &shaderModule
@@ -86,7 +86,7 @@ namespace platypus
 
     Shader::~Shader()
     {
-        vkDestroyShaderModule(Context::get_instance()->getImpl()->device, _pImpl->shaderModule, nullptr);
+        vkDestroyShaderModule(Context::get_impl()->device, _pImpl->shaderModule, nullptr);
         if (_pImpl)
             delete _pImpl;
     }

@@ -19,12 +19,12 @@ namespace platypus
 
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
-        MasterRenderer& renderer = pApp->getMasterRenderer();
+        MasterRenderer* pRenderer = pApp->getMasterRenderer();
 
         pApp->getInputManager().pollEvents();
         sceneManager.update();
         if (sceneManager.getCurrentScene())
-            renderer.render(pApp->getWindow());
+            pRenderer->render(pApp->getWindow());
 
         std::chrono::time_point<std::chrono::high_resolution_clock> currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> delta = currentTime - s_lastDisplayDelta;
@@ -57,14 +57,15 @@ namespace platypus
         Scene* pInitialScene
     ) :
         _window(name, width, height, resizable, windowMode),
-        _inputManager(_window),
-        _context(name.c_str(), &_window),
-        _masterRenderer(_window),
+        _inputManager(_window)
+    {
+        Context::create(name.c_str(), &_window);
+        _pMasterRenderer = new MasterRenderer(_window);
         // NOTE: MasterRenderer shouldn't "own" commandPool since the commandPool is
         // used for non rendering related stuff as well!
         // TODO: Fix the above
-        _assetManager(_masterRenderer.getCommandPool())
-    {
+        _pAssetManager = new AssetManager(_pMasterRenderer->getCommandPool());
+
         #ifdef PLATYPUS_DEBUG
             Debug::log(
                 "Running platypus engine in DEBUG mode"
@@ -92,7 +93,7 @@ namespace platypus
 
     void Application::run()
     {
-        _masterRenderer.createPipelines();
+        _pMasterRenderer->createPipelines();
         #ifdef PLATYPUS_BUILD_DESKTOP
             while (!_window.isCloseRequested())
             {
@@ -102,11 +103,15 @@ namespace platypus
             emscripten_set_main_loop(update, 0, 1);
         #endif
 
-        _context.waitForOperations();
+        Context::waitForOperations();
         // NOTE: Why the fuck was this commented out earlier!?!?!
-        _masterRenderer.cleanUp();
+        _pMasterRenderer->cleanUp();
         _inputManager.destroyEvents();
-        _assetManager.destroyAssets();
+        _pAssetManager->destroyAssets();
+
+        delete _pAssetManager;
+        delete _pMasterRenderer;
+        Context::destroy();
     }
 
     Application* Application::get_instance()

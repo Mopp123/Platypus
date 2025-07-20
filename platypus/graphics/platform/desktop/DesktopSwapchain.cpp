@@ -1,8 +1,8 @@
 #include "platypus/graphics/Swapchain.h"
 #include "DesktopSwapchain.h"
-#include "DesktopContext.h"
+#include "DesktopContext.hpp"
 #include "DesktopRenderPass.h"
-#include "platypus/core/platform/desktop/DesktopWindow.h"
+#include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
 #include <algorithm>
@@ -289,7 +289,7 @@ namespace platypus
 
     void Swapchain::create(const Window& window)
     {
-        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+        const ContextImpl* pContextImpl = Context::get_impl();
         const ContextImpl::SwapchainSupportDetails& swapchainSupportDetails = pContextImpl->deviceSwapchainSupportDetails;
         const VkSurfaceCapabilitiesKHR& surfaceCapabilities = swapchainSupportDetails.surfaceCapabilities;
         VkSurfaceFormatKHR selectedFormat = select_surface_format(swapchainSupportDetails.surfaceFormats);
@@ -303,7 +303,7 @@ namespace platypus
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = pContextImpl->surface;
+        createInfo.surface = window.getImpl()->surface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = selectedFormat.format;
         createInfo.imageColorSpace = selectedFormat.colorSpace;
@@ -405,7 +405,7 @@ namespace platypus
     void Swapchain::destroy()
     {
         // NOTE: Not sure is this the best way to throw the device around...
-        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
+        const ContextImpl* pContextImpl = Context::get_impl();
         VkDevice device = pContextImpl->device;
 
         for (size_t i = 0; i < _pImpl->maxFramesInFlight; ++i)
@@ -453,7 +453,7 @@ namespace platypus
 
     SwapchainResult Swapchain::acquireImage()
     {
-        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkDevice device = Context::get_impl()->device;
         vkWaitForFences(
             device,
             1,
@@ -508,7 +508,10 @@ namespace platypus
 
         presentInfo.pImageIndices = &_currentImageIndex;
 
-        VkResult presentResult = vkQueuePresentKHR(Context::get_instance()->getImpl()->presentQueue, &presentInfo);
+        VkResult presentResult = vkQueuePresentKHR(
+            Context::get_impl()->presentQueue,
+            &presentInfo
+        );
         SwapchainResult retResult = SwapchainResult::ERROR;
 
         if (presentResult == VK_SUCCESS)

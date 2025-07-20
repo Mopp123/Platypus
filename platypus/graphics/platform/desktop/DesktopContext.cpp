@@ -1,5 +1,5 @@
-#include "platypus/graphics/Context.h"
-#include "platypus/graphics/platform/desktop/DesktopContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
 #include <vulkan/vk_enum_string_helper.h>
 #include <GLFW/glfw3.h>
@@ -9,7 +9,7 @@
 
 #include "platypus/core/Debug.h"
 #include "platypus/Common.h"
-#include "platypus/core/platform/desktop/DesktopWindow.h"
+#include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/platform/desktop/DesktopSwapchain.h"
 #include "platypus/graphics/CommandBuffer.h"
@@ -303,12 +303,13 @@ namespace platypus
     #endif
 
 
-    static VkSurfaceKHR create_window_surface(VkInstance instance, Window* pWindow)
+    static void create_window_surface(VkInstance instance, Window* pWindow)
     {
+        WindowImpl* pWindowImpl = pWindow->getImpl();
         VkSurfaceKHR surface;
         VkResult result = glfwCreateWindowSurface(
             instance,
-            pWindow->getImpl()->pGLFWwindow,
+            pWindowImpl->pGLFWwindow,
             nullptr,
             &surface
         );
@@ -322,7 +323,7 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        return surface;
+        pWindowImpl->surface = surface;
     }
 
 
@@ -598,9 +599,13 @@ namespace platypus
     }
 
 
-    Context* Context::s_pInstance = nullptr;
-    Context::Context(const char* appName, Window* pWindow)
+    Window* Context::s_pWindow = nullptr;
+    ContextImpl* Context::s_pImpl = nullptr;
+    size_t Context::s_minUniformBufferOffsetAlignment = 1;
+    void Context::create(const char* appName, Window* pWindow)
     {
+        s_pWindow = pWindow;
+
         std::vector<const char*> requiredInstanceExtensions = get_required_instance_extensions();
         std::vector<const char*> requiredDeviceExtensions = get_required_device_extensions();
         std::vector<const char*> requiredLayers = get_required_layers();
@@ -615,11 +620,22 @@ namespace platypus
             VkDebugUtilsMessengerEXT debugMessenger = create_debug_messenger(instance);
         #endif
 
-        VkSurfaceKHR surface = create_window_surface(instance, pWindow);
+        create_window_surface(instance, pWindow);
+        VkSurfaceKHR surface = pWindow->getImpl()->surface;
 
-        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(instance, surface, _minUniformBufferOffsetAlignment);
-        ContextImpl::QueueFamilyIndices deviceQueueFamilyIndices = find_queue_families(selectedPhysicalDevice, surface);
-        ContextImpl::SwapchainSupportDetails swapchainDetails = query_swapchain_support_details(selectedPhysicalDevice, surface);
+        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(
+            instance,
+            surface,
+            s_minUniformBufferOffsetAlignment
+        );
+        ContextImpl::QueueFamilyIndices deviceQueueFamilyIndices = find_queue_families(
+            selectedPhysicalDevice,
+            surface
+        );
+        ContextImpl::SwapchainSupportDetails swapchainDetails = query_swapchain_support_details(
+            selectedPhysicalDevice,
+            surface
+        );
         // NOTE: Not sure if should actually give queues as ptrs to ptrs here?
         // Not tested does this actually work...
         VkQueue graphicsQueue;
@@ -639,39 +655,48 @@ namespace platypus
             instance
         );
 
-        _pImpl = new ContextImpl;
-        _pImpl->instance = instance;
+        s_pImpl = new ContextImpl;
+        s_pImpl->instance = instance;
         #ifdef PLATYPUS_DEBUG
-            _pImpl->debugMessenger = debugMessenger;
+            s_pImpl->debugMessenger = debugMessenger;
         #endif
-        _pImpl->surface = surface;
-        _pImpl->physicalDevice = selectedPhysicalDevice;
-        _pImpl->device = device;
-        _pImpl->vmaAllocator = vmaAllocator;
-        _pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
-        _pImpl->graphicsQueue = graphicsQueue;
-        _pImpl->presentQueue = presentQueue;
-        _pImpl->deviceSwapchainSupportDetails = swapchainDetails;
-
-        s_pInstance = this;
+        s_pImpl->physicalDevice = selectedPhysicalDevice;
+        s_pImpl->device = device;
+        s_pImpl->vmaAllocator = vmaAllocator;
+        s_pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
+        s_pImpl->graphicsQueue = graphicsQueue;
+        s_pImpl->presentQueue = presentQueue;
+        s_pImpl->deviceSwapchainSupportDetails = swapchainDetails;
 
         Debug::log("Graphics Context created");
     }
 
-    Context::~Context()
+    void Context::destroy()
     {
-        if (_pImpl->instance)
+        if (s_pImpl->instance)
         {
-            vmaDestroyAllocator(_pImpl->vmaAllocator);
-            vkDestroyDevice(_pImpl->device, nullptr);
-            vkDestroySurfaceKHR(_pImpl->instance, _pImpl->surface, nullptr);
+            VkInstance instance = s_pImpl->instance;
+            vkDestroySurfaceKHR(
+                instance,
+                s_pWindow->getImpl()->surface,
+                nullptr
+            );
+            s_pWindow->getImpl()->surface = VK_NULL_HANDLE;
+            vmaDestroyAllocator(s_pImpl->vmaAllocator);
+            vkDestroyDevice(s_pImpl->device, nullptr);
             #ifdef PLATYPUS_DEBUG
-                if (_pImpl->debugMessenger)
-                    destroy_vk_debug_messenger(_pImpl->instance, _pImpl->debugMessenger, nullptr);
+                if (s_pImpl->debugMessenger)
+                {
+                    destroy_vk_debug_messenger(
+                        s_pImpl->instance,
+                        s_pImpl->debugMessenger,
+                        nullptr
+                    );
+                }
             #endif
-            vkDestroyInstance(_pImpl->instance, nullptr);
+            vkDestroyInstance(s_pImpl->instance, nullptr);
         }
-        delete _pImpl;
+        delete s_pImpl;
     }
 
     void Context::submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame)
@@ -680,7 +705,7 @@ namespace platypus
         uint32_t imageIndex = swapchain.getCurrentImageIndex();
         // check if prev frame is using this image
         if (pSwapchainImpl->inFlightImages[imageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(_pImpl->device, 1, &pSwapchainImpl->inFlightImages[imageIndex], VK_TRUE, UINT64_MAX);
+            vkWaitForFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightImages[imageIndex], VK_TRUE, UINT64_MAX);
 
         // mark this img to be now used by this frame
         pSwapchainImpl->inFlightImages[imageIndex] = pSwapchainImpl->inFlightFences[frame];
@@ -698,9 +723,9 @@ namespace platypus
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &pSwapchainImpl->renderFinishedSemaphores[frame];
 
-        vkResetFences(_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
+        vkResetFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
         VkResult submitResult = vkQueueSubmit(
-            _pImpl->graphicsQueue,
+            s_pImpl->graphicsQueue,
             1,
             &submitInfo,
             pSwapchainImpl->inFlightFences[frame]
@@ -719,29 +744,17 @@ namespace platypus
 
     void Context::waitForOperations()
     {
-        vkDeviceWaitIdle(_pImpl->device);
+        vkDeviceWaitIdle(s_pImpl->device);
     }
 
     void Context::handleWindowResize()
     {
-        _pImpl->deviceSwapchainSupportDetails = query_swapchain_support_details(
-            _pImpl->physicalDevice,
-            _pImpl->surface
+        s_pImpl->deviceSwapchainSupportDetails = query_swapchain_support_details(
+            s_pImpl->physicalDevice,
+            s_pWindow->getImpl()->surface
         );
     }
 
-    Context* Context::get_instance()
-    {
-        if (!s_pInstance)
-        {
-            Debug::log(
-                "@Context::get_instance "
-                "Context instance was nullptr!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        return s_pInstance;
-    }
+    size_t Context::get_min_uniform_buffer_offset_align() { return s_minUniformBufferOffsetAlignment; }
+    ContextImpl* Context::get_impl() { return s_pImpl; }
 }

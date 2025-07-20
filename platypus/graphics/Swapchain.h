@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Context.h"
-#include "platypus/core/Window.h"
+#include "Context.hpp"
+#include "platypus/core/Window.hpp"
 #include "RenderPass.h"
 #include <platypus/Common.h>
 

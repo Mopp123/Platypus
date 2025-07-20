@@ -261,8 +261,8 @@ namespace platypus
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Mesh* pMesh = (const Mesh*)assetManager.getAsset(
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
             meshID,
             AssetType::ASSET_TYPE_MESH
         );
@@ -280,7 +280,7 @@ namespace platypus
 
         BatchData& batchData = _batches[batchIndex];
         batchData.identifier = identifier;
-        batchData.pMaterial = (Material*)assetManager.getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+        batchData.pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 

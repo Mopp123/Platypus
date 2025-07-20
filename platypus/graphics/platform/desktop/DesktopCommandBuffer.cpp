@@ -1,7 +1,7 @@
 #include "platypus/graphics/CommandBuffer.h"
 #include "DesktopCommandBuffer.h"
-#include "platypus/graphics/Context.h"
-#include "DesktopContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "DesktopContext.hpp"
 #include "DesktopRenderPass.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
@@ -33,7 +33,7 @@ namespace platypus
     void CommandBuffer::free()
     {
         vkFreeCommandBuffers(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             _pPool->_pImpl->handle,
             1,
             &_pImpl->handle
@@ -125,7 +125,7 @@ namespace platypus
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &handle;
 
-        VkQueue graphicsQueue = Context::get_instance()->getImpl()->graphicsQueue;
+        VkQueue graphicsQueue = Context::get_impl()->graphicsQueue;
 
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(graphicsQueue);
@@ -136,7 +136,7 @@ namespace platypus
 
     CommandPool::CommandPool()
     {
-        const ContextImpl * const pContextImpl = Context::get_instance()->getImpl();
+        const ContextImpl * const pContextImpl = Context::get_impl();
 
         VkCommandPoolCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -175,7 +175,7 @@ namespace platypus
     {
         // NOTE: All command buffers allocated from this pool should be freed at this point?
         vkDestroyCommandPool(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             _pImpl->handle,
             nullptr
         );
@@ -197,7 +197,7 @@ namespace platypus
         allocInfo.commandBufferCount = count;
 
         VkResult allocResult = vkAllocateCommandBuffers(
-            Context::get_instance()->getImpl()->device,
+            Context::get_impl()->device,
             &allocInfo,
             bufferHandles.data()
         );

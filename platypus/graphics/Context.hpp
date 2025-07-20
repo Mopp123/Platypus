@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/core/Window.h"
+#include "platypus/core/Window.hpp"
 
 // Don't care to mess with adapting to different systems having
 // different max push constants sizes, so we'll cap it to max
@@ -22,34 +22,31 @@ namespace platypus
         friend class Shader;
         friend class Buffer;
 
-        static Context* s_pInstance;
-        ContextImpl* _pImpl = nullptr;
+        static Window* s_pWindow;
+        static ContextImpl* s_pImpl;
 
-        size_t _minUniformBufferOffsetAlignment = 1;
+        static size_t s_minUniformBufferOffsetAlignment;
 
     public:
-        Context(const char* appName, Window* pWindow);
-        ~Context();
+        static void create(const char* appName, Window* pWindow);
+        static void destroy();
 
         // At the moment all rendering is done in a way that we have a single render pass and a single
         // primary command buffer in which we have recorded secondary command buffers.
         // Eventually we submit the primary command buffer for execution into the device's graphics queue.
         // TODO: Completely separate class for "Device" handling Device specific stuff like this
-        void submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame);
+        static void submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame);
 
         // *On vulkan side we need to wait for device operations to finish before freeing resources used
         // by these operations
-        void waitForOperations();
+        static void waitForOperations();
 
         // *On vulkan, required to re query swapchain support details to recreate swapchain
-        void handleWindowResize();
-
-        static Context* get_instance();
+        static void handleWindowResize();
 
         // Required for vulkan's descriptor sets using dynamic offsets of uniform buffers.
         // For OpenGL this should be always 1
-        inline size_t getMinUniformBufferOffsetAlignment() const { return _minUniformBufferOffsetAlignment; }
-        inline const ContextImpl * const getImpl() const { return _pImpl; }
-        inline ContextImpl* getImpl() { return _pImpl; }
+        static size_t get_min_uniform_buffer_offset_align();
+        static ContextImpl* get_impl();
     };
 }

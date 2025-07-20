@@ -213,11 +213,11 @@ namespace platypus
             entity, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         ID_t textureID = pRenderable->textureID;
         if (textureID == NULL_ID)
         {
-            textureID = assetManager.getWhiteTexture()->getID();
+            textureID = pAssetManager->getWhiteTexture()->getID();
         }
 
         int batchIndex = findExistingBatchIndex(pRenderable->layer, textureID);
@@ -450,8 +450,8 @@ namespace platypus
         const GUITransform* pTransform
     )
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        const Font* pFont = (const Font*)assetManager.getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        const Font* pFont = (const Font*)pAssetManager->getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
         const std::unordered_map<wchar_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
 
         const float originalX = pTransform->position.x;
@@ -529,8 +529,8 @@ namespace platypus
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Texture* pTexture = (const Texture*)pAssetManager->getAsset(
             textureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
@@ -562,8 +562,8 @@ namespace platypus
     void GUIRenderer::createTextureDescriptorSets(ID_t textureID)
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Texture* pTexture = (const Texture*)pAssetManager->getAsset(
             textureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
