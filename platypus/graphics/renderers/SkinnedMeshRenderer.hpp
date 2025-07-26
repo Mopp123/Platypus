@@ -19,13 +19,11 @@ namespace platypus
             ID_t meshID = NULL_ID;
             ID_t materialID = NULL_ID;
             std::vector<Matrix4f> jointMatrices;
-            std::vector<Matrix4f> inverseMatrices;
         };
 
         static size_t s_maxJoints;
 
         std::vector<Buffer*> _jointUniformBuffer;
-        std::vector<Buffer*> _inverseBindMatricesBuffer;
         DescriptorSetLayout _jointDescriptorSetLayout;
         std::vector<DescriptorSet> _jointDescriptorSet;
         std::vector<RenderData> _renderData;

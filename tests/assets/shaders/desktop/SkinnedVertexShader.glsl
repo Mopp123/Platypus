@@ -34,11 +34,6 @@ layout(set = 2, binding = 0) uniform JointData
     mat4 data[maxJoints];
 } jointData;
 
-layout(set = 2, binding = 1) uniform InverseBindMatrices
-{
-    mat4 data[maxJoints];
-} inverseBindMatrices;
-
 layout(location = 0) out vec3 var_normal;
 layout(location = 1) out vec2 var_texCoord;
 layout(location = 2) out vec3 var_fragPos;

@@ -5,6 +5,7 @@
 #include "platypus/utils/ID.h"
 #include <vector>
 
+#define
 
 namespace platypus
 {
@@ -28,6 +29,7 @@ namespace platypus
         bool stopped = false;
 
         size_t jointCount = 0;
+        Matrix4f jointMatrices[50];
     };
 
     SkeletalAnimation* create_skeletal_animation(

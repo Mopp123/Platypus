@@ -34,13 +34,6 @@ namespace platypus
                 DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, // NOTE: Should probably be dynamix uniform buffer...
                 ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                 { { 0, ShaderDataType::Mat4 } }
-            },
-            {
-                1,
-                1,
-                DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, // NOTE: Should probably be dynamix uniform buffer...
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                { { 0, ShaderDataType::Mat4 } }
             }
         }
         )
@@ -55,11 +48,8 @@ namespace platypus
 
         for (Buffer* pJointBuffer : _jointUniformBuffer)
             delete pJointBuffer;
-        for (Buffer* pInverseBuffer : _inverseBindMatricesBuffer)
-            delete pInverseBuffer;
 
         _jointUniformBuffer.clear();
-        _inverseBindMatricesBuffer.clear();
     }
 
     void SkinnedMeshRenderer::createDescriptorSets()
@@ -81,23 +71,11 @@ namespace platypus
             );
             _jointUniformBuffer.push_back(pJointUniformBuffer);
 
-            Buffer* pInverseBindMatrixBuffer = new Buffer(
-                _commandPoolRef,
-                jointBufferData.data(),
-                sizeof(Matrix4f),
-                jointBufferData.size(),
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            _inverseBindMatricesBuffer.push_back(pInverseBindMatrixBuffer);
-
             _jointDescriptorSet.push_back(
                 _descriptorPoolRef.createDescriptorSet(
                     &_jointDescriptorSetLayout,
                     {
-                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pJointUniformBuffer },
-                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pInverseBindMatrixBuffer },
+                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pJointUniformBuffer }
                     }
                 )
             );
@@ -111,10 +89,7 @@ namespace platypus
 
         for (Buffer* pBuffer : _jointUniformBuffer)
             delete pBuffer;
-        for (Buffer* pBuffer : _inverseBindMatricesBuffer)
-            delete pBuffer;
 
-        _inverseBindMatricesBuffer.clear();
         _jointUniformBuffer.clear();
     }
 
@@ -138,17 +113,13 @@ namespace platypus
         ID_t meshID = pRenderable->meshID;
         ID_t materialID = pRenderable->materialID;
 
-        SkeletalAnimationData* pAnimAsset = (SkeletalAnimationData*)Application::get_instance()->getAssetManager()->getAsset(
-            pAnimation->animationID,
-            AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
-        );
-
         // NOTE: Just testing atm! DANGEROUS AS HELL!!!
         // *Allocated transform skeleton should be able to be accessed like this
         // TODO: Make this safe and faster
         size_t jointCount = pAnimation->jointCount;
         std::vector<Matrix4f> jointMatrices(jointCount);
-        std::vector<Matrix4f> inverseBindMatrices(jointCount);
+        memcpy((void*)jointMatrices.data(), pAnimation->jointMatrices, sizeof(Matrix4f) * jointCount);
+        /*
         for (size_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
         {
             Transform* pJointTransform = (Transform*)pScene->getComponent(
@@ -157,12 +128,10 @@ namespace platypus
             );
             //pJointTransform->globalMatrix = resultMatrix;
             jointMatrices[jointIndex] = pJointTransform->globalMatrix;
-            inverseBindMatrices[jointIndex] = pAnimAsset->getBindPose().joints[jointIndex].inverseMatrix;
-        }
+        }*/
 
 
-
-        _renderData.push_back({ meshID, materialID, jointMatrices, inverseBindMatrices });
+        _renderData.push_back({ meshID, materialID, jointMatrices });
     }
 
     const CommandBuffer& SkinnedMeshRenderer::recordCommandBuffer(
@@ -230,11 +199,6 @@ namespace platypus
             _jointUniformBuffer[_currentFrame]->updateDeviceAndHost(
                 (void*)renderData.jointMatrices.data(),
                 sizeof(Matrix4f) * renderData.jointMatrices.size(),
-                0
-            );
-            _inverseBindMatricesBuffer[_currentFrame]->updateDeviceAndHost(
-                (void*)renderData.inverseMatrices.data(),
-                sizeof(Matrix4f) * renderData.inverseMatrices.size(),
                 0
             );
 
