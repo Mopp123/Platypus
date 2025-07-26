@@ -18,12 +18,14 @@ namespace platypus
         {
             ID_t meshID = NULL_ID;
             ID_t materialID = NULL_ID;
-            Matrix4f transformationMatrix;
+            std::vector<Matrix4f> jointMatrices;
+            std::vector<Matrix4f> inverseMatrices;
         };
 
         static size_t s_maxJoints;
 
         std::vector<Buffer*> _jointUniformBuffer;
+        std::vector<Buffer*> _inverseBindMatricesBuffer;
         DescriptorSetLayout _jointDescriptorSetLayout;
         std::vector<DescriptorSet> _jointDescriptorSet;
         std::vector<RenderData> _renderData;
@@ -36,6 +38,9 @@ namespace platypus
             uint64_t requiredComponentsMask
         );
         ~SkinnedMeshRenderer();
+
+        virtual void createDescriptorSets() override;
+        virtual void freeDescriptorSets() override;
 
         virtual void freeBatches();
         virtual void submit(const Scene* pScene, entityID_t entity);
@@ -51,6 +56,7 @@ namespace platypus
             size_t frame
         );
 
+        inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _jointDescriptorSetLayout; }
         static size_t get_max_joints();
     };
 }

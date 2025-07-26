@@ -7,7 +7,6 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Component.h"
 #include "StaticMeshRenderer.h"
-#include "SkinnedMeshRenderer.hpp"
 
 
 namespace platypus
@@ -102,7 +101,7 @@ namespace platypus
             *this,
             _commandPool,
             _descriptorPool,
-            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
         );
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
@@ -139,6 +138,14 @@ namespace platypus
         _pGUIRenderer->freeBatches();
 
         freeDescriptorSets();
+
+        // NOTE: This is confusing as fuck atm:
+        //  -> need to create renderer specific descriptor
+        //  sets and uniform buffers here so they are ready for next scene
+        //      -> Current freeDescriptorSets() clears the materials'
+        //      descriptor sets and uniform buffers...
+        for (auto& it : _renderers)
+            it.second->createDescriptorSets();
     }
 
     void MasterRenderer::cleanUp()
@@ -243,6 +250,9 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->freeDescriptorSets();
+
+        for (auto& it : _renderers)
+            it.second->freeDescriptorSets();
     }
 
     void MasterRenderer::createDescriptorSets()
@@ -250,6 +260,9 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->createDescriptorSets();
+
+        for (auto& it : _renderers)
+            it.second->createDescriptorSets();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()

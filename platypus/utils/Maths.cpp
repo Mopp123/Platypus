@@ -293,6 +293,19 @@ namespace platypus
         return inverseMatrix;
     }
 
+    Matrix4f Matrix4f::transpose() const
+    {
+        Matrix4f result;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                result[i + j * 4] = _data[j + i * 4];
+            }
+        }
+        return result;
+    }
+
     void Matrix4f::operator=(const Matrix4f& other)
     {
         memcpy(_data, other._data, sizeof(float) * 16);

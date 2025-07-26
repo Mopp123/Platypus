@@ -8,31 +8,36 @@ layout(location = 3) in vec4 weights;
 layout(location = 4) in vec4 jointIDs;
 
 
-layout(set = 0, binding = 0) uniform ArrTest
-{
-    vec4 data[];
-} arrTest;
-
-
 layout(push_constant) uniform Constants
 {
     mat4 projectionMatrix;
 } constants;
 
 
-layout(set = 1, binding = 0) uniform Camera
+layout(set = 0, binding = 0) uniform Camera
 {
     vec4 position;
     mat4 viewMatrix;
 } camera;
 
 
-layout(set = 2, binding = 0) uniform DirectionalLight
+layout(set = 1, binding = 0) uniform DirectionalLight
 {
     vec4 direction;
     vec4 color;
 } directionalLight;
 
+
+const int maxJoints = 50;
+layout(set = 2, binding = 0) uniform JointData
+{
+    mat4 data[maxJoints];
+} jointData;
+
+layout(set = 2, binding = 1) uniform InverseBindMatrices
+{
+    mat4 data[maxJoints];
+} inverseBindMatrices;
 
 layout(location = 0) out vec3 var_normal;
 layout(location = 1) out vec2 var_texCoord;
@@ -46,7 +51,22 @@ void main() {
     //gl_Position = constants.projectionMatrix * camera.viewMatrix * translatedPos;
     //vec4 rotatedNormal = constants.transformationMatrix * vec4(normal, 0.0);
 
-    vec4 translatedPos = vec4(position, 1.0);
+
+    float weightSum = weights[0] + weights[1] + weights[2] + weights[3];
+    mat4 jointTransform = jointData.data[0];
+    if (weightSum >= 1.0)
+    {
+        jointTransform =  jointData.data[int(jointIDs[0])] * weights[0];
+	    jointTransform += jointData.data[int(jointIDs[1])] * weights[1];
+	    jointTransform += jointData.data[int(jointIDs[2])] * weights[2];
+	    jointTransform += jointData.data[int(jointIDs[3])] * weights[3];
+    }
+    else
+    {
+        jointTransform = jointData.data[int(jointIDs[0])];
+    }
+
+    vec4 translatedPos = jointTransform * vec4(position, 1.0);
     gl_Position = constants.projectionMatrix * camera.viewMatrix * translatedPos;
     vec4 rotatedNormal = vec4(normal, 0.0);
 

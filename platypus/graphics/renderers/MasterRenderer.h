@@ -6,6 +6,7 @@
 #include "platypus/ecs/components/Renderable.h"
 #include "Renderer.h"
 #include "GUIRenderer.h"
+#include "SkinnedMeshRenderer.hpp"
 
 #include <map>
 #include <memory>
@@ -63,6 +64,8 @@ namespace platypus
         void cleanUp();
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
+
+        inline SkinnedMeshRenderer* getSkinnedMeshRenderer() { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }

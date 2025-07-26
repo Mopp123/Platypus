@@ -37,7 +37,7 @@ void SkinnedMeshTestScene::init()
 
     Debug::log("___TEST___ATTEMPT LOAD ANIM MODEL");
     Model* pAnimatedModel = pAssetManager->loadModel(
-        "assets/models/SkeletonTest.glb",
+        "assets/models/SkeletonTest3.glb",
         bindPoses,
         animations
     );
@@ -52,7 +52,7 @@ void SkinnedMeshTestScene::init()
     );
 
     Texture* pDiffuseTexture = pAssetManager->loadTexture(
-        "assets/textures/DiffuseTest.png",
+        "assets/textures/characterTest.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
@@ -72,13 +72,14 @@ void SkinnedMeshTestScene::init()
         bindPose.jointChildMapping
     );
     // Create the skinned mesh renderable
-    entityID_t skinnedEntity = createEntity();
-    create_transform(skinnedEntity, Matrix4f(1.0f));
+    //entityID_t skinnedEntity = createEntity();
+    //create_transform(skinnedEntity, Matrix4f(1.0f));
     create_skinned_mesh_renderable(
-        skinnedEntity,
+        jointEntities[0],
         pAnimatedMesh->getID(),
         pMaterial->getID()
     );
+
     // Create renderables representing joints
     /*
     for (entityID_t entity : jointEntities)
@@ -89,6 +90,8 @@ void SkinnedMeshTestScene::init()
             pMaterial->getID()
         );
     }
+    */
+
     SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
         1.0f,
         bindPoses[0],
@@ -100,13 +103,12 @@ void SkinnedMeshTestScene::init()
         pAnimationAsset->getID(),
         1.0f
     );
-    */
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,
         ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
     );
-    pDirLight->direction = { 0.75f, -1.5f, -1.0f };
+    pDirLight->direction = { 0.75f, -1.5f, 1.0f };
 }
 
 void SkinnedMeshTestScene::update()

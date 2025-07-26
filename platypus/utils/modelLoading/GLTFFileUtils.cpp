@@ -1,4 +1,5 @@
 #include "GLTFFileUtils.h"
+#include <tiny_gltf.h>
 #include "platypus/core/Debug.h"
 
 
@@ -95,6 +96,25 @@ namespace platypus
         );
         PLATYPUS_ASSERT(false);
         return ShaderDataType::None;
+    }
+
+
+    std::string gltf_accessor_component_type_to_string(
+        int gltfAccessorComponentType
+    )
+    {
+        switch (gltfAccessorComponentType)
+        {
+            case TINYGLTF_COMPONENT_TYPE_BYTE: return "TINYGLTF_COMPONENT_TYPE_BYTE";
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: return "TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE";
+            case TINYGLTF_COMPONENT_TYPE_SHORT: return "TINYGLTF_COMPONENT_TYPE_SHORT";
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: return "TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT";
+            case TINYGLTF_COMPONENT_TYPE_INT: return "TINYGLTF_COMPONENT_TYPE_INT";
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: return "TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT";
+            case TINYGLTF_COMPONENT_TYPE_FLOAT: return "TINYGLTF_COMPONENT_TYPE_FLOAT";
+            case TINYGLTF_COMPONENT_TYPE_DOUBLE: return "TINYGLTF_COMPONENT_TYPE_DOUBLE";
+            default: return "ERROR";
+        }
     }
 
 

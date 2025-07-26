@@ -37,6 +37,7 @@ namespace platypus
         int location;
         ShaderDataType dataType;
         int bufferViewIndex;
+        size_t accessorByteOffset;
     };
 
 
@@ -47,6 +48,10 @@ namespace platypus
     ShaderDataType gltf_accessor_component_type_to_engine(
         int gltfAccessorComponentType,
         int gltfComponentCount
+    );
+
+    std::string gltf_accessor_component_type_to_string(
+        int gltfAccessorComponentType
     );
 
     Quaternion to_engine_quaternion(const std::vector<double>& gltfQuaternion);

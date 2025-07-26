@@ -35,8 +35,10 @@ namespace platypus
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
 
-        virtual void freeBatches() = 0;
+        virtual void createDescriptorSets() {}
+        virtual void freeDescriptorSets() {}
 
+        virtual void freeBatches() = 0;
         virtual void submit(const Scene* pScene, entityID_t entity) = 0;
 
         virtual const CommandBuffer& recordCommandBuffer(

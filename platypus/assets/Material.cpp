@@ -233,6 +233,7 @@ namespace platypus
         std::vector<DescriptorSetLayout> descriptorSetLayouts = {
             pMasterRenderer->getCameraDescriptorSetLayout(),
             pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
+            pMasterRenderer->getSkinnedMeshRenderer()->getDescriptorSetLayout(),
             _descriptorSetLayout
         };
 
@@ -271,14 +272,14 @@ namespace platypus
         Rect2D viewportScissor = { 0, 0, viewportWidth, viewportHeight };
 
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-            pMasterRenderer->getCameraDescriptorSetLayout(),
-            pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
-            _descriptorSetLayout
-        };
-
         if (_pPipelineData)
         {
+            std::vector<DescriptorSetLayout> descriptorSetLayouts = {
+                pMasterRenderer->getCameraDescriptorSetLayout(),
+                pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
+                _descriptorSetLayout
+            };
+
             _pPipelineData->pipeline.create(
                 swapchain.getRenderPass(),
                 _pPipelineData->vertexBufferLayouts,
@@ -301,6 +302,12 @@ namespace platypus
 
         if (_pSkinnedPipelineData)
         {
+            std::vector<DescriptorSetLayout> descriptorSetLayouts = {
+                pMasterRenderer->getCameraDescriptorSetLayout(),
+                pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
+                pMasterRenderer->getSkinnedMeshRenderer()->getDescriptorSetLayout(),
+                _descriptorSetLayout
+            };
             _pSkinnedPipelineData->pipeline.create(
                 swapchain.getRenderPass(),
                 _pSkinnedPipelineData->vertexBufferLayouts,
@@ -346,6 +353,8 @@ namespace platypus
             warnUnassigned("@destroyPipeline");
     }
 
+    // NOTE: This also creates the uniform buffer
+    //  -> should that be a separate func or name this more clearly?
     void Material::createDescriptorSets()
     {
         if (!(_pPipelineData || _pSkinnedPipelineData))
@@ -405,7 +414,6 @@ namespace platypus
             );
             _uniformBuffers.push_back(pUniformBuffer);
 
-            std::vector<DescriptorSetComponent> descriptorSetComponents;
             if (hasNormalMap())
             {
                 _descriptorSets.push_back(

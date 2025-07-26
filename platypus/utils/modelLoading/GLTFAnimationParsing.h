@@ -26,4 +26,10 @@ namespace platypus
         const Pose& bindPose,
         std::unordered_map<int, int> nodePoseJointMapping
     );
+
+    Pose load_gltf_joints(
+        const tinygltf::Model& gltfModel,
+        size_t gltfSkinIndex,
+        std::unordered_map<int, int>& outNodeJointMapping // Mapping from gltf joint node index to our pose struct's joint index
+    );
 }

@@ -33,7 +33,7 @@ namespace platypus
 
         const Matrix4f& inverseBindMatrix = bindPose.joints[currentJointIndex].inverseMatrix;
         Matrix4f m = parentMatrix * translationMatrix * interpolatedRotation.toRotationMatrix();
-        Matrix4f resultMatrix = m; //* inverseBindMatrix; // Looks funky atm but when using inverse bind pose matrix in vertex shader only, we can make this so that it won't affect the transforms
+        Matrix4f resultMatrix = m * inverseBindMatrix; // Looks funky atm but when using inverse bind pose matrix in vertex shader only, we can make this so that it won't affect the transforms
 
         // NOTE: Just testing atm! DANGEROUS AS HELL!!!
         // *Allocated transform skeleton should be able to be accessed like this

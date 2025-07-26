@@ -199,9 +199,21 @@ namespace platypus
                 attrib.first,
                 0,
                 shaderDataType,
-                accessor.bufferView
+                accessor.bufferView,
+                accessor.byteOffset
             };
             add_to_sorted_attributes(vertexBufferAttrib, sortedVertexBufferAttributes);
+            // testing
+            size_t byteStride = gltfModel.bufferViews[accessor.bufferView].byteStride;
+            if (attrib.first == "WEIGHTS_0")
+            {
+                Debug::log("___TEST___WEIGHTS TYPE: " + gltf_accessor_component_type_to_string(accessor.componentType) + " COMPONENTS: " + std::to_string(componentCount));
+            }
+            else
+            if (attrib.first == "JOINTS_0")
+            {
+                Debug::log("___TEST___JOINTS TYPE: " + gltf_accessor_component_type_to_string(accessor.componentType) + " COMPONENTS: " + std::to_string(componentCount));
+            }
         }
 
         // Make sure all attributes were handled
@@ -234,6 +246,8 @@ namespace platypus
         {
             const GLTFVertexBufferAttrib& currentAttrib = sortedVertexBufferAttributes[currentAttribIndex];
             size_t currentAttribElemSize = get_shader_datatype_size(currentAttrib.dataType);
+            // This is the size in the gltf buffer
+            size_t internalAttribElemSize = currentAttribElemSize;
             if (dstOffset + currentAttribElemSize > combinedVertexBufferSize)
             {
                 Debug::log(
@@ -248,7 +262,7 @@ namespace platypus
             }
 
             tinygltf::BufferView& bufView = gltfModel.bufferViews[currentAttrib.bufferViewIndex];
-            PE_ubyte* pSrcBuffer = (PE_ubyte*)(gltfModel.buffers[bufView.buffer].data.data() + bufView.byteOffset + attribAccessorMapping[currentAttribIndex].byteOffset + srcOffsets[currentAttribIndex]);
+            PE_ubyte* pSrcBuffer = (PE_ubyte*)(gltfModel.buffers[bufView.buffer].data.data() + bufView.byteOffset + currentAttrib.accessorByteOffset + srcOffsets[currentAttribIndex]);
 
             // If attrib "gltf internal type" wasn't float
             //  -> we need to convert it into that (atm done only for joint ids buf which are ubytes)
@@ -261,11 +275,14 @@ namespace platypus
                 val.w = (float)*(pSrcBuffer + 3);
                 vertexJointData[vertexIndex].second = val;
 
+                //Debug::log("___TEST___JOINT IDs: " + val.toString() + " ATTRIB SIZE: " + std::to_string(currentAttribElemSize));
 
                 if (dstOffset + sizeof(Vector4f) > combinedVertexBufferSize)
                     PLATYPUS_ASSERT(false);
 
                 memcpy(combinedRawBuffer.data() + dstOffset, &val, sizeof(Vector4f));
+
+                internalAttribElemSize = 4;
             }
             else
             {
@@ -273,10 +290,12 @@ namespace platypus
                 if (currentAttrib.name == "WEIGHTS_0")
                 {
                     Vector4f val;
-                    val.x = (float)*pSrcBuffer;
-                    val.y = (float)*(pSrcBuffer + sizeof(float));
-                    val.z = (float)*(pSrcBuffer + sizeof(float) * 2);
-                    val.w = (float)*(pSrcBuffer + sizeof(float) * 3);
+                    //val.x = (float)*pSrcBuffer;
+                    //val.y = (float)*(pSrcBuffer + sizeof(float));
+                    //val.z = (float)*(pSrcBuffer + sizeof(float) * 2);
+                    //val.w = (float)*(pSrcBuffer + sizeof(float) * 3);
+                    //val = val.normalize();
+                    memcpy((void*)(&val), pSrcBuffer, sizeof(Vector4f));
                     const float sum = val.x + val.y + val.z + val.w;
                     if (sum != 0.0f)
                     {
@@ -289,6 +308,7 @@ namespace platypus
                     {
                         val = Vector4f(1.0f, 0, 0, 0);
                     }
+                    Debug::log("___TEST___WEIGHTS: " + val.toString() + " ATTRIB SIZE: " + std::to_string(currentAttribElemSize));
                     vertexJointData[vertexIndex].first = val;
 
                     if (dstOffset + sizeof(Vector4f) > combinedVertexBufferSize)
@@ -302,7 +322,7 @@ namespace platypus
                 }
             }
 
-            srcOffsets[currentAttribIndex] += currentAttribElemSize;
+            srcOffsets[currentAttribIndex] += internalAttribElemSize;
             dstOffset += currentAttribElemSize;
 
             currentAttribIndex += 1;

@@ -447,9 +447,12 @@ namespace platypus
                 bufferInfo.offset = 0;
                 // NOTE: range was pBuffer->getTotalSize() earlier because didn't use "dynamic uniform buffers"
                 // -> meaning large buffer used with dynamic offsets instead of whole buffer when binding
-                // descriptor sets! -> And range being the element size should make sence for all cases
+                // descriptor sets! -> And range being the element size should make sense for all cases
                 //  -> YOU JUST NEED TO BE CAREFUL THAT YOU PROVIDE THE CORRECT ELEMENT SIZE!
-                bufferInfo.range = pBuffer->getDataElemSize();
+                //bufferInfo.range = pBuffer->getDataElemSize();
+
+                // TESTING:
+                bufferInfo.range = pBuffer->getTotalSize();
             }
             else if (bindingType == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
             {

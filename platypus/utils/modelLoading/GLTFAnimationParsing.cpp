@@ -65,14 +65,13 @@ namespace platypus
 
             jointMatrix = translationMatrix * rotationMatrix * scaleMatrix;
         }
-        Matrix4f inverseBindMatrix = jointMatrix.inverse();
 
         Joint joint = {
             translation,
             rotation,
             scale,
             jointMatrix,
-            inverseBindMatrix
+            Matrix4f(1.0f) // Inverse bind matrices are taken from gltf buffer
         };
         const std::vector<int>& children = node.children;
         pose.joints.push_back(joint);
@@ -99,7 +98,7 @@ namespace platypus
         const tinygltf::Model& gltfModel,
         const tinygltf::Animation& gltfAnim,
         const std::vector<tinygltf::AnimationChannel>& channels,
-        int keyframeIndex
+        size_t keyframeIndex
     )
     {
         Joint joint;
@@ -162,7 +161,6 @@ namespace platypus
         }
 
         joint.matrix = jointTranslationMatrix * jointRotationMatrix;
-        joint.inverseMatrix = joint.matrix.inverse();
 
         return joint;
     }
@@ -188,14 +186,13 @@ namespace platypus
         }
 
         std::unordered_map<int, std::vector<Joint>> poseJoints;
-        for (int i = 0; i < maxKeyframes; ++i)
+        for (size_t i = 0; i < maxKeyframes; ++i)
             poseJoints[i].resize(nodePoseJointMapping.size());
 
         std::unordered_map<int, std::vector<tinygltf::AnimationChannel>>::const_iterator ncIt;
         for (ncIt = nodeChannelsMapping.begin(); ncIt != nodeChannelsMapping.end(); ++ncIt)
         {
-            Debug::log("___TEST___CREATING ANIM JOINTS");
-            for (int keyframeIndex = 0; keyframeIndex < maxKeyframes; ++keyframeIndex)
+            for (size_t keyframeIndex = 0; keyframeIndex < maxKeyframes; ++keyframeIndex)
             {
                 int poseJointIndex = nodePoseJointMapping[ncIt->first];
                 // gltf appears to provide keyframes in reverse order -> thats why: maxKeyframes - (keyframeIndex + 1)
@@ -219,5 +216,49 @@ namespace platypus
         }
 
         return outPoses;
+    }
+
+
+    Pose load_gltf_joints(
+        const tinygltf::Model& gltfModel,
+        size_t gltfSkinIndex,
+        std::unordered_map<int, int>& outNodeJointMapping
+    )
+    {
+        if (gltfSkinIndex >= gltfModel.skins.size())
+        {
+            Debug::log(
+                "@load_gltf_joints "
+                "skin index outside bounds. "
+                "Model skin count: " + std::to_string(gltfModel.skins.size()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        const tinygltf::Skin& skin = gltfModel.skins[gltfSkinIndex];
+        int rootJointNodeIndex = skin.joints[0];
+        Pose bindPose;
+        add_gltf_joint(
+            gltfModel,
+            bindPose,
+            -1, // index to pose struct's parent joint. NOT glTF node index!
+            rootJointNodeIndex,
+            outNodeJointMapping
+        );
+
+        // Load inverse bind matrices
+        // TODO: Maybe handle this somewhere else.. getting messy here...
+        const tinygltf::Accessor& invBindAccess = gltfModel.accessors[skin.inverseBindMatrices];
+        const tinygltf::BufferView& invBindBufView = gltfModel.bufferViews[invBindAccess.bufferView];
+        const tinygltf::Buffer& invBindBuf = gltfModel.buffers[invBindBufView.buffer];
+        size_t offset = invBindBufView.byteOffset + invBindAccess.byteOffset;
+        for (size_t i = 0; i < bindPose.joints.size(); ++i)
+        {
+            Matrix4f inverseBindMatrix(1.0f);
+            memcpy((void*)(&inverseBindMatrix), invBindBuf.data.data() + offset, sizeof(Matrix4f));
+            bindPose.joints[i].inverseMatrix = inverseBindMatrix;
+            offset += sizeof(float) * 16;
+        }
+        return bindPose;
     }
 }

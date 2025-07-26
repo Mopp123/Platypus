@@ -106,6 +106,7 @@ namespace platypus
         Matrix4f(float diag);
         void setIdentity();
         Matrix4f inverse() const;
+        Matrix4f transpose() const;
         void operator=(const Matrix4f& other);
         friend Matrix4f operator*(const Matrix4f& left, const Matrix4f& right);
         friend Vector4f operator*(const Matrix4f& left, const Vector4f& right);

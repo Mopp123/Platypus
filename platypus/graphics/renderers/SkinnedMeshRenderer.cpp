@@ -4,6 +4,7 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
 #include "platypus/ecs/components/Transform.h"
+#include "platypus/ecs/components/SkeletalAnimation.h"
 #include "platypus/core/Debug.h"
 #include <string>
 #include <cstring>
@@ -12,7 +13,7 @@
 
 namespace platypus
 {
-    size_t SkinnedMeshRenderer::s_maxJoints = 55;
+    size_t SkinnedMeshRenderer::s_maxJoints = 50;
     SkinnedMeshRenderer::SkinnedMeshRenderer(
         const MasterRenderer& masterRenderer,
         CommandPool& commandPool,
@@ -33,16 +34,88 @@ namespace platypus
                 DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, // NOTE: Should probably be dynamix uniform buffer...
                 ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                 { { 0, ShaderDataType::Mat4 } }
+            },
+            {
+                1,
+                1,
+                DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, // NOTE: Should probably be dynamix uniform buffer...
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                { { 0, ShaderDataType::Mat4 } }
             }
         }
         )
     {
-        // NOTE: How to recreate descriptor sets?
-        //  -> should the inherited Renderer have some overrideable funcs for that?
+        createDescriptorSets();
     }
 
     SkinnedMeshRenderer::~SkinnedMeshRenderer()
     {
+        freeDescriptorSets();
+        _jointDescriptorSetLayout.destroy();
+
+        for (Buffer* pJointBuffer : _jointUniformBuffer)
+            delete pJointBuffer;
+        for (Buffer* pInverseBuffer : _inverseBindMatricesBuffer)
+            delete pInverseBuffer;
+
+        _jointUniformBuffer.clear();
+        _inverseBindMatricesBuffer.clear();
+    }
+
+    void SkinnedMeshRenderer::createDescriptorSets()
+    {
+        std::vector<Matrix4f> jointBufferData(s_maxJoints);
+        memset(jointBufferData.data(), 0, sizeof(Matrix4f) * jointBufferData.size());
+
+        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        for (size_t i = 0; i < maxFramesInFlight; ++i)
+        {
+            Buffer* pJointUniformBuffer = new Buffer(
+                _commandPoolRef,
+                jointBufferData.data(),
+                sizeof(Matrix4f),
+                jointBufferData.size(),
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            _jointUniformBuffer.push_back(pJointUniformBuffer);
+
+            Buffer* pInverseBindMatrixBuffer = new Buffer(
+                _commandPoolRef,
+                jointBufferData.data(),
+                sizeof(Matrix4f),
+                jointBufferData.size(),
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            _inverseBindMatricesBuffer.push_back(pInverseBindMatrixBuffer);
+
+            _jointDescriptorSet.push_back(
+                _descriptorPoolRef.createDescriptorSet(
+                    &_jointDescriptorSetLayout,
+                    {
+                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pJointUniformBuffer },
+                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pInverseBindMatrixBuffer },
+                    }
+                )
+            );
+        }
+    }
+
+    void SkinnedMeshRenderer::freeDescriptorSets()
+    {
+        _descriptorPoolRef.freeDescriptorSets(_jointDescriptorSet);
+        _jointDescriptorSet.clear();
+
+        for (Buffer* pBuffer : _jointUniformBuffer)
+            delete pBuffer;
+        for (Buffer* pBuffer : _inverseBindMatricesBuffer)
+            delete pBuffer;
+
+        _inverseBindMatricesBuffer.clear();
+        _jointUniformBuffer.clear();
     }
 
     void SkinnedMeshRenderer::freeBatches()
@@ -54,6 +127,9 @@ namespace platypus
         const SkinnedMeshRenderable* pRenderable = (const SkinnedMeshRenderable*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
         );
+        const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
+            entity, ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+        );
         const Transform* pTransform = (const Transform*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_TRANSFORM
         );
@@ -62,7 +138,31 @@ namespace platypus
         ID_t meshID = pRenderable->meshID;
         ID_t materialID = pRenderable->materialID;
 
-        _renderData.push_back({ meshID, materialID, transformationMatrix });
+        SkeletalAnimationData* pAnimAsset = (SkeletalAnimationData*)Application::get_instance()->getAssetManager()->getAsset(
+            pAnimation->animationID,
+            AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
+        );
+
+        // NOTE: Just testing atm! DANGEROUS AS HELL!!!
+        // *Allocated transform skeleton should be able to be accessed like this
+        // TODO: Make this safe and faster
+        size_t jointCount = pAnimation->jointCount;
+        std::vector<Matrix4f> jointMatrices(jointCount);
+        std::vector<Matrix4f> inverseBindMatrices(jointCount);
+        for (size_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+        {
+            Transform* pJointTransform = (Transform*)pScene->getComponent(
+                entity + jointIndex,
+                ComponentType::COMPONENT_TYPE_TRANSFORM
+            );
+            //pJointTransform->globalMatrix = resultMatrix;
+            jointMatrices[jointIndex] = pJointTransform->globalMatrix;
+            inverseBindMatrices[jointIndex] = pAnimAsset->getBindPose().joints[jointIndex].inverseMatrix;
+        }
+
+
+
+        _renderData.push_back({ meshID, materialID, jointMatrices, inverseBindMatrices });
     }
 
     const CommandBuffer& SkinnedMeshRenderer::recordCommandBuffer(
@@ -127,6 +227,17 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
 
+            _jointUniformBuffer[_currentFrame]->updateDeviceAndHost(
+                (void*)renderData.jointMatrices.data(),
+                sizeof(Matrix4f) * renderData.jointMatrices.size(),
+                0
+            );
+            _inverseBindMatricesBuffer[_currentFrame]->updateDeviceAndHost(
+                (void*)renderData.inverseMatrices.data(),
+                sizeof(Matrix4f) * renderData.inverseMatrices.size(),
+                0
+            );
+
             render::bind_pipeline(
                 currentCommandBuffer,
                 pMaterial->getSkinnedPipelineData()->pipeline
@@ -156,6 +267,7 @@ namespace platypus
             std::vector<DescriptorSet> descriptorSetsToBind = {
                 cameraDescriptorSet,
                 dirLightDescriptorSet,
+                _jointDescriptorSet[_currentFrame],
                 pMaterial->getDescriptorSets()[_currentFrame]
             };
 

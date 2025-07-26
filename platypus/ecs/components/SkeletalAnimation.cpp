@@ -34,6 +34,11 @@ namespace platypus
         }
         pScene->addToComponentMask(target, componentType);
 
+        SkeletalAnimationData* pAsset = (SkeletalAnimationData*)pApp->getAssetManager()->getAsset(
+            animationAssetID,
+            AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
+        );
+
         SkeletalAnimation* pAnimation = (SkeletalAnimation*)pComponent;
         pAnimation->mode = AnimationMode::ANIMATION_MODE_LOOP;
         pAnimation->animationID = animationAssetID;
@@ -42,6 +47,7 @@ namespace platypus
         pAnimation->progress = 0.0f;
         pAnimation->speed = speed;
         pAnimation->stopped = false;
+        pAnimation->jointCount = pAsset->getBindPose().joints.size();
 
         return pAnimation;
     }

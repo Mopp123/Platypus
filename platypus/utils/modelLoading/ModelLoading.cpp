@@ -97,8 +97,6 @@ namespace platypus
             return false;
         }
 
-
-        Debug::log("___TEST___START LOADING MESHES");
         // Load meshes
         for (size_t i = 0; i < modelNodes.size(); ++i)
         {
@@ -172,18 +170,13 @@ namespace platypus
         for (size_t i = 0; i < gltfModel.skins.size(); ++i)
         {
             // Load skeleton (bind pose) (if found)
-            Pose bindPose;
-            // NOTE: Not sure is this skin index correct
-            int rootJointNodeIndex = gltfModel.skins[0].joints[0];
-            // Mapping from gltf joint node index to our pose struct's joint index
             std::unordered_map<int, int> nodeJointMapping;
-            add_gltf_joint(
+            Pose bindPose = load_gltf_joints(
                 gltfModel,
-                bindPose,
-                -1, // index to pose struct's parent joint. NOT glTF node index!
-                rootJointNodeIndex,
+                i,
                 nodeJointMapping
             );
+
             outBindPoses.push_back(bindPose);
 
             // Load animations (if found)
@@ -208,7 +201,6 @@ namespace platypus
                     bindPose,
                     nodeJointMapping
                 );
-                Debug::log("___TEST___LOADED ANIM KEYFRAME COUNT:" + std::to_string(animationPoses.size()));
                 outAnimations.push_back(animationPoses);
             }
         }
