@@ -211,9 +211,7 @@ namespace platypus
     )
     {
         outImageAvailableSemaphores.resize(maxFramesInFlight);
-        outRenderFinishedSemaphores.resize(maxFramesInFlight);
         outInFlightFences.resize(maxFramesInFlight);
-
         outInFlightImages.resize(swapchainImageCount, VK_NULL_HANDLE);
 
         VkSemaphoreCreateInfo semaphoreCreateInfo{};
@@ -231,12 +229,6 @@ namespace platypus
                 nullptr,
                 &outImageAvailableSemaphores[i]
             );
-            VkResult renderFinishedSemaphoreResult = vkCreateSemaphore(
-                device,
-                &semaphoreCreateInfo,
-                nullptr,
-                &outRenderFinishedSemaphores[i]
-            );
             VkResult fenceResult = vkCreateFence(
                 device,
                 &fenceCreateInfo,
@@ -253,22 +245,40 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
             }
+            if (fenceResult != VK_SUCCESS)
+            {
+                std::string errStr(string_VkResult(fenceResult));
+                Debug::log(
+                    "@create_sync_objects "
+                    "Failed to create 'inFlightFence'! VkResult: " + errStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+
+        // NOTE: Detected new validation error with newer Vulkan version and Validation layer
+        //  -> Previously were using same amount of "render finished semaphores" (semaphores to
+        //  wait before presenting) as frames in flight (hardcoded 2).
+        //      -> This leads to potentially using same semaphore for multiple swapchain images.
+        //          -> Disabling validation errors caused the system to work JUST BY ACCIDENT!
+        //  -> NEED TO USE SEPARATE "render finished semaphore" PER SWAPCHAIN IMAGE!!!
+        outRenderFinishedSemaphores.resize(swapchainImageCount);
+        for (size_t i = 0; i < swapchainImageCount; ++i)
+        {
+            VkResult renderFinishedSemaphoreResult = vkCreateSemaphore(
+                device,
+                &semaphoreCreateInfo,
+                nullptr,
+                &outRenderFinishedSemaphores[i]
+            );
+
             if (renderFinishedSemaphoreResult != VK_SUCCESS)
             {
                 std::string errStr(string_VkResult(renderFinishedSemaphoreResult));
                 Debug::log(
                     "@create_sync_objects "
                     "Failed to create 'renderFinishedSemaphore'! VkResult: " + errStr,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            if (fenceResult != VK_SUCCESS)
-            {
-                std::string errStr(string_VkResult(renderFinishedSemaphoreResult));
-                Debug::log(
-                    "@create_sync_objects "
-                    "Failed to create 'inFlightFence'! VkResult: " + errStr,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -412,16 +422,15 @@ namespace platypus
         DeviceImpl* pDeviceImpl = Device::get_impl();
         VkDevice device = pDeviceImpl->device;
 
-        for (size_t i = 0; i < _pImpl->maxFramesInFlight; ++i)
-        {
-            vkDestroySemaphore(device, _pImpl->imageAvailableSemaphores[i], nullptr);
-            vkDestroySemaphore(device, _pImpl->renderFinishedSemaphores[i], nullptr);
-            vkDestroyFence(device, _pImpl->inFlightFences[i], nullptr);
+        for (VkSemaphore semaphore : _pImpl->imageAvailableSemaphores)
+            vkDestroySemaphore(device, semaphore, nullptr);
 
-            _pImpl->imageAvailableSemaphores[i] = VK_NULL_HANDLE;
-            _pImpl->renderFinishedSemaphores[i] = VK_NULL_HANDLE;
-            _pImpl->inFlightFences[i] = VK_NULL_HANDLE;
-        }
+        for (VkSemaphore semaphore : _pImpl->renderFinishedSemaphores)
+            vkDestroySemaphore(device, semaphore, nullptr);
+
+        for (VkFence fence : _pImpl->inFlightFences)
+            vkDestroyFence(device, fence, nullptr);
+
         _pImpl->imageAvailableSemaphores.clear();
         _pImpl->renderFinishedSemaphores.clear();
         _pImpl->inFlightFences.clear();
@@ -504,7 +513,7 @@ namespace platypus
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &_pImpl->renderFinishedSemaphores[_currentFrame];//signalSemaphores;
+        presentInfo.pWaitSemaphores = &_pImpl->renderFinishedSemaphores[_currentImageIndex];//signalSemaphores;
 
         VkSwapchainKHR swapchains[] = { _pImpl->handle };
         presentInfo.swapchainCount = 1;

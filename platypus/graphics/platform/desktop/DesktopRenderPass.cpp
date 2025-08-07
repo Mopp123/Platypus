@@ -6,6 +6,7 @@
 #include "DesktopSwapchain.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -61,7 +62,11 @@ namespace platypus
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        // NOTE: Previously used VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL here.
+        // Using newer Vulkan version with different driver this gives validation error
+        // that you'd need to use synchronization2 extension for this to work.
+        // Got this fixed by rather using VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment = 1;

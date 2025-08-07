@@ -343,7 +343,7 @@ namespace platypus
         submitInfo.pCommandBuffers = &cmdBuf.getImpl()->handle;
 
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &pSwapchainImpl->renderFinishedSemaphores[frame];
+        submitInfo.pSignalSemaphores = &pSwapchainImpl->renderFinishedSemaphores[imageIndex];
 
         vkResetFences(s_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
         VkResult submitResult = vkQueueSubmit(

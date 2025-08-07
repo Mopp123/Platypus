@@ -5,7 +5,6 @@
 #include "platypus/utils/ID.h"
 #include <vector>
 
-#define
 
 namespace platypus
 {

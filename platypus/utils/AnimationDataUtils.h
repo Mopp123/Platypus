@@ -2,6 +2,7 @@
 
 #include "platypus/utils/Maths.h"
 #include <vector>
+#include <cstdint>
 
 
 namespace platypus
