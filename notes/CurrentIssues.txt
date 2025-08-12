@@ -22,6 +22,9 @@ Animations:
 
         The whole "generalistic" system's starting to feel pretty fucked up...
 
+--------------------------------------------------------------------------------------------------------------------------
+<SOLUTIONS(?)>
+--------------------------------------------------------------------------------------------------------------------------
     It would make the most sense to traverse the transform hierarchy,
     but how the FUCK should you deal with the inverse matrices!?!?
         -> POSSIBLE SOLUTION:
@@ -32,3 +35,5 @@ Animations:
     LAST THOUGHTS:
         * Would be useful to have lighter cross platform rendering API separated completely from the engine itself, since
         the fucking disgusting material and renderer systems!
+        * Also its a little wasteful to have entity with Transform component for each joint, since most of them won't be used
+            -> necessary evil if u want such a general way to dealing with this.
