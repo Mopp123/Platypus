@@ -1,0 +1,34 @@
+NOTE: Seems that the best possible solution is the last section!!!
+    -> Deal with everything, including the animation component rather in some "transform system"
+
+Animations:
+    *How to connect Transform hierarchy and animation?
+        -> atm theres no Transform hierarchy...
+            -> Maybe own scene for transform hierarchy stuff and continue from there?
+
+        ECS issue:
+        * Skeletal animation system should only do the animating(?)
+        * Transform hierarchy, using "parent", and "children" components should update
+        the child components to take into account the parent's transform
+
+        ...if want to have transform per skeleton joint, why not modify the transform hierarchy
+        in the AnimationSystem?
+            -> need to differentiate transforms that are glued to joints from the ones that aren't?
+                -> POSSIBLE SOLUTION: animate in TransformSystem if animation component can be found!
+                    -> remove animation system completely
+                        -> ISSUE: need to somehow incorporate the inverse bind matrix to the transform!
+                        This would require traversing the hierarchy again if not including the inverse
+                        in the Transform component itself.
+
+        The whole "generalistic" system's starting to feel pretty fucked up...
+
+    It would make the most sense to traverse the transform hierarchy,
+    but how the FUCK should you deal with the inverse matrices!?!?
+        -> POSSIBLE SOLUTION:
+            -> if anim in root component, apply it until last "skeleton joint entity" in transform system
+            including updating the anim component's joint matrices (the way its currently done in the animation system,
+            but do all this at the same time in transform system instead)
+
+    LAST THOUGHTS:
+        * Would be useful to have lighter cross platform rendering API separated completely from the engine itself, since
+        the fucking disgusting material and renderer systems!

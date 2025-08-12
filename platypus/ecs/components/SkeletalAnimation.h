@@ -28,6 +28,7 @@ namespace platypus
         bool stopped = false;
 
         size_t jointCount = 0;
+        // Atm the matrices to throw to the shader
         Matrix4f jointMatrices[50];
     };
 

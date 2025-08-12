@@ -100,13 +100,16 @@ namespace platypus
     void SkinnedMeshRenderer::submit(const Scene* pScene, entityID_t entity)
     {
         const SkinnedMeshRenderable* pRenderable = (const SkinnedMeshRenderable*)pScene->getComponent(
-            entity, ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
+            entity,
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
         );
         const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
-            entity, ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+            entity,
+            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
         );
         const Transform* pTransform = (const Transform*)pScene->getComponent(
-            entity, ComponentType::COMPONENT_TYPE_TRANSFORM
+            entity,
+            ComponentType::COMPONENT_TYPE_TRANSFORM
         );
         const Matrix4f transformationMatrix = pTransform->globalMatrix;
 
@@ -118,7 +121,11 @@ namespace platypus
         // TODO: Make this safe and faster
         size_t jointCount = pAnimation->jointCount;
         std::vector<Matrix4f> jointMatrices(jointCount);
-        memcpy((void*)jointMatrices.data(), pAnimation->jointMatrices, sizeof(Matrix4f) * jointCount);
+        memcpy(
+            (void*)jointMatrices.data(),
+            pAnimation->jointMatrices,
+            sizeof(Matrix4f) * jointCount
+        );
         /*
         for (size_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
         {

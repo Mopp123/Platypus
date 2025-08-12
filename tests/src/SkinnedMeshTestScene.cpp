@@ -35,7 +35,6 @@ void SkinnedMeshTestScene::init()
     std::vector<Pose> bindPoses;
     std::vector<std::vector<Pose>> animations;
 
-    Debug::log("___TEST___ATTEMPT LOAD ANIM MODEL");
     Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/SkeletonTest3.glb",
         bindPoses,
@@ -56,9 +55,21 @@ void SkinnedMeshTestScene::init()
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
+    Texture* pBoxDiffuseTexture = pAssetManager->loadTexture(
+        "assets/textures/DiffuseTest.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        textureSampler
+    );
 
     Material* pMaterial = pAssetManager->createMaterial(
         pDiffuseTexture->getID(),
+        pAssetManager->getWhiteTexture()->getID(),
+        NULL_ID,
+        0.8f,
+        16.0f
+    );
+    Material* pBoxMaterial = pAssetManager->createMaterial(
+        pBoxDiffuseTexture->getID(),
         pAssetManager->getWhiteTexture()->getID(),
         NULL_ID,
         0.8f,
@@ -80,17 +91,21 @@ void SkinnedMeshTestScene::init()
         pMaterial->getID()
     );
 
-    // Create renderables representing joints
-    /*
+    // Test putting box renderable on some skeleton hierarchy's transforms
+    int jointIndex = 0;
     for (entityID_t entity : jointEntities)
     {
-        create_static_mesh_renderable(
-            entity,
-            pModel->getMeshes()[0]->getID(),
-            pMaterial->getID()
-        );
+        if (jointIndex == 4)
+        {
+
+            create_static_mesh_renderable(
+                entity,
+                pModel->getMeshes()[0]->getID(),
+                pBoxMaterial->getID()
+            );
+        }
+        ++jointIndex;
     }
-    */
 
     SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
         1.0f,
