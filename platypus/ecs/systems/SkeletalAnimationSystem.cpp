@@ -47,26 +47,6 @@ namespace platypus
         );
         pJointTransform->globalMatrix = resultMatrix;
 
-        /*
-        pAnimationComponent->resultPose.joints[currentJointIndex] = {
-            interpolatedTranslation,
-            interpolatedRotation,
-            { 1.0f, 1.0f, 1.0f }, // Atm scaling is disabled!
-            resultMatrix
-        };
-        */
-        /*
-        pAnimationComponent->setResultPoseJoint(
-            {
-                interpolatedTranslation,
-                interpolatedRotation,
-                { 1.0f, 1.0f, 1.0f }, // Atm scaling is disabled!
-                resultMatrix
-            },
-            currentJointIndex
-        );
-        */
-
         const std::vector<uint32_t>& childJoints = bindPose.jointChildMapping[currentJointIndex];
         for (uint32_t i = 0; i < (uint32_t)childJoints.size(); ++i)
         {
