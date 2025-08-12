@@ -1,5 +1,11 @@
 # Platypus
 
+Goal eventually: <br/>
+Game engine system things + editor used more like "power user way"..
+* Less mouse usage (which is still supported tho) -> hotkeys, vim motions, etc. <br/>
+* Minimalistic -> enable/use only stuff you need.
+* Extendable/expandable, easily configurable.
+
 ## To build for desktop
 **Dependencies**
 * glfw https://github.com/glfw/glfw/tree/master <br/>
@@ -9,13 +15,13 @@
 * json.hpp
 * tiny_gltf.h
 * Freetype https://github.com/freetype/freetype
-* Harfbuzz https://github.com/harfbuzz/harfbuzz/tree/main
+* Harfbuzz https://github.com/harfbuzz/harfbuzz/tree/main (Actually not used atm...)
 
 Clone the repo using `--recurse-submodules`
 
-### Linux
-You require some Vulkan development tools. These depends on your distribution.<br/>
-On Ubuntu: <br/>
+### Install Vulkan dev tools
+
+**Ubuntu (probably same with Debian)**
 ```
 sudo apt-get install vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools
 ```
@@ -26,11 +32,17 @@ sudo apt-get install automake libtool autoconf libfreetype6-dev libglib2.0-dev l
 ```
 
 After installing all above mentioned dependencies, you can build dependency libs with  `./build-dependencies.sh` <br/>
+NOTE: Should probably switch to build deps along with the project or at least to use static libs instead of shared which are used atm! <br/>
 
 Also using glslc for compiling shaders.
 Didn't want to add it as submodule for now.
 You can get the unofficial binaries from here: https://github.com/google/shaderc/blob/main/downloads.md
 Copy the file bin/glslc into /usr/local/bin (Not sure do you need other files for now...)
+
+**Arch**
+```
+sudo pacman -S vulkan-devel
+```
 
 ## To build for web
 **Dependencies**
