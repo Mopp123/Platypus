@@ -7,6 +7,7 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/systems/SkeletalAnimationSystem.h"
+#include "platypus/ecs/systems/TransformSystem.h"
 
 
 namespace platypus
@@ -39,8 +40,15 @@ namespace platypus
         _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
             sizeof(DirectionalLight), 1, true
         );
+        _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = ComponentPool(
+            sizeof(Parent), maxEntityCount, true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = ComponentPool(
+            sizeof(Children), maxEntityCount, true
+        );
 
         _systems.push_back(new SkeletalAnimationSystem);
+        _systems.push_back(new TransformSystem);
     }
 
     Scene::~Scene()
@@ -225,7 +233,7 @@ namespace platypus
         {
             Debug::log(
                 "@Scene::getComponent (1) "
-                "No component pool exists for component type: " + std::to_string(type),
+                "No component pool exists for component type: " + component_type_to_string(type),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -241,7 +249,7 @@ namespace platypus
         {
             Debug::log(
                 "@Scene::getComponent (1) "
-                "Couldn't find component of type: " + std::to_string(type) + " "
+                "Couldn't find component of type: " + component_type_to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING
             );
@@ -282,7 +290,7 @@ namespace platypus
         {
             Debug::log(
                 "@Scene::getComponent (2) "
-                "Couldn't find component of type: " + std::to_string(type) + " "
+                "Couldn't find component of type: " + component_type_to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING
             );
@@ -301,7 +309,7 @@ namespace platypus
         }
         Debug::log(
             "Scene::getComponentInChildren "
-            "Couldn't find component of type: " + std::to_string(type) + " "
+            "Couldn't find component of type: " + component_type_to_string(type) + " "
             "from child entities of entity: " + std::to_string(entityID),
             Debug::MessageType::PLATYPUS_MESSAGE
         );

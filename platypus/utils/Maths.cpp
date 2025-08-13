@@ -517,10 +517,11 @@ namespace platypus
     }
 
 
-    Matrix4f create_rotation_matrix(float pitch, float yaw)
+    Matrix4f create_rotation_matrix(float pitch, float yaw, float roll)
     {
         Matrix4f pitchMatrix(1.0f);
         Matrix4f yawMatrix(1.0f);
+        Matrix4f rollMatrix(1.0f);
 
         pitchMatrix[1 + 1 * 4] = cos(pitch);
         pitchMatrix[1 + 2 * 4] = -sin(pitch);
@@ -532,7 +533,12 @@ namespace platypus
         yawMatrix[2 + 0 * 4] = -sin(yaw);
         yawMatrix[2 + 2 * 4] = cos(yaw);
 
-        return yawMatrix * pitchMatrix;
+        rollMatrix[0 + 0 * 4] = cos(roll);
+        rollMatrix[0 + 1 * 4] = -sin(roll);
+        rollMatrix[1 + 0 * 4] = sin(roll);
+        rollMatrix[1 + 1 * 4] = cos(roll);
+
+        return yawMatrix * pitchMatrix * rollMatrix;
     }
 
 

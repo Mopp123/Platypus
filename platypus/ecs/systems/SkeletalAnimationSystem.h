@@ -8,7 +8,6 @@ namespace platypus
     {
     public:
         SkeletalAnimationSystem();
-        SkeletalAnimationSystem(const SkeletalAnimationSystem& other);
         ~SkeletalAnimationSystem();
 
         void update(Scene* pScene);

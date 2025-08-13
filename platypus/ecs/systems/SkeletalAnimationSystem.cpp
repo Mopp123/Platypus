@@ -66,22 +66,20 @@ namespace platypus
     }
 
     SkeletalAnimationSystem::SkeletalAnimationSystem()
-    {}
-
-    SkeletalAnimationSystem::SkeletalAnimationSystem(const SkeletalAnimationSystem& other)
-    {}
+    {
+        _requiredComponentMask = ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION;
+    }
 
     SkeletalAnimationSystem::~SkeletalAnimationSystem()
     {}
 
     void SkeletalAnimationSystem::update(Scene* pScene)
     {
-        const uint64_t requiredComponentMask = ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION;
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
 
         for (const Entity& entity : pScene->getEntities())
         {
-            if ((entity.componentMask & requiredComponentMask) != requiredComponentMask)
+            if ((entity.componentMask & _requiredComponentMask) != _requiredComponentMask)
                 continue;
 
             SkeletalAnimation* pAnimationComponent = (SkeletalAnimation*)pScene->getComponent(

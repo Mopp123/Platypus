@@ -54,6 +54,110 @@ namespace platypus
     }
 
 
+    void set_transform_position(Transform* pTransform, const Vector3f& position, bool hasParent)
+    {
+        Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        m[0 + 3 * 4] = position.x;
+        m[1 + 3 * 4] = position.y;
+        m[2 + 3 * 4] = position.z;
+    }
+
+    void set_transform_rotation(Transform* pTransform, float pitch, float yaw, float roll, bool hasParent)
+    {
+        Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        Matrix4f rotationMatrix = create_rotation_matrix(pitch, yaw, roll);
+	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
+	    m[1 + 2 * 4] = rotationMatrix[1 + 2 * 4];
+	    m[2 + 1 * 4] = rotationMatrix[2 + 1 * 4];
+	    m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
+
+	    m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
+	    m[0 + 2 * 4] = rotationMatrix[0 + 2 * 4];
+	    m[2 + 0 * 4] = rotationMatrix[2 + 0 * 4];
+	    m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
+
+	    m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
+	    m[0 + 1 * 4] = rotationMatrix[0 + 1 * 4];
+	    m[1 + 0 * 4] = rotationMatrix[1 + 0 * 4];
+	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
+    }
+
+    void set_transform_rotation(Transform* pTransform, const Quaternion& rotation, bool hasParent)
+    {
+        Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        Matrix4f rotationMatrix = rotation.toRotationMatrix();
+	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
+	    m[1 + 2 * 4] = rotationMatrix[1 + 2 * 4];
+	    m[2 + 1 * 4] = rotationMatrix[2 + 1 * 4];
+	    m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
+
+	    m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
+	    m[0 + 2 * 4] = rotationMatrix[0 + 2 * 4];
+	    m[2 + 0 * 4] = rotationMatrix[2 + 0 * 4];
+	    m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
+
+	    m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
+	    m[0 + 1 * 4] = rotationMatrix[0 + 1 * 4];
+	    m[1 + 0 * 4] = rotationMatrix[1 + 0 * 4];
+	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
+    }
+
+    void rotate_transform(Transform* pTransform, float pAmount, float yAmount, float rAmount, bool hasParent)
+    {
+        Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        m = m * create_rotation_matrix(pAmount, yAmount, rAmount);
+    }
+
+    void set_transform_scale(Transform* pTransform, const Vector3f& scale, bool hasParent)
+    {
+        // NOTE: This might be incorrect!!!
+        Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+
+        Matrix4f scaleMatrix(1.0f);
+        scaleMatrix[0 + 0 * 4] = scale.x;
+        scaleMatrix[1 + 1 * 4] = scale.y;
+        scaleMatrix[2 + 2 * 4] = scale.z;
+
+        float currentSX = Vector3f(m[0 + 0 * 4], m[1 + 0 * 4], m[2 + 0 * 4]).length();
+        float currentSY = Vector3f(m[0 + 1 * 4], m[1 + 1 * 4], m[2 + 1 * 4]).length();
+        float currentSZ = Vector3f(m[0 + 2 * 4], m[1 + 2 * 4], m[2 + 2 * 4]).length();
+
+        m[0 + 0 * 4] = m[0 + 0 * 4] / currentSX * scale.x;
+        m[1 + 1 * 4] = m[1 + 1 * 4] / currentSY * scale.y;
+        m[2 + 2 * 4] = m[2 + 2 * 4] / currentSZ * scale.z;
+    }
+
+    Vector3f get_transform_forward(Transform* pTransform)
+    {
+        Matrix4f& m = pTransform->globalMatrix;
+        Vector3f backwards(
+                m[0 + 2 * 4],
+                m[1 + 2 * 4],
+                m[2 + 2 * 4]
+                );
+        return backwards * -1.0f;
+    }
+
+    Vector3f get_transform_up(Transform* pTransform)
+    {
+        Matrix4f& m = pTransform->globalMatrix;
+        return {
+            m[0 + 1 * 4],
+            m[1 + 1 * 4],
+            m[2 + 1 * 4]
+        };
+    }
+
+    Vector3f get_transform_right(Transform* pTransform)
+    {
+        Matrix4f& m = pTransform->globalMatrix;
+        return {
+            m[0 + 0 * 4],
+            m[1 + 0 * 4],
+            m[2 + 0 * 4]
+        };
+    }
+
     static void create_transform_entity_hierarchy(
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping,
@@ -138,5 +242,93 @@ namespace platypus
         pTransform->scale = scale;
 
         return pTransform;
+    }
+
+
+    void add_child(entityID_t target, entityID_t child)
+    {
+        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        if (!pScene->isValidEntity(target, "add_child"))
+        {
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        // Check if target already have Children component
+        Children* pChildren = (Children*)pScene->getComponent(
+            target,
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            false,
+            false
+        );
+        if (!pChildren)
+        {
+            void* pChildrenComponent = pScene->allocateComponent(
+                target,
+                ComponentType::COMPONENT_TYPE_CHILDREN
+            );
+            if (!pChildrenComponent)
+            {
+                Debug::log(
+                    "@add_child "
+                    "Failed to allocate Children component for entity: " + std::to_string(target),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            pScene->addToComponentMask(target, ComponentType::COMPONENT_TYPE_CHILDREN);
+            pChildren = (Children*)pChildrenComponent;
+            pChildren->count = 0;
+            memset(pChildren, 0, sizeof(Children));
+        }
+        // Make sure child count within limits
+        if (pChildren->count >= PLATYPUS_MAX_CHILD_ENTITIES)
+        {
+            Debug::log(
+                "@add_child "
+                "Child count exceeded for entity: " + std::to_string(target) + " "
+                "Max child count is: " + std::to_string(PLATYPUS_MAX_CHILD_ENTITIES),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        // Add the child entity to Children and create Parent component for the child
+        pChildren->entityIDs[pChildren->count] = child;
+        ++pChildren->count;
+
+        void* pParentComponent = pScene->allocateComponent(
+            target,
+            ComponentType::COMPONENT_TYPE_PARENT
+        );
+        if (!pParentComponent)
+        {
+            Debug::log(
+                "@add_child "
+                "Failed to allocate Parent component for entity: " + std::to_string(child),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        pScene->addToComponentMask(child, ComponentType::COMPONENT_TYPE_PARENT);
+        Parent* pParent = (Parent*)pParentComponent;
+        pParent->entityID = target;
+
+        // If child entity has transform, switch it's global matrix to be local
+        Transform* pChildTransform = (Transform*)pScene->getComponent(
+            child,
+            ComponentType::COMPONENT_TYPE_TRANSFORM,
+            false,
+            false
+        );
+        if (pChildTransform)
+        {
+            pChildTransform->localMatrix = pChildTransform->globalMatrix;
+            pChildTransform->globalMatrix = Matrix4f(1.0f);
+        }
+        Debug::log("___TEST___Added child entity: " + std::to_string(child) + " to parent entity: " + std::to_string(target));
     }
 }

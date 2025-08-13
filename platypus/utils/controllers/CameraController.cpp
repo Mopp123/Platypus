@@ -119,7 +119,7 @@ namespace platypus
             _cameraEntity,
             ComponentType::COMPONENT_TYPE_TRANSFORM
         );
-        pTransform->globalMatrix = translationMatrix * create_rotation_matrix(-_pitch, -_yaw);
+        pTransform->globalMatrix = translationMatrix * create_rotation_matrix(-_pitch, -_yaw, 0.0f);
     }
 
     void CameraController::set(
