@@ -1,6 +1,9 @@
 #!/bin/bash
 
-echo "Compiling shaders..."
+build_dir=$(dirname "$0")
+cd $build_dir
+build_dir=$(pwd)
+echo "Compiling shaders into $build_dir"
 
 glslc -fshader-stage=vert StaticVertexShader.glsl -o StaticVertexShader.spv
 glslc -fshader-stage=frag StaticFragmentShader.glsl -o StaticFragmentShader.spv

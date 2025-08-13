@@ -97,7 +97,6 @@ void SkinnedMeshTestScene::init()
     {
         if (jointIndex == 4)
         {
-
             create_static_mesh_renderable(
                 entity,
                 pModel->getMeshes()[0]->getID(),
