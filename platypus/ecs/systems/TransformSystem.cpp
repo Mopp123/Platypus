@@ -39,9 +39,9 @@ namespace platypus
     }
 
 
-    // NOTE: CURRENT ISSUE!
-    // Atm not allowing animating single bone skeletons
-    //  -> skipping of no Children componen found!
+    // NOTE: ISSUE!
+    //  Not allowing animating single bone skeletons
+    //  -> skipping if no Children componen found!
     //  TODO: Fix this when animating here!
     TransformSystem::TransformSystem()
     {

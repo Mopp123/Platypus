@@ -56,8 +56,8 @@ namespace platypus
     Vector3f get_transform_up(Transform* pTransform);
     Vector3f get_transform_right(Transform* pTransform);
 
-    // Creates Transform hierarchy for joints
-    std::vector<entityID_t> create_skeleton(
+    // Creates Transform hierarchy for joints and returns the root joint entity
+    entityID_t create_skeleton(
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping
     );

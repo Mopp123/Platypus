@@ -158,19 +158,16 @@ namespace platypus
         };
     }
 
-    static void create_transform_entity_hierarchy(
+    static entityID_t create_transform_entity_hierarchy(
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping,
         const Matrix4f& parentMatrix,
-        int jointIndex,
-        std::vector<entityID_t>& outEntities
+        int jointIndex
     )
     {
-        Matrix4f matrix = parentMatrix * joints[jointIndex].matrix;
-
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        Matrix4f matrix = parentMatrix * joints[jointIndex].matrix;
         entityID_t entity = pScene->createEntity();
-        outEntities.emplace_back(entity);
         Transform* pTransform = create_transform(
             entity,
             matrix
@@ -183,32 +180,28 @@ namespace platypus
 
         for (int childJointIndex : jointChildMapping[jointIndex])
         {
-            create_transform_entity_hierarchy(
+            entityID_t childEntity = create_transform_entity_hierarchy(
                 joints,
                 jointChildMapping,
                 matrix,
-                childJointIndex,
-                outEntities
+                childJointIndex
             );
+            add_child(entity, childEntity);
         }
+        return entity;
     }
 
-    std::vector<entityID_t> create_skeleton(
+    entityID_t create_skeleton(
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping
     )
     {
-        std::vector<entityID_t> entities;
-        entities.reserve(joints.size());
-
-        create_transform_entity_hierarchy(
+        return create_transform_entity_hierarchy(
             joints,
             jointChildMapping,
             Matrix4f(1.0f),
-            0,
-            entities
+            0
         );
-        return entities;
     }
 
 

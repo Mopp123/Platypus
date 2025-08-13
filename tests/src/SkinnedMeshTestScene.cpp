@@ -78,7 +78,7 @@ void SkinnedMeshTestScene::init()
     Model* pModel = pAssetManager->loadModel("assets/TestCube.glb");
 
     const Pose& bindPose = bindPoses[0];
-    std::vector<entityID_t> jointEntities = create_skeleton(
+    entityID_t rootJointEntity = create_skeleton(
         bindPose.joints,
         bindPose.jointChildMapping
     );
@@ -86,25 +86,21 @@ void SkinnedMeshTestScene::init()
     //entityID_t skinnedEntity = createEntity();
     //create_transform(skinnedEntity, Matrix4f(1.0f));
     create_skinned_mesh_renderable(
-        jointEntities[0],
+        rootJointEntity,
         pAnimatedMesh->getID(),
         pMaterial->getID()
     );
 
     // Test putting box renderable on some skeleton hierarchy's transforms
-    int jointIndex = 0;
-    for (entityID_t entity : jointEntities)
-    {
-        if (jointIndex == 4)
-        {
-            create_static_mesh_renderable(
-                entity,
-                pModel->getMeshes()[0]->getID(),
-                pBoxMaterial->getID()
-            );
-        }
-        ++jointIndex;
-    }
+    Children* pRootJointChildren = (Children*)getComponent(
+        rootJointEntity,
+        ComponentType::COMPONENT_TYPE_CHILDREN
+    );
+    create_static_mesh_renderable(
+        pRootJointChildren->entityIDs[0],
+        pModel->getMeshes()[0]->getID(),
+        pBoxMaterial->getID()
+    );
 
     SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
         1.0f,
@@ -113,7 +109,7 @@ void SkinnedMeshTestScene::init()
     );
 
     SkeletalAnimation* pAnimationComponent = create_skeletal_animation(
-        jointEntities[0],
+        rootJointEntity,
         pAnimationAsset->getID(),
         1.0f
     );
