@@ -1,5 +1,6 @@
 #include "TransformSystem.h"
 #include "platypus/core/Scene.h"
+#include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/core/Debug.h"
 
@@ -8,33 +9,50 @@ namespace platypus
 {
     static void apply_transform_hierarchy(
         Scene* pScene,
-        entityID_t parent,
-        Children* pChildren
+        entityID_t entity,
+        entityID_t parent
     )
     {
-        Transform* pParentTransform = (Transform*)pScene->getComponent(
-            parent,
+        Transform* pTransform = (Transform*)pScene->getComponent(
+            entity,
             ComponentType::COMPONENT_TYPE_TRANSFORM
         );
-        for (size_t i = 0; i < pChildren->count; ++i)
+        if (!pTransform)
         {
-            entityID_t childEntity = pChildren->entityIDs[i];
-            Transform* pChildTransform = (Transform*)pScene->getComponent(
-                childEntity,
+            Debug::log(
+                "@apply_transform_hierarchy "
+                "Entity " + std::to_string(entity) + " doesn't have a Transform component!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (parent != NULL_ENTITY_ID)
+        {
+            Transform* pParentTransform = (Transform*)pScene->getComponent(
+                parent,
                 ComponentType::COMPONENT_TYPE_TRANSFORM
             );
-            if (pChildTransform)
-            {
-                pChildTransform->globalMatrix = pParentTransform->globalMatrix * pChildTransform->localMatrix;
-                Children* pChildChildren = (Children*)pScene->getComponent(
-                    childEntity,
-                    ComponentType::COMPONENT_TYPE_CHILDREN,
-                    false,
-                    false
-                );
-                if (pChildChildren)
-                    apply_transform_hierarchy(pScene, childEntity, pChildChildren);
-            }
+            pTransform->globalMatrix = pParentTransform->globalMatrix * pTransform->localMatrix;
+        }
+
+        Children* pChildren = (Children*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            false,
+            false
+        );
+        if (!pChildren)
+            return;
+
+        for (size_t childIndex = 0; childIndex < pChildren->count; ++childIndex)
+        {
+            entityID_t childEntity = pChildren->entityIDs[childIndex];
+            apply_transform_hierarchy(
+                pScene,
+                childEntity,
+                entity
+            );
         }
     }
 
@@ -65,14 +83,10 @@ namespace platypus
                 continue;
             }
             entityID_t entityID = entity.id;
-            Children* pChildren = (Children*)pScene->getComponent(
-                entityID,
-                ComponentType::COMPONENT_TYPE_CHILDREN
-            );
             apply_transform_hierarchy(
                 pScene,
                 entityID,
-                pChildren
+                NULL_ENTITY_ID
             );
         }
     }

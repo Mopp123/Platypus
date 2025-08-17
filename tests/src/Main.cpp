@@ -1,5 +1,5 @@
 #include "platypus/Platypus.h"
-#include "SkinnedMeshTestScene.h"
+#include "HierarchyTestScene.h"
 
 
 int main(int argc, const char** argv)
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new SkinnedMeshTestScene
+        new HierarchyTestScene
     );
     app.run();
     return 0;
