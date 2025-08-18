@@ -86,7 +86,7 @@ namespace platypus
 
                 Debug::log(
                     "@Shader::Shader "
-                    "Failed to compile shader stage(" + std::to_string(stage) + ")\n"
+                    "Failed to compile shader stage: " + shader_stage_to_string(stage) + "\n"
                     "InfoLog:\n" + infoLog,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -171,7 +171,6 @@ namespace platypus
                     );
                     findLocationsESSL1(_pVertexShader->source);
                     findLocationsESSL1(_pFragmentShader->source);
-
                 }
             }
         }

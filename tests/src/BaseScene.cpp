@@ -37,7 +37,7 @@ BaseScene::~BaseScene()
 
 void BaseScene::initBase()
 {
-    environmentProperties.clearColor = { 0, 0, 0, 1.0f };
+    environmentProperties.clearColor = { 0.8f, 0.7f, 0.7f, 1.0f };
 
     _cameraEntity = createEntity();
     create_transform(

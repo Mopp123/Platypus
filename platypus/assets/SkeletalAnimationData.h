@@ -25,5 +25,8 @@ namespace platypus
         inline const Pose& getBindPose() const { return _bindPose; }
         inline const Pose& getPose(uint32_t index) const { return _poses[index]; }
         inline size_t getPoseCount() const { return _poses.size(); }
+
+        inline Pose* getBindPosePtr() { return &_bindPose; }
+        inline Pose* getPosePtr(uint32_t index) { return &_poses[(size_t)index]; }
     };
 }

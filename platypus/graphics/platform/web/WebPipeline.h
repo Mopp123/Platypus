@@ -23,5 +23,8 @@ namespace platypus
         DepthCompareOperation depthCmpOp;
 
         bool enableColorBlending = false;
+
+        // Just testing atm if could get rid of the annoyting UniformInfo structs
+        int useLocationIndex = 0;
     };
 }

@@ -445,14 +445,12 @@ namespace platypus
                 const Buffer* pBuffer = (const Buffer*)components[i].pData;
                 bufferInfo.buffer = pBuffer->getImpl()->handle;
                 bufferInfo.offset = 0;
-                // NOTE: range was pBuffer->getTotalSize() earlier because didn't use "dynamic uniform buffers"
-                // -> meaning large buffer used with dynamic offsets instead of whole buffer when binding
-                // descriptor sets! -> And range being the element size should make sense for all cases
+                // NOTE:
+                // Be careful when using dynamic uniform buffers!
+                //  -> When using dynamic offset in vkCmdBindDescriptorSets the "area of buffer that is used", is the given offset to the offset + this range
+                //  -> And range being the element size should make sense for all cases
                 //  -> YOU JUST NEED TO BE CAREFUL THAT YOU PROVIDE THE CORRECT ELEMENT SIZE!
-                //bufferInfo.range = pBuffer->getDataElemSize();
-
-                // TESTING:
-                bufferInfo.range = pBuffer->getTotalSize();
+                bufferInfo.range = pBuffer->getDataElemSize();
             }
             else if (bindingType == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
             {

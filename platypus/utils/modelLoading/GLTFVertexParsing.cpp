@@ -203,17 +203,6 @@ namespace platypus
                 accessor.byteOffset
             };
             add_to_sorted_attributes(vertexBufferAttrib, sortedVertexBufferAttributes);
-            // testing
-            size_t byteStride = gltfModel.bufferViews[accessor.bufferView].byteStride;
-            if (attrib.first == "WEIGHTS_0")
-            {
-                Debug::log("___TEST___WEIGHTS TYPE: " + gltf_accessor_component_type_to_string(accessor.componentType) + " COMPONENTS: " + std::to_string(componentCount));
-            }
-            else
-            if (attrib.first == "JOINTS_0")
-            {
-                Debug::log("___TEST___JOINTS TYPE: " + gltf_accessor_component_type_to_string(accessor.componentType) + " COMPONENTS: " + std::to_string(componentCount));
-            }
         }
 
         // Make sure all attributes were handled
@@ -275,8 +264,6 @@ namespace platypus
                 val.w = (float)*(pSrcBuffer + 3);
                 vertexJointData[vertexIndex].second = val;
 
-                //Debug::log("___TEST___JOINT IDs: " + val.toString() + " ATTRIB SIZE: " + std::to_string(currentAttribElemSize));
-
                 if (dstOffset + sizeof(Vector4f) > combinedVertexBufferSize)
                     PLATYPUS_ASSERT(false);
 
@@ -308,7 +295,6 @@ namespace platypus
                     {
                         val = Vector4f(1.0f, 0, 0, 0);
                     }
-                    Debug::log("___TEST___WEIGHTS: " + val.toString() + " ATTRIB SIZE: " + std::to_string(currentAttribElemSize));
                     vertexJointData[vertexIndex].first = val;
 
                     if (dstOffset + sizeof(Vector4f) > combinedVertexBufferSize)

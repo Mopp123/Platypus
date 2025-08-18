@@ -25,8 +25,8 @@ namespace platypus
         if (!pComponent)
         {
             Debug::log(
-                "@create_transform(2) "
-                "Failed to allocate Transform component for entity: " + std::to_string(target),
+                "@create_skeletal_animation "
+                "Failed to allocate SkeletalAnimation component for entity: " + std::to_string(target),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -50,5 +50,38 @@ namespace platypus
         pAnimation->jointCount = pAsset->getBindPose().joints.size();
 
         return pAnimation;
+    }
+
+
+    SkeletonJoint* create_skeleton_joint(
+        entityID_t target,
+        uint32_t jointIndex
+    )
+    {
+        Application* pApp = Application::get_instance();
+        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
+        if (!pScene->isValidEntity(target, "create_skeleton_joint"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_JOINT;
+        void* pComponent = pScene->allocateComponent(target, componentType);
+        if (!pComponent)
+        {
+            Debug::log(
+                "@create_skeleton_joint "
+                "Failed to allocate Joint component for entity: " + std::to_string(target),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        pScene->addToComponentMask(target, componentType);
+
+        SkeletonJoint* pJoint = (SkeletonJoint*)pComponent;
+        pJoint->jointIndex = jointIndex;
+
+        return pJoint;
     }
 }

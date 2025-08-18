@@ -34,6 +34,7 @@ namespace platypus
         // NOTE: This contains ALL descriptor set layouts for pipeline!
         // Currently the last one is the actual material's layout!
         DescriptorSetLayout _descriptorSetLayout;
+        DescriptorSetLayout _skinnedDescriptorSetLayout;
         std::vector<DescriptorSet> _descriptorSets;
 
     public:

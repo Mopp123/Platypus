@@ -14,6 +14,7 @@
 namespace platypus
 {
     size_t SkinnedMeshRenderer::s_maxJoints = 50;
+    size_t SkinnedMeshRenderer::s_maxRenderables = 1024; // TODO: Make this configurable
     SkinnedMeshRenderer::SkinnedMeshRenderer(
         const MasterRenderer& masterRenderer,
         CommandPool& commandPool,
@@ -31,9 +32,9 @@ namespace platypus
             {
                 0,
                 1,
-                DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, // NOTE: Should probably be dynamix uniform buffer...
+                DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, // NOTE: Should probably be dynamix uniform buffer...
                 ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                { { 0, ShaderDataType::Mat4 } }
+                { { 5, ShaderDataType::Mat4, (int)s_maxJoints } }
             }
         }
         )
@@ -54,8 +55,17 @@ namespace platypus
 
     void SkinnedMeshRenderer::createDescriptorSets()
     {
-        std::vector<Matrix4f> jointBufferData(s_maxJoints);
-        memset(jointBufferData.data(), 0, sizeof(Matrix4f) * jointBufferData.size());
+        _uniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
+            sizeof(Matrix4f) * s_maxJoints
+        );
+        std::vector<char> jointBufferData(_uniformBufferElementSize * s_maxRenderables);
+
+        Debug::log(
+            "___TEST___JOINT BUFFER ELEM SIZE: " + std::to_string(_uniformBufferElementSize) + " "
+            "BUFFER TOTAL SIZE: " + std::to_string(jointBufferData.size())
+        );
+
+        memset(jointBufferData.data(), 0, jointBufferData.size());
 
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (size_t i = 0; i < maxFramesInFlight; ++i)
@@ -63,8 +73,8 @@ namespace platypus
             Buffer* pJointUniformBuffer = new Buffer(
                 _commandPoolRef,
                 jointBufferData.data(),
-                sizeof(Matrix4f),
-                jointBufferData.size(),
+                _uniformBufferElementSize,
+                s_maxRenderables,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
                 true
@@ -75,7 +85,7 @@ namespace platypus
                 _descriptorPoolRef.createDescriptorSet(
                     &_jointDescriptorSetLayout,
                     {
-                        { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pJointUniformBuffer }
+                        { DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, pJointUniformBuffer }
                     }
                 )
             );
@@ -99,6 +109,17 @@ namespace platypus
 
     void SkinnedMeshRenderer::submit(const Scene* pScene, entityID_t entity)
     {
+        if (_renderData.size() >= s_maxRenderables)
+        {
+            Debug::log(
+                "@SkinnedMeshRenderer::submit "
+                "Maximum amount of skinned mesh renderables have already been submitted for rendering! "
+                "Current limit: " + std::to_string(s_maxRenderables),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         const SkinnedMeshRenderable* pRenderable = (const SkinnedMeshRenderable*)pScene->getComponent(
             entity,
             ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
@@ -107,11 +128,6 @@ namespace platypus
             entity,
             ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
         );
-        const Transform* pTransform = (const Transform*)pScene->getComponent(
-            entity,
-            ComponentType::COMPONENT_TYPE_TRANSFORM
-        );
-        const Matrix4f transformationMatrix = pTransform->globalMatrix;
 
         ID_t meshID = pRenderable->meshID;
         ID_t materialID = pRenderable->materialID;
@@ -126,17 +142,6 @@ namespace platypus
             pAnimation->jointMatrices,
             sizeof(Matrix4f) * jointCount
         );
-        /*
-        for (size_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
-        {
-            Transform* pJointTransform = (Transform*)pScene->getComponent(
-                entity + jointIndex,
-                ComponentType::COMPONENT_TYPE_TRANSFORM
-            );
-            //pJointTransform->globalMatrix = resultMatrix;
-            jointMatrices[jointIndex] = pJointTransform->globalMatrix;
-        }*/
-
 
         _renderData.push_back({ meshID, materialID, jointMatrices });
     }
@@ -171,6 +176,7 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        size_t renderDataIndex = 0;
         for (const RenderData& renderData : _renderData)
         {
             Mesh* pMesh = (Mesh*)pAssetManager->getAsset(
@@ -203,10 +209,11 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
 
+            uint32_t jointBufferOffset = renderDataIndex * _uniformBufferElementSize;
             _jointUniformBuffer[_currentFrame]->updateDeviceAndHost(
-                (void*)renderData.jointMatrices.data(),
+                (void*)(renderData.jointMatrices.data()),
                 sizeof(Matrix4f) * renderData.jointMatrices.size(),
-                0
+                jointBufferOffset
             );
 
             render::bind_pipeline(
@@ -245,7 +252,7 @@ namespace platypus
             render::bind_descriptor_sets(
                 currentCommandBuffer,
                 descriptorSetsToBind,
-                { }
+                { jointBufferOffset }
             );
 
             render::draw_indexed(
@@ -253,6 +260,8 @@ namespace platypus
                 (uint32_t)pIndexBuffer->getDataLength(),
                 1
             );
+
+            ++renderDataIndex;
         }
 
         currentCommandBuffer.end();
@@ -268,5 +277,10 @@ namespace platypus
     size_t SkinnedMeshRenderer::get_max_joints()
     {
         return s_maxJoints;
+    }
+
+    size_t  SkinnedMeshRenderer::get_max_renderables()
+    {
+        return s_maxRenderables;
     }
 }

@@ -10,18 +10,22 @@ namespace platypus
 {
     static void apply_interpolation_to_joints(
         Scene* pScene,
-        entityID_t rootJointEntity,
+        entityID_t entity,
         SkeletalAnimation* pAnimationComponent,
         const Pose& bindPose,
         const Pose& current,
         const Pose& next,
         float amount,
-        uint32_t currentJointIndex,
         const Matrix4f& parentMatrix
     )
     {
-        const Joint& jointCurrentPose = current.joints[currentJointIndex];
-        const Joint& jointNextPose = next.joints[currentJointIndex];
+        SkeletonJoint* pJoint = (SkeletonJoint*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_JOINT
+        );
+        size_t jointIndex = pJoint->jointIndex;
+        const Joint& jointCurrentPose = current.joints[jointIndex];
+        const Joint& jointNextPose = next.joints[jointIndex];
 
         // TODO: Include scaling
         Vector3f interpolatedTranslation = jointCurrentPose.translation.lerp(jointNextPose.translation, amount);
@@ -31,36 +35,44 @@ namespace platypus
         translationMatrix[2 + 3 * 4] = interpolatedTranslation.z;
         Quaternion interpolatedRotation = jointCurrentPose.rotation.slerp(jointNextPose.rotation, amount);
 
-        const Matrix4f& inverseBindMatrix = bindPose.joints[currentJointIndex].inverseMatrix;
-        Matrix4f m = parentMatrix * translationMatrix * interpolatedRotation.toRotationMatrix();
-        Matrix4f resultMatrix = m;// * inverseBindMatrix; // Looks funky atm but when using inverse bind pose matrix in vertex shader only, we can make this so that it won't affect the transforms
+        const Matrix4f& inverseBindMatrix = bindPose.joints[jointIndex].inverseMatrix;
+        Matrix4f localMatrix = translationMatrix * interpolatedRotation.toRotationMatrix();
+        Matrix4f resultMatrix = parentMatrix * localMatrix;
+        //Matrix4f resultMatrix = m;// * inverseBindMatrix; // Looks funky atm but when using inverse bind pose matrix in vertex shader only, we can make this so that it won't affect the transforms
 
-        pAnimationComponent->jointMatrices[currentJointIndex] = m * inverseBindMatrix;
+        pAnimationComponent->jointMatrices[jointIndex] = resultMatrix * inverseBindMatrix;
 
         // NOTE: Just testing atm! DANGEROUS AS HELL!!!
         // *Allocated transform skeleton should be able to be accessed like this
         // TODO: Make this safe and faster
         size_t jointCount = bindPose.joints.size();
         Transform* pJointTransform = (Transform*)pScene->getComponent(
-            rootJointEntity + currentJointIndex,
+            entity,
             ComponentType::COMPONENT_TYPE_TRANSFORM
         );
         pJointTransform->globalMatrix = resultMatrix;
 
-        const std::vector<uint32_t>& childJoints = bindPose.jointChildMapping[currentJointIndex];
-        for (uint32_t i = 0; i < (uint32_t)childJoints.size(); ++i)
+        Children* pChildren = (Children*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            false,
+            false
+        );
+        if (!pChildren)
+            return;
+
+        for (size_t i = 0; i < pChildren->count; ++i)
         {
-            int childJointIndex = childJoints[i];
+            entityID_t childEntity = pChildren->entityIDs[i];
             apply_interpolation_to_joints(
                 pScene,
-                rootJointEntity,
+                childEntity,
                 pAnimationComponent,
                 bindPose,
                 current,
                 next,
                 amount,
-                childJointIndex,
-                m
+                resultMatrix
             );
         }
     }
@@ -115,6 +127,7 @@ namespace platypus
             currentPose = pAnimationAsset->getPose(currentPoseIndex);
             nextPose = pAnimationAsset->getPose(nextPoseIndex);
 
+            /*
             apply_interpolation_to_joints(
                 pScene,
                 entity.id,
@@ -123,9 +136,9 @@ namespace platypus
                 currentPose,
                 nextPose,
                 pAnimationComponent->progress,
-                0,
                 Matrix4f(1.0f)
             );
+            */
 
             pAnimationComponent->progress += pAnimationComponent->speed * Timing::get_delta_time();
             if (pAnimationComponent->progress >= 1.0f)

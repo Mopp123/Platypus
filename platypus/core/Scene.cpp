@@ -17,34 +17,70 @@ namespace platypus
         size_t maxEntityCount = 10000;
 
         _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
-            sizeof(Transform), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_TRANSFORM,
+            sizeof(Transform),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = ComponentPool(
-            sizeof(GUITransform), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_GUI_TRANSFORM,
+            sizeof(GUITransform),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
-            sizeof(StaticMeshRenderable), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+            sizeof(StaticMeshRenderable),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE] = ComponentPool(
-            sizeof(SkinnedMeshRenderable), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+            sizeof(SkinnedMeshRenderable),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
-            sizeof(SkeletalAnimation), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
+            sizeof(SkeletalAnimation),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = ComponentPool(
-            sizeof(GUIRenderable), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+            sizeof(GUIRenderable),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
-            sizeof(Camera), 1, true
+            ComponentType::COMPONENT_TYPE_CAMERA,
+            sizeof(Camera),
+            1,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
-            sizeof(DirectionalLight), 1, true
+            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
+            sizeof(DirectionalLight),
+            1,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = ComponentPool(
-            sizeof(Parent), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_PARENT,
+            sizeof(Parent),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = ComponentPool(
-            sizeof(Children), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            sizeof(Children),
+            maxEntityCount,
+            true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_JOINT,
+            sizeof(SkeletonJoint),
+            maxEntityCount,
+            true
         );
 
         _systems.push_back(new SkeletalAnimationSystem);

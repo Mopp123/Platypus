@@ -22,7 +22,9 @@ namespace platypus
         };
 
         static size_t s_maxJoints;
+        static size_t s_maxRenderables; // TODO: Make this configurable
 
+        size_t _uniformBufferElementSize = 0;
         std::vector<Buffer*> _jointUniformBuffer;
         DescriptorSetLayout _jointDescriptorSetLayout;
         std::vector<DescriptorSet> _jointDescriptorSet;
@@ -56,5 +58,6 @@ namespace platypus
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _jointDescriptorSetLayout; }
         static size_t get_max_joints();
+        static size_t get_max_renderables();
     };
 }

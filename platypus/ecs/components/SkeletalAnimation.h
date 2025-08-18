@@ -32,9 +32,21 @@ namespace platypus
         Matrix4f jointMatrices[50];
     };
 
+    // NOTE: ATM JUST TESTING WITH THIS
+    struct SkeletonJoint
+    {
+        // Index in the skeleton hierarchy
+        uint32_t jointIndex = 0;
+    };
+
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
         ID_t animationAssetID,
         float speed
+    );
+
+    SkeletonJoint* create_skeleton_joint(
+        entityID_t target,
+        uint32_t jointIndex
     );
 }

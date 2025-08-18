@@ -1,5 +1,6 @@
 #include "Transform.h"
 #include "platypus/core/Application.h"
+#include "SkeletalAnimation.h"
 #include "platypus/core/Scene.h"
 #include "platypus/core/Debug.h"
 
@@ -162,16 +163,19 @@ namespace platypus
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping,
         const Matrix4f& parentMatrix,
-        int jointIndex
+        int jointIndex,
+        std::vector<entityID_t>& outEntities
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
         Matrix4f matrix = parentMatrix * joints[jointIndex].matrix;
         entityID_t entity = pScene->createEntity();
+        outEntities.push_back(entity);
         Transform* pTransform = create_transform(
             entity,
             matrix
         );
+        SkeletonJoint* pJoint = create_skeleton_joint(entity, jointIndex);
 
         const Joint& currentJoint = joints[jointIndex];
 
@@ -184,24 +188,28 @@ namespace platypus
                 joints,
                 jointChildMapping,
                 matrix,
-                childJointIndex
+                childJointIndex,
+                outEntities
             );
             add_child(entity, childEntity);
         }
         return entity;
     }
 
-    entityID_t create_skeleton(
+    std::vector<entityID_t> create_skeleton(
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping
     )
     {
-        return create_transform_entity_hierarchy(
+        std::vector<entityID_t> jointEntities;
+        create_transform_entity_hierarchy(
             joints,
             jointChildMapping,
             Matrix4f(1.0f),
-            0
+            0,
+            jointEntities
         );
+        return jointEntities;
     }
 
 
@@ -275,6 +283,7 @@ namespace platypus
             pChildren->count = 0;
             memset(pChildren, 0, sizeof(Children));
         }
+
         // Make sure child count within limits
         if (pChildren->count >= PLATYPUS_MAX_CHILD_ENTITIES)
         {
@@ -322,6 +331,5 @@ namespace platypus
             pChildTransform->localMatrix = pChildTransform->globalMatrix;
             pChildTransform->globalMatrix = Matrix4f(1.0f);
         }
-        Debug::log("___TEST___Added child entity: " + std::to_string(child) + " to parent entity: " + std::to_string(target));
     }
 }

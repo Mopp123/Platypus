@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # NOTE: Has to be changed depending on your own setup/path to emsdk
-file_packager_dir=~/Programs/emsdk/upstream/emscripten/tools/file_packager
+#file_packager_dir=~/Programs/emsdk/upstream/emscripten/tools/file_packager
+file_packager_dir=~/Documents/projects/emsdk/upstream/emscripten/tools/file_packager
 
 build_dir="build/web"
 

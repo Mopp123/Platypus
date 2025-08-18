@@ -5,24 +5,27 @@
 
 namespace platypus
 {
+    ComponentPool::ComponentPool(
+        ComponentType componentType,
+        size_t componentSize,
+        size_t componentCapacity,
+        bool allowResize
+    ) :
+        MemoryPool(componentSize * componentCapacity),
+        _componentType(componentType),
+        _componentSize(componentSize),
+        _componentCapacity(componentCapacity),
+        _allowResize(allowResize)
+    {}
+
     ComponentPool::ComponentPool(const ComponentPool& other) :
+        _componentType(other._componentType),
         _componentSize(other._componentSize),
         _componentCapacity(other._componentCapacity),
         _componentCount(other._componentCount),
         _allowResize(other._allowResize)
     {
     }
-
-    ComponentPool::ComponentPool(
-        size_t componentSize,
-        size_t componentCapacity,
-        bool allowResize
-    ) :
-        MemoryPool(componentSize * componentCapacity),
-        _componentSize(componentSize),
-        _componentCapacity(componentCapacity),
-        _allowResize(allowResize)
-    {}
 
     ComponentPool::~ComponentPool()
     {
@@ -79,6 +82,14 @@ namespace platypus
             {
                 addSpace(_totalSize + _componentSize);
                 ++_componentCapacity;
+
+                #ifdef PLATYPUS_DEBUG
+                    Debug::log(
+                        "@ComponentPool::" + component_type_to_string(_componentType) + "::allocComponent\n"
+                        "   Increased pool size to: " + std::to_string(_totalSize) + "\n"
+                        "   Component count: " + std::to_string(_componentCount)
+                    );
+                #endif
             }
         }
         void* ptr = nullptr;
