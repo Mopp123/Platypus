@@ -8,6 +8,8 @@
 
 namespace platypus
 {
+    // NOTE: Animating transferred to TransformSystem!
+    // TODO: Delete below
     static void apply_interpolation_to_joints(
         Scene* pScene,
         entityID_t entity,
@@ -38,14 +40,9 @@ namespace platypus
         const Matrix4f& inverseBindMatrix = bindPose.joints[jointIndex].inverseMatrix;
         Matrix4f localMatrix = translationMatrix * interpolatedRotation.toRotationMatrix();
         Matrix4f resultMatrix = parentMatrix * localMatrix;
-        //Matrix4f resultMatrix = m;// * inverseBindMatrix; // Looks funky atm but when using inverse bind pose matrix in vertex shader only, we can make this so that it won't affect the transforms
 
         pAnimationComponent->jointMatrices[jointIndex] = resultMatrix * inverseBindMatrix;
 
-        // NOTE: Just testing atm! DANGEROUS AS HELL!!!
-        // *Allocated transform skeleton should be able to be accessed like this
-        // TODO: Make this safe and faster
-        size_t jointCount = bindPose.joints.size();
         Transform* pJointTransform = (Transform*)pScene->getComponent(
             entity,
             ComponentType::COMPONENT_TYPE_TRANSFORM
@@ -127,6 +124,8 @@ namespace platypus
             currentPose = pAnimationAsset->getPose(currentPoseIndex);
             nextPose = pAnimationAsset->getPose(nextPoseIndex);
 
+            // NOTE: Animating transferred to TransformSystem!
+            // TODO: Delete below
             /*
             apply_interpolation_to_joints(
                 pScene,

@@ -10,11 +10,12 @@
 
 namespace platypus
 {
-
-    // ISSUES:
+    // ISSUES(?):
     //      * Root joint animation issue
     //          - If animated skeleton's root joint doesn't have a parent,
     //          it doesn't get animated.
+    //          SOLUTION:
+    //              -> Always have some "base entity" that has the root joint entity as child
     static void apply_transform_hierarchy(
         Scene* pScene,
         AssetManager* pAssetManager,
@@ -28,7 +29,7 @@ namespace platypus
     )
     {
         // Check if animation changes for this entity and its children
-        //  -> need to find new bind, current and next poses
+        //  -> need to find new bind pose and animation asset
         SkeletalAnimation* pEntityAnimation = (SkeletalAnimation*)pScene->getComponent(
             entity,
             ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
