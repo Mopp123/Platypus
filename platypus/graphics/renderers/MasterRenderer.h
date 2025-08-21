@@ -66,6 +66,7 @@ namespace platypus
         void render(const Window& window);
 
         inline SkinnedMeshRenderer* getSkinnedMeshRenderer() { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
+        inline const SkinnedMeshRenderer* getSkinnedMeshRenderer() const { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline CommandPool& getCommandPool() { return _commandPool; }
@@ -78,8 +79,8 @@ namespace platypus
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
         void destroyPipelines();
-        void freeDescriptorSets();
-        void createDescriptorSets();
+        void createShaderResources();
+        void freeShaderResources();
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };

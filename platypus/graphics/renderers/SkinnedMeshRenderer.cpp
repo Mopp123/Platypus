@@ -216,9 +216,10 @@ namespace platypus
                 jointBufferOffset
             );
 
+            // DANGER! Might dereference nullptr!
             render::bind_pipeline(
                 currentCommandBuffer,
-                pMaterial->getSkinnedPipelineData()->pipeline
+                *pMaterial->getSkinnedPipelineData()->pPipeline
             );
 
             Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };

@@ -46,9 +46,9 @@ namespace platypus
                 "@create_static_mesh_renderable "
                 "Material didn't have pipeline data yet -> creating..."
             );
-            pMaterial->createPipeline(pMesh->getVertexBufferLayout());
+            pMaterial->createPipeline(pMesh);
             if (!pMaterial->hasDescriptorSets())
-                pMaterial->createDescriptorSets();
+                pMaterial->createShaderResources();
         }
 
         return pRenderable;
@@ -95,9 +95,9 @@ namespace platypus
                 "@create_skinned_mesh_renderable "
                 "Material didn't have pipeline data yet -> creating..."
             );
-            pMaterial->createSkinnedPipeline(pMesh->getVertexBufferLayout());
+            pMaterial->createSkinnedPipeline(pMesh);
             if (!pMaterial->hasDescriptorSets())
-                pMaterial->createDescriptorSets();
+                pMaterial->createShaderResources();
         }
 
         return pRenderable;

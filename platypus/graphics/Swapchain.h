@@ -44,6 +44,7 @@ namespace platypus
         size_t getMaxFramesInFlight() const;
         Extent2D getExtent() const;
         inline const RenderPass& getRenderPass() const { return _renderPass; }
+        inline const RenderPass* getRenderPassPtr() const { return &_renderPass; }
         inline uint32_t getImageCount() const { return _imageCount; }
         inline uint32_t getCurrentImageIndex() const { return _currentImageIndex; }
         inline size_t getCurrentFrame() const { return _currentFrame; }

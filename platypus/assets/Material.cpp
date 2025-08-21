@@ -1,4 +1,5 @@
 #include "Material.h"
+#include "platypus/graphics/PipelineFactory.hpp"
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
@@ -94,17 +95,28 @@ namespace platypus
 
     Material::~Material()
     {
-        freeDescriptorSets();
+        freeShaderResources();
 
         _descriptorSetLayout.destroy();
+        // TODO: Unfuck below
         if (_pPipelineData)
+        {
+            delete _pPipelineData->pVertexShader;
+            delete _pPipelineData->pFragmentShader;
+            delete _pPipelineData->pPipeline;
             delete _pPipelineData;
+        }
         if (_pSkinnedPipelineData)
+        {
+            delete _pSkinnedPipelineData->pVertexShader;
+            delete _pSkinnedPipelineData->pFragmentShader;
+            delete _pSkinnedPipelineData->pPipeline;
             delete _pSkinnedPipelineData;
+        }
     }
 
     void Material::createPipeline(
-        const VertexBufferLayout& meshVertexBufferLayout
+        const Mesh* pMesh
     )
     {
         if (_pPipelineData != nullptr)
@@ -116,19 +128,6 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-
-        // Add instanced vertex buffer layout (mat4)
-        uint32_t meshVbLayoutElements = (uint32_t)meshVertexBufferLayout.getElements().size();
-        VertexBufferLayout instancedVertexBufferLayout = {
-            {
-                { meshVbLayoutElements, ShaderDataType::Float4 },
-                { meshVbLayoutElements + 1, ShaderDataType::Float4 },
-                { meshVbLayoutElements + 2, ShaderDataType::Float4 },
-                { meshVbLayoutElements + 3, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-            1
-        };
 
         bool normalMapping = _normalTextureID != NULL_ID;
         const std::string vertexShaderFilename = getShaderFilename(
@@ -145,51 +144,30 @@ namespace platypus
             "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
         );
 
-        _pPipelineData = new MaterialPipelineData{
-            { meshVertexBufferLayout, instancedVertexBufferLayout },
-            {
-                vertexShaderFilename,
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
-            },
-            {
-                fragmentShaderFilename,
-                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-            }
-        };
-
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-            pMasterRenderer->getCameraDescriptorSetLayout(),
-            pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
-            _descriptorSetLayout
-        };
-
-        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
-        const Extent2D swapchainExtent = swapchain.getExtent();
-        const uint32_t viewportWidth = (uint32_t)swapchainExtent.width;
-        const uint32_t viewportHeight = (uint32_t)swapchainExtent.height;
-        Rect2D viewportScissor = { 0, 0, viewportWidth, viewportHeight };
-        _pPipelineData->pipeline.create(
-            swapchain.getRenderPass(),
-            _pPipelineData->vertexBufferLayouts,
-            descriptorSetLayouts,
-            _pPipelineData->vertexShader,
-            _pPipelineData->fragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_BACK,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
-            false, // enable color blending
-            sizeof(Matrix4f), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
+        // TODO: Unfuck below
+        _pPipelineData = new MaterialPipelineData;
+        Shader* pVertexShader = new Shader(
+            vertexShaderFilename,
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
         );
+        Shader* pFragmentShader = new Shader(
+            fragmentShaderFilename,
+            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
+        );
+        _pPipelineData->pVertexShader = pVertexShader;
+        _pPipelineData->pFragmentShader = pFragmentShader;
+        Pipeline* pPipeline = create_material_pipeline(
+            pMesh,
+            true, // instanced
+            false, // skinned
+            this
+        );
+        _pPipelineData->pPipeline = pPipeline;
+        _pPipelineData->pPipeline->create();
     }
 
     void Material::createSkinnedPipeline(
-        const VertexBufferLayout& meshVertexBufferLayout
+        const Mesh* pMesh
     )
     {
         if (_pSkinnedPipelineData != nullptr)
@@ -217,48 +195,27 @@ namespace platypus
         Debug::log(
             "@Material::createSkinnedPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
         );
-        _pSkinnedPipelineData = new MaterialPipelineData{
-            { meshVertexBufferLayout },
-            {
-                vertexShaderFilename,
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
-            },
-            {
-                fragmentShaderFilename,
-                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-            }
-        };
 
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-            pMasterRenderer->getCameraDescriptorSetLayout(),
-            pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
-            pMasterRenderer->getSkinnedMeshRenderer()->getDescriptorSetLayout(),
-            _descriptorSetLayout
-        };
-
-        const Swapchain& swapchain = pMasterRenderer->getSwapchain();
-        const Extent2D swapchainExtent = swapchain.getExtent();
-        const uint32_t viewportWidth = (uint32_t)swapchainExtent.width;
-        const uint32_t viewportHeight = (uint32_t)swapchainExtent.height;
-        Rect2D viewportScissor = { 0, 0, viewportWidth, viewportHeight };
-        _pSkinnedPipelineData->pipeline.create(
-            swapchain.getRenderPass(),
-            _pSkinnedPipelineData->vertexBufferLayouts,
-            descriptorSetLayouts,
-            _pSkinnedPipelineData->vertexShader,
-            _pSkinnedPipelineData->fragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_BACK,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
-            false, // enable color blending
-            sizeof(Matrix4f), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
+        // TODO: Unfuck below
+        _pSkinnedPipelineData = new MaterialPipelineData;
+        Shader* pVertexShader = new Shader(
+            vertexShaderFilename,
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
         );
+        Shader* pFragmentShader = new Shader(
+            fragmentShaderFilename,
+            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
+        );
+        _pSkinnedPipelineData->pVertexShader = pVertexShader;
+        _pSkinnedPipelineData->pFragmentShader = pFragmentShader;
+        Pipeline* pPipeline = create_material_pipeline(
+            pMesh,
+            false, // instanced
+            true, // skinned
+            this
+        );
+        _pSkinnedPipelineData->pPipeline = pPipeline;
+        _pSkinnedPipelineData->pPipeline->create();
     }
 
     void Material::recreateExistingPipeline()
@@ -279,24 +236,7 @@ namespace platypus
                 pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
                 _descriptorSetLayout
             };
-
-            _pPipelineData->pipeline.create(
-                swapchain.getRenderPass(),
-                _pPipelineData->vertexBufferLayouts,
-                descriptorSetLayouts,
-                _pPipelineData->vertexShader,
-                _pPipelineData->fragmentShader,
-                viewportWidth,
-                viewportHeight,
-                viewportScissor,
-                CullMode::CULL_MODE_NONE,
-                FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-                true, // enable depth test
-                DepthCompareOperation::COMPARE_OP_LESS,
-                false, // enable color blending
-                sizeof(Matrix4f), // push constants size
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-            );
+            _pPipelineData->pPipeline->create();
             created = true;
         }
 
@@ -308,23 +248,7 @@ namespace platypus
                 pMasterRenderer->getSkinnedMeshRenderer()->getDescriptorSetLayout(),
                 _descriptorSetLayout
             };
-            _pSkinnedPipelineData->pipeline.create(
-                swapchain.getRenderPass(),
-                _pSkinnedPipelineData->vertexBufferLayouts,
-                descriptorSetLayouts,
-                _pSkinnedPipelineData->vertexShader,
-                _pSkinnedPipelineData->fragmentShader,
-                viewportWidth,
-                viewportHeight,
-                viewportScissor,
-                CullMode::CULL_MODE_NONE,
-                FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-                true, // enable depth test
-                DepthCompareOperation::COMPARE_OP_LESS,
-                false, // enable color blending
-                sizeof(Matrix4f), // push constants size
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-            );
+            _pSkinnedPipelineData->pPipeline->create();
             created = true;
         }
 
@@ -337,14 +261,14 @@ namespace platypus
         bool destroyed = false;
         if (_pPipelineData)
         {
-            _pPipelineData->pipeline.destroy();
+            _pPipelineData->pPipeline->destroy();
             destroyed = true;
             Debug::log("@Material::destroyPipeline Static pipeline destroyed");
         }
 
         if (_pSkinnedPipelineData)
         {
-            _pSkinnedPipelineData->pipeline.destroy();
+            _pSkinnedPipelineData->pPipeline->destroy();
             destroyed = true;
             Debug::log("@Material::destroyPipeline Skinned pipeline destroyed");
         }
@@ -353,9 +277,7 @@ namespace platypus
             warnUnassigned("@destroyPipeline");
     }
 
-    // NOTE: This also creates the uniform buffer
-    //  -> should that be a separate func or name this more clearly?
-    void Material::createDescriptorSets()
+    void Material::createShaderResources()
     {
         if (!(_pPipelineData || _pSkinnedPipelineData))
         {
@@ -449,7 +371,7 @@ namespace platypus
         );
     }
 
-    void Material::freeDescriptorSets()
+    void Material::freeShaderResources()
     {
         if (!(_pPipelineData || _pSkinnedPipelineData))
         {

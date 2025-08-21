@@ -169,7 +169,7 @@ namespace platypus
 
             render::bind_pipeline(
                 currentCommandBuffer,
-                batchData.pMaterial->getPipelineData()->pipeline
+                *batchData.pMaterial->getPipelineData()->pPipeline
             );
 
             Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };

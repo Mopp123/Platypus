@@ -137,7 +137,7 @@ namespace platypus
 
         _pGUIRenderer->freeBatches();
 
-        freeDescriptorSets();
+        freeShaderResources();
 
         // NOTE: This is confusing as fuck atm:
         //  -> need to create renderer specific descriptor
@@ -245,24 +245,24 @@ namespace platypus
             ((Material*)pAsset)->destroyPipeline();
     }
 
-    void MasterRenderer::freeDescriptorSets()
+    void MasterRenderer::createShaderResources()
     {
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->freeDescriptorSets();
-
-        for (auto& it : _renderers)
-            it.second->freeDescriptorSets();
-    }
-
-    void MasterRenderer::createDescriptorSets()
-    {
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->createDescriptorSets();
+            ((Material*)pAsset)->createShaderResources();
 
         for (auto& it : _renderers)
             it.second->createDescriptorSets();
+    }
+
+    void MasterRenderer::freeShaderResources()
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->freeShaderResources();
+
+        for (auto& it : _renderers)
+            it.second->freeDescriptorSets();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -404,12 +404,12 @@ namespace platypus
         {
             Device::handle_window_resize();
             _swapchain.recreate(window);
-            freeDescriptorSets();
+            freeShaderResources();
             destroyPipelines();
             freeCommandBuffers();
             allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
             createPipelines();
-            createDescriptorSets();
+            createShaderResources();
             window.resetResized();
         }
         else

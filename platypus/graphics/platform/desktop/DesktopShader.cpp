@@ -10,13 +10,13 @@
 namespace platypus
 {
     VkPipelineShaderStageCreateInfo get_pipeline_shader_stage_create_info(
-        const Shader& shader,
+        const Shader* pShader,
         const ShaderImpl * const pImpl
     )
     {
         VkPipelineShaderStageCreateInfo shaderStageCreateInfo{};
         shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shaderStageCreateInfo.stage = shader.getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
+        shaderStageCreateInfo.stage = pShader->getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
         shaderStageCreateInfo.module = pImpl->shaderModule;
         shaderStageCreateInfo.pName = "main";
         return shaderStageCreateInfo;

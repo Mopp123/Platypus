@@ -26,9 +26,6 @@ namespace platypus
         size_t _currentFrame = 0;
         uint64_t _requiredComponentsMask = 0;
 
-        Pipeline _imgPipeline;
-        Pipeline _fontPipeline;
-
         Shader _vertexShader;
         Shader _imgFragmentShader;
         Shader _fontFragmentShader;
@@ -72,6 +69,10 @@ namespace platypus
         // BUT! If want to have batch specific descriptor sets, needs some combined identifier
         // for each batch that contains its' type and textureID
         std::unordered_map<ID_t, std::vector<DescriptorSet>> _textureDescriptorSets;
+
+
+        Pipeline _imgPipeline;
+        Pipeline _fontPipeline;
 
         static size_t s_maxBatches;
         static size_t s_maxBatchLength;

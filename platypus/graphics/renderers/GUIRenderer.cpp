@@ -34,6 +34,76 @@ namespace platypus
                     { { 2 } }
                 }
             }
+        ),
+
+        _imgPipeline(
+            masterRenderer.getSwapchain().getRenderPassPtr(),
+            // Vertex buffer layouts
+            {
+                {
+                    {
+                        { 0, ShaderDataType::Float2 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                    0
+                },
+                {
+                    {
+                        { 1, ShaderDataType::Float4 },
+                        { 2, ShaderDataType::Float2 },
+                        { 3, ShaderDataType::Float4 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                    1
+                }
+            },
+            {
+                _textureDescriptorSetLayout,
+            },
+            &_vertexShader,
+            &_imgFragmentShader,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_ALWAYS,
+            true, // enable color blending
+            sizeof(Matrix4f) + sizeof(float), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
+        ),
+
+        _fontPipeline(
+            masterRenderer.getSwapchain().getRenderPassPtr(),
+            // Vertex buffer layouts
+            {
+                {
+                    {
+                        { 0, ShaderDataType::Float2 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                    0
+                },
+                {
+                    {
+                        { 1, ShaderDataType::Float4 },
+                        { 2, ShaderDataType::Float2 },
+                        { 3, ShaderDataType::Float4 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                    1
+                }
+            },
+            {
+                _textureDescriptorSetLayout,
+            },
+            &_vertexShader,
+            &_fontFragmentShader,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_ALWAYS,
+            true, // enable color blending
+            sizeof(Matrix4f) + sizeof(float), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         )
     {
         // Create common vertex and index buffers
@@ -118,63 +188,8 @@ namespace platypus
         float viewportHeight
     )
     {
-        VertexBufferLayout vbLayout = {
-            {
-                { 0, ShaderDataType::Float2 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-            0
-        };
-        VertexBufferLayout instancedVbLayout = {
-            {
-                { 1, ShaderDataType::Float4 },
-                { 2, ShaderDataType::Float2 },
-                { 3, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-            1
-        };
-        std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
-        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-            _textureDescriptorSetLayout
-        };
-
-        Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
-        _imgPipeline.create(
-            renderPass,
-            vertexBufferLayouts,
-            descriptorSetLayouts,
-            _vertexShader,
-            _imgFragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_BACK,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_ALWAYS,
-            true, // enable color blending
-            sizeof(Matrix4f) + sizeof(float), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
-
-        _fontPipeline.create(
-            renderPass,
-            vertexBufferLayouts,
-            descriptorSetLayouts,
-            _vertexShader,
-            _fontFragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_BACK,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_ALWAYS,
-            true, // enable color blending
-            sizeof(Matrix4f) + sizeof(float), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
+        _imgPipeline.create();
+        _fontPipeline.create();
     }
 
     void GUIRenderer::destroyPipeline()
