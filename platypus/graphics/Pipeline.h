@@ -96,6 +96,17 @@ namespace platypus
         void create();
         void destroy();
 
+
+        const std::vector<VertexBufferLayout>& getVertexBufferLayouts() const { return _vertexBufferLayouts; }
+        const std::vector<DescriptorSetLayout>& getDescriptorSetLayouts() const { return _descriptorSetLayouts; }
+        CullMode getCullMode() const { return _cullMode; }
+        FrontFace getFaceWindingOrder() const { return _frontFace; }
+        bool isDepthTestEnabled() const { return _enableDepthTest; }
+        DepthCompareOperation getDepthCompareOperation() const { return _depthCmpOp; }
+        bool isColorBlendEnabled() const { return _enableColorBlending; }
+        uint32_t getPushConstantsSize() const { return _pushConstantSize; }
+        uint32_t getPushConstantsStageFlags() { return _pushConstantStageFlags; }
+
         inline PipelineImpl* getImpl() const { return _pImpl; }
     };
 }

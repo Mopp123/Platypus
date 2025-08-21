@@ -10,7 +10,7 @@ namespace platypus
     struct CommandBufferImpl
     {
         // This should be assigned when calling bind_pipeline render command
-        PipelineImpl* pPipelineImpl = nullptr;
+        const Pipeline* pBoundPipeline = nullptr;
 
         // Used to determine glDrawElements' type
         IndexType drawIndexedType = IndexType::INDEX_TYPE_NONE;

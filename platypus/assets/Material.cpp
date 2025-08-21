@@ -89,7 +89,6 @@ namespace platypus
         _shininess(shininess),
         _shadeless(shadeless)
     {
-
         _descriptorSetLayout = { create_descriptor_set_layout_bindings(normalTextureID != NULL_ID) };
     }
 

@@ -43,7 +43,7 @@ namespace platypus
         GL_FUNC(glBindVertexArray(0));
 
         // Make sure this cmd buf is unable to touch any pipeline until calling bindPipeline() again
-        _pImpl->pPipelineImpl = nullptr;
+        _pImpl->pBoundPipeline = nullptr;
         _pImpl->drawIndexedType = IndexType::INDEX_TYPE_NONE;
     }
 

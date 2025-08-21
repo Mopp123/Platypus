@@ -104,18 +104,17 @@ namespace platypus
         )
         {
             PipelineImpl* pPipelineImpl = pipeline.getImpl();
-            ((CommandBufferImpl*)commandBuffer.getImpl())->pPipelineImpl = pPipelineImpl;
+            ((CommandBufferImpl*)commandBuffer.getImpl())->pBoundPipeline = &pipeline;
 
             // Testing getting rid of UniformInfos
             // Reset useLocationIndex from "prev round"
             pPipelineImpl->useLocationIndex = 0;
 
-            FrontFace frontFace = pPipelineImpl->frontFace;
-            GL_FUNC(glFrontFace(frontFace == FrontFace::FRONT_FACE_COUNTER_CLOCKWISE ? GL_CCW : GL_CW));
+            GL_FUNC(glFrontFace(pipeline.getFaceWindingOrder() == FrontFace::FRONT_FACE_COUNTER_CLOCKWISE ? GL_CCW : GL_CW));
 
             GL_FUNC(glUseProgram(pPipelineImpl->pShaderProgram->getID()));
 
-            if (pPipelineImpl->enableDepthTest)
+            if (pipeline.isDepthTestEnabled())
             {
                 GL_FUNC(glEnable(GL_DEPTH_TEST));
             }
@@ -124,7 +123,7 @@ namespace platypus
                 GL_FUNC(glDisable(GL_DEPTH_TEST));
             }
 
-            switch(pPipelineImpl->depthCmpOp)
+            switch(pipeline.getDepthCompareOperation())
             {
                 case DepthCompareOperation::COMPARE_OP_NEVER:
                     GL_FUNC(glDepthFunc(GL_NEVER));
@@ -152,7 +151,7 @@ namespace platypus
                     break;
             }
 
-            switch (pPipelineImpl->cullMode)
+            switch (pipeline.getCullMode())
             {
                 case CullMode::CULL_MODE_NONE:
                     GL_FUNC(glDisable(GL_CULL_FACE));
@@ -173,7 +172,7 @@ namespace platypus
                     break;
             }
 
-            if (pPipelineImpl->enableColorBlending)
+            if (pipeline.isColorBlendEnabled())
             {
                 GL_FUNC(glEnable(GL_BLEND));
                 // TODO: allow specifying this
@@ -209,15 +208,16 @@ namespace platypus
         }
 
 
-        static void create_vao(const PipelineImpl* pPipelineImpl, const std::vector<const Buffer*>& vertexBuffers)
+        static void create_vao(
+            const OpenglShaderProgram* pShaderProgram,
+            const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+            const std::vector<const Buffer*>& vertexBuffers
+        )
         {
             ContextImpl* pContextImpl = Context::get_impl();
-            const OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
-            const std::vector<int32_t>& shaderAttribLocations = pShaderProgram->getAttribLocations();
-            const std::vector<VertexBufferLayout>& vbLayouts = pPipelineImpl->vertexBufferLayouts;
 
             // Not sure if this stuff works here well...
-            std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vbLayouts.begin();
+            std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vertexBufferLayouts.begin();
 
             uint32_t vaoID = 0;
             std::set<uint32_t> bufferIDs;
@@ -227,7 +227,7 @@ namespace platypus
             for (const Buffer* pBuffer : vertexBuffers)
             {
                 // NOTE: Could maybe remove this kind of checking on release build?
-                if (vbLayoutIt == vbLayouts.end())
+                if (vbLayoutIt == vertexBufferLayouts.end())
                     Debug::log(
                         "@bind_vertex_buffers "
                         "No layout exists for inputted buffer",
@@ -347,11 +347,18 @@ namespace platypus
             const std::vector<const Buffer*>& vertexBuffers
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+            const Pipeline* pPipeline = commandBuffer.getImpl()->pBoundPipeline;
+            PipelineImpl* pPipelineImpl = pPipeline->getImpl();
 
             uint32_t vaoID = get_common_vao(vertexBuffers);
             if (vaoID == 0)
-                create_vao(pPipelineImpl, vertexBuffers);
+            {
+                create_vao(
+                    pPipelineImpl->pShaderProgram,
+                    pPipeline->getVertexBufferLayouts(),
+                    vertexBuffers
+                );
+            }
 
             GL_FUNC(glBindVertexArray(vaoID));
         }
@@ -399,7 +406,7 @@ namespace platypus
             std::vector<UniformInfo> glUniformInfo // Only used on opengl side NOTE: Why this passed by value!?
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pBoundPipeline->getImpl();
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
@@ -505,7 +512,7 @@ namespace platypus
             const std::vector<uint32_t>& offsets
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pBoundPipeline->getImpl();
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 

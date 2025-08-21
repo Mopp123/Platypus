@@ -107,8 +107,7 @@ namespace platypus
     }
 
     // TODO: Enable depth (and stencil) testing (assign pipelineCreateInfo.pDepthStencilState which is nullptr atm)
-    void Pipeline::create(
-    )
+    void Pipeline::create()
     {
         VkDevice device = Device::get_impl()->device;
         // Get vulkan handles from out vertexBufferLayouts
