@@ -71,7 +71,8 @@ namespace platypus
             rotation,
             scale,
             jointMatrix,
-            Matrix4f(1.0f) // Inverse bind matrices are taken from gltf buffer
+            Matrix4f(1.0f), // Inverse bind matrices are taken from gltf buffer
+            node.name
         };
         const std::vector<int>& children = node.children;
         pose.joints.push_back(joint);

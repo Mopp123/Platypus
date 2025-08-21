@@ -3,15 +3,19 @@
 #include "platypus/ecs/components/Transform.h"
 #include <string>
 
+
 using namespace platypus;
 
-entityID_t create_animated_entity(
+static entityID_t create_animated_entity(
     Scene* pScene,
     Mesh* pMesh,
     const Pose& bindPose,
     SkeletalAnimationData* pAnimationAsset,
     Material* pMaterial,
-    Vector3f position
+    Vector3f position,
+    Quaternion rotation,
+    Vector3f scale,
+    std::vector<entityID_t>& outJointEntities
 )
 {
     // Create entity containing the skeleton
@@ -20,15 +24,15 @@ entityID_t create_animated_entity(
     create_transform(
         entity,
         position,
-        { { 0, 1, 0 }, 0.0f},
-        { 1, 1, 1 }
+        rotation,
+        scale
     );
 
-    std::vector<entityID_t> jointEntities = create_skeleton(
+    outJointEntities = create_skeleton(
         bindPose.joints,
         bindPose.jointChildMapping
     );
-    entityID_t rootJointEntity = jointEntities[0];
+    entityID_t rootJointEntity = outJointEntities[0];
     create_skinned_mesh_renderable(
         rootJointEntity,
         pMesh->getID(),
@@ -46,31 +50,37 @@ entityID_t create_animated_entity(
 }
 
 
-// For helping debugging joint transforms
-void create_joint_boxes(
-    Scene* pScene,
-    Mesh* pBoxMesh,
-    Material* pBoxMaterial,
-    std::vector<entityID_t>& jointEntities
+static void glue_to_joint(
+    entityID_t entity,
+    std::vector<entityID_t>& jointEntities,
+    Pose& bindPose,
+    std::string jointName
 )
 {
-    const float cubeScale = 0.3f;
-    for (size_t i = 0; i < jointEntities.size(); ++i)
+    // Find correct joint index
+    int jointIndex = 0;
+    bool found = false;
+    for (int i = 0; i < bindPose.joints.size(); ++i)
     {
-        entityID_t e = pScene->createEntity();
-        create_transform(
-            e,
-            { 0, 0, 0 },
-            { { 0, 1, 0}, 0.0f },
-            { cubeScale, cubeScale, cubeScale }
-        );
-        add_child(jointEntities[i], e);
-        create_static_mesh_renderable(
-            e,
-            pBoxMesh->getID(),
-            pBoxMaterial->getID()
-        );
+        if (bindPose.joints[i].name == jointName)
+        {
+            jointIndex = i;
+            found = true;
+            break;
+        }
     }
+    if (!found)
+    {
+        Debug::log(
+            "@create_joint_box "
+            "No joint found with name: " + jointName,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+    entityID_t jointEntity = jointEntities[jointIndex];
+
+    add_child(jointEntity, entity);
 }
 
 
@@ -102,15 +112,32 @@ void SkinnedMeshTestScene::init()
 
     std::vector<Pose> bindPoses;
     std::vector<std::vector<Pose>> animations;
-
     Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/SkeletonTest3.glb",
         bindPoses,
         animations
     );
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
+    SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
+        1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
+        bindPoses[0],
+        animations[0]
+    );
 
-    // Create box entity for all skeleton model's joints
+    std::vector<Pose> pistolBindPoses;
+    std::vector<std::vector<Pose>> pistolAnimations;
+    Model* pPistolModel = pAssetManager->loadModel(
+        "assets/models/Pistol.glb",
+        pistolBindPoses,
+        pistolAnimations
+    );
+    Mesh* pPistolMesh = pPistolModel->getMeshes()[0];
+    SkeletalAnimationData* pPistolAnimationAsset = pAssetManager->createSkeletalAnimation(
+        1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
+        pistolBindPoses[0],
+        pistolAnimations[0]
+    );
+
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
@@ -120,6 +147,11 @@ void SkinnedMeshTestScene::init()
 
     Texture* pDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/characterTest.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        textureSampler
+    );
+    Texture* pPistolTexture = pAssetManager->loadTexture(
+        "assets/textures/Pistol.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
@@ -136,6 +168,13 @@ void SkinnedMeshTestScene::init()
         0.8f,
         16.0f
     );
+    Material* pPistolMaterial = pAssetManager->createMaterial(
+        pPistolTexture->getID(),
+        pAssetManager->getWhiteTexture()->getID(),
+        NULL_ID,
+        0.8f,
+        16.0f
+    );
     Material* pBoxMaterial = pAssetManager->createMaterial(
         pBoxDiffuseTexture->getID(),
         pAssetManager->getWhiteTexture()->getID(),
@@ -145,13 +184,9 @@ void SkinnedMeshTestScene::init()
     );
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
-    SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
-        1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
-        bindPoses[0],
-        animations[0]
-    );
 
-    int area = 10;
+    /*
+    int area = 1;
     float spacing = 3.0f;
     for (int x = 0; x < area; ++x)
     {
@@ -167,6 +202,64 @@ void SkinnedMeshTestScene::init()
             );
         }
     }
+    */
+    float animatedEntityScale = 1.0f;
+    std::vector<entityID_t> jointEntities;
+    entityID_t animatedEntity = create_animated_entity(
+        this,
+        pAnimatedMesh,
+        bindPoses[0],
+        pAnimationAsset,
+        pMaterial,
+        { 0, 0, -1 },
+        { { 0, 1, 0}, 0.0f },
+        { animatedEntityScale, animatedEntityScale, animatedEntityScale },
+        jointEntities
+    );
+
+
+    const float cubeScale = 0.3f;
+    entityID_t boxEntity = createEntity();
+    create_transform(
+        boxEntity,
+        { 0, 0, 0 },
+        { { 0, 1, 0}, 0.0f },
+        { cubeScale, cubeScale, cubeScale }
+    );
+    create_static_mesh_renderable(
+        boxEntity,
+        pBoxModel->getMeshes()[0]->getID(),
+        pBoxMaterial->getID()
+    );
+
+    glue_to_joint(
+        boxEntity,
+        jointEntities,
+        bindPoses[0],
+        "hand0"
+    );
+
+    float pistolScale = 0.125f;
+    std::vector<entityID_t> pistolJointEntities;
+    entityID_t pistolEntity = create_animated_entity(
+        this,
+        pPistolMesh,
+        pistolBindPoses[0],
+        pPistolAnimationAsset,
+        pPistolMaterial,
+        { 0, 0.15f, 0 },
+        { { 1, 0, 0}, PLATY_MATH_PI * -0.5f },
+        { pistolScale, pistolScale, pistolScale },
+        pistolJointEntities
+    );
+
+    glue_to_joint(
+        pistolEntity,
+        jointEntities,
+        bindPoses[0],
+        "hand1"
+    );
+
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,
