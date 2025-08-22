@@ -110,10 +110,7 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
-        const Matrix4f& perspectiveProjectionMatrix,
-        const Matrix4f& orthographicProjectionMatrix,
-        const DescriptorSet& cameraDescriptorSet,
-        const DescriptorSet& dirLightDescriptorSet,
+        const DescriptorSet& commonDescriptorSet,
         size_t frame
     )
     {
@@ -172,18 +169,6 @@ namespace platypus
                 *batchData.pMaterial->getPipelineData()->pPipeline
             );
 
-            Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };
-            render::push_constants(
-                currentCommandBuffer,
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                0,
-                sizeof(Matrix4f),
-                pushConstants,
-                {
-                    { 0, ShaderDataType::Mat4 }
-                }
-            );
-
             render::bind_vertex_buffers(
                 currentCommandBuffer,
                 {
@@ -194,8 +179,7 @@ namespace platypus
             render::bind_index_buffer(currentCommandBuffer, batchData.pIndexBuffer);
 
             std::vector<DescriptorSet> descriptorSetsToBind = {
-                cameraDescriptorSet,
-                dirLightDescriptorSet,
+                commonDescriptorSet,
                 batchData.pMaterial->getDescriptorSets()[_currentFrame]
             };
 

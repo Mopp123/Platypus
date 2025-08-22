@@ -186,9 +186,9 @@ void SkinnedMeshTestScene::init()
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
 
+    int area = 10;
+    float spacing = 3.25f;
     /*
-    int area = 1;
-    float spacing = 3.0f;
     for (int x = 0; x < area; ++x)
     {
         for (int z = 0; z < area; ++z)
@@ -204,61 +204,69 @@ void SkinnedMeshTestScene::init()
         }
     }
     */
-    float animatedEntityScale = 1.0f;
-    entityID_t animatedEntity = create_animated_entity(
-        this,
-        pAnimatedMesh,
-        bindPoses[0],
-        pAnimationAsset,
-        pMaterial,
-        { 0, 0, -1 },
-        { { 0, 1, 0}, 0.0f },
-        { animatedEntityScale, animatedEntityScale, animatedEntityScale },
-        _jointEntities
-    );
 
+    for (int x = 0; x < area; ++x)
+    {
+        for (int z = 0; z < area; ++z)
+        {
+            float animatedEntityScale = 1.0f;
+            entityID_t animatedEntity = create_animated_entity(
+                this,
+                pAnimatedMesh,
+                bindPoses[0],
+                pAnimationAsset,
+                pMaterial,
+                { x * spacing, 0, -z * spacing },
+                { { 0, 1, 0}, 0.0f },
+                { animatedEntityScale, animatedEntityScale, animatedEntityScale },
+                _jointEntities
+            );
 
-    const float cubeScale = 0.3f;
-    entityID_t boxEntity = createEntity();
-    create_transform(
-        boxEntity,
-        { 0, 0, 0 },
-        { { 0, 1, 0}, 0.0f },
-        { cubeScale, cubeScale, cubeScale }
-    );
-    create_static_mesh_renderable(
-        boxEntity,
-        pBoxModel->getMeshes()[0]->getID(),
-        pBoxMaterial->getID()
-    );
+            /*
+            const float cubeScale = 0.3f;
+            entityID_t boxEntity = createEntity();
+            create_transform(
+                boxEntity,
+                { 0, 0, 0 },
+                { { 0, 1, 0}, 0.0f },
+                { cubeScale, cubeScale, cubeScale }
+            );
+            create_static_mesh_renderable(
+                boxEntity,
+                pBoxModel->getMeshes()[0]->getID(),
+                pBoxMaterial->getID()
+            );
 
-    glue_to_joint(
-        boxEntity,
-        _jointEntities,
-        bindPoses[0],
-        "hand0"
-    );
+            glue_to_joint(
+                boxEntity,
+                _jointEntities,
+                bindPoses[0],
+                "hand0"
+            );
 
-    float pistolScale = 0.125f;
-    std::vector<entityID_t> pistolJointEntities;
-    entityID_t pistolEntity = create_animated_entity(
-        this,
-        pPistolMesh,
-        pistolBindPoses[0],
-        pPistolAnimationAsset,
-        pPistolMaterial,
-        { 0, 0.15f, 0 },
-        { { 1, 0, 0}, PLATY_MATH_PI * -0.5f },
-        { pistolScale, pistolScale, pistolScale },
-        pistolJointEntities
-    );
+            float pistolScale = 0.125f;
+            std::vector<entityID_t> pistolJointEntities;
+            entityID_t pistolEntity = create_animated_entity(
+                this,
+                pPistolMesh,
+                pistolBindPoses[0],
+                pPistolAnimationAsset,
+                pPistolMaterial,
+                { 0, 0.15f, 0 },
+                { { 1, 0, 0}, PLATY_MATH_PI * -0.5f },
+                { pistolScale, pistolScale, pistolScale },
+                pistolJointEntities
+            );
 
-    glue_to_joint(
-        pistolEntity,
-        _jointEntities,
-        bindPoses[0],
-        "hand1"
-    );
+            glue_to_joint(
+                pistolEntity,
+                _jointEntities,
+                bindPoses[0],
+                "hand1"
+            );
+            */
+        }
+    }
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,
@@ -289,6 +297,7 @@ void SkinnedMeshTestScene::update()
     _camController.update();
 
     // Test removing entities, especially from the middle of the hierarchy
+    /*
     InputManager& inputManager = Application::get_instance()->getInputManager();
     if (inputManager.isKeyDown(KeyName::KEY_TAB) && !s_tabDown)
     {
@@ -315,4 +324,5 @@ void SkinnedMeshTestScene::update()
     }
     if (!inputManager.isKeyDown(KeyName::KEY_BACKSPACE) && s_backspaceDown)
         s_backspaceDown = false;
+    */
 }

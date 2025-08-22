@@ -98,18 +98,23 @@ namespace platypus
 
         _descriptorSetLayout.destroy();
         // TODO: Unfuck below
+        // NOTE: Important that the pipeline gets destroyed before shaders,
+        // since the web implementation detaches the shaders from opengl
+        // shader program on pipeline destruction.
+        //  -> if shaders destroyed before pipeline, the detaching in
+        //  OpenglShaderProgram breaks
         if (_pPipelineData)
         {
+            delete _pPipelineData->pPipeline;
             delete _pPipelineData->pVertexShader;
             delete _pPipelineData->pFragmentShader;
-            delete _pPipelineData->pPipeline;
             delete _pPipelineData;
         }
         if (_pSkinnedPipelineData)
         {
+            delete _pSkinnedPipelineData->pPipeline;
             delete _pSkinnedPipelineData->pVertexShader;
             delete _pSkinnedPipelineData->pFragmentShader;
-            delete _pSkinnedPipelineData->pPipeline;
             delete _pSkinnedPipelineData;
         }
     }
@@ -221,32 +226,14 @@ namespace platypus
     {
         bool created = false;
 
-        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
-        const Extent2D swapchainExtent = swapchain.getExtent();
-        const uint32_t viewportWidth = (uint32_t)swapchainExtent.width;
-        const uint32_t viewportHeight = (uint32_t)swapchainExtent.height;
-        Rect2D viewportScissor = { 0, 0, viewportWidth, viewportHeight };
-
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         if (_pPipelineData)
         {
-            std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-                pMasterRenderer->getCameraDescriptorSetLayout(),
-                pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
-                _descriptorSetLayout
-            };
             _pPipelineData->pPipeline->create();
             created = true;
         }
 
         if (_pSkinnedPipelineData)
         {
-            std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-                pMasterRenderer->getCameraDescriptorSetLayout(),
-                pMasterRenderer->getDirectionalLightDescriptorSetLayout(),
-                pMasterRenderer->getSkinnedMeshRenderer()->getDescriptorSetLayout(),
-                _descriptorSetLayout
-            };
             _pSkinnedPipelineData->pPipeline->create();
             created = true;
         }

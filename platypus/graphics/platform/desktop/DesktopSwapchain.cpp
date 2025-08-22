@@ -381,7 +381,11 @@ namespace platypus
             VK_IMAGE_ASPECT_COLOR_BIT,
             1
         );
-        _pImpl->maxFramesInFlight = _imageCount - 1;
+        // NOTE: Not sure should this be handle this way...
+        if (_imageCount > 1)
+            _pImpl->maxFramesInFlight = _imageCount - 1;
+        else
+            _pImpl->maxFramesInFlight = 1;
 
         create_depth_texture(
             device,

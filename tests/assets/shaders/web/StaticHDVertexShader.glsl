@@ -6,34 +6,22 @@ attribute vec2 texCoord;
 attribute vec4 tangent;
 attribute mat4 transformationMatrix;
 
-struct Constants
+struct SceneData
 {
     mat4 projectionMatrix;
-};
-uniform Constants constants;
-
-
-struct Camera
-{
-    vec4 position;
     mat4 viewMatrix;
+    vec4 cameraPosition;
+    vec4 lightDirection;
+    vec4 lightColor;
+    vec4 ambientLightColor;
 };
-uniform Camera camera;
-
-
-struct DirectionalLight
-{
-    vec4 direction;
-    vec4 color;
-};
-uniform DirectionalLight directionalLight;
-
+uniform SceneData sceneData;
 
 varying vec2 var_texCoord;
 varying vec3 var_toCamera; // in tangent space
 varying vec3 var_lightDir; // in tangent space
 varying vec4 var_lightColor;
-
+varying vec4 var_ambientLightColor;
 
 mat3 transpose(mat3 matrix)
 {
@@ -48,15 +36,14 @@ mat3 transpose(mat3 matrix)
     return result;
 }
 
-
+// OLD BELOW -> seems solved for now..
 // NOTE: ISSUES!
 // It seems with specularity as if the light is coming from the opposite direction
 void main() {
-    mat4 toCameraSpace = camera.viewMatrix * transformationMatrix;
+    mat4 toCameraSpace = sceneData.viewMatrix * transformationMatrix;
     vec4 transformedPos = transformationMatrix * vec4(position, 1.0);
-    gl_Position = constants.projectionMatrix * camera.viewMatrix * transformedPos;
+    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;
     var_texCoord = texCoord;
-
 
     vec3 transformedNormal = normalize(toCameraSpace * vec4(normal, 0.0)).xyz;
 
@@ -69,10 +56,11 @@ void main() {
     mat3 toTangentSpace = mat3(transformedTangent, biTangent, transformedNormal);
     toTangentSpace = transpose(toTangentSpace);
 
-    vec3 toCam = camera.position.xyz - transformedPos.xyz;
-    var_toCamera = normalize(toTangentSpace * (camera.viewMatrix * vec4(toCam, 0.0)).xyz);
+    vec3 toCam = sceneData.cameraPosition.xyz - transformedPos.xyz;
+    var_toCamera = normalize(toTangentSpace * (sceneData.viewMatrix * vec4(toCam, 0.0)).xyz);
 
-    var_lightDir = toTangentSpace * (camera.viewMatrix * vec4(directionalLight.direction.xyz, 0.0)).xyz;
+    var_lightDir = toTangentSpace * (sceneData.viewMatrix * vec4(sceneData.lightDirection.xyz, 0.0)).xyz;
 
-    var_lightColor = directionalLight.color;
+    var_lightColor = sceneData.lightColor;
+    var_ambientLightColor = sceneData.ambientLightColor;
 }

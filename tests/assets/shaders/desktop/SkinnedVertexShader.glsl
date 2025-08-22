@@ -7,29 +7,19 @@ layout(location = 2) in vec2 texCoord;
 layout(location = 3) in vec4 weights;
 layout(location = 4) in vec4 jointIDs;
 
-
-layout(push_constant) uniform Constants
+layout(set = 0, binding = 0) uniform SceneData
 {
     mat4 projectionMatrix;
-} constants;
-
-
-layout(set = 0, binding = 0) uniform Camera
-{
-    vec4 position;
     mat4 viewMatrix;
-} camera;
-
-
-layout(set = 1, binding = 0) uniform DirectionalLight
-{
-    vec4 direction;
-    vec4 color;
-} directionalLight;
+    vec4 cameraPosition;
+    vec4 lightDirection;
+    vec4 lightColor;
+    vec4 ambientLightColor;
+} sceneData;
 
 
 const int maxJoints = 50;
-layout(set = 2, binding = 0) uniform JointData
+layout(set = 1, binding = 0) uniform JointData
 {
     mat4 data[maxJoints];
 } jointData;
@@ -40,12 +30,12 @@ layout(location = 2) out vec3 var_fragPos;
 layout(location = 3) out vec3 var_cameraPos;
 layout(location = 4) out vec3 var_lightDir;
 layout(location = 5) out vec4 var_lightColor;
+layout(location = 6) out vec4 var_ambientLightColor;
 
 void main() {
     //vec4 translatedPos = constants.transformationMatrix * vec4(position, 1.0);
     //gl_Position = constants.projectionMatrix * camera.viewMatrix * translatedPos;
     //vec4 rotatedNormal = constants.transformationMatrix * vec4(normal, 0.0);
-
 
     float weightSum = weights[0] + weights[1] + weights[2] + weights[3];
     mat4 jointTransform = jointData.data[0];
@@ -62,14 +52,15 @@ void main() {
     }
 
     vec4 translatedPos = jointTransform * vec4(position, 1.0);
-    gl_Position = constants.projectionMatrix * camera.viewMatrix * translatedPos;
+    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
     vec4 rotatedNormal = vec4(normal, 0.0);
 
     var_normal = rotatedNormal.xyz;
     var_texCoord = texCoord;
     var_fragPos = translatedPos.xyz;
-    var_cameraPos = camera.position.xyz;
+    var_cameraPos = sceneData.cameraPosition.xyz;
 
-    var_lightDir = directionalLight.direction.xyz;
-    var_lightColor = directionalLight.color;
+    var_lightDir = sceneData.lightDirection.xyz;
+    var_lightColor = sceneData.lightColor;
+    var_ambientLightColor = sceneData.ambientLightColor;
 }

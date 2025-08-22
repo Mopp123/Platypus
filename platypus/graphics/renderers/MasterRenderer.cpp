@@ -16,7 +16,8 @@ namespace platypus
     ) :
         _swapchain(window),
         _descriptorPool(_swapchain),
-        _cameraDescriptorSetLayout(
+
+        _scene3DDataDescriptorSetLayout(
             {
                 {
                     0,
@@ -24,72 +25,39 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     {
-                        { 1, ShaderDataType::Float4 },
-                        { 2, ShaderDataType::Mat4 }
-                    }
-                }
-            }
-        ),
-        _dirLightDescriptorSetLayout(
-            {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                    {
+                        { 0, ShaderDataType::Mat4 },
+                        { 1, ShaderDataType::Mat4 },
+                        { 2, ShaderDataType::Float4 },
                         { 3, ShaderDataType::Float4 },
-                        { 4, ShaderDataType::Float4 }
+                        { 4, ShaderDataType::Float4 },
+                        { 5, ShaderDataType::Float4 }
                     }
                 }
             }
         )
     {
         // Create common uniform buffers and descriptor sets
-        CameraUniformBufferData cameraUniformBufferData;
+        Scene3DData scene3DData;
         for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
         {
-            Buffer* pCameraUniformBuffer = new Buffer(
+            Buffer* pScene3DDataUniformBuffer = new Buffer(
                 _commandPool,
-                &cameraUniformBufferData,
-                sizeof(CameraUniformBufferData),
+                &scene3DData,
+                sizeof(scene3DData),
                 1,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
                 true
             );
-            _cameraUniformBuffer.push_back(pCameraUniformBuffer);
+            _scene3DDataUniformBuffers.push_back(pScene3DDataUniformBuffer);
 
-            _cameraDescriptorSets.push_back(
+            _scene3DDescriptorSets.push_back(
                 _descriptorPool.createDescriptorSet(
-                    &_cameraDescriptorSetLayout,
-                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pCameraUniformBuffer } }
+                    &_scene3DDataDescriptorSetLayout,
+                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pScene3DDataUniformBuffer } }
                 )
             );
         }
-
-        DirLightUniformBufferData dirLightUniformBufferData;
-        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
-        {
-            Buffer* pDirLightUniformBuffer = new Buffer(
-                _commandPool,
-                &dirLightUniformBufferData,
-                sizeof(DirLightUniformBufferData),
-                1,
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            _dirLightUniformBuffer.push_back(pDirLightUniformBuffer);
-
-            _dirLightDescriptorSets.push_back(
-                _descriptorPool.createDescriptorSet(
-                    &_dirLightDescriptorSetLayout,
-                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pDirLightUniformBuffer } }
-                )
-            );
-        }
-
 
         _pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
             *this,
@@ -118,15 +86,12 @@ namespace platypus
 
     MasterRenderer::~MasterRenderer()
     {
-        for (Buffer* pBuffer : _cameraUniformBuffer)
-            delete pBuffer;
-        _cameraUniformBuffer.clear();
-        _cameraDescriptorSetLayout.destroy();
+        _descriptorPool.freeDescriptorSets(_scene3DDescriptorSets);
 
-        for (Buffer* pBuffer : _dirLightUniformBuffer)
+        for (Buffer* pBuffer : _scene3DDataUniformBuffers)
             delete pBuffer;
-        _dirLightUniformBuffer.clear();
-        _dirLightDescriptorSetLayout.destroy();
+        _scene3DDataUniformBuffers.clear();
+        _scene3DDataDescriptorSetLayout.destroy();
     }
 
     void MasterRenderer::cleanRenderers()
@@ -313,6 +278,8 @@ namespace platypus
             perspectiveProjectionMatrix = pCamera->perspectiveProjectionMatrix;
             orthographicProjectionMatrix = pCamera->orthographicProjectionMatrix;
         }
+        _scene3DData.perspectiveProjectionMatrix = perspectiveProjectionMatrix;
+
         if (pCameraTransform)
         {
             const Matrix4f cameraTransformationMatrix = pCameraTransform->globalMatrix;
@@ -321,13 +288,8 @@ namespace platypus
             cameraPosition.z = cameraTransformationMatrix[2 + 3 * 4];
             viewMatrix = cameraTransformationMatrix.inverse();
         }
-
-        CameraUniformBufferData cameraUniformBufferData = { cameraPosition, viewMatrix };
-        _cameraUniformBuffer[frame]->updateDeviceAndHost(
-            &cameraUniformBufferData,
-            sizeof(CameraUniformBufferData),
-            0
-        );
+        _scene3DData.cameraPosition = cameraPosition;
+        _scene3DData.viewMatrix = viewMatrix;
 
         const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(
             ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
@@ -335,26 +297,37 @@ namespace platypus
         );
         if (!pDirectionalLight)
         {
-            _useDirLightData = { { 0, 0, 0, 1.0f }, { 0, 0, 0, 1.0f } };
+            // TODO: Normalize
+            _scene3DData.lightDirection = { 0.75f, -1.5f, -1.0f, 0.0f };
+            _scene3DData.lightColor = { 0, 0, 0, 1 };
         }
         else
         {
-            _useDirLightData.direction = {
+            _scene3DData.lightDirection = {
                 pDirectionalLight->direction.x,
                 pDirectionalLight->direction.y,
                 pDirectionalLight->direction.z,
-                1.0f
+                0.0f
             };
-            _useDirLightData.color = {
+            _scene3DData.lightColor = {
                 pDirectionalLight->color.r,
                 pDirectionalLight->color.g,
                 pDirectionalLight->color.b,
                 1.0f
             };
         }
-        _dirLightUniformBuffer[frame]->updateDeviceAndHost(
-            &_useDirLightData,
-            sizeof(DirLightUniformBufferData),
+
+        const Vector3f sceneAmbientLight = pScene->environmentProperties.ambientColor;
+        _scene3DData.ambientLightColor = {
+            sceneAmbientLight.r,
+            sceneAmbientLight.g,
+            sceneAmbientLight.b,
+            1.0f
+        };
+
+        _scene3DDataUniformBuffers[frame]->updateDeviceAndHost(
+            &_scene3DData,
+            sizeof(Scene3DData),
             0
         );
 
@@ -367,10 +340,7 @@ namespace platypus
                     _swapchain.getRenderPass(),
                     swapchainExtent.width,
                     swapchainExtent.height,
-                    perspectiveProjectionMatrix,
-                    orthographicProjectionMatrix,
-                    _cameraDescriptorSets[frame],
-                    _dirLightDescriptorSets[frame],
+                    _scene3DDescriptorSets[frame],
                     frame // NOTE: no idea should this be the "frame index" or "image index"
                 )
             );

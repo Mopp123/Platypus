@@ -14,19 +14,15 @@
 
 namespace platypus
 {
-    struct CameraUniformBufferData
+    struct Scene3DData
     {
-        Vector4f position;
+        Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
+        Vector4f cameraPosition = Vector4f(0, 0, 0, 1);
+        Vector4f lightDirection = Vector4f(0, 0, 0, 0);
+        Vector4f lightColor = Vector4f(1, 1, 1, 1);
+        Vector4f ambientLightColor = Vector4f(0.1f, 0.1f, 0.1f, 1);
     };
-
-
-    struct DirLightUniformBufferData
-    {
-        Vector4f direction = Vector4f(0, 0, 0, 1);
-        Vector4f color = Vector4f(1, 1, 1, 1);
-    };
-
 
     class MasterRenderer
     {
@@ -37,14 +33,10 @@ namespace platypus
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
         // Shared descriptor sets among multiple renderers
-        std::vector<Buffer*> _cameraUniformBuffer;
-        DescriptorSetLayout _cameraDescriptorSetLayout;
-        std::vector<DescriptorSet> _cameraDescriptorSets;
-
-        DirLightUniformBufferData _useDirLightData;
-        std::vector<Buffer*> _dirLightUniformBuffer;
-        DescriptorSetLayout _dirLightDescriptorSetLayout;
-        std::vector<DescriptorSet> _dirLightDescriptorSets;
+        Scene3DData _scene3DData;
+        std::vector<Buffer*> _scene3DDataUniformBuffers;
+        DescriptorSetLayout _scene3DDataDescriptorSetLayout;
+        std::vector<DescriptorSet> _scene3DDescriptorSets;
 
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
         std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
@@ -72,8 +64,7 @@ namespace platypus
         inline CommandPool& getCommandPool() { return _commandPool; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
-        inline const DescriptorSetLayout& getCameraDescriptorSetLayout() const { return _cameraDescriptorSetLayout; }
-        inline const DescriptorSetLayout& getDirectionalLightDescriptorSetLayout() const { return _dirLightDescriptorSetLayout; }
+        inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
 
     private:
         void allocCommandBuffers(uint32_t count);

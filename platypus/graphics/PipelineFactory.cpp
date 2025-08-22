@@ -63,8 +63,7 @@ namespace platypus
         const Shader* pUseFragmentShader = nullptr;
         const MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         std::vector<DescriptorSetLayout> useDescriptorSetLayouts = {
-            pMasterRenderer->getCameraDescriptorSetLayout(),
-            pMasterRenderer->getDirectionalLightDescriptorSetLayout()
+            pMasterRenderer->getScene3DDataDescriptorSetLayout(),
         };
         if (skinned)
         {
@@ -98,8 +97,8 @@ namespace platypus
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
             true, // Enable color blend
-            sizeof(Matrix4f), // Push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // Push constants' stage flags
+            0, // Push constants size
+            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
         );
 
         return pPipeline;

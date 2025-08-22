@@ -6,8 +6,7 @@ varying vec3 var_fragPos;
 varying vec3 var_cameraPos;
 varying vec3 var_lightDir;
 varying vec4 var_lightColor;
-
-const vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1);
+varying vec4 var_ambientLightColor;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 uniform sampler2D diffuseTextureSampler;
@@ -46,7 +45,7 @@ void main() {
     float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
     vec4 specularColor = lightColor * specularFactor * specularStrength * specularTextureColor;
 
-    vec4 finalColor = (ambientLight + lightDiffuseColor + specularColor) * diffuseTextureColor;
+    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * diffuseTextureColor;
 
     if (diffuseTextureColor.a < 0.1)
     {
