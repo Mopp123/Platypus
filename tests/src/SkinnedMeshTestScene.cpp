@@ -117,6 +117,7 @@ void SkinnedMeshTestScene::init()
         bindPoses,
         animations
     );
+    _bindPose = bindPoses[0];
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
     SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
         1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
@@ -204,7 +205,6 @@ void SkinnedMeshTestScene::init()
     }
     */
     float animatedEntityScale = 1.0f;
-    std::vector<entityID_t> jointEntities;
     entityID_t animatedEntity = create_animated_entity(
         this,
         pAnimatedMesh,
@@ -214,7 +214,7 @@ void SkinnedMeshTestScene::init()
         { 0, 0, -1 },
         { { 0, 1, 0}, 0.0f },
         { animatedEntityScale, animatedEntityScale, animatedEntityScale },
-        jointEntities
+        _jointEntities
     );
 
 
@@ -234,7 +234,7 @@ void SkinnedMeshTestScene::init()
 
     glue_to_joint(
         boxEntity,
-        jointEntities,
+        _jointEntities,
         bindPoses[0],
         "hand0"
     );
@@ -255,11 +255,10 @@ void SkinnedMeshTestScene::init()
 
     glue_to_joint(
         pistolEntity,
-        jointEntities,
+        _jointEntities,
         bindPoses[0],
         "hand1"
     );
-
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,
@@ -268,7 +267,52 @@ void SkinnedMeshTestScene::init()
     pDirLight->direction = { 0.75f, -1.5f, 1.0f };
 }
 
+static std::string get_joint_name(const Pose& bindPose, size_t index)
+{
+    if (index >= bindPose.joints.size())
+    {
+        Debug::log(
+            "@print_joint_name "
+            "Joint index (" + std::to_string(index) + ") "
+            "joint count is " + std::to_string(bindPose.joints.size()),
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+    return bindPose.joints[index].name;
+}
+
+static bool s_tabDown = false;
+static bool s_backspaceDown = false;
 void SkinnedMeshTestScene::update()
 {
     _camController.update();
+
+    // Test removing entities, especially from the middle of the hierarchy
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+    if (inputManager.isKeyDown(KeyName::KEY_TAB) && !s_tabDown)
+    {
+        s_tabDown = true;
+        _selectedJointIndex = (_selectedJointIndex + 1) % _bindPose.joints.size();
+        _selectedJointEntity = _jointEntities[_selectedJointIndex];
+        std::string selectedJointName = get_joint_name(_bindPose, _selectedJointIndex);
+        Debug::log(
+            "___TEST___Selected joint: " + selectedJointName
+        );
+    }
+    if (!inputManager.isKeyDown(KeyName::KEY_TAB) && s_tabDown)
+        s_tabDown = false;
+
+
+    if (inputManager.isKeyDown(KeyName::KEY_BACKSPACE) && !s_backspaceDown)
+    {
+        s_backspaceDown = true;
+
+        Debug::log(
+            "___TEST___deleting joint: " + get_joint_name(_bindPose, _selectedJointIndex)
+        );
+        destroyEntity(_selectedJointEntity);
+    }
+    if (!inputManager.isKeyDown(KeyName::KEY_BACKSPACE) && s_backspaceDown)
+        s_backspaceDown = false;
 }

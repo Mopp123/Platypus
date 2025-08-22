@@ -132,7 +132,7 @@ namespace platypus
         else
         {
             Debug::log(
-                "@ComponentPool::destroyComponent "
+                "@ComponentPool(" + component_type_to_string(_componentType) + ")::destroyComponent "
                 "Invalid entityID: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -146,7 +146,7 @@ namespace platypus
         if (_entityOffsetMapping.find(entityID) == _entityOffsetMapping.end())
         {
             Debug::log(
-                "@ComponentPool::operator[] (1)"
+                "@ComponentPool(" + component_type_to_string(_componentType) + ") operator[] (1) "
                 "Failed to find entity: " + std::to_string(entityID) + " from pool",
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -164,7 +164,7 @@ namespace platypus
         if (it == _entityOffsetMapping.end())
         {
             Debug::log(
-                "@ComponentPool::operator[] (2)"
+                "@ComponentPool(" + component_type_to_string(_componentType) + ") operator[] (2) "
                 "Failed to find entity: " + std::to_string(entityID) + " from pool",
                 Debug::MessageType::PLATYPUS_ERROR
             );

@@ -302,7 +302,7 @@ namespace platypus
         ++pChildren->count;
 
         void* pParentComponent = pScene->allocateComponent(
-            target,
+            child,
             ComponentType::COMPONENT_TYPE_PARENT
         );
         if (!pParentComponent)
@@ -331,5 +331,69 @@ namespace platypus
             pChildTransform->localMatrix = pChildTransform->globalMatrix;
             pChildTransform->globalMatrix = Matrix4f(1.0f);
         }
+    }
+
+    void remove_child(entityID_t target, entityID_t child)
+    {
+        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        pScene->destroyComponent(child, ComponentType::COMPONENT_TYPE_PARENT);
+        Children* pChildren = (Children*)pScene->getComponent(
+            target,
+            ComponentType::COMPONENT_TYPE_CHILDREN
+        );
+        for (size_t i = 0; i < pChildren->count; ++i)
+        {
+            if (pChildren->entityIDs[i] == child)
+            {
+                pChildren->entityIDs[i] = NULL_ENTITY_ID;
+                pChildren->count -= 1;
+                if (pChildren->count == 0)
+                {
+                    pScene->destroyComponent(target, ComponentType::COMPONENT_TYPE_CHILDREN);
+                    Debug::log(
+                        "@remove_child "
+                        "Last child of entity: " + std::to_string(target) + " destroyed. "
+                        "Children component destroyed"
+                    );
+                }
+                pack_children(pChildren, i);
+                return;
+            }
+        }
+        Debug::log(
+            "@remove_child "
+            "No child entity found with ID: " + std::to_string(child) + " "
+            "from parent entity: " + std::to_string(target),
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+
+    void pack_children(Children* pChildren, size_t freedPosition)
+    {
+        // This should never happen since this gets called ONLY when children are removed
+        //  -> I don't trust myself tho...
+        if (pChildren->count >= PLATYPUS_MAX_CHILD_ENTITIES)
+        {
+            Debug::log(
+                "@defrag_children "
+                "Child count (" + std::to_string(pChildren->count) + ") "
+                "exceeded maximum limit (" + std::to_string(PLATYPUS_MAX_CHILD_ENTITIES) + ") "
+                "THIS SHOULD NEVER HAPPEN WHEN CALLING THIS FUCNTION! YOU'VE DONE FUCKED UP!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        std::vector<entityID_t> temp(pChildren->count);
+        // We're moving all IDs one slot back from freedPosition
+        // count + 1 since the last removal already decreased it
+        for (size_t i = freedPosition + 1; i < pChildren->count + 1; ++i)
+        {
+            entityID_t childID = pChildren->entityIDs[i];
+            pChildren->entityIDs[i - 1] = childID;
+        }
+        // Make last pos NULL_ENTITY since otherwise the last id gets duplicated
+        pChildren->entityIDs[pChildren->count] = NULL_ENTITY_ID;
     }
 }

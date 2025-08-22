@@ -69,4 +69,8 @@ namespace platypus
     );
 
     void add_child(entityID_t target, entityID_t child);
+    void remove_child(entityID_t target, entityID_t child);
+    // Moves all children after freedPosition, so that all child IDs are contiguous.
+    // Calling this assumes that there was only a single gap in contiguous IDs!
+    void pack_children(Children* pChildren, size_t freedPosition);
 }
