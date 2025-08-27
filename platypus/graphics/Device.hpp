@@ -13,6 +13,7 @@ namespace platypus
         static DeviceImpl* s_pImpl;
         static Window* s_pWindow;
         static size_t s_minUniformBufferOffsetAlignment;
+        static CommandPool* s_pCommandPool;
 
     public:
         static void create(Window* pWindow);
@@ -38,6 +39,8 @@ namespace platypus
         // Required for vulkan's descriptor sets using dynamic offsets of uniform buffers.
         // For OpenGL this should be always 1
         static size_t get_min_uniform_buffer_offset_align();
+
+        static CommandPool* get_command_pool();
 
         static DeviceImpl* get_impl();
     };

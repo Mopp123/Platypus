@@ -12,9 +12,9 @@
 
 namespace platypus
 {
-    void copy_buffer(const CommandPool& commandPool, VkBuffer source, VkBuffer destination, size_t size)
+    void copy_buffer(VkBuffer source, VkBuffer destination, size_t size)
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -38,14 +38,13 @@ namespace platypus
     }
 
     void copy_buffer_to_image(
-        const CommandPool& commandPool,
         VkBuffer source,
         VkImage destination,
         uint32_t imageWidth,
         uint32_t imageHeight
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -285,7 +284,6 @@ namespace platypus
     //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
     //  and destroy staging buffer!
     Buffer::Buffer(
-        const CommandPool& commandPool,
         void* pData,
         size_t elementSize,
         size_t dataLength,
@@ -309,7 +307,6 @@ namespace platypus
         if (useStaging)
         {
             pStagingBuffer = new Buffer(
-                commandPool,
                 pData,
                 elementSize,
                 dataLength,
@@ -377,7 +374,6 @@ namespace platypus
         else
         {
             copy_buffer(
-                commandPool,
                 pStagingBuffer->_pImpl->handle,
                 _pImpl->handle,
                 getTotalSize()

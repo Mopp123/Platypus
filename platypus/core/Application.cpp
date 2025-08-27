@@ -59,20 +59,6 @@ namespace platypus
         _window(name, width, height, resizable, windowMode),
         _inputManager(_window)
     {
-        Context::create(name.c_str(), &_window);
-        Device::create(&_window);
-        _pMasterRenderer = new MasterRenderer(_window);
-        // NOTE: MasterRenderer shouldn't "own" commandPool since the commandPool is
-        // used for non rendering related stuff as well!
-        // TODO: Fix the above
-        _pAssetManager = new AssetManager(_pMasterRenderer->getCommandPool());
-
-        #ifdef PLATYPUS_DEBUG
-            Debug::log(
-                "Running platypus engine in DEBUG mode"
-            );
-        #endif
-
         if (s_pInstance)
         {
             Debug::log(
@@ -83,6 +69,25 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         s_pInstance = this;
+
+        Context::create(name.c_str(), &_window);
+        Device::create(&_window);
+
+        // NOTE: Some fucking logic how core stuff is initialized and how their
+        // lifetimes are controlled... This is fucking disgusting atm!
+        //
+        // *MasterRenderer creates only once "common shader resources" in its constructor
+        // *MasterRenderer recreates all renderers' and Materials' shader resources on
+        // window resize (on swapchain recreation)
+        _pMasterRenderer = new MasterRenderer(_window);
+
+        _pAssetManager = new AssetManager;
+
+        #ifdef PLATYPUS_DEBUG
+            Debug::log(
+                "Running platypus engine in DEBUG mode"
+            );
+        #endif
 
         _sceneManager.assignNextScene(pInitialScene);
         s_lastDisplayDelta = std::chrono::high_resolution_clock::now();
@@ -112,6 +117,12 @@ namespace platypus
 
         delete _pAssetManager;
         delete _pMasterRenderer;
+        // These shouldn't be accessed after this but ur so dumb,
+        // that you'll forget -> this to at least see that these
+        // are freed...
+        _pAssetManager = nullptr;
+        _pMasterRenderer = nullptr;
+
         Device::destroy();
         Context::destroy();
     }

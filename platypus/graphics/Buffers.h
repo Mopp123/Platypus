@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
-#include "CommandBuffer.h"
 
 
 namespace platypus
@@ -152,7 +151,6 @@ namespace platypus
         //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
         //  and destroy staging buffer
         Buffer(
-            const CommandPool& commandPool,
             void* pData,
             size_t elementSize,
             size_t dataLength,

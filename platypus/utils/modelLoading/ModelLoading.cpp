@@ -30,7 +30,6 @@ namespace platypus
     //      -> something was wrong with RiggedFigure, having something to do
     //      with multiple vertex attribs overlapping?
     bool load_gltf_model(
-        const CommandPool& commandPool,
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
         std::vector<Pose>& outBindPoses,
@@ -126,7 +125,7 @@ namespace platypus
             std::vector<MeshBufferData> indexBuffers;
             MeshBufferData vertexBuffer;
             VertexBufferLayout vertexBufferLayout;
-            if (!load_index_buffers(commandPool, gltfModel, gltfMesh, indexBuffers))
+            if (!load_index_buffers(gltfModel, gltfMesh, indexBuffers))
             {
                 Debug::log(
                     "@load_gltf_model "
@@ -146,7 +145,7 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
             }
-            if (!load_vertex_buffer(commandPool, gltfModel, gltfMesh, vertexBufferLayout, vertexBuffer))
+            if (!load_vertex_buffer(gltfModel, gltfMesh, vertexBufferLayout, vertexBuffer))
             {
                 Debug::log(
                     "@load_gltf_model "

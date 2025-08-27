@@ -16,13 +16,11 @@ namespace platypus
     size_t StaticMeshRenderer::s_maxBatchLength = 10000;
     StaticMeshRenderer::StaticMeshRenderer(
         const MasterRenderer& masterRenderer,
-        CommandPool& commandPool,
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
         Renderer(
             masterRenderer,
-            commandPool,
             descriptorPool,
             requiredComponentsMask
         )
@@ -35,7 +33,6 @@ namespace platypus
             BatchData& batchData = _batches[i];
             std::vector<Matrix4f> transformsBuffer(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
-                _commandPoolRef,
                 transformsBuffer.data(),
                 sizeof(Matrix4f),
                 transformsBuffer.size(),
@@ -178,14 +175,12 @@ namespace platypus
             );
             render::bind_index_buffer(currentCommandBuffer, batchData.pIndexBuffer);
 
-            std::vector<DescriptorSet> descriptorSetsToBind = {
-                commonDescriptorSet,
-                batchData.pMaterial->getDescriptorSets()[_currentFrame]
-            };
-
             render::bind_descriptor_sets(
                 currentCommandBuffer,
-                descriptorSetsToBind,
+                {
+                    commonDescriptorSet,
+                    batchData.pMaterial->getDescriptorSets()[_currentFrame]
+                },
                 { }
             );
 

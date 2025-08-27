@@ -11,9 +11,7 @@
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(
-        const Window& window
-    ) :
+    MasterRenderer::MasterRenderer(const Window& window) :
         _swapchain(window),
         _descriptorPool(_swapchain),
 
@@ -36,44 +34,18 @@ namespace platypus
             }
         )
     {
-        // Create common uniform buffers and descriptor sets
-        Scene3DData scene3DData;
-        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
-        {
-            Buffer* pScene3DDataUniformBuffer = new Buffer(
-                _commandPool,
-                &scene3DData,
-                sizeof(scene3DData),
-                1,
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            _scene3DDataUniformBuffers.push_back(pScene3DDataUniformBuffer);
-
-            _scene3DDescriptorSets.push_back(
-                _descriptorPool.createDescriptorSet(
-                    &_scene3DDataDescriptorSetLayout,
-                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pScene3DDataUniformBuffer } }
-                )
-            );
-        }
-
         _pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
             *this,
-            _commandPool,
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
         );
         _pSkinnedMeshRenderer = std::make_unique<SkinnedMeshRenderer>(
             *this,
-            _commandPool,
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
         );
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
-            _commandPool,
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
@@ -82,6 +54,8 @@ namespace platypus
         _renderers[_pSkinnedMeshRenderer->getRequiredComponentsMask()] = _pSkinnedMeshRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+
+        createCommonShaderResources();
     }
 
     MasterRenderer::~MasterRenderer()
@@ -164,7 +138,7 @@ namespace platypus
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
     {
-        _primaryCommandBuffers = _commandPool.allocCommandBuffers(
+        _primaryCommandBuffers = Device::get_command_pool()->allocCommandBuffers(
             count,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         );
@@ -208,6 +182,31 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
+    }
+
+    void MasterRenderer::createCommonShaderResources()
+    {
+        // Create common uniform buffers and descriptor sets
+        Scene3DData scene3DData;
+        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
+        {
+            Buffer* pScene3DDataUniformBuffer = new Buffer(
+                &scene3DData,
+                sizeof(scene3DData),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            _scene3DDataUniformBuffers.push_back(pScene3DDataUniformBuffer);
+
+            _scene3DDescriptorSets.push_back(
+                _descriptorPool.createDescriptorSet(
+                    &_scene3DDataDescriptorSetLayout,
+                    { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pScene3DDataUniformBuffer } }
+                )
+            );
+        }
     }
 
     void MasterRenderer::createShaderResources()
@@ -377,7 +376,7 @@ namespace platypus
             freeShaderResources();
             destroyPipelines();
             freeCommandBuffers();
-            allocCommandBuffers(_swapchain.getMaxFramesInFlight()); // Updated to test this...
+            allocCommandBuffers(_swapchain.getMaxFramesInFlight());
             createPipelines();
             createShaderResources();
             window.resetResized();

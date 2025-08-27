@@ -8,7 +8,6 @@
 #include "Material.h"
 #include "Font.h"
 #include "SkeletalAnimationData.h"
-#include "platypus/graphics/CommandBuffer.h"
 #include <unordered_map>
 #include <vector>
 
@@ -18,7 +17,6 @@ namespace platypus
     class AssetManager
     {
     private:
-        CommandPool& _commandPoolRef;
         std::unordered_map<ID_t, Asset*> _assets;
         std::unordered_map<ID_t, Asset*> _persistentAssets;
 
@@ -26,7 +24,7 @@ namespace platypus
         Texture* _pBlackTexture = nullptr;
 
     public:
-        AssetManager(CommandPool& commandPool);
+        AssetManager();
         ~AssetManager();
         void destroyAssets();
 

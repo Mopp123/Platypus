@@ -14,7 +14,6 @@ namespace platypus
 {
     // TODO: Make less dumb
     bool load_gltf_model(
-        const CommandPool& commandPool,
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
         std::vector<Pose>& outBindPoses,

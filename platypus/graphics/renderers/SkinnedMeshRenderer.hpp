@@ -33,7 +33,6 @@ namespace platypus
     public:
         SkinnedMeshRenderer(
             const MasterRenderer& masterRenderer,
-            CommandPool& commandPool,
             DescriptorPool& descriptorPool,
             uint64_t requiredComponentsMask
         );

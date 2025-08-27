@@ -183,6 +183,7 @@ namespace platypus
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
     size_t Device::s_minUniformBufferOffsetAlignment = 1;
+    CommandPool* Device::s_pCommandPool = nullptr;
     void Device::create(Window* pWindow)
     {
         s_pWindow = pWindow;
@@ -289,6 +290,8 @@ namespace platypus
         }
 
         s_pImpl->vmaAllocator = vmaAllocator;
+
+        s_pCommandPool = new CommandPool();
     }
 
     void Device::destroy()
@@ -302,6 +305,7 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
+        delete s_pCommandPool;
         vmaDestroyAllocator(s_pImpl->vmaAllocator);
         vkDestroyDevice(s_pImpl->device, nullptr);
     }
@@ -380,6 +384,11 @@ namespace platypus
     size_t Device::get_min_uniform_buffer_offset_align()
     {
         return s_minUniformBufferOffsetAlignment;
+    }
+
+    CommandPool* Device::get_command_pool()
+    {
+        return s_pCommandPool;
     }
 
     DeviceImpl* Device::get_impl()

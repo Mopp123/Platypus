@@ -28,7 +28,6 @@ namespace platypus
     {
     private:
         Swapchain _swapchain;
-        CommandPool _commandPool;
         DescriptorPool _descriptorPool;
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
@@ -48,6 +47,7 @@ namespace platypus
         std::map<uint64_t, Renderer*> _renderers;
 
     public:
+        // NOTE: CommandPool and Device must exist when creating this
         MasterRenderer(const Window& window);
         ~MasterRenderer();
         void createPipelines();
@@ -61,7 +61,6 @@ namespace platypus
         inline const SkinnedMeshRenderer* getSkinnedMeshRenderer() const { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
-        inline CommandPool& getCommandPool() { return _commandPool; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
@@ -70,8 +69,15 @@ namespace platypus
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
         void destroyPipelines();
+
+        // NOTE: Currently creating only once the "common" shader resources
+        void createCommonShaderResources();
+
+        // Creates secondary renderers' and Material assets' shader resources
         void createShaderResources();
+        // Frees secondary renderers' and Material assets' shader resources
         void freeShaderResources();
+
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };

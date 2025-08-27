@@ -1,4 +1,5 @@
 #include "Material.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/PipelineFactory.hpp"
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
@@ -295,7 +296,6 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        CommandPool& commandPool = pMasterRenderer->getCommandPool();
         DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
 
         const Texture* pDiffuseTexture = getDiffuseTexture();
@@ -312,7 +312,6 @@ namespace platypus
         for (size_t i = 0; i < maxFramesInFlight; ++i)
         {
             Buffer* pUniformBuffer = new Buffer(
-                commandPool,
                 &materialProperties,
                 sizeof(Vector4f),
                 1,

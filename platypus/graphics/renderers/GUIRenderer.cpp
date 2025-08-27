@@ -1,4 +1,5 @@
 #include "GUIRenderer.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
@@ -13,12 +14,10 @@ namespace platypus
     size_t GUIRenderer::s_maxBatchLength = 1000;
     GUIRenderer::GUIRenderer(
         const MasterRenderer& masterRenderer,
-        CommandPool& commandPool,
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
         _masterRendererRef(masterRenderer),
-        _commandPoolRef(commandPool),
         _descriptorPoolRef(descriptorPool),
         _requiredComponentsMask(requiredComponentsMask),
         _vertexShader("GUIVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
@@ -118,7 +117,6 @@ namespace platypus
             2, 3, 0
         };
         _pVertexBuffer = new Buffer(
-            _commandPoolRef,
             vertexData.data(),
             sizeof(float) * 2,
             4,
@@ -127,7 +125,6 @@ namespace platypus
             false
         );
         _pIndexBuffer = new Buffer(
-            _commandPoolRef,
             indices.data(),
             sizeof(uint16_t),
             indices.size(),
@@ -144,7 +141,6 @@ namespace platypus
             BatchData& batchData = _batches[i];
             std::vector<GUIRenderData> instanceBufferData(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
-                _commandPoolRef,
                 instanceBufferData.data(),
                 sizeof(GUITransform),
                 instanceBufferData.size(),
@@ -169,7 +165,7 @@ namespace platypus
 
     void GUIRenderer::allocCommandBuffers(uint32_t count)
     {
-        _commandBuffers = _commandPoolRef.allocCommandBuffers(
+        _commandBuffers = Device::get_command_pool()->allocCommandBuffers(
             count,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
@@ -380,8 +376,8 @@ namespace platypus
                 // "Clear" the batch for next round of submits
                 // NOTE: Might be issue here if shitload of gui stuff
                 //  -> occupied batches gets never really cleared!
-                //  TODO: Truly clear batches at least on scene switch
-                //      + maybe some clever way to deal with that withing the same scene too...
+                //  TODO: Truly clear batches at least on scene switch?
+                //      + maybe some clever way to deal with that within the same scene too...
                 batchData.count = 0;
             }
         }

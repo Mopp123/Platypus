@@ -1,0 +1,30 @@
+Maybe take a look how Godot does it
+
+What does rendering require (secondary cmd buf level, where actually calling render commands)
+    *Mesh data
+    *Component data
+    *Misc. data
+        -additional vertex buffers (for example: instancing)
+        -additional uniform buffers + descriptors (for example: skeletal animation)
+
+Same as above but lower level:
+    *pipeline
+    *vertex buffers
+    *index buffers
+    *descriptor sets
+    *push constants
+
+    ...its that simple
+        -> BUT how to render multiple instances?
+        *"dumb rendering"
+        *instanced rendering
+
+    Dumb rendering
+        *Descriptor sets needs to live somewhere (for example: joint uniform buffer)
+            -> could be a part of Material
+            BUT that "ruins" the idea of Material being just a material
+
+
+Issue:
+*Each renderer works so differently
+    -> theres no reason to try forcing them work the same way?

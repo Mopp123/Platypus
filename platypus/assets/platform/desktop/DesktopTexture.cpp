@@ -5,8 +5,8 @@
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
-#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
@@ -16,14 +16,13 @@
 namespace platypus
 {
     static void transition_image_layout(
-        const CommandPool& commandPool,
         VkImage imageHandle,
         VkImageLayout oldLayout,
         VkImageLayout newLayout,
         uint32_t mipLevelCount
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -139,7 +138,6 @@ namespace platypus
 
 
     static void generate_mipmaps(
-        const CommandPool& commandPool,
         VkImage imageHandle,
         VkFormat imageFormat,
         int imgWidth,
@@ -148,7 +146,7 @@ namespace platypus
         VkFilter filterMode
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -362,7 +360,6 @@ namespace platypus
 
 
     Texture::Texture(
-        const CommandPool& commandPool,
         const Image* pImage,
         ImageFormat targetFormat,
         const TextureSampler& sampler,
@@ -384,7 +381,6 @@ namespace platypus
 
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
-            commandPool,
             (void*)pImage->getData(),
             1, // Single element size is 8 bit "pixel"
             pImage->getSize(),
@@ -479,14 +475,12 @@ namespace platypus
         }
 
         transition_image_layout(
-            commandPool,
             imageHandle,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             mipLevelCount
         );
         copy_buffer_to_image(
-            commandPool,
             pStagingBuffer->getImpl()->handle,
             imageHandle,
             imageWidth,
@@ -496,7 +490,6 @@ namespace platypus
         if (mipLevelCount > 1)
         {
             generate_mipmaps(
-                commandPool,
                 imageHandle,
                 imageFormat,
                 imageWidth,
@@ -508,7 +501,6 @@ namespace platypus
         else
         {
             transition_image_layout(
-                commandPool,
                 imageHandle,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

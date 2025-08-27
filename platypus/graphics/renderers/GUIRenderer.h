@@ -19,7 +19,6 @@ namespace platypus
     {
     private:
         const MasterRenderer& _masterRendererRef;
-        CommandPool& _commandPoolRef;
         std::vector<CommandBuffer> _commandBuffers;
         DescriptorPool& _descriptorPoolRef;
 
@@ -35,19 +34,26 @@ namespace platypus
 
         DescriptorSetLayout _textureDescriptorSetLayout;
 
-        enum class BatchType
-        {
-            NONE,
-            IMAGE,
-            TEXT
-        };
-
         // Per instance
         struct GUIRenderData
         {
             Vector4f translation = Vector4f(0, 0, 1, 1);
             Vector2f textureOffset = Vector2f(0, 0);
             Vector4f color = Vector4f(1, 1, 1, 1);
+        };
+
+        /*
+            NOTE: Batching currently works here in following way:
+                *While submitting, batch' count increases
+                *After recording a single batch' stuff to the command buffer, its count gets set to 0.
+                    -> If encountering batch with count 0 in the next round of submits, this batch gets
+                    removed from _toRender map
+        */
+        enum class BatchType
+        {
+            NONE,
+            IMAGE,
+            TEXT
         };
 
         struct BatchData
@@ -80,7 +86,6 @@ namespace platypus
     public:
         GUIRenderer(
             const MasterRenderer& masterRenderer,
-            CommandPool& commandPool,
             DescriptorPool& descriptorPool,
             uint64_t requiredComponentsMask
         );

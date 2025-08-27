@@ -186,7 +186,7 @@ void SkinnedMeshTestScene::init()
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
 
-    int area = 10;
+    int area = 11;
     float spacing = 3.25f;
     /*
     for (int x = 0; x < area; ++x)
@@ -296,9 +296,10 @@ void SkinnedMeshTestScene::update()
 {
     _camController.update();
 
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+
     // Test removing entities, especially from the middle of the hierarchy
     /*
-    InputManager& inputManager = Application::get_instance()->getInputManager();
     if (inputManager.isKeyDown(KeyName::KEY_TAB) && !s_tabDown)
     {
         s_tabDown = true;

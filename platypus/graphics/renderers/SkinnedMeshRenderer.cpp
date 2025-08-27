@@ -2,6 +2,7 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/RenderCommand.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
@@ -17,13 +18,11 @@ namespace platypus
     size_t SkinnedMeshRenderer::s_maxRenderables = 1024; // TODO: Make this configurable
     SkinnedMeshRenderer::SkinnedMeshRenderer(
         const MasterRenderer& masterRenderer,
-        CommandPool& commandPool,
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
         Renderer(
             masterRenderer,
-            commandPool,
             descriptorPool,
             requiredComponentsMask
         ),
@@ -60,18 +59,12 @@ namespace platypus
         );
         std::vector<char> jointBufferData(_uniformBufferElementSize * s_maxRenderables);
 
-        Debug::log(
-            "___TEST___JOINT BUFFER ELEM SIZE: " + std::to_string(_uniformBufferElementSize) + " "
-            "BUFFER TOTAL SIZE: " + std::to_string(jointBufferData.size())
-        );
-
         memset(jointBufferData.data(), 0, jointBufferData.size());
 
         size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         for (size_t i = 0; i < maxFramesInFlight; ++i)
         {
             Buffer* pJointUniformBuffer = new Buffer(
-                _commandPoolRef,
                 jointBufferData.data(),
                 _uniformBufferElementSize,
                 s_maxRenderables,
@@ -132,9 +125,6 @@ namespace platypus
         ID_t meshID = pRenderable->meshID;
         ID_t materialID = pRenderable->materialID;
 
-        // NOTE: Just testing atm! DANGEROUS AS HELL!!!
-        // *Allocated transform skeleton should be able to be accessed like this
-        // TODO: Make this safe and faster
         size_t jointCount = pAnimation->jointCount;
         std::vector<Matrix4f> jointMatrices(jointCount);
         memcpy(
@@ -228,15 +218,13 @@ namespace platypus
             const Buffer* pIndexBuffer = pMesh->getIndexBuffer();
             render::bind_index_buffer(currentCommandBuffer, pIndexBuffer);
 
-            std::vector<DescriptorSet> descriptorSetsToBind = {
-                commonDescriptorSet,
-                _jointDescriptorSet[_currentFrame],
-                pMaterial->getDescriptorSets()[_currentFrame]
-            };
-
             render::bind_descriptor_sets(
                 currentCommandBuffer,
-                descriptorSetsToBind,
+                {
+                    commonDescriptorSet,
+                    _jointDescriptorSet[_currentFrame],
+                    pMaterial->getDescriptorSets()[_currentFrame]
+                },
                 { jointBufferOffset }
             );
 

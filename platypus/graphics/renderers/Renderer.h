@@ -16,7 +16,6 @@ namespace platypus
     {
     protected:
         const MasterRenderer& _masterRendererRef;
-        CommandPool& _commandPoolRef;
         std::vector<CommandBuffer> _commandBuffers;
         DescriptorPool& _descriptorPoolRef;
 
@@ -26,7 +25,6 @@ namespace platypus
     public:
         Renderer(
             const MasterRenderer& masterRenderer,
-            CommandPool& commandPool,
             DescriptorPool& descriptorPool,
             uint64_t requiredComponentsMask
         );
@@ -38,6 +36,7 @@ namespace platypus
         virtual void createDescriptorSets() {}
         virtual void freeDescriptorSets() {}
 
+        // NOTE: Should rather
         virtual void freeBatches() = 0;
         virtual void submit(const Scene* pScene, entityID_t entity) = 0;
 
