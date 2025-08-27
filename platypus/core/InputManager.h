@@ -1,7 +1,7 @@
 #pragma once
 
 #include "InputEvent.h"
-#include "platypus/core/Window.h"
+#include "platypus/core/Window.hpp"
 #include <unordered_map>
 #include <vector>
 

@@ -2,6 +2,7 @@
 
 #include "Asset.h"
 #include "Texture.h"
+#include "Mesh.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
 
@@ -10,13 +11,9 @@ namespace platypus
 {
     struct MaterialPipelineData
     {
-        std::vector<VertexBufferLayout> vertexBufferLayouts;
-        // NOTE: This contains ALL descriptor set layouts for pipeline!
-        // Currently the last one is the actual material's layout!
-        std::vector<DescriptorSetLayout> descriptorSetLayouts;
-        Shader vertexShader;
-        Shader fragmentShader;
-        Pipeline pipeline;
+        Shader* pVertexShader;
+        Shader* pFragmentShader;
+        Pipeline* pPipeline;
     };
 
     class Material : public Asset
@@ -32,7 +29,11 @@ namespace platypus
         bool _shadeless = false;
 
         MaterialPipelineData* _pPipelineData = nullptr;
+        MaterialPipelineData* _pSkinnedPipelineData = nullptr;
         std::vector<Buffer*> _uniformBuffers;
+        // NOTE: This contains ALL descriptor set layouts for pipeline!
+        // Currently the last one is the actual material's layout!
+        DescriptorSetLayout _descriptorSetLayout;
         std::vector<DescriptorSet> _descriptorSets;
 
     public:
@@ -47,13 +48,18 @@ namespace platypus
         ~Material();
 
         void createPipeline(
-            const VertexBufferLayout& meshVertexBufferLayout,
-            bool skinned
+            const Mesh* pMesh
         );
+        void createSkinnedPipeline(
+            const Mesh* pMesh
+        );
+
         void recreateExistingPipeline();
         void destroyPipeline();
-        void createDescriptorSets();
-        void freeDescriptorSets();
+        // NOTE: This also creates the uniform buffer
+        //  -> should that be a separate func or name this more clearly?
+        void createShaderResources();
+        void freeShaderResources();
 
         Texture* getDiffuseTexture() const;
         Texture* getSpecularTexture() const;
@@ -64,10 +70,23 @@ namespace platypus
         inline bool isShadeless() const { return _shadeless; }
         inline bool hasNormalMap() const { return _normalTextureID != NULL_ID;  }
         inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
+        inline const MaterialPipelineData* getSkinnedPipelineData() { return _pSkinnedPipelineData; }
         inline const std::vector<Buffer*>& getUniformBuffers() const { return _uniformBuffers; }
         inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }
+        inline bool hasDescriptorSets() const { return !_descriptorSets.empty(); }
+
+        inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
+
+        inline const Shader* getVertexShader() const { return _pPipelineData->pVertexShader; }
+        inline const Shader* getFragmentShader() const { return _pPipelineData->pFragmentShader; }
+
+        inline const Shader* getSkinnedVertexShader() const { return _pSkinnedPipelineData->pVertexShader; }
+        inline const Shader* getSkinnedFragmentShader() const { return _pSkinnedPipelineData->pFragmentShader; }
+
+        void warnUnassigned(const std::string& beginStr);
 
     private:
-        std::string getVertexShaderFilename(uint32_t shaderStage, bool normalMapping);
+        // Returns compiled shader filename depending on given properties
+        std::string getShaderFilename(uint32_t shaderStage, bool normalMapping, bool skinned);
     };
 }

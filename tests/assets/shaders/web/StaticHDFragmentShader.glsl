@@ -4,8 +4,7 @@ varying vec2 var_texCoord;
 varying vec3 var_toCamera; // in tangent space
 varying vec3 var_lightDir; // in tangent space
 varying vec4 var_lightColor;
-
-const vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1);
+varying vec4 var_ambientLightColor;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 uniform sampler2D diffuseTextureSampler;
@@ -21,9 +20,7 @@ struct MaterialData
 };
 uniform MaterialData materialData;
 
-
 void main() {
-
     vec4 diffuseTextureColor = texture2D(diffuseTextureSampler, var_texCoord);
     vec4 specularTextureColor = texture2D(specularTextureSampler, var_texCoord);
     vec4 normalTextureColor = texture2D(normalTextureSampler, var_texCoord);
@@ -47,7 +44,7 @@ void main() {
     float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
     vec4 specularColor = var_lightColor * specularFactor * specularStrength * specularTextureColor;
 
-    vec4 finalColor = (ambientLight + lightDiffuseColor + specularColor) * diffuseTextureColor;
+    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * diffuseTextureColor;
 
     if (diffuseTextureColor.a < 0.1)
     {

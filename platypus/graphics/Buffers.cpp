@@ -40,6 +40,25 @@ namespace platypus
         }
     }
 
+    std::string shader_datatype_to_string(ShaderDataType type)
+    {
+        switch (type)
+        {
+            case ShaderDataType::Int:  return "Int";
+            case ShaderDataType::Int2: return "Int2";
+            case ShaderDataType::Int3: return "Int3";
+            case ShaderDataType::Int4: return "Int4";
+
+            case ShaderDataType::Float:  return "Float";
+            case ShaderDataType::Float2: return "Float2";
+            case ShaderDataType::Float3: return "Float3";
+            case ShaderDataType::Float4: return "Float4";
+
+            case ShaderDataType::Mat4: return "Mat4";
+            default: return "Invalid type";
+        }
+    }
+
 
     void Buffer::updateHost(void* pData, size_t dataSize, size_t offset)
     {

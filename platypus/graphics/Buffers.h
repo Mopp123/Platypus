@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
-#include "CommandBuffer.h"
+#include <string>
 
 
 namespace platypus
@@ -63,6 +63,7 @@ namespace platypus
 
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
+    std::string shader_datatype_to_string(ShaderDataType type);
 
     // Requires platform impl
     //  On Vulkan side this returns required actual size for inputted requestSize
@@ -150,7 +151,6 @@ namespace platypus
         //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
         //  and destroy staging buffer
         Buffer(
-            const CommandPool& commandPool,
             void* pData,
             size_t elementSize,
             size_t dataLength,

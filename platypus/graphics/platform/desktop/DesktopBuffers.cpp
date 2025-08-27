@@ -1,8 +1,9 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 #include "DesktopBuffers.h"
-#include "platypus/graphics/Context.h"
-#include "DesktopContext.h"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
+#include "DesktopContext.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 #include <cstring>
@@ -11,9 +12,9 @@
 
 namespace platypus
 {
-    void copy_buffer(const CommandPool& commandPool, VkBuffer source, VkBuffer destination, size_t size)
+    void copy_buffer(VkBuffer source, VkBuffer destination, size_t size)
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -37,14 +38,13 @@ namespace platypus
     }
 
     void copy_buffer_to_image(
-        const CommandPool& commandPool,
         VkBuffer source,
         VkImage destination,
         uint32_t imageWidth,
         uint32_t imageHeight
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -122,7 +122,7 @@ namespace platypus
 
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
     {
-        size_t alignRequirement = Context::get_instance()->getMinUniformBufferOffsetAlignment();
+        size_t alignRequirement = Device::get_min_uniform_buffer_offset_align();
         size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
         return  alignRequirement * (diff + 1);
     }
@@ -253,6 +253,23 @@ namespace platypus
         return *this;
     }
 
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        _pImpl = new VertexBufferLayoutImpl;
+        _pImpl->bindingDescription.binding = other._pImpl->bindingDescription.binding;
+        _pImpl->bindingDescription.inputRate = other._pImpl->bindingDescription.inputRate;
+
+        return *this;
+    }
+
     VertexBufferLayout::~VertexBufferLayout()
     {
         if (_pImpl)
@@ -267,7 +284,6 @@ namespace platypus
     //  * If usageFlags contains BUFFER_USAGE_TRANSFER_DST_BIT this will implicitly create, transfer
     //  and destroy staging buffer!
     Buffer::Buffer(
-        const CommandPool& commandPool,
         void* pData,
         size_t elementSize,
         size_t dataLength,
@@ -291,7 +307,6 @@ namespace platypus
         if (useStaging)
         {
             pStagingBuffer = new Buffer(
-                commandPool,
                 pData,
                 elementSize,
                 dataLength,
@@ -322,7 +337,7 @@ namespace platypus
             allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
 
-        VmaAllocator vmaAllocator = Context::get_instance()->getImpl()->vmaAllocator;
+        VmaAllocator vmaAllocator = Device::get_impl()->vmaAllocator;
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createResult = vmaCreateBuffer(
@@ -359,7 +374,6 @@ namespace platypus
         else
         {
             copy_buffer(
-                commandPool,
                 pStagingBuffer->_pImpl->handle,
                 _pImpl->handle,
                 getTotalSize()
@@ -376,7 +390,7 @@ namespace platypus
         if (_pImpl)
         {
             vmaDestroyBuffer(
-                Context::get_instance()->getImpl()->vmaAllocator,
+                Device::get_impl()->vmaAllocator,
                 _pImpl->handle,
                 _pImpl->vmaAllocation
             );
@@ -406,7 +420,7 @@ namespace platypus
             return;
         }
         vmaCopyMemoryToAllocation(
-            Context::get_instance()->getImpl()->vmaAllocator,
+            Device::get_impl()->vmaAllocator,
             pData,
             _pImpl->vmaAllocation,
             offset,

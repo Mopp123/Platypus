@@ -6,6 +6,7 @@
 #include "platypus/ecs/components/Renderable.h"
 #include "Renderer.h"
 #include "GUIRenderer.h"
+#include "SkinnedMeshRenderer.hpp"
 
 #include <map>
 #include <memory>
@@ -13,39 +14,31 @@
 
 namespace platypus
 {
-    struct CameraUniformBufferData
+    struct Scene3DData
     {
-        Vector4f position;
+        Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
+        Vector4f cameraPosition = Vector4f(0, 0, 0, 1);
+        Vector4f lightDirection = Vector4f(0, 0, 0, 0);
+        Vector4f lightColor = Vector4f(1, 1, 1, 1);
+        Vector4f ambientLightColor = Vector4f(0.1f, 0.1f, 0.1f, 1);
     };
-
-
-    struct DirLightUniformBufferData
-    {
-        Vector4f direction = Vector4f(0, 0, 0, 1);
-        Vector4f color = Vector4f(1, 1, 1, 1);
-    };
-
 
     class MasterRenderer
     {
     private:
         Swapchain _swapchain;
-        CommandPool _commandPool;
         DescriptorPool _descriptorPool;
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
         // Shared descriptor sets among multiple renderers
-        std::vector<Buffer*> _cameraUniformBuffer;
-        DescriptorSetLayout _cameraDescriptorSetLayout;
-        std::vector<DescriptorSet> _cameraDescriptorSets;
-
-        DirLightUniformBufferData _useDirLightData;
-        std::vector<Buffer*> _dirLightUniformBuffer;
-        DescriptorSetLayout _dirLightDescriptorSetLayout;
-        std::vector<DescriptorSet> _dirLightDescriptorSets;
+        Scene3DData _scene3DData;
+        std::vector<Buffer*> _scene3DDataUniformBuffers;
+        DescriptorSetLayout _scene3DDataDescriptorSetLayout;
+        std::vector<DescriptorSet> _scene3DDescriptorSets;
 
         std::unique_ptr<Renderer> _pStaticMeshRenderer;
+        std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
         // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
         // *This was due to Renderer and Material rework
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
@@ -54,6 +47,7 @@ namespace platypus
         std::map<uint64_t, Renderer*> _renderers;
 
     public:
+        // NOTE: CommandPool and Device must exist when creating this
         MasterRenderer(const Window& window);
         ~MasterRenderer();
         void createPipelines();
@@ -63,19 +57,27 @@ namespace platypus
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
 
+        inline SkinnedMeshRenderer* getSkinnedMeshRenderer() { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
+        inline const SkinnedMeshRenderer* getSkinnedMeshRenderer() const { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
+
         inline const Swapchain& getSwapchain() const { return _swapchain; }
-        inline CommandPool& getCommandPool() { return _commandPool; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
-        inline const DescriptorSetLayout& getCameraDescriptorSetLayout() const { return _cameraDescriptorSetLayout; }
-        inline const DescriptorSetLayout& getDirectionalLightDescriptorSetLayout() const { return _dirLightDescriptorSetLayout; }
+        inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
 
     private:
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
         void destroyPipelines();
-        void freeDescriptorSets();
-        void createDescriptorSets();
+
+        // NOTE: Currently creating only once the "common" shader resources
+        void createCommonShaderResources();
+
+        // Creates secondary renderers' and Material assets' shader resources
+        void createShaderResources();
+        // Frees secondary renderers' and Material assets' shader resources
+        void freeShaderResources();
+
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };

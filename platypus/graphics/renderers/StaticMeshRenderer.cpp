@@ -16,13 +16,11 @@ namespace platypus
     size_t StaticMeshRenderer::s_maxBatchLength = 10000;
     StaticMeshRenderer::StaticMeshRenderer(
         const MasterRenderer& masterRenderer,
-        CommandPool& commandPool,
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
         Renderer(
             masterRenderer,
-            commandPool,
             descriptorPool,
             requiredComponentsMask
         )
@@ -35,7 +33,6 @@ namespace platypus
             BatchData& batchData = _batches[i];
             std::vector<Matrix4f> transformsBuffer(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
-                _commandPoolRef,
                 transformsBuffer.data(),
                 sizeof(Matrix4f),
                 transformsBuffer.size(),
@@ -110,10 +107,7 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
-        const Matrix4f& perspectiveProjectionMatrix,
-        const Matrix4f& orthographicProjectionMatrix,
-        const DescriptorSet& cameraDescriptorSet,
-        const DescriptorSet& dirLightDescriptorSet,
+        const DescriptorSet& commonDescriptorSet,
         size_t frame
     )
     {
@@ -169,19 +163,7 @@ namespace platypus
 
             render::bind_pipeline(
                 currentCommandBuffer,
-                batchData.pMaterial->getPipelineData()->pipeline
-            );
-
-            Matrix4f pushConstants[1] = { perspectiveProjectionMatrix };
-            render::push_constants(
-                currentCommandBuffer,
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                0,
-                sizeof(Matrix4f),
-                pushConstants,
-                {
-                    { 0, ShaderDataType::Mat4 }
-                }
+                *batchData.pMaterial->getPipelineData()->pPipeline
             );
 
             render::bind_vertex_buffers(
@@ -193,15 +175,12 @@ namespace platypus
             );
             render::bind_index_buffer(currentCommandBuffer, batchData.pIndexBuffer);
 
-            std::vector<DescriptorSet> descriptorSetsToBind = {
-                cameraDescriptorSet,
-                dirLightDescriptorSet,
-                batchData.pMaterial->getDescriptorSets()[_currentFrame]
-            };
-
             render::bind_descriptor_sets(
                 currentCommandBuffer,
-                descriptorSetsToBind,
+                {
+                    commonDescriptorSet,
+                    batchData.pMaterial->getDescriptorSets()[_currentFrame]
+                },
                 { }
             );
 
@@ -261,8 +240,8 @@ namespace platypus
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Mesh* pMesh = (const Mesh*)assetManager.getAsset(
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
             meshID,
             AssetType::ASSET_TYPE_MESH
         );
@@ -280,7 +259,7 @@ namespace platypus
 
         BatchData& batchData = _batches[batchIndex];
         batchData.identifier = identifier;
-        batchData.pMaterial = (Material*)assetManager.getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+        batchData.pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 

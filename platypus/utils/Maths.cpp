@@ -68,9 +68,20 @@ namespace platypus
         };
     }
 
+    Vector3f Vector3f::lerp(const Vector3f& other, float amount) const
+    {
+        const Vector3f& v = *this;
+        return v + ((other - v) * amount);
+    }
+
     Vector3f Vector3f::operator+(const Vector3f& other) const
     {
         return { x + other.x, y + other.y, z + other.z };
+    }
+
+    Vector3f Vector3f::operator-(const Vector3f& other) const
+    {
+        return { x - other.x, y - other.y, z - other.z };
     }
 
     Vector3f Vector3f::operator*(const Vector3f& other) const
@@ -282,6 +293,19 @@ namespace platypus
         return inverseMatrix;
     }
 
+    Matrix4f Matrix4f::transpose() const
+    {
+        Matrix4f result;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                result[i + j * 4] = _data[j + i * 4];
+            }
+        }
+        return result;
+    }
+
     void Matrix4f::operator=(const Matrix4f& other)
     {
         memcpy(_data, other._data, sizeof(float) * 16);
@@ -345,6 +369,11 @@ namespace platypus
         w = cos(angle / 2.0f);
     }
 
+    float Quaternion::dotp(const Quaternion& other) const
+    {
+        return ((x * other.x) + (y * other.y) + (z * other.z) + (w * other.w));
+    }
+
     float Quaternion::length() const
     {
         return sqrtf((x * x) + (y * y) + (z * z) + (w * w));
@@ -393,6 +422,72 @@ namespace platypus
         return rotationMatrix;
     }
 
+    // Copied from wikipedia : https://en.wikipedia.org/wiki/Slerp
+    #define QUATERNION_SLERP__DOT_THRESHOLD 0.9995f
+    Quaternion Quaternion::slerp(const Quaternion& other, float amount) const
+    {
+        // Only unit quaternions are valid rotations.
+        // Normalize to avoid undefined behavior.
+        Quaternion ua = normalize();
+        Quaternion ub = other.normalize();
+
+        // Compute the cosine of the angle between the two vectors.
+        float dot = ua.dotp(ub);
+
+        // If the dot product is negative, slerp won't take
+        // the shorter path. Note that v1 and -v1 are equivalent when
+        // the negation is applied to all four components. Fix by
+        // reversing one quaternion.
+        if (dot < 0.0f) {
+            ub = ub * -1.0f;
+            dot = -dot;
+        }
+
+        if (dot > QUATERNION_SLERP__DOT_THRESHOLD)
+        {
+            // If the inputs are too close for comfort, linearly interpolate
+            // and normalize the result.
+            Quaternion result = ua + ((ub - ua) * amount);
+            return result.normalize();
+        }
+
+        // Since dot is in range [0, DOT_THRESHOLD], acos is safe
+        float theta_0 = acos(dot);        // theta_0 = angle between input vectors
+        float theta = theta_0 * amount;   // theta = angle between v0 and result
+        float sin_theta = sin(theta);     // compute this value only once
+        float sin_theta_0 = sin(theta_0); // compute this value only once
+
+        float s0 = cos(theta) - dot * sin_theta / sin_theta_0;  // == sin(theta_0 - theta) / sin(theta_0)
+        float s1 = sin_theta / sin_theta_0;
+
+        return (ua * s0) + (ub * s1);
+    }
+
+    Quaternion Quaternion::operator+(const Quaternion& other) const
+    {
+        return { x + other.x, y + other.y, z + other.z, w + other.w };
+    }
+
+    Quaternion Quaternion::operator-(const Quaternion& other) const
+    {
+        return { x - other.x, y - other.y, z - other.z, w - other.w };
+    }
+
+    Quaternion Quaternion::operator*(const Quaternion& other) const
+    {
+        Quaternion result;
+        result.w = w * other.w - x * other.x - y * other.y - z * other.z;
+        result.x = x * other.w + w * other.x + y * other.z - z * other.y;
+        result.y = y * other.w + w * other.y + z * other.x - x * other.z;
+        result.z = z * other.w + w * other.z + x * other.y - y * other.x;
+        return result;
+    }
+
+    Quaternion Quaternion::operator*(float other) const
+    {
+        return { x * other, y * other, z * other, w * other };
+    }
+
     std::string Quaternion::toString() const
     {
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ", " + std::to_string(w) + ")";
@@ -422,10 +517,11 @@ namespace platypus
     }
 
 
-    Matrix4f create_rotation_matrix(float pitch, float yaw)
+    Matrix4f create_rotation_matrix(float pitch, float yaw, float roll)
     {
         Matrix4f pitchMatrix(1.0f);
         Matrix4f yawMatrix(1.0f);
+        Matrix4f rollMatrix(1.0f);
 
         pitchMatrix[1 + 1 * 4] = cos(pitch);
         pitchMatrix[1 + 2 * 4] = -sin(pitch);
@@ -437,7 +533,12 @@ namespace platypus
         yawMatrix[2 + 0 * 4] = -sin(yaw);
         yawMatrix[2 + 2 * 4] = cos(yaw);
 
-        return yawMatrix * pitchMatrix;
+        rollMatrix[0 + 0 * 4] = cos(roll);
+        rollMatrix[0 + 1 * 4] = -sin(roll);
+        rollMatrix[1 + 0 * 4] = sin(roll);
+        rollMatrix[1 + 1 * 4] = cos(roll);
+
+        return yawMatrix * pitchMatrix * rollMatrix;
     }
 
 

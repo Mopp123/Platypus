@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cstring>
 
 #define PLATY_MATH_PI 3.14159265358979323846
 
@@ -57,8 +58,10 @@ namespace platypus
         float length() const;
         Vector3f normalize() const;
         Vector3f cross(const Vector3f& other) const;
+        Vector3f lerp(const Vector3f& other, float amount) const;
 
         Vector3f operator+(const Vector3f& other) const;
+        Vector3f operator-(const Vector3f& other) const;
         Vector3f operator*(const Vector3f& other) const;
         Vector3f operator*(float value) const;
 
@@ -103,6 +106,7 @@ namespace platypus
         Matrix4f(float diag);
         void setIdentity();
         Matrix4f inverse() const;
+        Matrix4f transpose() const;
         void operator=(const Matrix4f& other);
         friend Matrix4f operator*(const Matrix4f& left, const Matrix4f& right);
         friend Vector4f operator*(const Matrix4f& left, const Vector4f& right);
@@ -112,6 +116,7 @@ namespace platypus
         inline float& operator[](int index) { return _data[index]; }
         inline float operator[](int index) const { return _data[index]; }
         inline const float* getRawArray() const { return _data; }
+        inline bool operator==(const Matrix4f& other) const { return memcmp(_data, other._data, sizeof(float) * 16) == 0; }
     };
 
 
@@ -133,10 +138,17 @@ namespace platypus
             x(other.x), y(other.y), z(other.z), w(other.w)
         {}
 
+        float dotp(const Quaternion& other) const;
         float length() const;
         Quaternion normalize() const;
         Quaternion conjugate() const;
         Matrix4f toRotationMatrix() const;
+        Quaternion slerp(const Quaternion& other, float amount) const;
+
+        Quaternion operator+(const Quaternion& other) const;
+        Quaternion operator-(const Quaternion& other) const;
+        Quaternion operator*(const Quaternion& other) const;
+        Quaternion operator*(float other) const;
 
         std::string toString() const;
     };
@@ -148,7 +160,7 @@ namespace platypus
         const Vector3f& scale
     );
 
-    Matrix4f create_rotation_matrix(float pitch, float yaw);
+    Matrix4f create_rotation_matrix(float pitch, float yaw, float roll);
 
     // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
     Matrix4f create_orthographic_projection_matrix(

@@ -6,42 +6,33 @@ layout(location = 2) in vec2 texCoord;
 layout(location = 3) in vec4 tangent;
 layout(location = 4) in mat4 transformationMatrix;
 
-layout(push_constant) uniform Constants
+layout(set = 0, binding = 0) uniform SceneData
 {
     mat4 projectionMatrix;
-} constants;
-
-
-layout(set = 0, binding = 0) uniform Camera
-{
-    vec4 position;
     mat4 viewMatrix;
-} camera;
-
-
-layout(set = 1, binding = 0) uniform DirectionalLight
-{
-    vec4 direction;
-    vec4 color;
-} directionalLight;
-
+    vec4 cameraPosition;
+    vec4 lightDirection;
+    vec4 lightColor;
+    vec4 ambientLightColor;
+} sceneData;
 
 layout(location = 0) out vec3 var_normal;
 layout(location = 1) out vec2 var_texCoord;
 layout(location = 2) out vec3 var_fragPos; // in tangent space
 layout(location = 3) out vec3 var_toCamera; // in tangent space
 layout(location = 4) out vec3 var_lightDir; // in tangent space
-layout(location = 5) out vec4 var_lightColor; // in tangent space
-layout(location = 6) out mat3 var_toTangentSpace;
-layout(location = 9) out vec4 var_tangent;
+layout(location = 5) out vec4 var_lightColor;
+layout(location = 6) out vec4 var_ambientLightColor;
+layout(location = 7) out mat3 var_toTangentSpace; // uses locations 7-9
+layout(location = 10) out vec4 var_tangent;
 
 
 // NOTE: ISSUES!
 // It seems with specularity as if the light is coming from the opposite direction
 void main() {
-    mat4 toCameraSpace = camera.viewMatrix * transformationMatrix;
+    mat4 toCameraSpace = sceneData.viewMatrix * transformationMatrix;
     vec4 transformedPos = transformationMatrix * vec4(position, 1.0);
-    gl_Position = constants.projectionMatrix * camera.viewMatrix * transformedPos;
+    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;
     var_texCoord = texCoord;
 
 
@@ -56,12 +47,13 @@ void main() {
 
     var_toTangentSpace = transpose(mat3(transformedTangent, biTangent, transformedNormal));
 
-    vec3 toCam = camera.position.xyz - transformedPos.xyz;
-    var_toCamera = normalize(var_toTangentSpace * (camera.viewMatrix * vec4(toCam, 0.0)).xyz);
+    vec3 toCam = sceneData.cameraPosition.xyz - transformedPos.xyz;
+    var_toCamera = normalize(var_toTangentSpace * (sceneData.viewMatrix * vec4(toCam, 0.0)).xyz);
 
-    var_lightDir = var_toTangentSpace * (camera.viewMatrix * vec4(directionalLight.direction.xyz, 0.0)).xyz;
+    var_lightDir = var_toTangentSpace * (sceneData.viewMatrix * vec4(sceneData.lightDirection.xyz, 0.0)).xyz;
 
-    var_lightColor = directionalLight.color;
+    var_lightColor = sceneData.lightColor;
+    var_ambientLightColor = sceneData.ambientLightColor;
     var_normal = (toCameraSpace * vec4(normal, 0.0)).xyz;
 
     var_tangent = vec4(biTangent, 1.0);

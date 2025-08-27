@@ -27,7 +27,7 @@ namespace platypus
 
         std::vector<System*> _systems;
         std::vector<Entity> _entities;
-        std::unordered_map<entityID_t, std::vector<entityID_t>> _entityChildMapping;
+
         std::vector<entityID_t> _freeEntityIDs;
         std::unordered_map<ComponentType, ComponentPool> _componentPools;
 
@@ -41,11 +41,9 @@ namespace platypus
 
         entityID_t createEntity();
         Entity getEntity(entityID_t entity) const;
+        inline const std::vector<Entity>& getEntities() const { return _entities; }
         void destroyEntity(entityID_t entityID);
         void destroyComponent(entityID_t entityID, ComponentType componentType);
-        void addChild(entityID_t entityID, entityID_t childID);
-        // NOTE: Could be optimized to return just ptr to first child and child count
-        std::vector<entityID_t> getChildren(entityID_t entityID) const;
 
         // TODO: All getComponent things could be optimized?
         void* getComponent(ComponentType type, bool enableWarning=true);
@@ -61,8 +59,6 @@ namespace platypus
             bool nestedSearch = false,
             bool enableWarning = true
         ) const;
-        // Returns first component of "type" found in "entity"'s child entities
-        void* getComponentInChildren(entityID_t entityID, ComponentType type);
 
         virtual void init() = 0;
         virtual void update() = 0;

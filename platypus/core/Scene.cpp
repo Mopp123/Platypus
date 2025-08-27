@@ -3,34 +3,88 @@
 #include "Debug.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/SkeletalAnimation.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
+#include "platypus/ecs/systems/SkeletalAnimationSystem.h"
+#include "platypus/ecs/systems/TransformSystem.h"
 
 
 namespace platypus
 {
     Scene::Scene()
     {
-        size_t maxEntityCount = 1000000;
+        size_t maxEntityCount = 10000;
 
         _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
-            sizeof(Transform), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_TRANSFORM,
+            sizeof(Transform),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = ComponentPool(
-            sizeof(GUITransform), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_GUI_TRANSFORM,
+            sizeof(GUITransform),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
-            sizeof(Transform), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+            sizeof(StaticMeshRenderable),
+            maxEntityCount,
+            true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+            sizeof(SkinnedMeshRenderable),
+            maxEntityCount,
+            true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
+            sizeof(SkeletalAnimation),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = ComponentPool(
-            sizeof(GUIRenderable), maxEntityCount, true
+            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+            sizeof(GUIRenderable),
+            maxEntityCount,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
-            sizeof(Camera), 1, true
+            ComponentType::COMPONENT_TYPE_CAMERA,
+            sizeof(Camera),
+            1,
+            true
         );
         _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
-            sizeof(DirectionalLight), 1, true
+            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
+            sizeof(DirectionalLight),
+            1,
+            true
         );
+        _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_PARENT,
+            sizeof(Parent),
+            maxEntityCount,
+            true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            sizeof(Children),
+            maxEntityCount,
+            true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_JOINT,
+            sizeof(SkeletonJoint),
+            maxEntityCount,
+            true
+        );
+
+        _systems.push_back(new SkeletalAnimationSystem);
+        _systems.push_back(new TransformSystem);
     }
 
     Scene::~Scene()
@@ -45,8 +99,6 @@ namespace platypus
             delete system;
 
         _systems.clear();
-
-        _entityChildMapping.clear();
     }
 
     void* Scene::allocateComponent(entityID_t target, ComponentType componentType)
@@ -108,26 +160,42 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
+        // Check if entity has parent -> remove it from parent's child list
+        Parent* pParent = (Parent*)getComponent(
+            entityID,
+            ComponentType::COMPONENT_TYPE_PARENT,
+            false,
+            false
+        );
+        if (pParent)
+        {
+            remove_child(pParent->entityID, entityID);
+        }
+        // Check if entity has children -> destroy those first
+        Children* pChildren = (Children*)getComponent(
+            entityID,
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            false,
+            false
+        );
+        if (pChildren)
+        {
+            for (size_t i = 0; i < pChildren->count; ++i)
+            {
+                destroyEntity(pChildren->entityIDs[i]);
+            }
+        }
+
         // Destroy/free all this entity's components
-        uint64_t componentMask = _entities[entityID].componentMask;
         std::unordered_map<ComponentType, ComponentPool>::iterator poolsIt;
         for (poolsIt = _componentPools.begin(); poolsIt != _componentPools.end(); ++poolsIt)
         {
-            if (componentMask & poolsIt->first)
+            if (_entities[entityID].componentMask & poolsIt->first)
                 poolsIt->second.destroyComponent(entityID);
         }
         // Destroy/free entity itself
         _freeEntityIDs.push_back(entityID);
         _entities[entityID].clear();
-
-        if (_entityChildMapping.find(entityID) != _entityChildMapping.end())
-        {
-            for (entityID_t childID : _entityChildMapping[entityID])
-            {
-                destroyEntity(childID);
-            }
-            _entityChildMapping.erase(entityID);
-        }
     }
 
     void Scene::destroyComponent(entityID_t entityID, ComponentType componentType)
@@ -144,37 +212,18 @@ namespace platypus
         }
 
         uint64_t componentMask = _entities[entityID].componentMask;
-        if (componentMask & componentType)
-            _componentPools[componentType].destroyComponent(entityID);
-    }
-
-    void Scene::addChild(entityID_t entityID, entityID_t childID)
-    {
-        if (!isValidEntity(entityID, "addChild"))
+        if ((componentMask & componentType) != componentType)
         {
+            Debug::log(
+                "Scene::destroyComponent "
+                "No component of type: " + component_type_to_string(componentType) + " found "
+                "from entity: " + std::to_string(entityID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
             PLATYPUS_ASSERT(false);
-            return;
         }
-        if (!isValidEntity(childID, "addChild Invalid child entity"))
-        {
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-        _entities[childID].parentID = entityID;
-        _entityChildMapping[entityID].push_back(childID);
-    }
-
-    // NOTE: Could be optimized to return just ptr to first child and child count
-    std::vector<entityID_t> Scene::getChildren(entityID_t entityID) const
-    {
-        if (!isValidEntity(entityID, "getChildren"))
-        {
-            PLATYPUS_ASSERT(false);
-            return {};
-        }
-        if (_entityChildMapping.find(entityID) == _entityChildMapping.end())
-            return {};
-        return _entityChildMapping.at(entityID);
+        _componentPools[componentType].destroyComponent(entityID);
+        _entities[entityID].componentMask &= ~componentType;
     }
 
     void* Scene::getComponent(ComponentType type, bool enableWarning)
@@ -215,7 +264,7 @@ namespace platypus
         {
             Debug::log(
                 "@Scene::getComponent (1) "
-                "No component pool exists for component type: " + std::to_string(type),
+                "No component pool exists for component type: " + component_type_to_string(type),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -231,7 +280,7 @@ namespace platypus
         {
             Debug::log(
                 "@Scene::getComponent (1) "
-                "Couldn't find component of type: " + std::to_string(type) + " "
+                "Couldn't find component of type: " + component_type_to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING
             );
@@ -255,7 +304,7 @@ namespace platypus
         if (poolIt == _componentPools.end())
         {
             Debug::log(
-                "@Scene::getComponent (2)"
+                "@Scene::getComponent (2) "
                 "No component pool exists for component type: " + std::to_string(type),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -271,30 +320,12 @@ namespace platypus
         if (!nestedSearch && enableWarning)
         {
             Debug::log(
-                "@Scene::getComponent (2)"
-                "Couldn't find component of type: " + std::to_string(type) + " "
+                "@Scene::getComponent (2) "
+                "Couldn't find component of type: " + component_type_to_string(type) + " "
                 "from entity: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_WARNING
             );
         }
-        return nullptr;
-    }
-
-    // Returns first component of "type" found in "entity"'s child entities
-    void* Scene::getComponentInChildren(entityID_t entityID, ComponentType type)
-    {
-        for (const entityID_t& child : _entityChildMapping[entityID])
-        {
-            void* pComponent = getComponent(child, type, true);
-            if (pComponent)
-                return pComponent;
-        }
-        Debug::log(
-            "Scene::getComponentInChildren "
-            "Couldn't find component of type: " + std::to_string(type) + " "
-            "from child entities of entity: " + std::to_string(entityID),
-            Debug::MessageType::PLATYPUS_MESSAGE
-        );
         return nullptr;
     }
 

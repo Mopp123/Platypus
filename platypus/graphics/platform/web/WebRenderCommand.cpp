@@ -1,6 +1,6 @@
 #include "platypus/graphics/RenderCommand.h"
-#include "platypus/graphics/Context.h"
-#include "WebContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "WebContext.hpp"
 #include "platypus/graphics/CommandBuffer.h"
 #include "WebCommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
@@ -104,14 +104,17 @@ namespace platypus
         )
         {
             PipelineImpl* pPipelineImpl = pipeline.getImpl();
-            ((CommandBufferImpl*)commandBuffer.getImpl())->pPipelineImpl = pPipelineImpl;
+            ((CommandBufferImpl*)commandBuffer.getImpl())->pBoundPipeline = &pipeline;
 
-            FrontFace frontFace = pPipelineImpl->frontFace;
-            GL_FUNC(glFrontFace(frontFace == FrontFace::FRONT_FACE_COUNTER_CLOCKWISE ? GL_CCW : GL_CW));
+            // Testing getting rid of UniformInfos
+            // Reset useLocationIndex from "prev round"
+            pPipelineImpl->useLocationIndex = 0;
+
+            GL_FUNC(glFrontFace(pipeline.getFaceWindingOrder() == FrontFace::FRONT_FACE_COUNTER_CLOCKWISE ? GL_CCW : GL_CW));
 
             GL_FUNC(glUseProgram(pPipelineImpl->pShaderProgram->getID()));
 
-            if (pPipelineImpl->enableDepthTest)
+            if (pipeline.isDepthTestEnabled())
             {
                 GL_FUNC(glEnable(GL_DEPTH_TEST));
             }
@@ -120,7 +123,7 @@ namespace platypus
                 GL_FUNC(glDisable(GL_DEPTH_TEST));
             }
 
-            switch(pPipelineImpl->depthCmpOp)
+            switch(pipeline.getDepthCompareOperation())
             {
                 case DepthCompareOperation::COMPARE_OP_NEVER:
                     GL_FUNC(glDepthFunc(GL_NEVER));
@@ -148,7 +151,7 @@ namespace platypus
                     break;
             }
 
-            switch (pPipelineImpl->cullMode)
+            switch (pipeline.getCullMode())
             {
                 case CullMode::CULL_MODE_NONE:
                     GL_FUNC(glDisable(GL_CULL_FACE));
@@ -169,7 +172,7 @@ namespace platypus
                     break;
             }
 
-            if (pPipelineImpl->enableColorBlending)
+            if (pipeline.isColorBlendEnabled())
             {
                 GL_FUNC(glEnable(GL_BLEND));
                 // TODO: allow specifying this
@@ -205,15 +208,16 @@ namespace platypus
         }
 
 
-        static void create_vao(const PipelineImpl* pPipelineImpl, const std::vector<const Buffer*>& vertexBuffers)
+        static void create_vao(
+            const OpenglShaderProgram* pShaderProgram,
+            const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+            const std::vector<const Buffer*>& vertexBuffers
+        )
         {
-            ContextImpl* pContextImpl = Context::get_instance()->getImpl();
-            const OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
-            const std::vector<int32_t>& shaderAttribLocations = pShaderProgram->getAttribLocations();
-            const std::vector<VertexBufferLayout>& vbLayouts = pPipelineImpl->vertexBufferLayouts;
+            ContextImpl* pContextImpl = Context::get_impl();
 
             // Not sure if this stuff works here well...
-            std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vbLayouts.begin();
+            std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vertexBufferLayouts.begin();
 
             uint32_t vaoID = 0;
             std::set<uint32_t> bufferIDs;
@@ -223,7 +227,7 @@ namespace platypus
             for (const Buffer* pBuffer : vertexBuffers)
             {
                 // NOTE: Could maybe remove this kind of checking on release build?
-                if (vbLayoutIt == vbLayouts.end())
+                if (vbLayoutIt == vertexBufferLayouts.end())
                     Debug::log(
                         "@bind_vertex_buffers "
                         "No layout exists for inputted buffer",
@@ -318,7 +322,7 @@ namespace platypus
 
         static uint32_t get_common_vao(const std::vector<const Buffer*>& vertexBuffers)
         {
-            std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_instance()->getImpl()->vaoBufferMapping;
+            std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_impl()->vaoBufferMapping;
             // Must be one of these...
             for (uint32_t vaoID : vertexBuffers[0]->getImpl()->vaos)
             {
@@ -343,11 +347,18 @@ namespace platypus
             const std::vector<const Buffer*>& vertexBuffers
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+            const Pipeline* pPipeline = commandBuffer.getImpl()->pBoundPipeline;
+            PipelineImpl* pPipelineImpl = pPipeline->getImpl();
 
             uint32_t vaoID = get_common_vao(vertexBuffers);
             if (vaoID == 0)
-                create_vao(pPipelineImpl, vertexBuffers);
+            {
+                create_vao(
+                    pPipelineImpl->pShaderProgram,
+                    pPipeline->getVertexBufferLayouts(),
+                    vertexBuffers
+                );
+            }
 
             GL_FUNC(glBindVertexArray(vaoID));
         }
@@ -391,15 +402,17 @@ namespace platypus
             uint32_t offset,
             uint32_t size,
             const void* pValues,
+            // NOTE: Issue when getting rid of UniformInfos -> How to figure out the type of the values?
             std::vector<UniformInfo> glUniformInfo // Only used on opengl side NOTE: Why this passed by value!?
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pBoundPipeline->getImpl();
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
             PE_byte* pBuf = (PE_byte*)pValues;
             size_t bufOffset = 0;
+            int& useLocationIndex = pPipelineImpl->useLocationIndex;
             for (const UniformInfo& uInfo : glUniformInfo)
             {
                 if (bufOffset >= size)
@@ -418,57 +431,63 @@ namespace platypus
                     case ShaderDataType::Int:
                     {
                         int val = *(int*)pCurrentData;
-                        GL_FUNC(glUniform1i(shaderUniformLocations[uInfo.locationIndex], val));
+                        GL_FUNC(glUniform1i(shaderUniformLocations[useLocationIndex], val));
+                        ++useLocationIndex;
                         break;
                     }
                     case ShaderDataType::Float:
                     {
                         float val = *(float*)pCurrentData;
-                        GL_FUNC(glUniform1f(shaderUniformLocations[uInfo.locationIndex], val));
+                        GL_FUNC(glUniform1f(shaderUniformLocations[useLocationIndex], val));
+                        ++useLocationIndex;
                         break;
                     }
                     case ShaderDataType::Float2:
                     {
                         Vector2f vec = *(Vector2f*)pCurrentData;
                         GL_FUNC(glUniform2f(
-                            shaderUniformLocations[uInfo.locationIndex],
+                            shaderUniformLocations[useLocationIndex],
                             vec.x,
                             vec.y
                         ));
+                        ++useLocationIndex;
                         break;
                     }
                     case ShaderDataType::Float3:
                     {
                         Vector3f vec = *(Vector3f*)pCurrentData;;
                         GL_FUNC(glUniform3f(
-                            shaderUniformLocations[uInfo.locationIndex],
+                            shaderUniformLocations[useLocationIndex],
                             vec.x,
                             vec.y,
                             vec.z
                         ));
+                        ++useLocationIndex;
                         break;
                     }
                     case ShaderDataType::Float4:
                     {
                         Vector4f vec = *(Vector4f*)pCurrentData;
                         GL_FUNC(glUniform4f(
-                            shaderUniformLocations[uInfo.locationIndex],
+                            shaderUniformLocations[useLocationIndex],
                             vec.x,
                             vec.y,
                             vec.z,
                             vec.w
                         ));
+                        ++useLocationIndex;
                         break;
                     }
                     case ShaderDataType::Mat4:
                     {
                         Matrix4f matrix = *(Matrix4f*)pCurrentData;
                         GL_FUNC(glUniformMatrix4fv(
-                            shaderUniformLocations[uInfo.locationIndex],
+                            shaderUniformLocations[useLocationIndex],
                             1,
                             GL_FALSE,
                             (const float*)&matrix
                         ));
+                        ++useLocationIndex;
                         break;
                     }
 
@@ -493,7 +512,7 @@ namespace platypus
             const std::vector<uint32_t>& offsets
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pPipelineImpl;
+            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pBoundPipeline->getImpl();
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
@@ -511,6 +530,7 @@ namespace platypus
                 //  buffers anymore...
                 int bufferBindingIndex = 0;
                 int bindingIndex = 0;
+                int& useLocationIndex = pPipelineImpl->useLocationIndex;
                 for (const DescriptorSetLayoutBinding& binding : pLayout->getBindings())
                 {
                     const std::vector<UniformInfo>& uniformInfo = binding.getUniformInfo();
@@ -532,7 +552,7 @@ namespace platypus
                         {
                             Debug::log(
                                 "@bind_descriptor_sets "
-                                "Descriptor set component's data was nullptr!"
+                                "Descriptor set component's data was nullptr!",
                                 Debug::MessageType::PLATYPUS_ERROR
                             );
                             PLATYPUS_ASSERT(false);
@@ -575,14 +595,16 @@ namespace platypus
                                 {
                                     int val = *(int*)pCurrentData;
                                     valSize = sizeof(int);
-                                    glUniform1i(shaderUniformLocations[uboInfo.locationIndex], val);
+                                    glUniform1i(shaderUniformLocations[useLocationIndex], val);
+                                    ++useLocationIndex;
                                     break;
                                 }
                                 case ShaderDataType::Float:
                                 {
                                     float val = *(float*)pCurrentData;
                                     valSize = sizeof(float);
-                                    GL_FUNC(glUniform1f(shaderUniformLocations[uboInfo.locationIndex], val));
+                                    GL_FUNC(glUniform1f(shaderUniformLocations[useLocationIndex], val));
+                                    ++useLocationIndex;
                                     break;
                                 }
                                 case ShaderDataType::Float2:
@@ -592,10 +614,11 @@ namespace platypus
                                     memcpy(&vec, pCurrentData, valSize);
 
                                     GL_FUNC(glUniform2f(
-                                        shaderUniformLocations[uboInfo.locationIndex],
+                                        shaderUniformLocations[useLocationIndex],
                                         vec.x,
                                         vec.y
                                     ));
+                                    ++useLocationIndex;
                                     break;
                                 }
                                 case ShaderDataType::Float3:
@@ -604,11 +627,12 @@ namespace platypus
                                     valSize = sizeof(Vector3f);
                                     memcpy(&vec, pCurrentData, valSize);
                                     GL_FUNC(glUniform3f(
-                                        shaderUniformLocations[uboInfo.locationIndex],
+                                        shaderUniformLocations[useLocationIndex],
                                         vec.x,
                                         vec.y,
                                         vec.z
                                     ));
+                                    ++useLocationIndex;
                                     break;
                                 }
                                 case ShaderDataType::Float4:
@@ -616,16 +640,17 @@ namespace platypus
                                     Vector4f vec;
                                     valSize = sizeof(Vector4f);
                                     memcpy(&vec, pCurrentData, valSize);
-
                                     GL_FUNC(glUniform4f(
-                                        shaderUniformLocations[uboInfo.locationIndex],
+                                        shaderUniformLocations[useLocationIndex],
                                         vec.x,
                                         vec.y,
                                         vec.z,
                                         vec.w
                                     ));
+                                    ++useLocationIndex;
                                     break;
                                 }
+                                // NOTE: remembering some issues about this?
                                 case ShaderDataType::Mat4:
                                 {
                                     valSize = sizeof(Matrix4f) * uboInfo.arrayLen;
@@ -633,11 +658,12 @@ namespace platypus
                                     {
                                         const PE_byte* pData = pCurrentData + i * sizeof(Matrix4f);
                                         GL_FUNC(glUniformMatrix4fv(
-                                            shaderUniformLocations[uboInfo.locationIndex + i],
+                                            shaderUniformLocations[useLocationIndex],
                                             1,
                                             GL_FALSE,
                                             (const float*)pData
                                         ));
+                                        ++useLocationIndex;
                                     }
                                     break;
                                 }
@@ -646,7 +672,7 @@ namespace platypus
                                     Debug::log(
                                         "@bind_descriptor_sets "
                                         "Unsupported ShaderDataType: " + std::to_string(uboInfo.type) + " "
-                                        "using location index: " + std::to_string(uboInfo.locationIndex) + " "
+                                        "using location index: " + std::to_string(useLocationIndex) + " "
                                         "Currently implemented types are: "
                                         "Int, Float, Float2, Float3, Float4, Mat4",
                                         Debug::MessageType::PLATYPUS_ERROR
@@ -663,7 +689,7 @@ namespace platypus
                         // TODO: some boundary checking..
                         for (const UniformInfo& layoutInfo : uniformInfo)
                         {
-                            GL_FUNC(glUniform1i(shaderUniformLocations[layoutInfo.locationIndex], binding.getBinding()));
+                            GL_FUNC(glUniform1i(shaderUniformLocations[useLocationIndex], binding.getBinding()));
                             // well following is quite fucking dumb.. dunno how could do this better
                             GL_FUNC(glActiveTexture(binding_to_gl_texture_unit(binding.getBinding())));
                             const Texture* pTexture = (const Texture*)descriptorSetComponents[bindingIndex].pData;
@@ -671,6 +697,7 @@ namespace platypus
                                 GL_TEXTURE_2D,
                                 pTexture->getImpl()->id
                             ));
+                            ++useLocationIndex;
                         }
                     }
                     ++bindingIndex;

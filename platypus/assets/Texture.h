@@ -76,7 +76,6 @@ namespace platypus
 
     public:
         Texture(
-            const CommandPool& commandPool,
             const Image* pImage,
             ImageFormat targetFormat,
             const TextureSampler& sampler,

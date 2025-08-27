@@ -1,4 +1,5 @@
 #include "GUIRenderer.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
@@ -13,12 +14,10 @@ namespace platypus
     size_t GUIRenderer::s_maxBatchLength = 1000;
     GUIRenderer::GUIRenderer(
         const MasterRenderer& masterRenderer,
-        CommandPool& commandPool,
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
         _masterRendererRef(masterRenderer),
-        _commandPoolRef(commandPool),
         _descriptorPoolRef(descriptorPool),
         _requiredComponentsMask(requiredComponentsMask),
         _vertexShader("GUIVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
@@ -34,6 +33,76 @@ namespace platypus
                     { { 2 } }
                 }
             }
+        ),
+
+        _imgPipeline(
+            masterRenderer.getSwapchain().getRenderPassPtr(),
+            // Vertex buffer layouts
+            {
+                {
+                    {
+                        { 0, ShaderDataType::Float2 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                    0
+                },
+                {
+                    {
+                        { 1, ShaderDataType::Float4 },
+                        { 2, ShaderDataType::Float2 },
+                        { 3, ShaderDataType::Float4 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                    1
+                }
+            },
+            {
+                _textureDescriptorSetLayout,
+            },
+            &_vertexShader,
+            &_imgFragmentShader,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_ALWAYS,
+            true, // enable color blending
+            sizeof(Matrix4f) + sizeof(float), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
+        ),
+
+        _fontPipeline(
+            masterRenderer.getSwapchain().getRenderPassPtr(),
+            // Vertex buffer layouts
+            {
+                {
+                    {
+                        { 0, ShaderDataType::Float2 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                    0
+                },
+                {
+                    {
+                        { 1, ShaderDataType::Float4 },
+                        { 2, ShaderDataType::Float2 },
+                        { 3, ShaderDataType::Float4 }
+                    },
+                    VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                    1
+                }
+            },
+            {
+                _textureDescriptorSetLayout,
+            },
+            &_vertexShader,
+            &_fontFragmentShader,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // enable depth test
+            DepthCompareOperation::COMPARE_OP_ALWAYS,
+            true, // enable color blending
+            sizeof(Matrix4f) + sizeof(float), // push constants size
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
         )
     {
         // Create common vertex and index buffers
@@ -48,7 +117,6 @@ namespace platypus
             2, 3, 0
         };
         _pVertexBuffer = new Buffer(
-            _commandPoolRef,
             vertexData.data(),
             sizeof(float) * 2,
             4,
@@ -57,7 +125,6 @@ namespace platypus
             false
         );
         _pIndexBuffer = new Buffer(
-            _commandPoolRef,
             indices.data(),
             sizeof(uint16_t),
             indices.size(),
@@ -74,7 +141,6 @@ namespace platypus
             BatchData& batchData = _batches[i];
             std::vector<GUIRenderData> instanceBufferData(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
-                _commandPoolRef,
                 instanceBufferData.data(),
                 sizeof(GUITransform),
                 instanceBufferData.size(),
@@ -99,7 +165,7 @@ namespace platypus
 
     void GUIRenderer::allocCommandBuffers(uint32_t count)
     {
-        _commandBuffers = _commandPoolRef.allocCommandBuffers(
+        _commandBuffers = Device::get_command_pool()->allocCommandBuffers(
             count,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
@@ -118,63 +184,8 @@ namespace platypus
         float viewportHeight
     )
     {
-        VertexBufferLayout vbLayout = {
-            {
-                { 0, ShaderDataType::Float2 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-            0
-        };
-        VertexBufferLayout instancedVbLayout = {
-            {
-                { 1, ShaderDataType::Float4 },
-                { 2, ShaderDataType::Float2 },
-                { 3, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-            1
-        };
-        std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
-        std::vector<DescriptorSetLayout> descriptorSetLayouts = {
-            _textureDescriptorSetLayout
-        };
-
-        Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
-        _imgPipeline.create(
-            renderPass,
-            vertexBufferLayouts,
-            descriptorSetLayouts,
-            _vertexShader,
-            _imgFragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_BACK,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_ALWAYS,
-            true, // enable color blending
-            sizeof(Matrix4f) + sizeof(float), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
-
-        _fontPipeline.create(
-            renderPass,
-            vertexBufferLayouts,
-            descriptorSetLayouts,
-            _vertexShader,
-            _fontFragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_BACK,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_ALWAYS,
-            true, // enable color blending
-            sizeof(Matrix4f) + sizeof(float), // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
+        _imgPipeline.create();
+        _fontPipeline.create();
     }
 
     void GUIRenderer::destroyPipeline()
@@ -213,11 +224,11 @@ namespace platypus
             entity, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         ID_t textureID = pRenderable->textureID;
         if (textureID == NULL_ID)
         {
-            textureID = assetManager.getWhiteTexture()->getID();
+            textureID = pAssetManager->getWhiteTexture()->getID();
         }
 
         int batchIndex = findExistingBatchIndex(pRenderable->layer, textureID);
@@ -365,8 +376,8 @@ namespace platypus
                 // "Clear" the batch for next round of submits
                 // NOTE: Might be issue here if shitload of gui stuff
                 //  -> occupied batches gets never really cleared!
-                //  TODO: Truly clear batches at least on scene switch
-                //      + maybe some clever way to deal with that withing the same scene too...
+                //  TODO: Truly clear batches at least on scene switch?
+                //      + maybe some clever way to deal with that within the same scene too...
                 batchData.count = 0;
             }
         }
@@ -450,8 +461,8 @@ namespace platypus
         const GUITransform* pTransform
     )
     {
-        AssetManager& assetManager = Application::get_instance()->getAssetManager();
-        const Font* pFont = (const Font*)assetManager.getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        const Font* pFont = (const Font*)pAssetManager->getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
         const std::unordered_map<wchar_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
 
         const float originalX = pTransform->position.x;
@@ -529,8 +540,8 @@ namespace platypus
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Texture* pTexture = (const Texture*)pAssetManager->getAsset(
             textureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
@@ -562,8 +573,8 @@ namespace platypus
     void GUIRenderer::createTextureDescriptorSets(ID_t textureID)
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Texture* pTexture = (const Texture*)assetManager.getAsset(
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Texture* pTexture = (const Texture*)pAssetManager->getAsset(
             textureID,
             AssetType::ASSET_TYPE_TEXTURE
         );

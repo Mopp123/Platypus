@@ -1,14 +1,15 @@
 #include "AssetManager.h"
-#include "platypus/core/Debug.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/Buffers.h"
-#include "platypus/utils/ModelLoading.h"
+#include "platypus/assets/SkeletalAnimationData.h"
+#include "platypus/core/Debug.h"
+#include "platypus/utils/modelLoading/ModelLoading.h"
 #include "platypus/Common.h"
 
 
 namespace platypus
 {
-    AssetManager::AssetManager(CommandPool& commandPool) :
-        _commandPoolRef(commandPool)
+    AssetManager::AssetManager()
     {
         // Create black and white default textures
         PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
@@ -143,7 +144,6 @@ namespace platypus
         }
 
         Texture* pTexture = new Texture(
-            _commandPoolRef,
             pImage,
             targetFormat,
             sampler,
@@ -247,7 +247,6 @@ namespace platypus
     )
     {
         Buffer* pVertexBuffer = new Buffer(
-            _commandPoolRef,
             (void*)vertexData.data(),
             sizeof(float),
             vertexData.size(),
@@ -256,7 +255,6 @@ namespace platypus
             false
         );
         Buffer* pIndexBuffer = new Buffer(
-            _commandPoolRef,
             (void*)indexData.data(),
             sizeof(uint32_t),
             indexData.size(),
@@ -277,7 +275,9 @@ namespace platypus
     Model* AssetManager::loadModel(const std::string& filepath)
     {
         std::vector<MeshData> loadedMeshes;
-        if (!load_gltf_model(_commandPoolRef, filepath, loadedMeshes))
+        std::vector<Pose> loadedBindPoses;
+        std::vector<std::vector<Pose>> loadedAnimations;
+        if (!load_gltf_model(filepath, loadedMeshes, loadedBindPoses, loadedAnimations))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -292,8 +292,7 @@ namespace platypus
         for (const MeshData& meshData : loadedMeshes)
         {
             Buffer* pVertexBuffer = new Buffer(
-                _commandPoolRef,
-                (void*)meshData.vertexBufferData.data.data(),
+                (void*)meshData.vertexBufferData.rawData.data(),
                 meshData.vertexBufferData.elementSize,
                 meshData.vertexBufferData.length,
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -302,8 +301,7 @@ namespace platypus
             );
             MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
             Buffer* pIndexBuffer = new Buffer(
-                _commandPoolRef,
-                (void*)useIndexBuffer.data.data(),
+                (void*)useIndexBuffer.rawData.data(),
                 useIndexBuffer.elementSize,
                 useIndexBuffer.length,
                 BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -323,6 +321,70 @@ namespace platypus
         Model* pModel = new Model(createdMeshes);
         _assets[pModel->getID()] = pModel;
         return pModel;
+    }
+
+    Model* AssetManager::loadModel(
+        const std::string& filepath,
+        std::vector<Pose>& outBindPoses,
+        std::vector<std::vector<Pose>>& outAnimations
+    )
+    {
+        std::vector<MeshData> loadedMeshes;
+        if (!load_gltf_model(filepath, loadedMeshes, outBindPoses, outAnimations))
+        {
+            Debug::log(
+                "@AssetManager::loadModel "
+                "Failed to load model using filepath: " + filepath,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+
+        std::vector<Mesh*> createdMeshes;
+        for (const MeshData& meshData : loadedMeshes)
+        {
+            Buffer* pVertexBuffer = new Buffer(
+                (void*)meshData.vertexBufferData.rawData.data(),
+                meshData.vertexBufferData.elementSize,
+                meshData.vertexBufferData.length,
+                BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+            MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
+            Buffer* pIndexBuffer = new Buffer(
+                (void*)useIndexBuffer.rawData.data(),
+                useIndexBuffer.elementSize,
+                useIndexBuffer.length,
+                BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+
+            Mesh* pMesh = new Mesh(
+                meshData.vertexBufferLayout,
+                pVertexBuffer,
+                pIndexBuffer,
+                meshData.transformationMatrix
+            );
+            _assets[pMesh->getID()] = pMesh;
+            createdMeshes.push_back(pMesh);
+        }
+        Model* pModel = new Model(createdMeshes);
+        _assets[pModel->getID()] = pModel;
+        return pModel;
+    }
+
+    SkeletalAnimationData* AssetManager::createSkeletalAnimation(
+        float speed,
+        const Pose& bindPose,
+        const std::vector<Pose>& poses
+    )
+    {
+        SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(speed, bindPose, poses);
+        _assets[pAnimationData->getID()] = pAnimationData;
+        return pAnimationData;
     }
 
     Font* AssetManager::loadFont(const std::string& filepath, unsigned int pixelSize)

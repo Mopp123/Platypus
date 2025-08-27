@@ -26,11 +26,7 @@ add_compile_options(
     -Wall -std=c++17 -g
 )
 
-if(${BUILD_TARGET} MATCHES "desktop")
-    add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
-elseif(${BUILD_TARGET} MATCHES "web")
-    add_compile_definitions(PLATYPUS_BUILD_WEB=1)
-endif()
+add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}
@@ -46,7 +42,9 @@ file(GLOB SRC_FILES
     platypus/core/platform/${BUILD_TARGET}/*.cpp
 
     platypus/ecs/components/*.cpp
+    platypus/ecs/systems/*.cpp
     platypus/utils/*.cpp
+    platypus/utils/modelLoading/*.cpp
     platypus/utils/controllers/*.cpp
 
     platypus/assets/*.cpp

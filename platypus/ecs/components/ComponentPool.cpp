@@ -5,24 +5,27 @@
 
 namespace platypus
 {
+    ComponentPool::ComponentPool(
+        ComponentType componentType,
+        size_t componentSize,
+        size_t componentCapacity,
+        bool allowResize
+    ) :
+        MemoryPool(componentSize * componentCapacity),
+        _componentType(componentType),
+        _componentSize(componentSize),
+        _componentCapacity(componentCapacity),
+        _allowResize(allowResize)
+    {}
+
     ComponentPool::ComponentPool(const ComponentPool& other) :
+        _componentType(other._componentType),
         _componentSize(other._componentSize),
         _componentCapacity(other._componentCapacity),
         _componentCount(other._componentCount),
         _allowResize(other._allowResize)
     {
     }
-
-    ComponentPool::ComponentPool(
-        size_t componentSize,
-        size_t componentCapacity,
-        bool allowResize
-    ) :
-        MemoryPool(componentSize * componentCapacity),
-        _componentSize(componentSize),
-        _componentCapacity(componentCapacity),
-        _allowResize(allowResize)
-    {}
 
     ComponentPool::~ComponentPool()
     {
@@ -79,6 +82,14 @@ namespace platypus
             {
                 addSpace(_totalSize + _componentSize);
                 ++_componentCapacity;
+
+                #ifdef PLATYPUS_DEBUG
+                    Debug::log(
+                        "@ComponentPool::" + component_type_to_string(_componentType) + "::allocComponent\n"
+                        "   Increased pool size to: " + std::to_string(_totalSize) + "\n"
+                        "   Component count: " + std::to_string(_componentCount)
+                    );
+                #endif
             }
         }
         void* ptr = nullptr;
@@ -121,7 +132,7 @@ namespace platypus
         else
         {
             Debug::log(
-                "@ComponentPool::destroyComponent "
+                "@ComponentPool(" + component_type_to_string(_componentType) + ")::destroyComponent "
                 "Invalid entityID: " + std::to_string(entityID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -135,7 +146,7 @@ namespace platypus
         if (_entityOffsetMapping.find(entityID) == _entityOffsetMapping.end())
         {
             Debug::log(
-                "@ComponentPool::operator[] (1)"
+                "@ComponentPool(" + component_type_to_string(_componentType) + ") operator[] (1) "
                 "Failed to find entity: " + std::to_string(entityID) + " from pool",
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -153,7 +164,7 @@ namespace platypus
         if (it == _entityOffsetMapping.end())
         {
             Debug::log(
-                "@ComponentPool::operator[] (2)"
+                "@ComponentPool(" + component_type_to_string(_componentType) + ") operator[] (2) "
                 "Failed to find entity: " + std::to_string(entityID) + " from pool",
                 Debug::MessageType::PLATYPUS_ERROR
             );

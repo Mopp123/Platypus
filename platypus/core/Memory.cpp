@@ -25,6 +25,7 @@ namespace platypus
             "Copied memory pool!",
             Debug::MessageType::PLATYPUS_WARNING
         );
+        PLATYPUS_ASSERT(false);
     }
 
     MemoryPool::~MemoryPool()
@@ -83,6 +84,11 @@ namespace platypus
     {
         free(_pStorage);
         _pStorage = nullptr;
+
+        Debug::log(
+            "@MemoryPool::freeStorage freed " + std::to_string(_totalSize)
+        );
+
         _totalSize = 0;
         _occupiedSize = 0;
     }
@@ -106,10 +112,6 @@ namespace platypus
 
         free(_pStorage);
         _pStorage = pNewStorage;
-        Debug::log(
-            "@MemoryPool::addSpace "
-            "Increased size from " + std::to_string(_totalSize) + " to " + std::to_string(newSize)
-        );
         _totalSize = newSize;
     }
 }

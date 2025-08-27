@@ -34,7 +34,6 @@ namespace platypus
     public:
         StaticMeshRenderer(
             const MasterRenderer& masterRenderer,
-            CommandPool& commandPool,
             DescriptorPool& descriptorPool,
             uint64_t requiredComponentsMask
         );
@@ -48,10 +47,7 @@ namespace platypus
             const RenderPass& renderPass,
             uint32_t viewportWidth,
             uint32_t viewportHeight,
-            const Matrix4f& perspectiveProjectionMatrix,
-            const Matrix4f& orthographicProjectionMatrix,
-            const DescriptorSet& cameraDescriptorSet,
-            const DescriptorSet& dirLightDescriptorSet,
+            const DescriptorSet& commonDescriptorSet,
             size_t frame
         );
 

@@ -16,7 +16,6 @@ namespace platypus
     {
     protected:
         const MasterRenderer& _masterRendererRef;
-        CommandPool& _commandPoolRef;
         std::vector<CommandBuffer> _commandBuffers;
         DescriptorPool& _descriptorPoolRef;
 
@@ -26,7 +25,6 @@ namespace platypus
     public:
         Renderer(
             const MasterRenderer& masterRenderer,
-            CommandPool& commandPool,
             DescriptorPool& descriptorPool,
             uint64_t requiredComponentsMask
         );
@@ -35,18 +33,18 @@ namespace platypus
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
 
-        virtual void freeBatches() = 0;
+        virtual void createDescriptorSets() {}
+        virtual void freeDescriptorSets() {}
 
+        // NOTE: Should rather
+        virtual void freeBatches() = 0;
         virtual void submit(const Scene* pScene, entityID_t entity) = 0;
 
         virtual const CommandBuffer& recordCommandBuffer(
             const RenderPass& renderPass,
             uint32_t viewportWidth,
             uint32_t viewportHeight,
-            const Matrix4f& perspectiveProjectionMatrix,
-            const Matrix4f& orthographicProjectionMatrix,
-            const DescriptorSet& cameraDescriptorSet,
-            const DescriptorSet& dirLightDescriptorSet,
+            const DescriptorSet& commonDescriptorSet,
             size_t frame
         ) = 0;
 

@@ -3,9 +3,10 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"
-#include "platypus/graphics/Context.h"
-#include "platypus/graphics/platform/desktop/DesktopContext.h"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
@@ -15,14 +16,13 @@
 namespace platypus
 {
     static void transition_image_layout(
-        const CommandPool& commandPool,
         VkImage imageHandle,
         VkImageLayout oldLayout,
         VkImageLayout newLayout,
         uint32_t mipLevelCount
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -138,7 +138,6 @@ namespace platypus
 
 
     static void generate_mipmaps(
-        const CommandPool& commandPool,
         VkImage imageHandle,
         VkFormat imageFormat,
         int imgWidth,
@@ -147,7 +146,7 @@ namespace platypus
         VkFilter filterMode
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -260,7 +259,7 @@ namespace platypus
     TextureSamplerImpl::~TextureSamplerImpl()
     {
         vkDestroySampler(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             handle,
             nullptr
         );
@@ -330,7 +329,7 @@ namespace platypus
 
         VkSampler handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateSampler(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -361,7 +360,6 @@ namespace platypus
 
 
     Texture::Texture(
-        const CommandPool& commandPool,
         const Image* pImage,
         ImageFormat targetFormat,
         const TextureSampler& sampler,
@@ -383,7 +381,6 @@ namespace platypus
 
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
-            commandPool,
             (void*)pImage->getData(),
             1, // Single element size is 8 bit "pixel"
             pImage->getSize(),
@@ -394,12 +391,10 @@ namespace platypus
 
         VkFormat imageFormat = to_vk_format(targetFormat);
 
-        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
-
         // Using vkCmdBlit to create mipmaps, so make sure this is supported
         VkFormatProperties imageFormatProperties;
         vkGetPhysicalDeviceFormatProperties(
-            pContextImpl->physicalDevice,
+            Device::get_impl()->physicalDevice,
             imageFormat,
             &imageFormatProperties
         );
@@ -460,7 +455,7 @@ namespace platypus
         VkImage imageHandle = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createImageResult = vmaCreateImage(
-            pContextImpl->vmaAllocator,
+            Device::get_impl()->vmaAllocator,
             &imageCreateInfo,
             &allocCreateInfo,
             &imageHandle,
@@ -480,14 +475,12 @@ namespace platypus
         }
 
         transition_image_layout(
-            commandPool,
             imageHandle,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             mipLevelCount
         );
         copy_buffer_to_image(
-            commandPool,
             pStagingBuffer->getImpl()->handle,
             imageHandle,
             imageWidth,
@@ -497,7 +490,6 @@ namespace platypus
         if (mipLevelCount > 1)
         {
             generate_mipmaps(
-                commandPool,
                 imageHandle,
                 imageFormat,
                 imageWidth,
@@ -509,7 +501,6 @@ namespace platypus
         else
         {
             transition_image_layout(
-                commandPool,
                 imageHandle,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -525,7 +516,7 @@ namespace platypus
         //  -> The updating probably breaks the system since the same texture may be in use at the time
         //  of the update by the descriptor sets!
         VkImageView imageView = create_image_views(
-            pContextImpl->device,
+            Device::get_impl()->device,
             { imageHandle },
             imageFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -544,9 +535,9 @@ namespace platypus
     {
         if (_pImpl)
         {
-            const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
-            vkDestroyImageView(pContextImpl->device, _pImpl->imageView, nullptr);
-            vmaDestroyImage(pContextImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+            DeviceImpl* pDeviceImpl = Device::get_impl();
+            vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
+            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
             delete _pImpl;
         }
     }

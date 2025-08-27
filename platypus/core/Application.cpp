@@ -1,5 +1,5 @@
 #include "Application.h"
-#include "platypus/graphics/Swapchain.h"
+#include "platypus/graphics/Device.hpp"
 #include "Debug.h"
 #include "Timing.h"
 
@@ -19,12 +19,12 @@ namespace platypus
 
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
-        MasterRenderer& renderer = pApp->getMasterRenderer();
+        MasterRenderer* pRenderer = pApp->getMasterRenderer();
 
         pApp->getInputManager().pollEvents();
         sceneManager.update();
         if (sceneManager.getCurrentScene())
-            renderer.render(pApp->getWindow());
+            pRenderer->render(pApp->getWindow());
 
         std::chrono::time_point<std::chrono::high_resolution_clock> currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> delta = currentTime - s_lastDisplayDelta;
@@ -57,20 +57,8 @@ namespace platypus
         Scene* pInitialScene
     ) :
         _window(name, width, height, resizable, windowMode),
-        _inputManager(_window),
-        _context(name.c_str(), &_window),
-        _masterRenderer(_window),
-        // NOTE: MasterRenderer shouldn't "own" commandPool since the commandPool is
-        // used for non rendering related stuff as well!
-        // TODO: Fix the above
-        _assetManager(_masterRenderer.getCommandPool())
+        _inputManager(_window)
     {
-        #ifdef PLATYPUS_DEBUG
-            Debug::log(
-                "Running platypus engine in DEBUG mode"
-            );
-        #endif
-
         if (s_pInstance)
         {
             Debug::log(
@@ -82,6 +70,25 @@ namespace platypus
         }
         s_pInstance = this;
 
+        Context::create(name.c_str(), &_window);
+        Device::create(&_window);
+
+        // NOTE: Some fucking logic how core stuff is initialized and how their
+        // lifetimes are controlled... This is fucking disgusting atm!
+        //
+        // *MasterRenderer creates only once "common shader resources" in its constructor
+        // *MasterRenderer recreates all renderers' and Materials' shader resources on
+        // window resize (on swapchain recreation)
+        _pMasterRenderer = new MasterRenderer(_window);
+
+        _pAssetManager = new AssetManager;
+
+        #ifdef PLATYPUS_DEBUG
+            Debug::log(
+                "Running platypus engine in DEBUG mode"
+            );
+        #endif
+
         _sceneManager.assignNextScene(pInitialScene);
         s_lastDisplayDelta = std::chrono::high_resolution_clock::now();
     }
@@ -92,7 +99,7 @@ namespace platypus
 
     void Application::run()
     {
-        _masterRenderer.createPipelines();
+        _pMasterRenderer->createPipelines();
         #ifdef PLATYPUS_BUILD_DESKTOP
             while (!_window.isCloseRequested())
             {
@@ -102,9 +109,22 @@ namespace platypus
             emscripten_set_main_loop(update, 0, 1);
         #endif
 
-        _context.waitForOperations();
+        Device::wait_for_operations();
         // NOTE: Why the fuck was this commented out earlier!?!?!
-        _masterRenderer.cleanUp();
+        _pMasterRenderer->cleanUp();
+        _inputManager.destroyEvents();
+        _pAssetManager->destroyAssets();
+
+        delete _pAssetManager;
+        delete _pMasterRenderer;
+        // These shouldn't be accessed after this but ur so dumb,
+        // that you'll forget -> this to at least see that these
+        // are freed...
+        _pAssetManager = nullptr;
+        _pMasterRenderer = nullptr;
+
+        Device::destroy();
+        Context::destroy();
     }
 
     Application* Application::get_instance()

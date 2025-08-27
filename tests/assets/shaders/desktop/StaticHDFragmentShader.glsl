@@ -5,17 +5,16 @@ layout(location = 1) in vec2 var_texCoord;
 layout(location = 2) in vec3 var_fragPos; // in tangent space
 layout(location = 3) in vec3 var_toCamera; // in tangent space
 layout(location = 4) in vec3 var_lightDir; // in tangent space
-layout(location = 5) in vec4 var_lightColor; // in tangent space
-layout(location = 6) in mat3 var_toTangentSpace;
-layout(location = 9) in vec4 var_tangent;
-
-const vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1);
+layout(location = 5) in vec4 var_lightColor;
+layout(location = 6) in vec4 var_ambientLightColor;
+layout(location = 7) in mat3 var_toTangentSpace; // uses locations 7-9
+layout(location = 10) in vec4 var_tangent;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
-layout(set = 2, binding = 0) uniform sampler2D diffuseTextureSampler;
-layout(set = 2, binding = 1) uniform sampler2D specularTextureSampler;
-layout(set = 2, binding = 2) uniform sampler2D normalTextureSampler;
-layout(set = 2, binding = 3) uniform MaterialData
+layout(set = 1, binding = 0) uniform sampler2D diffuseTextureSampler;
+layout(set = 1, binding = 1) uniform sampler2D specularTextureSampler;
+layout(set = 1, binding = 2) uniform sampler2D normalTextureSampler;
+layout(set = 1, binding = 3) uniform MaterialData
 {
     vec4 data;
     // x = specular strength
@@ -51,7 +50,7 @@ void main() {
     float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
     vec4 specularColor = var_lightColor * specularFactor * specularStrength * specularTextureColor;
 
-    vec4 finalColor = (ambientLight + lightDiffuseColor + specularColor) * diffuseTextureColor;
+    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * diffuseTextureColor;
 
     if (diffuseTextureColor.a < 0.1)
     {

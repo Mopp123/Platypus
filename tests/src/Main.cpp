@@ -1,6 +1,6 @@
 #include "platypus/Platypus.h"
-#include "UITestScene.h"
 #include "SkinnedMeshTestScene.h"
+#include <iostream>
 
 
 int main(int argc, const char** argv)

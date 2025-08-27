@@ -14,7 +14,7 @@ namespace platypus
 
     public:
         MemoryPool() {}
-        MemoryPool(size_t capacity);
+        MemoryPool(size_t size);
         MemoryPool(const MemoryPool& other);
         virtual ~MemoryPool();
 

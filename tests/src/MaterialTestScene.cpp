@@ -16,7 +16,7 @@ void MaterialTestScene::init()
 {
     initBase();
 
-    AssetManager& assetManager = Application::get_instance()->getAssetManager();
+    AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
     _ui.init(this, inputManager);
@@ -37,7 +37,7 @@ void MaterialTestScene::init()
         true
     );
 
-    Font* pFont = assetManager.loadFont("assets/fonts/Ubuntu-R.ttf", 16);
+    Font* pFont = pAssetManager->loadFont("assets/fonts/Ubuntu-R.ttf", 16);
     ui::UIElement* pText =  ui::add_text_element(
         _ui,
         pUIContainer,
@@ -65,52 +65,52 @@ void MaterialTestScene::init()
         0
     );
 
-    Texture* pDiffuseTexture = assetManager.loadTexture(
+    Texture* pDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/DiffuseTest.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pSpecularTexture = assetManager.loadTexture(
+    Texture* pSpecularTexture = pAssetManager->loadTexture(
         "assets/textures/SpecularTest.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pNormalTexture = assetManager.loadTexture(
+    Texture* pNormalTexture = pAssetManager->loadTexture(
         "assets/textures/NormalTest.png",
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
-    Texture* pFloorTexture = assetManager.loadTexture(
+    Texture* pFloorTexture = pAssetManager->loadTexture(
         "assets/textures/Floor.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pFloorSpecularTexture = assetManager.loadTexture(
+    Texture* pFloorSpecularTexture = pAssetManager->loadTexture(
         "assets/textures/FloorSpecular.png",
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pFloorNormalTexture = assetManager.loadTexture(
+    Texture* pFloorNormalTexture = pAssetManager->loadTexture(
         "assets/textures/FloorNormal.png",
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
 
-    Material* pMaterial = assetManager.createMaterial(
+    Material* pMaterial = pAssetManager->createMaterial(
         pDiffuseTexture->getID(),
-        assetManager.getWhiteTexture()->getID(),
+        pAssetManager->getWhiteTexture()->getID(),
         pNormalTexture->getID(),
         0.8f,
         16.0f
     );
-    Material* pMaterial2 = assetManager.createMaterial(
+    Material* pMaterial2 = pAssetManager->createMaterial(
         pDiffuseTexture->getID(),
-        assetManager.getWhiteTexture()->getID(),
+        pAssetManager->getWhiteTexture()->getID(),
         NULL_ID,
         0.8f,
         16.0f
     );
-    Material* pFloorMaterial = assetManager.createMaterial(
+    Material* pFloorMaterial = pAssetManager->createMaterial(
         pFloorTexture->getID(),
         pFloorSpecularTexture->getID(),
         pFloorNormalTexture->getID(),
@@ -118,9 +118,9 @@ void MaterialTestScene::init()
         64.0f
     );
 
-    Model* pModel = assetManager.loadModel("assets/TestCubeTangents.glb");
-    Model* pModel2 = assetManager.loadModel("assets/TestCube.glb");
-    Model* pFloorModel = assetManager.loadModel("assets/models/Floor.glb");
+    Model* pModel = pAssetManager->loadModel("assets/TestCubeTangents.glb");
+    Model* pModel2 = pAssetManager->loadModel("assets/TestCube.glb");
+    Model* pFloorModel = pAssetManager->loadModel("assets/models/Floor.glb");
 
     // Create box entities
     // Normal mapped
@@ -132,8 +132,8 @@ void MaterialTestScene::init()
     pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
     StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
         _boxEntity,
-        pModel->getMeshes()[0]->getID(),
-        pMaterial->getID()
+        pModel2->getMeshes()[0]->getID(),
+        pMaterial2->getID()
     );
     // Non normal mapped
     entityID_t entity2 = createEntity();

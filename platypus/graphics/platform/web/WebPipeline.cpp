@@ -1,4 +1,6 @@
 #include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/Context.hpp"
+#include "platypus/core/Application.h"
 #include "WebPipeline.h"
 #include "WebShader.h"
 #include "platypus/core/Debug.h"
@@ -6,7 +8,32 @@
 
 namespace platypus
 {
-    Pipeline::Pipeline()
+    Pipeline::Pipeline(
+        const RenderPass* pRenderPass,
+        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+        const std::vector<DescriptorSetLayout>& descriptorLayouts,
+        const Shader* pVertexShader,
+        const Shader* pFragmentShader,
+        CullMode cullMode,
+        FrontFace frontFace,
+        bool enableDepthTest,
+        DepthCompareOperation depthCmpOp,
+        bool enableColorBlending, // TODO: more options to handle this..
+        uint32_t pushConstantSize,
+        uint32_t pushConstantStageFlags
+    ) :
+        _pRenderPass(pRenderPass),
+        _vertexBufferLayouts(vertexBufferLayouts),
+        _descriptorSetLayouts(descriptorLayouts),
+        _pVertexShader(pVertexShader),
+        _pFragmentShader(pFragmentShader),
+        _cullMode(cullMode),
+        _frontFace(frontFace),
+        _enableDepthTest(enableDepthTest),
+        _depthCmpOp(depthCmpOp),
+        _enableColorBlending(enableColorBlending),
+        _pushConstantSize(pushConstantSize),
+        _pushConstantStageFlags(pushConstantStageFlags)
     {
         _pImpl = new PipelineImpl;
     }
@@ -18,21 +45,6 @@ namespace platypus
     }
 
     void Pipeline::create(
-        const RenderPass& renderPass,
-        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-        const std::vector<DescriptorSetLayout>& descriptorLayouts,
-        const Shader& vertexShader,
-        const Shader& fragmentShader,
-        float viewportWidth,
-        float viewportHeight,
-        const Rect2D viewportScissor,
-        CullMode cullMode,
-        FrontFace frontFace,
-        bool enableDepthTest,
-        DepthCompareOperation depthCmpOp,
-        bool enableColorBlending, // TODO: more options to handle this..
-        uint32_t pushConstantSize,
-        uint32_t pushConstantStageFlags
     )
     {
         if (_pImpl->pShaderProgram)
@@ -46,41 +58,33 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
-        if (pushConstantSize > PLATYPUS_MAX_PUSH_CONSTANTS_SIZE)
+        if (_pushConstantSize > PLATYPUS_MAX_PUSH_CONSTANTS_SIZE)
         {
             Debug::log(
                 "@Pipeline::create "
-                "Push constants size too big: " + std::to_string(pushConstantSize) + " "
+                "Push constants size too big: " + std::to_string(_pushConstantSize) + " "
                 "Maximum size is " + std::to_string(PLATYPUS_MAX_PUSH_CONSTANTS_SIZE),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
 
-        _pImpl->vertexBufferLayouts = vertexBufferLayouts;
-        _pImpl->descriptorSetLayouts = descriptorLayouts;
-        _pImpl->viewportWidth = viewportWidth;
-        _pImpl->viewportHeight = viewportHeight;
+        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
+        Extent2D swapchainExtent = swapchain.getExtent();
+        _pImpl->viewportWidth = swapchainExtent.width;
+        _pImpl->viewportHeight = swapchainExtent.height;
         // NOTE: on web platform we aren't using layout qualifiers
         _pImpl->pShaderProgram = new OpenglShaderProgram(
             ShaderVersion::ESSL1,
-            (const ShaderImpl*)vertexShader._pImpl,
-            (const ShaderImpl*)fragmentShader._pImpl
+            (const ShaderImpl*)_pVertexShader->_pImpl,
+            (const ShaderImpl*)_pFragmentShader->_pImpl
         );
-        _pImpl->cullMode = cullMode;
-        _pImpl->frontFace = frontFace;
-        _pImpl->enableDepthTest = enableDepthTest;
-        _pImpl->depthCmpOp = depthCmpOp;
-        _pImpl->enableColorBlending = enableColorBlending;
     }
 
     void Pipeline::destroy()
     {
         if (_pImpl)
         {
-            _pImpl->vertexBufferLayouts.clear();
-            _pImpl->descriptorSetLayouts.clear();
-
             delete _pImpl->pShaderProgram;
             _pImpl->pShaderProgram = nullptr;
         }

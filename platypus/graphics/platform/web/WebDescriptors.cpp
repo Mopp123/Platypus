@@ -6,6 +6,10 @@ namespace platypus
     {
     };
 
+    DescriptorSetLayout::DescriptorSetLayout()
+    {
+    }
+
     DescriptorSetLayout::DescriptorSetLayout(
         const std::vector<DescriptorSetLayoutBinding>& bindings
     ) :

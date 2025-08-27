@@ -216,6 +216,8 @@ namespace platypus
             );
         }
 
+        // NOTE: If using dynamic uniform buffers make sure you have
+        // given the correct range when creating the descriptor set!
         void bind_descriptor_sets(
             CommandBuffer& commandBuffer,
             const std::vector<DescriptorSet>& descriptorSets,

@@ -1,15 +1,15 @@
 #include "Renderer.h"
+#include "platypus/graphics/Device.hpp"
+
 
 namespace platypus
 {
     Renderer::Renderer(
         const MasterRenderer& masterRenderer,
-        CommandPool& commandPool,
         DescriptorPool& descriptorPool,
         uint64_t requiredComponentsMask
     ) :
         _masterRendererRef(masterRenderer),
-        _commandPoolRef(commandPool),
         _descriptorPoolRef(descriptorPool),
         _requiredComponentsMask(requiredComponentsMask)
     {
@@ -21,7 +21,7 @@ namespace platypus
 
     void Renderer::allocCommandBuffers(uint32_t count)
     {
-        _commandBuffers = _commandPoolRef.allocCommandBuffers(
+        _commandBuffers = Device::get_command_pool()->allocCommandBuffers(
             count,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );

@@ -3,6 +3,7 @@
 #include "Asset.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/utils/Maths.h"
+#include "platypus/utils/AnimationDataUtils.h"
 
 
 namespace platypus

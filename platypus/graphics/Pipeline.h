@@ -62,19 +62,27 @@ namespace platypus
     private:
         PipelineImpl* _pImpl = nullptr;
 
-    public:
-        Pipeline();
-        ~Pipeline();
+        const RenderPass* _pRenderPass;
+        std::vector<VertexBufferLayout> _vertexBufferLayouts;
+        std::vector<DescriptorSetLayout> _descriptorSetLayouts;
+        const Shader* _pVertexShader = nullptr;
+        const Shader* _pFragmentShader = nullptr;
+        CullMode _cullMode;
+        FrontFace _frontFace;
+        bool _enableDepthTest = false;
+        DepthCompareOperation _depthCmpOp;
+        bool _enableColorBlending = false;
+        uint32_t _pushConstantSize = 0;
+        uint32_t _pushConstantStageFlags = 0;
 
-        void create(
-            const RenderPass& renderPass,
+    public:
+        // NOTE: All pipelines currently uses the swapchain's extent as viewport extent
+        Pipeline(
+            const RenderPass* pRenderPass,
             const std::vector<VertexBufferLayout>& vertexBufferLayouts,
             const std::vector<DescriptorSetLayout>& descriptorLayouts,
-            const Shader& vertexShader,
-            const Shader& fragmentShader,
-            float viewportWidth,
-            float viewportHeight,
-            const Rect2D viewportScissor,
+            const Shader* pVertexShader,
+            const Shader* pFragmentShader,
             CullMode cullMode,
             FrontFace frontFace,
             bool enableDepthTest,
@@ -83,8 +91,21 @@ namespace platypus
             uint32_t pushConstantSize,
             uint32_t pushConstantStageFlags
         );
+        ~Pipeline();
 
+        void create();
         void destroy();
+
+
+        const std::vector<VertexBufferLayout>& getVertexBufferLayouts() const { return _vertexBufferLayouts; }
+        const std::vector<DescriptorSetLayout>& getDescriptorSetLayouts() const { return _descriptorSetLayouts; }
+        CullMode getCullMode() const { return _cullMode; }
+        FrontFace getFaceWindingOrder() const { return _frontFace; }
+        bool isDepthTestEnabled() const { return _enableDepthTest; }
+        DepthCompareOperation getDepthCompareOperation() const { return _depthCmpOp; }
+        bool isColorBlendEnabled() const { return _enableColorBlending; }
+        uint32_t getPushConstantsSize() const { return _pushConstantSize; }
+        uint32_t getPushConstantsStageFlags() { return _pushConstantStageFlags; }
 
         inline PipelineImpl* getImpl() const { return _pImpl; }
     };

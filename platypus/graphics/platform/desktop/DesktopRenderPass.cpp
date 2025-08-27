@@ -1,11 +1,12 @@
 #include "platypus/graphics/RenderPass.h"
 #include "platypus/graphics/Swapchain.h"
-#include "platypus/graphics/Context.h"
+#include "platypus/graphics/Device.hpp"
+#include "DesktopDevice.hpp"
 #include "DesktopRenderPass.h"
-#include "DesktopContext.h"
 #include "DesktopSwapchain.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -61,7 +62,11 @@ namespace platypus
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        // NOTE: Previously used VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL here.
+        // Using newer Vulkan version with different driver this gives validation error
+        // that you'd need to use synchronization2 extension for this to work.
+        // Got this fixed by rather using VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment = 1;
@@ -94,7 +99,7 @@ namespace platypus
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             &createInfo,
             nullptr,
             &renderPass
@@ -117,7 +122,7 @@ namespace platypus
 
     void RenderPass::destroy()
     {
-        vkDestroyRenderPass(Context::get_instance()->getImpl()->device, _pImpl->handle, nullptr);
+        vkDestroyRenderPass(Device::get_impl()->device, _pImpl->handle, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;
     }
 }

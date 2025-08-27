@@ -7,7 +7,7 @@
 #include "Texture.h"
 #include "Material.h"
 #include "Font.h"
-#include "platypus/graphics/CommandBuffer.h"
+#include "SkeletalAnimationData.h"
 #include <unordered_map>
 #include <vector>
 
@@ -17,7 +17,6 @@ namespace platypus
     class AssetManager
     {
     private:
-        CommandPool& _commandPoolRef;
         std::unordered_map<ID_t, Asset*> _assets;
         std::unordered_map<ID_t, Asset*> _persistentAssets;
 
@@ -25,7 +24,7 @@ namespace platypus
         Texture* _pBlackTexture = nullptr;
 
     public:
-        AssetManager(CommandPool& commandPool);
+        AssetManager();
         ~AssetManager();
         void destroyAssets();
 
@@ -57,6 +56,16 @@ namespace platypus
             const std::vector<uint32_t>& indexData
         );
         Model* loadModel(const std::string& filepath);
+        Model* loadModel(
+            const std::string& filepath,
+            std::vector<Pose>& outBindPoses,
+            std::vector<std::vector<Pose>>& outAnimations
+        );
+        SkeletalAnimationData* createSkeletalAnimation(
+            float speed,
+            const Pose& bindPose,
+            const std::vector<Pose>& poses
+        );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
         Asset* getAsset(ID_t assetID, AssetType type) const;
