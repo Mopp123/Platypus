@@ -18,11 +18,20 @@ Same as above but lower level:
         -> BUT how to render multiple instances?
         *"dumb rendering"
         *instanced rendering
+        BUT How to figure out which one to use?
+            -> Mesh type? Renderable type?
+        BUT How to do batching?
+        NOTE: Also current instanced rendering is kind of fucked, since "living in the worst case scenario all the time"
+            -> Should transforms buffer really be the same for everythin? Could it be specified somewhere else per batch, like Mesh asset?
+            -> Test StaticRenderer's performace!
 
-    Dumb rendering
         *Descriptor sets needs to live somewhere (for example: joint uniform buffer)
-            -> could be a part of Material
-            BUT that "ruins" the idea of Material being just a material
+            -> Material specific stuff lives inside the Material asset
+            -> Animation specific lives inside the Animation asset
+                *The DescriptorSetLayout could live statically somewhere around there:D
+
+            BUT how does something like "foliage rendering" work with wind, etc?
+                -> Separate foliage material
 
 
 Issue:
