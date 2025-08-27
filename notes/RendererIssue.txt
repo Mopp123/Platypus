@@ -1,5 +1,3 @@
-Maybe take a look how Godot does it
-
 What does rendering require (secondary cmd buf level, where actually calling render commands)
     *Mesh data
     *Component data
@@ -14,16 +12,19 @@ Same as above but lower level:
     *descriptor sets
     *push constants
 
-    ...its that simple
-        -> BUT how to render multiple instances?
-        *"dumb rendering"
-        *instanced rendering
-        BUT How to figure out which one to use?
-            -> Mesh type? Renderable type?
-        BUT How to do batching?
-        NOTE: Also current instanced rendering is kind of fucked, since "living in the worst case scenario all the time"
-            -> Should transforms buffer really be the same for everythin? Could it be specified somewhere else per batch, like Mesh asset?
-            -> Test StaticRenderer's performace!
+    It's that simple!
+        BUT how to render multiple instances?
+            Separate rendering methods:
+                *"dumb rendering"
+                *instanced rendering
+                BUT How to figure out which one to use?
+                    -> Mesh type? Renderable type?
+
+            Who decides when to use instancing?
+                ->Not the user(?)
+                    ->Look at incomming data:
+                        ->check components and figure out from there
+                            ->attempt to animate if has Animation component
 
         *Descriptor sets needs to live somewhere (for example: joint uniform buffer)
             -> Material specific stuff lives inside the Material asset
@@ -33,6 +34,9 @@ Same as above but lower level:
             BUT how does something like "foliage rendering" work with wind, etc?
                 -> Separate foliage material
 
+IDEAS:
+    *A "dumb" renderer that just deals with different kinds of primitives(buffers, descriptor sets, etc) and "batching method",
+    where some other system dispatches the primitives for the "dumb renderer"
 
 Issue:
 *Each renderer works so differently
