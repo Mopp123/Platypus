@@ -1,8 +1,9 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 #include "DesktopBuffers.h"
-#include "platypus/graphics/Context.h"
-#include "DesktopContext.h"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
+#include "DesktopContext.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 #include <cstring>
@@ -11,9 +12,9 @@
 
 namespace platypus
 {
-    void copy_buffer(const CommandPool& commandPool, VkBuffer source, VkBuffer destination, size_t size)
+    void copy_buffer(VkBuffer source, VkBuffer destination, size_t size)
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -37,14 +38,13 @@ namespace platypus
     }
 
     void copy_buffer_to_image(
-        const CommandPool& commandPool,
         VkBuffer source,
         VkImage destination,
         uint32_t imageWidth,
         uint32_t imageHeight
     )
     {
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
@@ -122,7 +122,7 @@ namespace platypus
 
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
     {
-        size_t alignRequirement = Context::get_instance()->getMinUniformBufferOffsetAlignment();
+        size_t alignRequirement = Device::get_min_uniform_buffer_offset_align();
         size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
         return  alignRequirement * (diff + 1);
     }
@@ -164,6 +164,24 @@ namespace platypus
         _pImpl->attribDescription = other._pImpl->attribDescription;
     }
 
+    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement&& other)
+    {
+        _location = other._location;
+        _type = other._type;
+        _pImpl = new VertexBufferElementImpl;
+        _pImpl->attribDescription = other._pImpl->attribDescription;
+        return *this;
+    }
+
+    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement& other)
+    {
+        _location = other._location;
+        _type = other._type;
+        _pImpl = new VertexBufferElementImpl;
+        _pImpl->attribDescription = other._pImpl->attribDescription;
+        return *this;
+    }
+
     VertexBufferElement::~VertexBufferElement()
     {
         if (_pImpl)
@@ -171,6 +189,12 @@ namespace platypus
     }
 
 
+    VertexBufferLayout::VertexBufferLayout()
+    {
+        _pImpl = new VertexBufferLayoutImpl;
+    }
+
+    // NOTE: Not sure if copying elems goes correctly here..
     VertexBufferLayout::VertexBufferLayout(
         const std::vector<VertexBufferElement>& elements,
         VertexInputRate inputRate,
@@ -212,6 +236,40 @@ namespace platypus
     {
     }
 
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout&& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        _pImpl = new VertexBufferLayoutImpl;
+        _pImpl->bindingDescription.binding = other._pImpl->bindingDescription.binding;
+        _pImpl->bindingDescription.inputRate = other._pImpl->bindingDescription.inputRate;
+
+        return *this;
+    }
+
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        _pImpl = new VertexBufferLayoutImpl;
+        _pImpl->bindingDescription.binding = other._pImpl->bindingDescription.binding;
+        _pImpl->bindingDescription.inputRate = other._pImpl->bindingDescription.inputRate;
+
+        return *this;
+    }
+
     VertexBufferLayout::~VertexBufferLayout()
     {
         if (_pImpl)
@@ -220,29 +278,35 @@ namespace platypus
 
 
     Buffer::Buffer(
-        const CommandPool& commandPool,
         void* pData,
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
-        BufferUpdateFrequency updateFrequency
+        BufferUpdateFrequency updateFrequency,
+        bool storeHostSide
     ) :
         _dataElemSize(elementSize),
         _dataLength(dataLength),
         _bufferUsageFlags(usageFlags),
         _updateFrequency(updateFrequency)
     {
+        if (storeHostSide)
+        {
+            _pData = calloc(_dataLength, _dataElemSize);
+            memcpy(_pData, pData, getTotalSize());
+        }
+
         bool useStaging = usageFlags & BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT;
         Buffer* pStagingBuffer = nullptr;
         if (useStaging)
         {
             pStagingBuffer = new Buffer(
-                commandPool,
                 pData,
                 elementSize,
                 dataLength,
                 BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
             );
         }
 
@@ -267,7 +331,7 @@ namespace platypus
             allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
 
-        VmaAllocator vmaAllocator = Context::get_instance()->getImpl()->vmaAllocator;
+        VmaAllocator vmaAllocator = Device::get_impl()->vmaAllocator;
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkResult createResult = vmaCreateBuffer(
@@ -304,7 +368,6 @@ namespace platypus
         else
         {
             copy_buffer(
-                commandPool,
                 pStagingBuffer->_pImpl->handle,
                 _pImpl->handle,
                 getTotalSize()
@@ -321,7 +384,7 @@ namespace platypus
         if (_pImpl)
         {
             vmaDestroyBuffer(
-                Context::get_instance()->getImpl()->vmaAllocator,
+                Device::get_impl()->vmaAllocator,
                 _pImpl->handle,
                 _pImpl->vmaAllocation
             );
@@ -329,47 +392,34 @@ namespace platypus
         }
     }
 
-    void Buffer::update(void* pData, size_t dataSize)
+    void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        if (dataSize > getTotalSize())
+        if (!_hostSideUpdated)
         {
             Debug::log(
-                "@Buffer::update(1) "
-                "provided data size(" + std::to_string(dataSize) + ") too big! "
-                "Buffer size is " + std::to_string(getTotalSize()),
-                Debug::MessageType::PLATYPUS_ERROR
+                "@Buffer::updateDevice "
+                "Host side buffer exists but wasn't updated!",
+                Debug::MessageType::PLATYPUS_WARNING
             );
-            PLATYPUS_ASSERT(false);
-            return;
         }
-        vmaCopyMemoryToAllocation(
-            Context::get_instance()->getImpl()->vmaAllocator,
-            pData,
-            _pImpl->vmaAllocation,
-            0,
-            getTotalSize()
-        );
-    }
 
-    void Buffer::update(void* pData, size_t dataSize, size_t offset)
-    {
-        if (dataSize + offset > getTotalSize())
+        if (!validateUpdate(pData, dataSize, offset))
         {
             Debug::log(
-                "@Buffer::update(2) "
-                "provided data size(" + std::to_string(dataSize) + ") too big using offset: " + std::to_string(offset) + " "
-                "Buffer size is " + std::to_string(getTotalSize()),
+                "@Buffer::updateDevice "
+                "Failed to update buffer!",
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
         vmaCopyMemoryToAllocation(
-            Context::get_instance()->getImpl()->vmaAllocator,
+            Device::get_impl()->vmaAllocator,
             pData,
             _pImpl->vmaAllocation,
             offset,
             dataSize
         );
+        _hostSideUpdated = false;
     }
 }

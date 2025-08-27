@@ -1,0 +1,10 @@
+
+TODO:
+    *Test on laptop too?
+
+UPDATE:
+-------
+Okay... wtf... it seems that Spotify causes the lag. And only when playing a song -> doesn't seem to happen if paused OR explicitly minimizing the spotify window
+
+Specs:
+Window system: X11

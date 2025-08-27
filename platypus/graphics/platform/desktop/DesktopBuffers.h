@@ -26,10 +26,9 @@ namespace platypus
     };
 
 
-    void copy_buffer(const CommandPool& commandPool, VkBuffer source, VkBuffer destination, size_t size);
+    void copy_buffer(VkBuffer source, VkBuffer destination, size_t size);
 
     void copy_buffer_to_image(
-        const CommandPool& commandPool,
         VkBuffer source,
         VkImage destination,
         uint32_t imageWidth,

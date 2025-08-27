@@ -3,6 +3,7 @@
 #include "platypus/utils/Maths.h"
 #include "platypus/core/Scene.h"
 #include "platypus/ecs/Entity.h"
+#include "platypus/ecs/components/Transform.h"
 
 #include "platypus/core/InputEvent.h"
 
@@ -56,8 +57,8 @@ namespace platypus
         bool _initialized = false;
 
     public:
-        void init();
-        void update(Transform* pCameraTransform);
+        void init(entityID_t cameraEntity);
+        void update();
 
         void set(
             float pitch,

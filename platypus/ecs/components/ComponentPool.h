@@ -12,8 +12,9 @@ namespace platypus
     class ComponentPool : public MemoryPool
     {
     private:
-        size_t _componentSize = 0;
-        size_t _componentCapacity = 0;
+        ComponentType _componentType;
+        size_t _componentSize = 0; // Size of a single component
+        size_t _componentCapacity = 0; // How many components can be allocated
         size_t _componentCount = 0;
         bool _allowResize = false;
 
@@ -45,8 +46,13 @@ namespace platypus
         };
 
         ComponentPool() {}
+        ComponentPool(
+            ComponentType componentType,
+            size_t componentSize,
+            size_t componentCapacity,
+            bool allowResize
+        );
         ComponentPool(const ComponentPool& other);
-        ComponentPool(size_t componentSize, size_t componentCapacity, bool allowResize);
         ~ComponentPool();
 
         // NOTE: Iterator to beginning of memory, NOT THE ACTUAL EXISTING COMPONENT!
@@ -63,6 +69,7 @@ namespace platypus
         void destroyComponent(entityID_t entityID);
 
         void* operator[](entityID_t entityID);
+        const void* operator[](entityID_t entityID) const;
 
         inline size_t getComponentCount() const { return _componentCount; }
     };

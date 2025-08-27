@@ -3,8 +3,10 @@
 #include "platypus/graphics/Buffers.h"
 #include "DesktopBuffers.h"
 #include "DesktopShader.h"
-#include "platypus/graphics/Context.h"
-#include "DesktopContext.h"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
+#include "platypus/graphics/Context.hpp"
+#include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
 #include "DesktopRenderPass.h"
 #include "DesktopDescriptors.h"
@@ -64,7 +66,32 @@ namespace platypus
     }
 
 
-    Pipeline::Pipeline()
+    Pipeline::Pipeline(
+        const RenderPass* pRenderPass,
+        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+        const std::vector<DescriptorSetLayout>& descriptorLayouts,
+        const Shader* pVertexShader,
+        const Shader* pFragmentShader,
+        CullMode cullMode,
+        FrontFace frontFace,
+        bool enableDepthTest,
+        DepthCompareOperation depthCmpOp,
+        bool enableColorBlending, // TODO: more options to handle this..
+        uint32_t pushConstantSize,
+        uint32_t pushConstantStageFlags
+    ) :
+        _pRenderPass(pRenderPass),
+        _vertexBufferLayouts(vertexBufferLayouts),
+        _descriptorSetLayouts(descriptorLayouts),
+        _pVertexShader(pVertexShader),
+        _pFragmentShader(pFragmentShader),
+        _cullMode(cullMode),
+        _frontFace(frontFace),
+        _enableDepthTest(enableDepthTest),
+        _depthCmpOp(depthCmpOp),
+        _enableColorBlending(enableColorBlending),
+        _pushConstantSize(pushConstantSize),
+        _pushConstantStageFlags(pushConstantStageFlags)
     {
         _pImpl = new PipelineImpl;
     }
@@ -79,32 +106,15 @@ namespace platypus
         }
     }
 
-    // TODO: Implement descriptor sets (configure pipeline layout)
     // TODO: Enable depth (and stencil) testing (assign pipelineCreateInfo.pDepthStencilState which is nullptr atm)
-    void Pipeline::create(
-        const RenderPass& renderPass,
-        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-        const std::vector<const DescriptorSetLayout*>& descriptorLayouts,
-        const Shader& vertexShader,
-        const Shader& fragmentShader,
-        float viewportWidth,
-        float viewportHeight,
-        const Rect2D viewportScissor,
-        CullMode cullMode,
-        FrontFace frontFace,
-        bool enableDepthTest,
-        DepthCompareOperation depthCmpOp,
-        bool enableColorBlending, // TODO: more options to handle this..
-        uint32_t pushConstantSize,
-        uint32_t pushConstantStageFlags
-    )
+    void Pipeline::create()
     {
-        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkDevice device = Device::get_impl()->device;
         // Get vulkan handles from out vertexBufferLayouts
         std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
         std::vector<VkVertexInputAttributeDescription> vertexAttribDescriptions;
 
-        for (const VertexBufferLayout& layout : vertexBufferLayouts)
+        for (const VertexBufferLayout& layout : _vertexBufferLayouts)
         {
             vertexBindingDescriptions.push_back(layout._pImpl->bindingDescription);
             for (const VertexBufferElement& element : layout.getElements())
@@ -113,8 +123,8 @@ namespace platypus
         // Configure programmable stages
         // NOTE: Atm vertex and fragment shaders are REQUIRED!
         VkPipelineShaderStageCreateInfo shaderStageCreateInfos[] = {
-            get_pipeline_shader_stage_create_info(vertexShader, vertexShader._pImpl),
-            get_pipeline_shader_stage_create_info(fragmentShader, fragmentShader._pImpl)
+            get_pipeline_shader_stage_create_info(_pVertexShader, _pVertexShader->_pImpl),
+            get_pipeline_shader_stage_create_info(_pFragmentShader, _pFragmentShader->_pImpl)
         };
 
         // Fixed function stages
@@ -136,14 +146,20 @@ namespace platypus
         inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
 
         // Specify viewport
+        // TODO: Allow specifying other than swapchain's extent
+        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
+        Extent2D swapchainExtent = swapchain.getExtent();
+        Rect2D viewportScissor = {
+            0, 0, swapchainExtent.width, swapchainExtent.height
+        };
         // ----------------
         // NOTE: Flipping the viewpot height here to have y point up so
         // it's consistent with opengl and how gltf files' vertices go
         VkViewport viewport{};
         viewport.x = 0;
-        viewport.y = viewportHeight;
-        viewport.width = viewportWidth;
-        viewport.height = -viewportHeight;
+        viewport.y = (float)swapchainExtent.height;
+        viewport.width = (float)swapchainExtent.width;
+        viewport.height = -((float)swapchainExtent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
@@ -169,8 +185,8 @@ namespace platypus
         rasterizationCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizationCreateInfo.lineWidth = 1.0f;
         // *Face culling
-        rasterizationCreateInfo.cullMode = to_vk_cull_mode(cullMode);
-        rasterizationCreateInfo.frontFace = to_vk_front_face(frontFace);
+        rasterizationCreateInfo.cullMode = to_vk_cull_mode(_cullMode);
+        rasterizationCreateInfo.frontFace = to_vk_front_face(_frontFace);
         // *Can be used to help with shadowmapping (bias thing to prevent acne?)
         rasterizationCreateInfo.depthBiasEnable = VK_FALSE;
         rasterizationCreateInfo.depthBiasConstantFactor = 0.0f;
@@ -191,12 +207,12 @@ namespace platypus
         // Depth and stencil testing
         //--------------------------
         VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
-        if (enableDepthTest)
+        if (_enableDepthTest)
         {
             depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
             depthStencilCreateInfo.depthTestEnable = VK_TRUE;
             depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
-            depthStencilCreateInfo.depthCompareOp = to_vk_depth_compare_op(depthCmpOp);
+            depthStencilCreateInfo.depthCompareOp = to_vk_depth_compare_op(_depthCmpOp);
             depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE; // DISABLED ATM!
             depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
             depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
@@ -223,7 +239,7 @@ namespace platypus
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachment.blendEnable = VK_FALSE;
-        if (enableColorBlending)
+        if (_enableColorBlending)
         {
             colorBlendAttachment.blendEnable = VK_TRUE;
             colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -252,29 +268,29 @@ namespace platypus
 
         // TODO: Descriptors
         // *Uniforms:
-        layoutCreateInfo.setLayoutCount = (uint32_t)descriptorLayouts.size();
+        layoutCreateInfo.setLayoutCount = (uint32_t)_descriptorSetLayouts.size();
         // *Combine the VkDescriptorLayouts from the descriptor layouts into a single contiguous container
         std::vector<VkDescriptorSetLayout> vkDescSetLayouts;
-        for (int i = 0; i < descriptorLayouts.size(); ++i)
-            vkDescSetLayouts.push_back(descriptorLayouts[i]->getImpl()->handle);
+        for (int i = 0; i < _descriptorSetLayouts.size(); ++i)
+            vkDescSetLayouts.push_back(_descriptorSetLayouts[i].getImpl()->handle);
         // *Push constants:
         VkPushConstantRange pushConstantRange{};
 
-        if (pushConstantSize > 0)
+        if (_pushConstantSize > 0)
         {
-            if (pushConstantSize > PLATYPUS_MAX_PUSH_CONSTANTS_SIZE)
+            if (_pushConstantSize > PLATYPUS_MAX_PUSH_CONSTANTS_SIZE)
             {
                 Debug::log(
                     "@Pipeline::create "
-                    "Push constants size too big: " + std::to_string(pushConstantSize) + " "
+                    "Push constants size too big: " + std::to_string(_pushConstantSize) + " "
                     "Maximum size is " + std::to_string(PLATYPUS_MAX_PUSH_CONSTANTS_SIZE),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
             }
             pushConstantRange.offset = 0;
-            pushConstantRange.size = pushConstantSize;
-            VkShaderStageFlags vkPushConstantStageFlags = to_vk_shader_stage_flags(pushConstantStageFlags);
+            pushConstantRange.size = _pushConstantSize;
+            VkShaderStageFlags vkPushConstantStageFlags = to_vk_shader_stage_flags(_pushConstantStageFlags);
             pushConstantRange.stageFlags = vkPushConstantStageFlags;
 
             layoutCreateInfo.pushConstantRangeCount = 1; // allow just 1 range atm..
@@ -313,12 +329,12 @@ namespace platypus
         pipelineCreateInfo.pViewportState = &viewportCreateInfo;
         pipelineCreateInfo.pRasterizationState = &rasterizationCreateInfo;
         pipelineCreateInfo.pMultisampleState = &multisampleCreateInfo;
-        pipelineCreateInfo.pDepthStencilState = enableDepthTest ? &depthStencilCreateInfo: nullptr;
+        pipelineCreateInfo.pDepthStencilState = _enableDepthTest ? &depthStencilCreateInfo: nullptr;
         pipelineCreateInfo.pColorBlendState = &colorBlendCreateInfo;
         pipelineCreateInfo.pDynamicState = nullptr; // not used atm!
         pipelineCreateInfo.layout = pipelineLayout;
 
-        pipelineCreateInfo.renderPass = renderPass.getImpl()->handle;
+        pipelineCreateInfo.renderPass = _pRenderPass->getImpl()->handle;
         pipelineCreateInfo.subpass = 0;
 
         pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -353,7 +369,7 @@ namespace platypus
 
     void Pipeline::destroy()
     {
-        VkDevice device = Context::get_instance()->getImpl()->device;
+        VkDevice device = Device::get_impl()->device;
         vkDestroyPipeline(device, _pImpl->handle, nullptr);
         vkDestroyPipelineLayout(device, _pImpl->layout, nullptr);
         _pImpl->handle = VK_NULL_HANDLE;

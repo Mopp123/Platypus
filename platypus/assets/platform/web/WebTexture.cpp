@@ -1,8 +1,7 @@
 #include "platypus/assets/Texture.h"
 #include "WebTexture.h"
-#include "platypus/graphics/platform/web/WebContext.h"
+#include "platypus/graphics/platform/web/WebContext.hpp"
 #include "platypus/core/Debug.h"
-
 
 #include <GL/glew.h>
 
@@ -16,12 +15,12 @@ namespace platypus
     TextureSampler::TextureSampler(
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
-        uint32_t mipLevelCount,
+        bool mipmapping,
         uint32_t anisotropicFiltering
     ) :
         _filterMode(filterMode),
         _addressMode(addressMode),
-        _mipLevelCount(mipLevelCount)
+        _mipmapping(mipmapping)
     {
     }
 
@@ -32,7 +31,7 @@ namespace platypus
     TextureSampler::TextureSampler(const TextureSampler& other) :
         _filterMode(other._filterMode),
         _addressMode(other._addressMode),
-        _mipLevelCount(other._mipLevelCount)
+        _mipmapping(other._mipmapping)
     {
     }
 
@@ -40,10 +39,23 @@ namespace platypus
     Texture::Texture(
         const CommandPool& commandPool,
         const Image* pImage,
-        const TextureSampler& sampler
+        ImageFormat targetFormat,
+        const TextureSampler& sampler,
+        uint32_t atlasRowCount
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE)
+        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _atlasRowCount(atlasRowCount)
     {
+        if (!is_image_format_valid(targetFormat, pImage->getChannels()))
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "Invalid target format: " + image_format_to_string(targetFormat) + " "
+                "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+
         if (!pImage)
         {
             Debug::log(
@@ -134,7 +146,7 @@ namespace platypus
                 break;
         }
 
-        if (sampler.getMipLevelCount() > 1)
+        if (sampler.isMipmapped())
         {
             if(sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {

@@ -12,7 +12,7 @@ namespace platypus
     };
 
     VkPipelineShaderStageCreateInfo get_pipeline_shader_stage_create_info(
-        const Shader& shader,
+        const Shader* pShader,
         const ShaderImpl * const pImpl
     );
 

@@ -1,7 +1,7 @@
 #include "platypus/core/InputManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/core/Application.h"
-#include "DesktopWindow.h"
+#include "DesktopWindow.hpp"
 #include <GLFW/glfw3.h>
 
 
@@ -180,6 +180,11 @@ namespace platypus
     InputManager::InputManager(Window& windowRef) :
         _windowRef(windowRef)
     {
+        // These needs to be set to initial window size, because X11 window system may call
+        // refresh immediately in the beginning...
+        s_lastFramebufferWidth = _windowRef.getWidth();
+        s_lastFramebufferHeight = _windowRef.getHeight();
+
         GLFWwindow* pGLFWwindow = windowRef.getImpl()->pGLFWwindow;
         glfwSetWindowUserPointer(pGLFWwindow, this);
 

@@ -14,18 +14,19 @@ else()
 endif()
 
 
-# -g to to use gdb debugger
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17 -g")
 # For our vim setup's YCM plugin to work
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_compile_definitions(PLATYPUS_DEBUG=1)
+add_compile_definitions(
+    PLATYPUS_DEBUG=1
+)
 
-if(${BUILD_TARGET} MATCHES "desktop")
-    add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
-elseif(${BUILD_TARGET} MATCHES "web")
-    add_compile_definitions(PLATYPUS_BUILD_WEB=1)
-endif()
+# -g to to use gdb debugger
+add_compile_options(
+    -Wall -std=c++17 -g
+)
+
+add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}
@@ -33,6 +34,7 @@ include_directories(
     "dependencies/stb"
     "dependencies/json"
     "dependencies/tinygltf"
+    "dependencies/freetype/include"
 )
 
 file(GLOB SRC_FILES
@@ -40,7 +42,9 @@ file(GLOB SRC_FILES
     platypus/core/platform/${BUILD_TARGET}/*.cpp
 
     platypus/ecs/components/*.cpp
+    platypus/ecs/systems/*.cpp
     platypus/utils/*.cpp
+    platypus/utils/modelLoading/*.cpp
     platypus/utils/controllers/*.cpp
 
     platypus/assets/*.cpp
@@ -49,21 +53,25 @@ file(GLOB SRC_FILES
     platypus/graphics/*.cpp
     platypus/graphics/platform/${BUILD_TARGET}/*.cpp
     platypus/graphics/renderers/*.cpp
+
+    platypus/ui/*.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
-# TODO: Some flag to build looking all libs from current dir for "shipping"
+# TODO: Some flag to build looking all libs from current dir for "shipping"?
 add_library(glfw SHARED IMPORTED)
 set_property(TARGET glfw PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/dependencies/glfw/build/src/libglfw.so.3.5")
+
+add_library(freetype SHARED IMPORTED)
+set_property(TARGET freetype PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/dependencies/freetype/objs/.libs/libfreetype.so")
+
 # Below so much more nice, but the issue with licences and static linking?
 # add_subdirectory(dependencies/glfw)
 
 find_package(Vulkan REQUIRED)
 set(VMA_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/dependencies/VulkanMemoryAllocator/include")
 
-
-#set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-O3")
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS} ${VMA_INCLUDE_DIR})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan freetype)

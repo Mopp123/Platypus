@@ -3,40 +3,29 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"
-#include "platypus/graphics/Context.h"
-#include "platypus/graphics/platform/desktop/DesktopContext.h"
+#include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
+#include <cmath>
 
 
 namespace platypus
 {
     static void transition_image_layout(
-        const CommandPool& commandPool,
         VkImage imageHandle,
         VkImageLayout oldLayout,
         VkImageLayout newLayout,
         uint32_t mipLevelCount
     )
     {
-        if (mipLevelCount != 1)
-        {
-            Debug::log(
-                "@transition_image_layout "
-                "Invalid mip level count: " + std::to_string(mipLevelCount) + " "
-                "Mipmapping not yet implemented so mipLevelCount of 1 is required!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        CommandBuffer commandBuffer = commandPool.allocCommandBuffers(
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         )[0];
-
         commandBuffer.beginSingleUse();
 
         VkImageMemoryBarrier barrier{};
@@ -97,21 +86,17 @@ namespace platypus
 
     // NOTE: If formats' *_SRGB not supported by the device whole texture creation fails!
     // TODO: Query supported formats and handle depending on requested channels that way
-    static VkFormat channels_to_vk_format(int channels)
+    static VkFormat to_vk_format(ImageFormat imageFormat)
     {
-        switch (channels)
+        switch (imageFormat)
         {
-            case 1: return VK_FORMAT_R8_SRGB;
-            case 2: return VK_FORMAT_R8G8_SRGB;
-            case 3: return VK_FORMAT_R8G8B8_SRGB;
-            case 4: return VK_FORMAT_R8G8B8A8_SRGB;
-            default:
-                Debug::log(
-                    "@channels_to_vk_format "
-                    "Invalid channel count: " + std::to_string(channels) + " "
-                    "Supported range is 1-4",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
+            case ImageFormat::R8_SRGB: return VK_FORMAT_R8_SRGB;
+            case ImageFormat::R8G8B8_SRGB: return VK_FORMAT_R8G8B8_SRGB;
+            case ImageFormat::R8G8B8A8_SRGB: return VK_FORMAT_R8G8B8A8_SRGB;
+
+            case ImageFormat::R8_UNORM: return VK_FORMAT_R8_UNORM;
+            case ImageFormat::R8G8B8_UNORM: return VK_FORMAT_R8G8B8_UNORM;
+            case ImageFormat::R8G8B8A8_UNORM: return VK_FORMAT_R8G8B8A8_UNORM;
         }
         PLATYPUS_ASSERT(false);
         return VK_FORMAT_UNDEFINED;
@@ -152,6 +137,119 @@ namespace platypus
     }
 
 
+    static void generate_mipmaps(
+        VkImage imageHandle,
+        VkFormat imageFormat,
+        int imgWidth,
+        int imgHeight,
+        uint32_t mipLevelCount,
+        VkFilter filterMode
+    )
+    {
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
+            1,
+            CommandBufferLevel::PRIMARY_COMMAND_BUFFER
+        )[0];
+        commandBuffer.beginSingleUse();
+        VkCommandBuffer cmdBufferHandle = commandBuffer.getImpl()->handle;
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.image = imageHandle;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.levelCount = 1;
+
+        int32_t mipWidth = imgWidth;
+        int32_t mipHeight = imgHeight;
+
+        for (uint32_t i = 1; i < mipLevelCount; ++i)
+        {
+            barrier.subresourceRange.baseMipLevel = i - 1;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+            vkCmdPipelineBarrier(
+                cmdBufferHandle,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1, &barrier
+            );
+
+            VkImageBlit blit{};
+            blit.srcOffsets[0] = { 0, 0, 0 };
+            blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+            blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blit.srcSubresource.mipLevel = i - 1;
+            blit.srcSubresource.baseArrayLayer = 0;
+            blit.srcSubresource.layerCount = 1;
+            blit.dstOffsets[0] = { 0, 0, 0 };
+            int32_t nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+            int32_t nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+            blit.dstOffsets[1] = { nextMipWidth, nextMipHeight, 1 };
+            blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blit.dstSubresource.mipLevel = i;
+            blit.dstSubresource.baseArrayLayer = 0;
+            blit.dstSubresource.layerCount = 1;
+
+            vkCmdBlitImage(
+                cmdBufferHandle,
+                imageHandle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                imageHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1, &blit,
+                filterMode
+            );
+
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(
+                cmdBufferHandle,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1, &barrier
+            );
+
+            if (mipWidth > 1)
+                mipWidth /= 2;
+
+            if (mipHeight > 1)
+                mipHeight /= 2;
+        }
+
+        // Transition also the last mip level to readonlyoptimal
+        barrier.subresourceRange.baseMipLevel = mipLevelCount - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(
+            cmdBufferHandle,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
+
+        commandBuffer.finishSingleUse();
+    }
+
+
     // NOTE: This is an exception that impl has it's own destructor!
     // We wanted to be able to pass TextureSampler just as "pure data" in different places without
     // having to manage it's vulkan implementation's lifetime explicitly so this is required!
@@ -161,7 +259,7 @@ namespace platypus
     TextureSamplerImpl::~TextureSamplerImpl()
     {
         vkDestroySampler(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             handle,
             nullptr
         );
@@ -170,9 +268,12 @@ namespace platypus
     TextureSampler::TextureSampler(
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
-        uint32_t mipLevelCount,
+        bool mipmapping,
         uint32_t anisotropicFiltering
-    )
+    ) :
+        _filterMode(filterMode),
+        _addressMode(addressMode),
+        _mipmapping(mipmapping)
     {
         VkSamplerCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -210,21 +311,14 @@ namespace platypus
         createInfo.compareEnable = VK_FALSE;
         createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-        createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        // TODO: Mipmapping
-        if (mipLevelCount > 1)
+        createInfo.mipmapMode = filterMode == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        if (mipmapping)
         {
-            Debug::log(
-                "@TextureSampler::TextureSampler "
-                "Mipmapping not supported yet so you need to provide 1 for this argument!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            //createInfo.minLod = 0.0f; // Optional
-            // NOTE: Should rather use: VK_LOD_CLAMP_NONE for maxLod, so we don't need mip level count here!
+            createInfo.minLod = 0.0f;
+            // NOTE: use VK_LOD_CLAMP_NONE for maxLod, so we don't need mip level count here!
             // https://www.reddit.com/r/vulkan/comments/1hgq0fz/texture_samplers_best_practice/
-            //createInfo.maxLod = (float)mipLevelCount;
-            //createInfo.mipLodBias = 0.0f; // Optional
+            createInfo.maxLod = VK_LOD_CLAMP_NONE;
+            createInfo.mipLodBias = 0.0f;
         }
         else
         {
@@ -235,7 +329,7 @@ namespace platypus
 
         VkSampler handle = VK_NULL_HANDLE;
         VkResult createResult = vkCreateSampler(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             &createInfo,
             nullptr,
             &handle
@@ -255,7 +349,10 @@ namespace platypus
     }
 
     TextureSampler::TextureSampler(const TextureSampler& other) :
-        _pImpl(other._pImpl)
+        _pImpl(other._pImpl),
+        _filterMode(other._filterMode),
+        _addressMode(other._addressMode),
+        _mipmapping(other._mipmapping)
     {}
 
     TextureSampler::~TextureSampler()
@@ -263,24 +360,55 @@ namespace platypus
 
 
     Texture::Texture(
-        const CommandPool& commandPool,
         const Image* pImage,
-        const TextureSampler& pSampler
+        ImageFormat targetFormat,
+        const TextureSampler& sampler,
+        uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pSamplerImpl(pSampler.getImpl())
+        _pSamplerImpl(sampler.getImpl()),
+        _atlasRowCount(atlasRowCount)
     {
+        if (!is_image_format_valid(targetFormat, pImage->getChannels()))
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "Invalid target format: " + image_format_to_string(targetFormat) + " "
+                "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
-            commandPool,
             (void*)pImage->getData(),
             1, // Single element size is 8 bit "pixel"
             pImage->getSize(),
             BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
         );
 
-        VkFormat imageFormat = channels_to_vk_format(pImage->getChannels());
+        VkFormat imageFormat = to_vk_format(targetFormat);
+
+        // Using vkCmdBlit to create mipmaps, so make sure this is supported
+        VkFormatProperties imageFormatProperties;
+        vkGetPhysicalDeviceFormatProperties(
+            Device::get_impl()->physicalDevice,
+            imageFormat,
+            &imageFormatProperties
+        );
+        if (!(imageFormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported. "
+                "This is currently requierd to generate mipmaps!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         if (imageFormat == VK_FORMAT_R8G8B8_SRGB)
         {
             Debug::log(
@@ -291,18 +419,31 @@ namespace platypus
             );
         }
 
+        uint32_t imageWidth = (uint32_t)pImage->getWidth();
+        uint32_t imageHeight = (uint32_t)pImage->getHeight();
+
+        VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        uint32_t mipLevelCount = 1;
+        if (sampler.isMipmapped())
+        {
+            mipLevelCount = (uint32_t)(std::floor(
+                std::log2(std::max(imageWidth, imageHeight))
+            )) + 1;
+            imageUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
+
         VkImageCreateInfo imageCreateInfo{};
         imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageCreateInfo.extent.width = (uint32_t)pImage->getWidth();
-        imageCreateInfo.extent.height = (uint32_t)pImage->getHeight();
+        imageCreateInfo.extent.width = imageWidth;
+        imageCreateInfo.extent.height = imageHeight;
         imageCreateInfo.extent.depth = 1;
-        imageCreateInfo.mipLevels = 1; // TODO: Mipmap support!
+        imageCreateInfo.mipLevels = mipLevelCount;
         imageCreateInfo.arrayLayers = 1;
         imageCreateInfo.format = imageFormat;
         imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageCreateInfo.usage = imageUsageFlags;
         imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -313,9 +454,8 @@ namespace platypus
 
         VkImage imageHandle = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
-        const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
         VkResult createImageResult = vmaCreateImage(
-            pContextImpl->vmaAllocator,
+            Device::get_impl()->vmaAllocator,
             &imageCreateInfo,
             &allocCreateInfo,
             &imageHandle,
@@ -335,26 +475,38 @@ namespace platypus
         }
 
         transition_image_layout(
-            commandPool,
             imageHandle,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1 // TODO: Mipmapping
+            mipLevelCount
         );
         copy_buffer_to_image(
-            commandPool,
             pStagingBuffer->getImpl()->handle,
             imageHandle,
-            (uint32_t)pImage->getWidth(),
-            (uint32_t)pImage->getHeight()
+            imageWidth,
+            imageHeight
         );
-        transition_image_layout(
-            commandPool,
-            imageHandle,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            1 // TODO: Mipmapping
-        );
+
+        if (mipLevelCount > 1)
+        {
+            generate_mipmaps(
+                imageHandle,
+                imageFormat,
+                imageWidth,
+                imageHeight,
+                mipLevelCount,
+                to_vk_sampler_filter_mode(sampler.getFilterMode())
+            );
+        }
+        else
+        {
+            transition_image_layout(
+                imageHandle,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                1 // TODO: Mipmapping
+            );
+        }
 
         delete pStagingBuffer;
 
@@ -364,10 +516,11 @@ namespace platypus
         //  -> The updating probably breaks the system since the same texture may be in use at the time
         //  of the update by the descriptor sets!
         VkImageView imageView = create_image_views(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             { imageHandle },
             imageFormat,
-            VK_IMAGE_ASPECT_COLOR_BIT
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            mipLevelCount
         )[0];
 
         _pImpl = new TextureImpl
@@ -382,9 +535,9 @@ namespace platypus
     {
         if (_pImpl)
         {
-            const ContextImpl* pContextImpl = Context::get_instance()->getImpl();
-            vkDestroyImageView(pContextImpl->device, _pImpl->imageView, nullptr);
-            vmaDestroyImage(pContextImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+            DeviceImpl* pDeviceImpl = Device::get_impl();
+            vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
+            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
             delete _pImpl;
         }
     }

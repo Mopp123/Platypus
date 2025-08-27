@@ -1,8 +1,8 @@
 #include "platypus/graphics/Buffers.h"
 #include "WebBuffers.h"
 #include "platypus/core/Debug.h"
-#include "platypus/graphics/Context.h"
-#include "WebContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "WebContext.hpp"
 #include "platypus/Common.h"
 #include <cstdlib>
 #include <GL/glew.h>
@@ -54,6 +54,20 @@ namespace platypus
     {
     }
 
+    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement&& other)
+    {
+        _location = other._location;
+        _type = other._type;
+        return *this;
+    }
+
+    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement& other)
+    {
+        _location = other._location;
+        _type = other._type;
+        return *this;
+    }
+
     VertexBufferElement::~VertexBufferElement()
     {
     }
@@ -62,6 +76,10 @@ namespace platypus
     struct VertexBufferLayoutImpl
     {
     };
+
+    VertexBufferLayout::VertexBufferLayout()
+    {
+    }
 
     VertexBufferLayout::VertexBufferLayout(
         const std::vector<VertexBufferElement>& elements,
@@ -82,6 +100,32 @@ namespace platypus
     {
     }
 
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout&& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        return *this;
+    }
+
+    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout& other)
+    {
+        _elements.resize(other._elements.size());
+        for (size_t i = 0; i < other._elements.size(); ++i)
+        {
+            _elements[i] = other._elements[i];
+        }
+        _inputRate = other._inputRate;
+        _stride = other._stride;
+
+        return *this;
+    }
+
     VertexBufferLayout::~VertexBufferLayout()
     {
     }
@@ -93,13 +137,21 @@ namespace platypus
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
-        BufferUpdateFrequency updateFrequency
+        BufferUpdateFrequency updateFrequency,
+        bool storeHostSide
     ) :
         _dataElemSize(elementSize),
         _dataLength(dataLength),
         _bufferUsageFlags(usageFlags),
         _updateFrequency(updateFrequency)
     {
+        if (storeHostSide)
+        {
+            _pData = calloc(_dataLength, _dataElemSize);
+            memcpy(_pData, pData, getTotalSize());
+        }
+
+        // in gl terms its the glBufferData's "usage"
         GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(updateFrequency);
         uint32_t id = 0;
         if ((usageFlags & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT)
@@ -132,70 +184,60 @@ namespace platypus
 
         if (_pImpl)
         {
-            GL_FUNC(glDeleteBuffers(1, &_pImpl->id));
+            uint32_t vboID = _pImpl->id;
+            GL_FUNC(glDeleteBuffers(1, &vboID));
+            if ((_bufferUsageFlags & BUFFER_USAGE_VERTEX_BUFFER_BIT) == BUFFER_USAGE_VERTEX_BUFFER_BIT)
+            {
+                // Remove from context impl's vaos
+                // -> IF context impl's vao doesn't have any buffers associated with it anymore
+                //  -> destroy the actual vao
+                ContextImpl* pContextImpl = Context::get_impl();
+                if (!pContextImpl)
+                {
+                    Debug::log("@Buffer::~Buffer Context impl was nullptr", Debug::MessageType::PLATYPUS_ERROR);
+                    PLATYPUS_ASSERT(false);
+                }
+                for (uint32_t vaoID : _pImpl->vaos)
+                {
+                    pContextImpl->vaoBufferMapping[vaoID].erase(vboID);
+                    if (vao_deletion_allowed(pContextImpl, vaoID))
+                    {
+                        GL_FUNC(glDeleteVertexArrays(1, &vaoID));
+                        pContextImpl->vaoBufferMapping.erase(vaoID);
+                    }
+                }
+            }
             delete _pImpl;
         }
     }
 
-    // NOTE: With both update funcs, don't remember the reasoning behind waiting
-    // the actual buffer updating(glBufferData/glBufferSubData) until render commands...
-    // TODO: Test and figure out if it would be better to do it here!
-    void Buffer::update(void* pData, size_t dataSize)
+    void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        if (dataSize != getTotalSize())
+        // Since we just fake uniform buffers here, the host side buffer used as uniform data should
+        // already be updated at this point, so we don't need to do anything to those here...
+        if ((_bufferUsageFlags & BUFFER_USAGE_UNIFORM_BUFFER_BIT) != BUFFER_USAGE_UNIFORM_BUFFER_BIT)
         {
-            Debug::log(
-                "@Buffer::update(1) "
-                "provided data size(" + std::to_string(dataSize) + ") different "
-                "from original(" + std::to_string(getTotalSize()) + ") "
-                "Currently web implementation requires you to replace the original "
-                "completely with this function!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
+            if (!validateUpdate(pData, dataSize, offset))
+            {
+                Debug::log(
+                    "@Buffer::updateDevice "
+                    "Failed to update buffer!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
 
-        if ((_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-        {
-            memcpy(_pData, pData, dataSize);
-        }
-        else
-        {
-            Debug::log("@Buffer::update(1)(non uniform buffer) NOT TESTED!", Debug::MessageType::PLATYPUS_WARNING);
             GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
             GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
-            GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
-        }
-    }
-
-    void Buffer::update(void* pData, size_t dataSize, size_t offset)
-    {
-        if (dataSize + offset > getTotalSize())
-        {
-            Debug::log(
-                "@Buffer::update(2) "
-                "provided data size(" + std::to_string(dataSize) + ") too big using offset: " + std::to_string(offset) + " "
-                "Buffer size is " + std::to_string(getTotalSize()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        if ((_bufferUsageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-        {
-            memcpy(((PE_byte*)_pData) + offset, pData, dataSize);
-        }
-        else
-        {
-            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
-            glBufferSubData(
-                GL_ARRAY_BUFFER,
-                (GLintptr)offset,
-                (GLsizeiptr) dataSize,
-                pData
-            );
+            if (getTotalSize() == dataSize)
+            {
+                GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
+            }
+            else
+            {
+                GL_FUNC(glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)dataSize, pData));
+            }
         }
     }
 }

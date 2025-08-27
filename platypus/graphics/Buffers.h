@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
-#include "CommandBuffer.h"
+#include <string>
 
 
 namespace platypus
@@ -62,6 +62,7 @@ namespace platypus
 
     size_t get_shader_datatype_size(ShaderDataType type);
     uint32_t get_shader_datatype_component_count(ShaderDataType type);
+    std::string shader_datatype_to_string(ShaderDataType type);
 
     // Requires platform impl
     //  On Vulkan side this returns required actual size for inputted requestSize
@@ -88,7 +89,9 @@ namespace platypus
     public:
         VertexBufferElement();
         VertexBufferElement(uint32_t location, ShaderDataType dataType);
-        VertexBufferElement(const VertexBufferElement&);
+        VertexBufferElement(const VertexBufferElement& other);
+        VertexBufferElement& operator=(VertexBufferElement&& other);
+        VertexBufferElement& operator=(VertexBufferElement& other);
         ~VertexBufferElement();
 
         inline uint32_t getLocation() const { return _location; }
@@ -107,12 +110,16 @@ namespace platypus
         int32_t _stride = 0;
 
     public:
+        VertexBufferLayout();
+        // NOTE: Not sure if copying elems goes correctly here..
         VertexBufferLayout(
             const std::vector<VertexBufferElement>& elements,
             VertexInputRate inputRate,
             uint32_t binding
         );
         VertexBufferLayout(const VertexBufferLayout& other);
+        VertexBufferLayout& operator=(VertexBufferLayout&& other);
+        VertexBufferLayout& operator=(VertexBufferLayout& other);
         ~VertexBufferLayout();
 
         inline const std::vector<VertexBufferElement>& getElements() const { return _elements; }
@@ -133,22 +140,28 @@ namespace platypus
         uint32_t _bufferUsageFlags = 0;
         BufferUpdateFrequency _updateFrequency;
 
+        bool _hostSideUpdated = false;
+
     public:
         Buffer(
-            const CommandPool& commandPool,
             void* pData,
             size_t elementSize,
             size_t dataLength,
             uint32_t usageFlags,
-            BufferUpdateFrequency updateFrequency
+            BufferUpdateFrequency updateFrequency,
+            bool storeHostSide
         );
         Buffer(const Buffer&) = delete;
         ~Buffer();
 
-        void update(void* pData, size_t dataSize);
-        void update(void* pData, size_t dataSize, size_t offset);
+        // Functions updateHost and updateDeviceAndHost are platform agnostic
+        void updateHost(void* pData, size_t dataSize, size_t offset);
+        void updateDeviceAndHost(void* pData, size_t dataSize, size_t offset);
+        // Function updateDevice requires platform impl!
+        void updateDevice(void* pData, size_t dataSize, size_t offset);
 
         inline const void* getData() const { return _pData; }
+        inline void* accessData() { return _pData; }
         inline size_t getDataElemSize() const { return _dataElemSize; }
         inline size_t getDataLength() const { return _dataLength; }
         inline uint32_t getBufferUsage() const { return _bufferUsageFlags; }
@@ -156,5 +169,7 @@ namespace platypus
         inline BufferUpdateFrequency getUpdateFrequency() const { return _updateFrequency; }
 
         inline BufferImpl* getImpl() const { return _pImpl; }
+    private:
+        bool validateUpdate(void* pData, size_t dataSize, size_t offset);
     };
 }

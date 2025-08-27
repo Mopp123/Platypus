@@ -1,9 +1,12 @@
 #include "StaticMeshRenderer.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
+#include "platypus/ecs/components/Transform.h"
 #include "platypus/core/Debug.h"
 #include <string>
+#include <cstring>
 #include <cmath>
 
 
@@ -13,138 +16,67 @@ namespace platypus
     size_t StaticMeshRenderer::s_maxBatchLength = 10000;
     StaticMeshRenderer::StaticMeshRenderer(
         const MasterRenderer& masterRenderer,
-        const Swapchain& swapchain,
-        CommandPool& commandPool,
-        DescriptorPool& descriptorPool
+        DescriptorPool& descriptorPool,
+        uint64_t requiredComponentsMask
     ) :
-        _masterRendererRef(masterRenderer),
-        _commandPoolRef(commandPool),
-        _descriptorPoolRef(descriptorPool),
-        _vertexShader("TestVertexShader", ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
-        _fragmentShader("TestFragmentShader", ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
-        _textureDescriptorSetLayout(
-            {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 4 } }
-                }
-            }
+        Renderer(
+            masterRenderer,
+            descriptorPool,
+            requiredComponentsMask
         )
     {
+        // Alloc batches
         _batches.resize(s_maxBatches);
+        // Create empty instanced buffers for batches
         for (size_t i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
             std::vector<Matrix4f> transformsBuffer(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
-                _commandPoolRef,
                 transformsBuffer.data(),
                 sizeof(Matrix4f),
                 transformsBuffer.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STREAM,
+                true
             );
-
         }
     }
 
     StaticMeshRenderer::~StaticMeshRenderer()
     {
         for (BatchData& b : _batches)
-        {
             delete b.pInstancedBuffer;
-            // NOTE: shouldn't we also delete descriptor sets?
-        }
-        _textureDescriptorSetLayout.destroy();
+
+        freeBatches();
     }
 
-    void StaticMeshRenderer::allocCommandBuffers(uint32_t count)
+    void StaticMeshRenderer::freeBatches()
     {
-        _commandBuffers = _commandPoolRef.allocCommandBuffers(
-            count,
-            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
-        );
-    }
-
-    void StaticMeshRenderer::freeCommandBuffers()
-    {
-        for (CommandBuffer& buffer : _commandBuffers)
-            buffer.free();
-        _commandBuffers.clear();
-    }
-
-    void StaticMeshRenderer::createPipeline(
-        const RenderPass& renderPass,
-        float viewportWidth,
-        float viewportHeight,
-        const DescriptorSetLayout& dirLightDescriptorSetLayout
-    )
-    {
-        VertexBufferLayout vbLayout = {
-            {
-                { 0, ShaderDataType::Float3 },
-                { 1, ShaderDataType::Float3 },
-                { 2, ShaderDataType::Float2 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-            0
-        };
-        VertexBufferLayout instancedVbLayout = {
-            {
-                { 3, ShaderDataType::Float4 },
-                { 4, ShaderDataType::Float4 },
-                { 5, ShaderDataType::Float4 },
-                { 6, ShaderDataType::Float4 }
-            },
-            VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-            1
-        };
-        std::vector<VertexBufferLayout> vertexBufferLayouts = { vbLayout, instancedVbLayout };
-        std::vector<const DescriptorSetLayout*> descriptorSetLayouts = {
-            &dirLightDescriptorSetLayout,
-            &_textureDescriptorSetLayout
-        };
-
-        Rect2D viewportScissor = { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight };
-        _pipeline.create(
-            renderPass,
-            vertexBufferLayouts,
-            descriptorSetLayouts,
-            _vertexShader,
-            _fragmentShader,
-            viewportWidth,
-            viewportHeight,
-            viewportScissor,
-            CullMode::CULL_MODE_NONE,
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
-            false, // enable color blending
-            sizeof(Matrix4f) * 2, // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT // push constants' stage flags
-        );
-    }
-
-    void StaticMeshRenderer::destroyPipeline()
-    {
-        _pipeline.destroy();
-    }
-
-    void StaticMeshRenderer::submit(
-        const StaticMeshRenderable* pRenderable,
-        const Matrix4f& transformationMatrix
-    )
-    {
-        ID_t textureID = pRenderable->textureID;
-        int foundBatchIndex = findExistingBatchIndex(textureID);
-        if (foundBatchIndex != -1)
+        for (BatchData& batchData : _batches)
         {
-            addToBatch(_batches[foundBatchIndex], transformationMatrix);
+            batchData.identifier = NULL_ID;
+            batchData.pMaterial = nullptr;
+            batchData.count = 0;
         }
-        else
+        _identifierBatchMapping.clear();
+    }
+
+    void StaticMeshRenderer::submit(const Scene* pScene, entityID_t entity)
+    {
+        const StaticMeshRenderable* pRenderable = (const StaticMeshRenderable*)pScene->getComponent(
+            entity, ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
+        );
+        const Transform* pTransform = (const Transform*)pScene->getComponent(
+            entity, ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+        const Matrix4f transformationMatrix = pTransform->globalMatrix;
+
+        ID_t materialID = pRenderable->materialID;
+        ID_t identifier = ID::hash(pRenderable->meshID, materialID);
+
+        BatchData* pBatch = findExistingBatch(identifier);
+        if (!pBatch)
         {
             int freeBatchIndex = findFreeBatchIndex();
             if (freeBatchIndex == -1)
@@ -156,8 +88,7 @@ namespace platypus
                 );
                 return;
             }
-            BatchData& batchData = _batches[freeBatchIndex];
-            if (!occupyBatch(batchData, pRenderable->meshID, textureID))
+            if (!occupyBatch(freeBatchIndex, pRenderable->meshID, materialID, identifier))
             {
                 Debug::log(
                     "@StaticMeshRenderer::submit "
@@ -166,17 +97,17 @@ namespace platypus
                 );
                 return;
             }
-            addToBatch(batchData, transformationMatrix);
+            pBatch = &_batches[freeBatchIndex];
         }
+
+        addToBatch(*pBatch, transformationMatrix);
     }
 
     const CommandBuffer& StaticMeshRenderer::recordCommandBuffer(
         const RenderPass& renderPass,
         uint32_t viewportWidth,
         uint32_t viewportHeight,
-        const Matrix4f& projectionMatrix,
-        const Matrix4f& viewMatrix,
-        const DescriptorSet& dirLightDescriptorSet,
+        const DescriptorSet& commonDescriptorSet,
         size_t frame
     )
     {
@@ -197,25 +128,43 @@ namespace platypus
         currentCommandBuffer.begin(renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-        render::bind_pipeline(currentCommandBuffer, _pipeline);
-
-        Matrix4f pushConstants[2] = { projectionMatrix, viewMatrix };
-        render::push_constants(
-            currentCommandBuffer,
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(Matrix4f) * 2,
-            pushConstants,
-            {
-                { 0, ShaderDataType::Mat4 },
-                { 1, ShaderDataType::Mat4 }
-            }
-        );
 
         for (BatchData& batchData : _batches)
         {
             if (batchData.identifier == NULL_ID)
                 continue;
+
+            // Make sure valid material
+            if (!batchData.pMaterial)
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::recordCommandBuffer "
+                    "Batch material was nullptr",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            // Make sure descriptor sets has been created
+            if (batchData.pMaterial->getDescriptorSets().empty())
+            {
+                Debug::log(
+                    "@StaticMeshRenderer::recordCommandBuffer "
+                    "No descriptor sets found for batch with identifier: " + std::to_string(batchData.identifier),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            batchData.pInstancedBuffer->updateDevice(
+                batchData.pInstancedBuffer->accessData(),
+                batchData.count * sizeof(Matrix4f),
+                0
+            );
+
+            render::bind_pipeline(
+                currentCommandBuffer,
+                *batchData.pMaterial->getPipelineData()->pPipeline
+            );
 
             render::bind_vertex_buffers(
                 currentCommandBuffer,
@@ -226,14 +175,12 @@ namespace platypus
             );
             render::bind_index_buffer(currentCommandBuffer, batchData.pIndexBuffer);
 
-            std::vector<DescriptorSet> descriptorSetsToBind = {
-                dirLightDescriptorSet,
-                batchData.textureDescriptorSets[_currentFrame]
-            };
-
             render::bind_descriptor_sets(
                 currentCommandBuffer,
-                descriptorSetsToBind,
+                {
+                    commonDescriptorSet,
+                    batchData.pMaterial->getDescriptorSets()[_currentFrame]
+                },
                 { }
             );
 
@@ -254,24 +201,20 @@ namespace platypus
         return currentCommandBuffer;
     }
 
-    int StaticMeshRenderer::findExistingBatchIndex(ID_t identifier)
+    StaticMeshRenderer::BatchData* StaticMeshRenderer::findExistingBatch(ID_t identifier)
     {
-        for (int  i = 0; i < _batches.size(); ++i)
-        {
-            BatchData& batchData = _batches[i];
-            if (batchData.identifier == identifier && batchData.count + 1 <= s_maxBatchLength)
-                return i;
-        }
-        return -1;
+        if (_identifierBatchMapping.find(identifier) != _identifierBatchMapping.end())
+            return &_batches[_identifierBatchMapping[identifier]];
+        return nullptr;
     }
 
     int StaticMeshRenderer::findFreeBatchIndex()
     {
-        for (int  i = 0; i < _batches.size(); ++i)
+        for (size_t  i = 0; i < _batches.size(); ++i)
         {
             BatchData& batchData = _batches[i];
             if (batchData.identifier == NULL_ID)
-                return i;
+                return (int)i;
         }
         return -1;
     }
@@ -281,7 +224,7 @@ namespace platypus
         const Matrix4f& transformationMatrix
     )
     {
-        batchData.pInstancedBuffer->update(
+        batchData.pInstancedBuffer->updateHost(
             (void*)(&transformationMatrix),
             sizeof(Matrix4f),
             batchData.count * sizeof(Matrix4f)
@@ -290,15 +233,18 @@ namespace platypus
     }
 
     bool StaticMeshRenderer::occupyBatch(
-        BatchData& batchData,
+        int batchIndex,
         ID_t meshID,
-        ID_t textureID
+        ID_t materialID,
+        ID_t identifier
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        const Mesh* pMesh = assetManager.getMesh(meshID);
-        const Texture* pTexture = assetManager.getTexture(textureID);
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
+            meshID,
+            AssetType::ASSET_TYPE_MESH
+        );
         #ifdef PLATYPUS_DEBUG
             if (!pMesh)
             {
@@ -309,31 +255,16 @@ namespace platypus
                 );
                 return false;
             }
-            if (!pTexture)
-            {
-                Debug::log(
-                    "@StaticMeshRenderer::occupyBatch "
-                    "No texture found with ID: " + std::to_string(meshID),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                return false;
-            }
         #endif
 
-        batchData.identifier = textureID;
+        BatchData& batchData = _batches[batchIndex];
+        batchData.identifier = identifier;
+        batchData.pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         batchData.pVertexBuffer = pMesh->getVertexBuffer();
         batchData.pIndexBuffer = pMesh->getIndexBuffer();
 
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        for (int i = 0; i < maxFramesInFlight; ++i)
-        {
-            batchData.textureDescriptorSets.push_back(
-                _descriptorPoolRef.createDescriptorSet(
-                    &_textureDescriptorSetLayout,
-                    { pTexture }
-                )
-            );
-        }
+        _identifierBatchMapping[identifier] = batchIndex;
+
         return true;
     }
 }

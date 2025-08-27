@@ -1,5 +1,7 @@
-#include "platypus/core/Window.h"
-#include "DesktopWindow.h"
+#include "platypus/core/Window.hpp"
+#include "DesktopWindow.hpp"
+#include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 #include "platypus/core/Debug.h"
 #include <GLFW/glfw3.h>
 
@@ -76,8 +78,21 @@ namespace platypus
 
     Window::~Window()
     {
+        if (_pImpl->surface)
+        {
+            Debug::log(
+                "@Window::~Window "
+                "Window surface not destroyed. "
+                "Context is responsible for creating and destroying the window surface. "
+                "Context::destroy() should be called before window's destruction!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
         if (_pImpl->pGLFWwindow)
+        {
             glfwDestroyWindow(_pImpl->pGLFWwindow);
+        }
         glfwTerminate();
         delete _pImpl;
     }
@@ -93,6 +108,11 @@ namespace platypus
     }
 
     WindowImpl* Window::getImpl()
+    {
+        return _pImpl;
+    }
+
+    const WindowImpl* Window::getImpl() const
     {
         return _pImpl;
     }

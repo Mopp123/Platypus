@@ -1,6 +1,7 @@
 #include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Device.hpp"
 #include "DesktopShader.h"
-#include "DesktopContext.h"
+#include "DesktopDevice.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/utils/FileUtils.h"
 #include <vulkan/vk_enum_string_helper.h>
@@ -9,13 +10,13 @@
 namespace platypus
 {
     VkPipelineShaderStageCreateInfo get_pipeline_shader_stage_create_info(
-        const Shader& shader,
+        const Shader* pShader,
         const ShaderImpl * const pImpl
     )
     {
         VkPipelineShaderStageCreateInfo shaderStageCreateInfo{};
         shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shaderStageCreateInfo.stage = shader.getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
+        shaderStageCreateInfo.stage = pShader->getStage() == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
         shaderStageCreateInfo.module = pImpl->shaderModule;
         shaderStageCreateInfo.pName = "main";
         return shaderStageCreateInfo;
@@ -64,7 +65,7 @@ namespace platypus
 
         VkShaderModule shaderModule;
         VkResult createResult = vkCreateShaderModule(
-            Context::get_instance()->getImpl()->device,
+            Device::get_impl()->device,
             &createInfo,
             nullptr,
             &shaderModule
@@ -86,7 +87,7 @@ namespace platypus
 
     Shader::~Shader()
     {
-        vkDestroyShaderModule(Context::get_instance()->getImpl()->device, _pImpl->shaderModule, nullptr);
+        vkDestroyShaderModule(Device::get_impl()->device, _pImpl->shaderModule, nullptr);
         if (_pImpl)
             delete _pImpl;
     }

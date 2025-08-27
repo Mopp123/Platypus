@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 #include "Application.h"
+#include "platypus/graphics/Device.hpp"
 #include "Debug.h"
 
 
@@ -79,30 +80,9 @@ namespace platypus
         // NOTE: This has to be done here since need quarantee that all necessary components have been
         // properly updated before submission!
         Application* pApp = Application::get_instance();
-        AssetManager& assetManager = pApp->getAssetManager();
-        MasterRenderer& masterRenderer = pApp->getMasterRenderer();
-        uint64_t requiredMask = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        for (const Entity& e : _pCurrentScene->_entities)
-        {
-            if ((e.componentMask & requiredMask) == requiredMask)
-            {
-                const StaticMeshRenderable* pRenderable = (const StaticMeshRenderable*)_pCurrentScene->getComponent(
-                    e.id,
-                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
-                );
-
-                Transform* pTransform = (Transform*)_pCurrentScene->getComponent(
-                    e.id,
-                    ComponentType::COMPONENT_TYPE_TRANSFORM
-                );
-
-                masterRenderer.submit(
-                    pRenderable,
-                    pTransform->globalMatrix
-                );
-            }
-        }
-
+        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
+        for (const Entity& entity : _pCurrentScene->_entities)
+            pMasterRenderer->submit(_pCurrentScene, entity);
 
         /*
         ComponentPool& transformPool = _pCurrentScene->componentPools[ComponentType::PK_TRANSFORM];
@@ -141,9 +121,10 @@ namespace platypus
             Debug::log("Switching scene");
 
             Application* pApp = Application::get_instance();
-            pApp->getContext().waitForOperations();
+            Device::wait_for_operations();
+            pApp->getMasterRenderer()->cleanRenderers();
             pApp->getInputManager().destroyEvents();
-            pApp->getAssetManager().destroyAssets();
+            pApp->getAssetManager()->destroyAssets();
 
             delete _pCurrentScene;
             _pCurrentScene = _pNextScene;

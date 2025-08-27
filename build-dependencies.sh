@@ -9,10 +9,17 @@ dependencies_dir=$( pwd )/dependencies
 cd $dependencies_dir
 pwd $dependencies_dir
 
-# build glfw
+# Build glfw
 echo "Building GLFW..."
 cd glfw/
 cmake -S . -B build -D BUILD_SHARED_LIBS=ON
 cmake --build ./build/
 
 cd $dependencies_dir
+
+# Build Freetype
+echo "Building freetype (without harfbuzz)"
+cd freetype
+./autogen.sh
+./configure --without-harfbuzz
+make

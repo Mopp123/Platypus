@@ -11,6 +11,7 @@ namespace platypus
     struct Entity
     {
         entityID_t id = NULL_ENTITY_ID;
+        // TODO: remove parent from here -> that kind of stuff handled using Parent and Children components!
         entityID_t parentID = NULL_ENTITY_ID;
         uint64_t componentMask = 0;
 

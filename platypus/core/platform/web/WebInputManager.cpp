@@ -258,6 +258,7 @@ namespace platypus
     //  window.
     static EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
     {
+        Debug::log("___TEST___WARNING UI CALLBACK!");
         InputManager* pInputManager = (InputManager*)userData;
         const Window& window = Application::get_instance()->getWindow();
         if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN && eventType == EMSCRIPTEN_EVENT_RESIZE)
@@ -285,14 +286,15 @@ namespace platypus
         _windowRef(windowRef)
     {
         //emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, key_callback);
+        //emscripten_set_keypress_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keypress_callback);
+
         emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keydown_callback);
         emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keyup_callback);
-        //emscripten_set_keypress_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, keypress_callback);
 
         emscripten_set_mousedown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, mouse_down_callback);
         emscripten_set_mouseup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, mouse_up_callback);
 
-        emscripten_set_mousemove_callback("canvas", this, true, cursor_pos_callback);
+        emscripten_set_mousemove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, cursor_pos_callback);
         emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, scroll_callback);
 
 

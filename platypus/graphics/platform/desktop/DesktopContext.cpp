@@ -1,5 +1,5 @@
-#include "platypus/graphics/Context.h"
-#include "platypus/graphics/platform/desktop/DesktopContext.h"
+#include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
 #include <vulkan/vk_enum_string_helper.h>
 #include <GLFW/glfw3.h>
@@ -9,7 +9,7 @@
 
 #include "platypus/core/Debug.h"
 #include "platypus/Common.h"
-#include "platypus/core/platform/desktop/DesktopWindow.h"
+#include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/platform/desktop/DesktopSwapchain.h"
 #include "platypus/graphics/CommandBuffer.h"
@@ -33,15 +33,6 @@ namespace platypus
     }
 
 
-    static std::vector<const char*> get_required_device_extensions()
-    {
-        const std::vector<const char*> requiredExtensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
-        };
-        return requiredExtensions;
-    }
-
-
     static std::vector<const char*> get_required_layers()
     {
         std::vector<const char*> requiredLayers;
@@ -61,34 +52,6 @@ namespace platypus
         vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
         std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, availableExtensions.data());
-        for (size_t i = 0; i < extensions.size(); ++i)
-        {
-            bool found = false;
-            for (const VkExtensionProperties& availableExtension : availableExtensions)
-            {
-                if (strcmp(extensions[i], availableExtension.extensionName) == 0)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-                outUnavailable.push_back(extensions[i]);
-        }
-        return outUnavailable.empty();
-    }
-
-
-    static bool check_device_extension_availability(
-        VkPhysicalDevice physicalDevice,
-        const std::vector<const char*>& extensions,
-        std::vector<const char*>& outUnavailable
-    )
-    {
-        uint32_t availableExtensionCount = 0;
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, nullptr);
-        std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, availableExtensions.data());
         for (size_t i = 0; i < extensions.size(); ++i)
         {
             bool found = false;
@@ -303,12 +266,13 @@ namespace platypus
     #endif
 
 
-    static VkSurfaceKHR create_window_surface(VkInstance instance, Window* pWindow)
+    static void create_window_surface(VkInstance instance, Window* pWindow)
     {
+        WindowImpl* pWindowImpl = pWindow->getImpl();
         VkSurfaceKHR surface;
         VkResult result = glfwCreateWindowSurface(
             instance,
-            pWindow->getImpl()->pGLFWwindow,
+            pWindowImpl->pGLFWwindow,
             nullptr,
             &surface
         );
@@ -322,229 +286,7 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        return surface;
-    }
-
-
-    static ContextImpl::QueueFamilyIndices find_queue_families(
-        VkPhysicalDevice physicalDevice,
-        VkSurfaceKHR surface
-    )
-    {
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-        ContextImpl::QueueFamilyIndices result;
-        int index = 0;
-        for (const VkQueueFamilyProperties& queueFamilyProperties : queueFamilies)
-        {
-            if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                result.queueFlags |= ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
-                result.graphicsFamily = index;
-            }
-            VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &presentSupport);
-            if (presentSupport)
-            {
-                result.queueFlags |= ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
-                result.presentFamily = index;
-            }
-            ++index;
-        }
-        return result;
-    }
-
-    static ContextImpl::SwapchainSupportDetails query_swapchain_support_details(
-        VkPhysicalDevice physicalDevice,
-        VkSurfaceKHR surface
-    )
-    {
-        ContextImpl::SwapchainSupportDetails details{};
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.surfaceCapabilities);
-
-        uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-        details.surfaceFormats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.surfaceFormats.data());
-
-        uint32_t presentModes = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, nullptr);
-        details.presentModes.resize(presentModes);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, details.presentModes.data());
-
-        return details;
-    };
-
-    static bool is_device_adequate(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
-    {
-        // TODO:
-        //  * Have some device limit requirements and check those here
-        //  from VkPhysicalDeviceProperties
-        //  * Some logging telling why device not adequate
-        ContextImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
-        uint32_t requiredFlags = ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS | ContextImpl::QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
-
-        std::vector<const char*> requiredDeviceExtensions = get_required_device_extensions();
-        std::vector<const char*> unavailableExtensions;
-        bool supportsSwapchain = check_device_extension_availability(
-            physicalDevice,
-            requiredDeviceExtensions,
-            unavailableExtensions
-        );
-
-        ContextImpl::SwapchainSupportDetails swapchainSupportDetails = query_swapchain_support_details(
-            physicalDevice,
-            surface
-        );
-        bool swapchainDetailsAdequate = !swapchainSupportDetails.surfaceFormats.empty() && !swapchainSupportDetails.presentModes.empty();
-
-        return ((queueFamilyIndices.queueFlags & requiredFlags) == requiredFlags) && supportsSwapchain && swapchainDetailsAdequate;
-    }
-
-    static VkPhysicalDevice auto_pick_physical_device(
-        VkInstance instance,
-        VkSurfaceKHR surface,
-        size_t& outMinUniformBufferOffsetAlignment
-    )
-    {
-        uint32_t physicalDeviceCount = 0;
-        vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
-        if (physicalDeviceCount == 0)
-        {
-            Debug::log(
-                "@pick_physical_device "
-                "No physical devices found",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-        vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices.data());
-
-        Debug::log(
-            "Found physical devices:"
-        );
-        for (const VkPhysicalDevice& physicalDevice : physicalDevices)
-        {
-            VkPhysicalDeviceProperties properties;
-            vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-            // TODO:
-            //  * Maybe display some more info?
-            //  * Store device limits somewhere?
-            std::string deviceNameStr(properties.deviceName);
-            std::string deviceTypeStr = string_VkPhysicalDeviceType(properties.deviceType);
-            Debug::log("    " + deviceNameStr);
-            Debug::log("        type: " + deviceTypeStr);
-            Debug::log("        api version: " + std::to_string(properties.apiVersion));
-
-            if (is_device_adequate(physicalDevice, surface))
-            {
-                Debug::log("Picked device: " + deviceNameStr);
-                outMinUniformBufferOffsetAlignment = properties.limits.minUniformBufferOffsetAlignment;
-                return physicalDevice;
-            }
-        }
-        Debug::log(
-            "@auto_pick_physical_device "
-            "Failed to find suitable physical device",
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return physicalDevices[0];
-    }
-
-
-    static VkDevice create_device(
-        VkPhysicalDevice physicalDevice,
-        VkSurfaceKHR surface,
-        const std::vector<const char*>& extensions,
-        const std::vector<const char*>& enabledLayers,
-        VkQueue* pGraphicsQueue,
-        VkQueue* pPresentQueue
-    )
-    {
-        ContextImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
-        // It's possible that the chosen device has queue family supporting both graphics and
-        // presentation so figure that out..
-        std::set<uint32_t> uniqueQueueFamilies = { queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily };
-
-        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        float queuePriority = 1.0f;
-        for (uint32_t queueFamilyIndex : uniqueQueueFamilies)
-        {
-            VkDeviceQueueCreateInfo queueCreateInfo{};
-            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueCount = 1;
-            queueCreateInfo.queueFamilyIndex = queueFamilyIndex;
-            queueCreateInfo.pQueuePriorities = &queuePriority;
-            queueCreateInfos.push_back(queueCreateInfo);
-        }
-
-        VkPhysicalDeviceFeatures physicalDeviceFeatures{};
-
-        VkDeviceCreateInfo deviceCreateInfo{};
-        deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
-        deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-        deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
-
-        deviceCreateInfo.enabledExtensionCount = (uint32_t)extensions.size();
-        deviceCreateInfo.ppEnabledExtensionNames = extensions.data();
-
-        deviceCreateInfo.enabledLayerCount = enabledLayers.size();
-        deviceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
-
-        VkDevice device;
-        VkResult createDeviceResult = vkCreateDevice(
-            physicalDevice,
-            &deviceCreateInfo,
-            nullptr,
-            &device
-        );
-        if (createDeviceResult != VK_SUCCESS)
-        {
-            const std::string resultStr(string_VkResult(createDeviceResult));
-            Debug::log(
-                "@create_device "
-                "Failed to create VkDevice! VkResult: " + resultStr
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily, 0, pGraphicsQueue);
-        vkGetDeviceQueue(device, queueFamilyIndices.presentFamily, 0, pPresentQueue);
-
-        return device;
-    }
-
-    static VmaAllocator create_allocator(
-        VkPhysicalDevice physicalDevice,
-        VkDevice device,
-        VkInstance instance
-    )
-    {
-        VmaAllocatorCreateInfo createInfo{};
-        createInfo.flags = 0;
-        createInfo.physicalDevice = physicalDevice;
-        createInfo.device = device;
-        createInfo.instance = instance;
-        createInfo.vulkanApiVersion = VK_API_VERSION_1_0;
-        //createInfo.pHeapSizeLimit = nullptr;
-        VmaAllocator vmaAllocator;
-        VkResult createResult = vmaCreateAllocator(&createInfo, &vmaAllocator);
-        if (createResult != VK_SUCCESS)
-        {
-            const std::string errStr(string_VkResult(createResult));
-            Debug::log(
-                "@create_allocator "
-                "Failed to create VmaAllocator! VkResult: " + errStr,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        return vmaAllocator;
+        pWindowImpl->surface = surface;
     }
 
 
@@ -552,7 +294,8 @@ namespace platypus
         VkDevice device,
         const std::vector<VkImage>& images,
         VkFormat format,
-        VkImageAspectFlags aspectFlags
+        VkImageAspectFlags aspectFlags,
+        uint32_t mipLevelCount
     )
     {
         std::vector<VkImageView> imageViews(images.size());
@@ -570,7 +313,7 @@ namespace platypus
             createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.subresourceRange.aspectMask = aspectFlags;
             createInfo.subresourceRange.baseMipLevel = 0; // TODO: Mipmapping!
-            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.levelCount = mipLevelCount;
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
 
@@ -597,11 +340,13 @@ namespace platypus
     }
 
 
-    Context* Context::s_pInstance = nullptr;
-    Context::Context(const char* appName, Window* pWindow)
+    Window* Context::s_pWindow = nullptr;
+    ContextImpl* Context::s_pImpl = nullptr;
+    void Context::create(const char* appName, Window* pWindow)
     {
+        s_pWindow = pWindow;
+
         std::vector<const char*> requiredInstanceExtensions = get_required_instance_extensions();
-        std::vector<const char*> requiredDeviceExtensions = get_required_device_extensions();
         std::vector<const char*> requiredLayers = get_required_layers();
 
         VkInstance instance = create_instance(
@@ -614,132 +359,45 @@ namespace platypus
             VkDebugUtilsMessengerEXT debugMessenger = create_debug_messenger(instance);
         #endif
 
-        VkSurfaceKHR surface = create_window_surface(instance, pWindow);
+        create_window_surface(instance, pWindow);
 
-        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(instance, surface, _minUniformBufferOffsetAlignment);
-        ContextImpl::QueueFamilyIndices deviceQueueFamilyIndices = find_queue_families(selectedPhysicalDevice, surface);
-        ContextImpl::SwapchainSupportDetails swapchainDetails = query_swapchain_support_details(selectedPhysicalDevice, surface);
-
-        VkQueue graphicsQueue;
-        VkQueue presentQueue;
-        VkDevice device = create_device(
-            selectedPhysicalDevice,
-            surface,
-            requiredDeviceExtensions,
-            requiredLayers,
-            &graphicsQueue,
-            &presentQueue
-        );
-
-        VmaAllocator vmaAllocator = create_allocator(
-            selectedPhysicalDevice,
-            device,
-            instance
-        );
-
-        _pImpl = new ContextImpl;
-        _pImpl->instance = instance;
+        s_pImpl = new ContextImpl;
+        s_pImpl->instance = instance;
         #ifdef PLATYPUS_DEBUG
-            _pImpl->debugMessenger = debugMessenger;
+            s_pImpl->debugMessenger = debugMessenger;
         #endif
-        _pImpl->surface = surface;
-        _pImpl->physicalDevice = selectedPhysicalDevice;
-        _pImpl->device = device;
-        _pImpl->vmaAllocator = vmaAllocator;
-        _pImpl->deviceQueueFamilyIndices = deviceQueueFamilyIndices;
-        _pImpl->graphicsQueue = graphicsQueue;
-        _pImpl->presentQueue = presentQueue;
-        _pImpl->deviceSwapchainSupportDetails = swapchainDetails;
-
-        s_pInstance = this;
 
         Debug::log("Graphics Context created");
     }
 
-    Context::~Context()
+    void Context::destroy()
     {
-        if (_pImpl->instance)
+        if (s_pImpl->instance)
         {
-            vmaDestroyAllocator(_pImpl->vmaAllocator);
-            vkDestroyDevice(_pImpl->device, nullptr);
-            vkDestroySurfaceKHR(_pImpl->instance, _pImpl->surface, nullptr);
+            VkInstance instance = s_pImpl->instance;
+            vkDestroySurfaceKHR(
+                instance,
+                s_pWindow->getImpl()->surface,
+                nullptr
+            );
+            s_pWindow->getImpl()->surface = VK_NULL_HANDLE;
             #ifdef PLATYPUS_DEBUG
-                if (_pImpl->debugMessenger)
-                    destroy_vk_debug_messenger(_pImpl->instance, _pImpl->debugMessenger, nullptr);
+                if (s_pImpl->debugMessenger)
+                {
+                    destroy_vk_debug_messenger(
+                        s_pImpl->instance,
+                        s_pImpl->debugMessenger,
+                        nullptr
+                    );
+                }
             #endif
-            vkDestroyInstance(_pImpl->instance, nullptr);
+            vkDestroyInstance(s_pImpl->instance, nullptr);
         }
-        delete _pImpl;
+        delete s_pImpl;
     }
 
-    void Context::submitPrimaryCommandBuffer(Swapchain& swapchain, const CommandBuffer& cmdBuf, size_t frame)
+    ContextImpl* Context::get_impl()
     {
-        SwapchainImpl* pSwapchainImpl = swapchain._pImpl;
-        uint32_t imageIndex = swapchain.getCurrentImageIndex();
-        // check if prev frame is using this image
-        if (pSwapchainImpl->inFlightImages[imageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(_pImpl->device, 1, &pSwapchainImpl->inFlightImages[imageIndex], VK_TRUE, UINT64_MAX);
-
-        // mark this img to be now used by this frame
-        pSwapchainImpl->inFlightImages[imageIndex] = pSwapchainImpl->inFlightFences[frame];
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &pSwapchainImpl->imageAvailableSemaphores[frame];
-        submitInfo.pWaitDstStageMask = waitStages;
-
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &cmdBuf._pImpl->handle;
-
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &pSwapchainImpl->renderFinishedSemaphores[frame];
-
-        vkResetFences(_pImpl->device, 1, &pSwapchainImpl->inFlightFences[frame]);
-        VkResult submitResult = vkQueueSubmit(
-            _pImpl->graphicsQueue,
-            1,
-            &submitInfo,
-            pSwapchainImpl->inFlightFences[frame]
-        );
-        if (submitResult != VK_SUCCESS)
-        {
-            const std::string errStr(string_VkResult(submitResult));
-            Debug::log(
-                "@Context::submitPrimaryCommandBuffer "
-                "Failed to submit command buffer to graphics queue! VkResult: " + errStr,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-    }
-
-    void Context::waitForOperations()
-    {
-        vkDeviceWaitIdle(_pImpl->device);
-    }
-
-    void Context::handleWindowResize()
-    {
-        _pImpl->deviceSwapchainSupportDetails = query_swapchain_support_details(
-            _pImpl->physicalDevice,
-            _pImpl->surface
-        );
-    }
-
-    Context* Context::get_instance()
-    {
-        if (!s_pInstance)
-        {
-            Debug::log(
-                "@Context::get_instance "
-                "Context instance was nullptr!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        return s_pInstance;
+        return s_pImpl;
     }
 }

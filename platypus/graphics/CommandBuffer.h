@@ -13,15 +13,12 @@ namespace  platypus
         SECONDARY_COMMAND_BUFFER
     };
 
-
-    class Context;
     class CommandPool;
 
     struct CommandBufferImpl;
     class CommandBuffer
     {
     private:
-        friend class Context;
         friend class CommandPool;
         const CommandPool* _pPool = nullptr;
         CommandBufferImpl* _pImpl = nullptr;

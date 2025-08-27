@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Window.h"
+#include "Window.hpp"
 #include "InputManager.h"
-#include "platypus/graphics/Context.h"
+#include "platypus/graphics/Context.hpp"
 #include "platypus/graphics/renderers/MasterRenderer.h"
 #include "SceneManager.h"
 #include "platypus/assets/AssetManager.h"
@@ -18,10 +18,11 @@ namespace platypus
         // Order of these is important for proper construction and destruction!
         Window _window;
         InputManager _inputManager;
-        Context _context;
-        MasterRenderer _masterRenderer;
+        // TODO: Fix these -> not supposed to be heap allocated
+        MasterRenderer* _pMasterRenderer = nullptr;
+        AssetManager* _pAssetManager = nullptr;
+
         SceneManager _sceneManager;
-        AssetManager _assetManager;
 
     public:
         Application(
@@ -42,8 +43,7 @@ namespace platypus
         inline Window& getWindow() { return _window; }
         inline InputManager& getInputManager() { return _inputManager; }
         inline SceneManager& getSceneManager() { return _sceneManager; }
-        inline AssetManager& getAssetManager() { return _assetManager; }
-        inline Context& getContext() { return _context; }
-        inline MasterRenderer& getMasterRenderer() { return _masterRenderer; }
+        inline AssetManager* getAssetManager() { return _pAssetManager; }
+        inline MasterRenderer* getMasterRenderer() { return _pMasterRenderer; }
     };
 }

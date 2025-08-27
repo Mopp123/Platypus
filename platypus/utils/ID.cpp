@@ -50,4 +50,14 @@ namespace platypus
             s_usedIDs.erase(it);
         }
     }
+
+    // Not sure if this might fail in some cases... use at your own risk...
+    // https://stackoverflow.com/questions/919612/mapping-two-integers-to-one-in-a-unique-and-deterministic-way
+    ID_t ID::hash(ID_t a, ID_t b)
+    {
+        uint32_t A = (uint32_t)(a >= 0 ? 2 * (int32_t)a : -2 * (int32_t)a - 1);
+        uint32_t B = (uint32_t)(b >= 0 ? 2 * (int32_t)b : -2 * (int32_t)b - 1);
+        uint32_t C = (int32_t)((A >= B ? A * A + A + B : A + B * B) / 2);
+        return (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
+    }
 }

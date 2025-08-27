@@ -20,5 +20,7 @@ namespace platypus
     public:
         static ID_t generate();
         static void erase(ID_t idToErase);
+
+        static ID_t hash(ID_t a, ID_t b);
     };
 }

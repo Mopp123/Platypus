@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 
 namespace platypus
 {
@@ -7,6 +9,9 @@ namespace platypus
 
     class System
     {
+    protected:
+        uint64_t _requiredComponentMask = 0;
+
     public:
         System() = default;
         System(const System& other) = delete;

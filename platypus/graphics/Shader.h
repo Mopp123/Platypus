@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "platypus/graphics/Context.h"
+#include <cstdint>
 
 
 namespace platypus
@@ -21,6 +21,8 @@ namespace platypus
         GLSL3,
         ESSL1
     };
+
+    std::string shader_stage_to_string(uint32_t shaderStage);
 
 
     class Pipeline;
