@@ -133,6 +133,7 @@ namespace platypus
         _pImpl->handle = other._pImpl->handle;
     }
 
+    /*
     DescriptorSet& DescriptorSet::operator=(DescriptorSet&& other)
     {
         _components = other._components;
@@ -140,6 +141,7 @@ namespace platypus
         _pImpl->handle = other._pImpl->handle;
         return *this;
     }
+    */
 
     DescriptorSet::~DescriptorSet()
     {

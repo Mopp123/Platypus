@@ -34,11 +34,13 @@ namespace platypus
             }
         )
     {
-        _pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
-            *this,
-            _descriptorPool,
-            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
-        );
+        //_pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
+        //    *this,
+        //    _descriptorPool,
+        //    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
+        //);
+        _pRenderer3D = std::make_unique<Renderer3D>(*this);
+
         _pSkinnedMeshRenderer = std::make_unique<SkinnedMeshRenderer>(
             *this,
             _descriptorPool,
@@ -50,7 +52,7 @@ namespace platypus
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        _renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
+        //_renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
         _renderers[_pSkinnedMeshRenderer->getRequiredComponentsMask()] = _pSkinnedMeshRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
@@ -74,6 +76,7 @@ namespace platypus
         for (auto& it : _renderers)
             it.second->freeBatches();
 
+        BatchPool::free_batches();
         _pGUIRenderer->freeBatches();
 
         freeShaderResources();
@@ -91,25 +94,50 @@ namespace platypus
     {
         cleanRenderers();
         destroyPipelines();
+        // NOTE: Why need to free command buffers here?
+        //  -> cleanUp() is called on scene change, but new scene doesn't need new command buffers!
         freeCommandBuffers();
     }
 
     void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
-        Batch* pBatch = getBatch(entity);
-        if (!pBatch)
-            pBatch = createBatch(entity)
-
-        if (!pBatch)
+        uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
+        uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
+        if (!(entity.componentMask & requiredMask1) && !((entity.componentMask & requiredMask2)))
         {
-            // TODO: Error here!
+            return;
         }
 
-        addToBatch(pBatch, entity);
+        // NOTE: Just experimenting using new batching and rendering system for static meshes!
+        // TODO: When static meshes working -> do the same for skinned meshes!
+        Transform* pTransform = (Transform*)pScene->getComponent(
+            entity.id,
+            ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
 
-        _pRenderer3D->submit(pBatch);
-
-
+        StaticMeshRenderable* pStaticRenderable = (StaticMeshRenderable*)pScene->getComponent(
+            entity.id,
+            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+            false,
+            false
+        );
+        if (pStaticRenderable)
+        {
+            const ID_t meshID = pStaticRenderable->meshID;
+            const ID_t materialID = pStaticRenderable->materialID;
+            ID_t batchIdentifier = ID::hash(meshID, materialID);
+            Batch* pBatch = BatchPool::get_batch(meshID, materialID);
+            if (!pBatch)
+            {
+                Debug::log(
+                    "@MasterRenderer::submit "
+                    "No suitable batch found. Creating a new one..."
+                );
+                // TODO: Error handling if creation fails
+                pBatch = BatchPool::create_static_batch(meshID, materialID);
+            }
+            BatchPool::add_to_static_batch(pBatch, batchIdentifier, pTransform->globalMatrix);
+        }
 
         for (auto& it : _renderers)
         {
@@ -160,6 +188,8 @@ namespace platypus
         for (const auto& renderer : _renderers)
             renderer.second->allocCommandBuffers(count);
 
+        // TODO: Make all renderers alloc same way!
+        _pRenderer3D->allocCommandBuffers();
         _pGUIRenderer->allocCommandBuffers(count);
     }
 
@@ -169,6 +199,7 @@ namespace platypus
             it.second->freeCommandBuffers();
 
         _pGUIRenderer->freeCommandBuffers();
+        _pRenderer3D->freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
@@ -358,6 +389,22 @@ namespace platypus
             );
         }
 
+        // NOTE:
+        //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
+        //      because when adding to a batch, it only updates the host side!
+        BatchPool::update_device_side_buffers();
+        secondaryCommandBuffers.push_back(
+            _pRenderer3D->recordCommandBuffer(
+                _swapchain.getRenderPass(),
+                (float)swapchainExtent.width,
+                (float)swapchainExtent.height,
+                BatchPool::get_batches()
+            )
+        );
+        // NOTE: Need to reset batches for next frame's submits
+        //      -> Otherwise adding endlessly
+        BatchPool::reset_for_next_frame();
+
         secondaryCommandBuffers.push_back(
             _pGUIRenderer->recordCommandBuffer(
                 _swapchain.getRenderPass(),
@@ -392,6 +439,9 @@ namespace platypus
             allocCommandBuffers(_swapchain.getMaxFramesInFlight());
             createPipelines();
             createShaderResources();
+            // NOTE: Makes window resizing even slower.
+            //  -> Required tho, because need to get new descriptor sets for batches!
+            BatchPool::free_batches();
             window.resetResized();
         }
         else

@@ -10,38 +10,17 @@ namespace platypus
     Renderer3D::Renderer3D(MasterRenderer& masterRendererRef) :
         _masterRendererRef(masterRendererRef)
     {
-        _maxBatches = 10;
-        _batches.resize(_maxBatches);
     }
 
     Renderer3D::~Renderer3D()
     {
     }
 
-    void Renderer3D::submit(Batch* pBatch)
-    {
-        // Not sure how the batches should be provided here.
-        // Atm just experimenting...
-        if (_usedBatches >= _maxBatches)
-        {
-            Debug::log(
-                "@Renderer3D::submit "
-                "All batches already in use. "
-                "Maximum batch count is " + std::to_string(_maxBatches),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        _batches[_usedBatches] = pBatch;
-        ++_usedBatches;
-    }
-
     CommandBuffer& Renderer3D::recordCommandBuffer(
         const RenderPass& renderPass,
         float viewportWidth,
-        float viewportHeight
+        float viewportHeight,
+        const std::vector<Batch*>& toRender
     )
     {
         #ifdef PLATYPUS_DEBUG
@@ -62,36 +41,39 @@ namespace platypus
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
-        for (const Batch& batch : _batches)
+        for (Batch* pBatch : toRender)
         {
-            for (uint32_t repeatIndex = 0; repeatIndex < batch.repeatCount; ++repeatIndex)
+            for (uint32_t repeatIndex = 0; repeatIndex < pBatch->repeatCount; ++repeatIndex)
             {
                 // DANGER! Might dereference nullptr!
                 render::bind_pipeline(
                     currentCommandBuffer,
-                    *batch.pPipeline
+                    *pBatch->pPipeline
                 );
 
                 render::bind_vertex_buffers(
                     currentCommandBuffer,
-                    batch.vertexBuffers
+                    pBatch->vertexBuffers
                 );
-                render::bind_index_buffer(currentCommandBuffer, batch.pIndexBuffer);
+                render::bind_index_buffer(currentCommandBuffer, pBatch->pIndexBuffer);
 
-                render::push_constants(
-                    currentCommandBuffer,
-                    batch.pushConstantsShaderStage,
-                    0,
-                    batch.pushConstantsSize,
-                    batch.pPushConstantsData,
-                    batch.pushConstantsUniformInfos
-                );
+                if (pBatch->pushConstantsSize > 0)
+                {
+                    render::push_constants(
+                        currentCommandBuffer,
+                        pBatch->pushConstantsShaderStage,
+                        0,
+                        pBatch->pushConstantsSize,
+                        pBatch->pPushConstantsData,
+                        pBatch->pushConstantsUniformInfos
+                    );
+                }
 
-                if (batch.dynamicDescriptorSetRanges.empty())
+                if (pBatch->dynamicDescriptorSetRanges.empty())
                 {
                     render::bind_descriptor_sets(
                         currentCommandBuffer,
-                        batch.descriptorSets[_currentFrame],
+                        pBatch->descriptorSets[_currentFrame],
                         { }
                     );
                 }
@@ -99,21 +81,18 @@ namespace platypus
                 {
                     render::bind_descriptor_sets(
                         currentCommandBuffer,
-                        batch.descriptorSets[_currentFrame],
-                        { batch.dynamicDescriptorSetRanges[repeatIndex] }
+                        pBatch->descriptorSets[_currentFrame],
+                        { pBatch->dynamicDescriptorSetRanges[repeatIndex] }
                     );
                 }
 
                 render::draw_indexed(
                     currentCommandBuffer,
-                    (uint32_t)batch.pIndexBuffer->getDataLength(),
-                    batch.instanceCount
+                    (uint32_t)pBatch->pIndexBuffer->getDataLength(),
+                    pBatch->instanceCount
                 );
             }
         }
-
-        // NOTE: Recording command buffer shouldn't really be responsible for resetting used batches?
-        _usedBatches = 0;
 
         currentCommandBuffer.end();
 

@@ -140,7 +140,10 @@ namespace platypus
             const DescriptorSetLayout* pLayout
         );
         DescriptorSet(const DescriptorSet& other);
-        DescriptorSet& operator=(DescriptorSet&& other);
+        // Don't remember why I ever had below
+        //      -> copy constructor gets implicitly deleted if below is defined!
+        //          -> caused some issues, but this might cause issues in the future as well?
+        //DescriptorSet& operator=(DescriptorSet&& other);
 
         ~DescriptorSet();
 

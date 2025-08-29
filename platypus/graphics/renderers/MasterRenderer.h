@@ -7,6 +7,8 @@
 #include "Renderer.h"
 #include "GUIRenderer.h"
 #include "SkinnedMeshRenderer.hpp"
+#include "Renderer3D.hpp"
+#include "Batch.hpp"
 
 #include <map>
 #include <memory>
@@ -37,8 +39,12 @@ namespace platypus
         DescriptorSetLayout _scene3DDataDescriptorSetLayout;
         std::vector<DescriptorSet> _scene3DDescriptorSets;
 
-        std::unique_ptr<Renderer> _pStaticMeshRenderer;
+        // Testing new Renderer3D
+        // TODO: Remove old StaticMeshRenderer, when new one works!
+        //std::unique_ptr<Renderer> _pStaticMeshRenderer;
         std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
+
+        std::unique_ptr<Renderer3D> _pRenderer3D;
         // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
         // *This was due to Renderer and Material rework
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
@@ -64,6 +70,7 @@ namespace platypus
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
+        inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
 
     private:
         void allocCommandBuffers(uint32_t count);
