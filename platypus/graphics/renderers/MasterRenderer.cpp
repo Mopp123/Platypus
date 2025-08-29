@@ -96,6 +96,21 @@ namespace platypus
 
     void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
+        Batch* pBatch = getBatch(entity);
+        if (!pBatch)
+            pBatch = createBatch(entity)
+
+        if (!pBatch)
+        {
+            // TODO: Error here!
+        }
+
+        addToBatch(pBatch, entity);
+
+        _pRenderer3D->submit(pBatch);
+
+
+
         for (auto& it : _renderers)
         {
             if ((entity.componentMask & it.second->getRequiredComponentsMask()) == it.second->getRequiredComponentsMask())
