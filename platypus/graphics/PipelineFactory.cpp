@@ -2,6 +2,7 @@
 #include "platypus/core/Application.h"
 #include "Swapchain.h"
 #include "renderers/MasterRenderer.h"
+#include "renderers/Batch.hpp"
 #include <string>
 
 
@@ -67,10 +68,10 @@ namespace platypus
         };
         if (skinned)
         {
-            // NOTE: Does this descriptor set layout really need to live in the SkinnedMeshRenderer?
-            // TODO: Rather just make it here?
+            // NOTE: Too confusing to access joint descriptor set layout from BatchPool here?!
+            // TODO: Fix plz?
             useDescriptorSetLayouts.push_back(
-                pMasterRenderer->getSkinnedMeshRenderer()->getDescriptorSetLayout()
+                BatchPool::get_joint_descriptor_set_layout()
             );
 
             pUseVertexShader = pMaterial->getSkinnedVertexShader();

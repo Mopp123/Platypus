@@ -40,8 +40,7 @@ namespace platypus
         std::vector<DescriptorSet> _scene3DDescriptorSets;
 
         // Testing new Renderer3D
-        // TODO: Remove old StaticMeshRenderer, when new one works!
-        //std::unique_ptr<Renderer> _pStaticMeshRenderer;
+        // TODO: Remove old SkinnedMeshRenderer, when new one works!
         std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
 
         std::unique_ptr<Renderer3D> _pRenderer3D;
@@ -51,6 +50,8 @@ namespace platypus
 
         // Key is the required component mask for submitted components of the renderer
         std::map<uint64_t, Renderer*> _renderers;
+
+        size_t _currentFrame = 0;
 
     public:
         // NOTE: CommandPool and Device must exist when creating this
@@ -71,6 +72,8 @@ namespace platypus
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
         inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
+
+        inline size_t getCurrentFrame() const { return _currentFrame; }
 
     private:
         void allocCommandBuffers(uint32_t count);

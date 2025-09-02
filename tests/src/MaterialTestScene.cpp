@@ -1,5 +1,6 @@
 #include "MaterialTestScene.h"
 #include "UITestScene.h"
+#include "SkinnedMeshTestScene.h"
 
 using namespace platypus;
 
@@ -169,6 +170,8 @@ void MaterialTestScene::init()
         ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
     );
     pDirLight->direction = { 0.75f, -1.5f, -1.0f };
+
+    Debug::log("___TEST___MATERIAL TEST INIT! Created " + std::to_string(getEntities().size()) + " entities.");
 }
 
 static float s_anim = 0.0f;
@@ -197,5 +200,10 @@ void MaterialTestScene::update()
     if(inputManager.isKeyDown(KeyName::KEY_0))
     {
         Application::get_instance()->getSceneManager().assignNextScene(new UITestScene);
+    }
+
+    if(inputManager.isKeyDown(KeyName::KEY_1))
+    {
+        Application::get_instance()->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
     }
 }

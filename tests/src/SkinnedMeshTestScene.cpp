@@ -1,6 +1,7 @@
 #include "SkinnedMeshTestScene.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
+#include "MaterialTestScene.h"
 #include <string>
 
 
@@ -273,6 +274,9 @@ void SkinnedMeshTestScene::init()
         ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
     );
     pDirLight->direction = { 0.75f, -1.5f, 1.0f };
+
+
+    Debug::log("___TEST___SKINNED TEST INIT! Created " + std::to_string(getEntities().size()) + " entities.");
 }
 
 static std::string get_joint_name(const Pose& bindPose, size_t index)
@@ -297,6 +301,10 @@ void SkinnedMeshTestScene::update()
     _camController.update();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
+    if (inputManager.isKeyDown(KeyName::KEY_0) && !s_tabDown)
+    {
+        Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
+    }
 
     // Test removing entities, especially from the middle of the hierarchy
     /*

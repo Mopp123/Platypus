@@ -6,6 +6,7 @@
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Component.h"
+#include "platypus/ecs/components/SkeletalAnimation.h"
 #include "StaticMeshRenderer.h"
 
 
@@ -34,30 +35,26 @@ namespace platypus
             }
         )
     {
-        //_pStaticMeshRenderer = std::make_unique<StaticMeshRenderer>(
-        //    *this,
-        //    _descriptorPool,
-        //    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM
-        //);
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
 
-        _pSkinnedMeshRenderer = std::make_unique<SkinnedMeshRenderer>(
-            *this,
-            _descriptorPool,
-            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
-        );
+        //_pSkinnedMeshRenderer = std::make_unique<SkinnedMeshRenderer>(
+        //    *this,
+        //    _descriptorPool,
+        //    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+        //);
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        //_renderers[_pStaticMeshRenderer->getRequiredComponentsMask()] = _pStaticMeshRenderer.get();
-        _renderers[_pSkinnedMeshRenderer->getRequiredComponentsMask()] = _pSkinnedMeshRenderer.get();
+        //_renderers[_pSkinnedMeshRenderer->getRequiredComponentsMask()] = _pSkinnedMeshRenderer.get();
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
 
         createCommonShaderResources();
+
+        BatchPool::init();
     }
 
     MasterRenderer::~MasterRenderer()
@@ -68,6 +65,8 @@ namespace platypus
             delete pBuffer;
         _scene3DDataUniformBuffers.clear();
         _scene3DDataDescriptorSetLayout.destroy();
+
+        BatchPool::destroy();
     }
 
     void MasterRenderer::cleanRenderers()
@@ -92,6 +91,7 @@ namespace platypus
 
     void MasterRenderer::cleanUp()
     {
+        BatchPool::free_batches();
         cleanRenderers();
         destroyPipelines();
         // NOTE: Why need to free command buffers here?
@@ -103,16 +103,20 @@ namespace platypus
     {
         uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
         uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
-        if (!(entity.componentMask & requiredMask1) && !((entity.componentMask & requiredMask2)))
+        uint64_t requiredMask3 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
+        if (!(entity.componentMask & requiredMask1) &&
+            !(entity.componentMask & requiredMask2) &&
+            !(entity.componentMask & requiredMask3))
         {
             return;
         }
 
-        // NOTE: Just experimenting using new batching and rendering system for static meshes!
-        // TODO: When static meshes working -> do the same for skinned meshes!
+        // NOTE: Below should rather be done by the "batcher" since these are kind of batching related operations?!
         Transform* pTransform = (Transform*)pScene->getComponent(
             entity.id,
-            ComponentType::COMPONENT_TYPE_TRANSFORM
+            ComponentType::COMPONENT_TYPE_TRANSFORM,
+            false,
+            false
         );
 
         StaticMeshRenderable* pStaticRenderable = (StaticMeshRenderable*)pScene->getComponent(
@@ -125,18 +129,52 @@ namespace platypus
         {
             const ID_t meshID = pStaticRenderable->meshID;
             const ID_t materialID = pStaticRenderable->materialID;
-            ID_t batchIdentifier = ID::hash(meshID, materialID);
-            Batch* pBatch = BatchPool::get_batch(meshID, materialID);
-            if (!pBatch)
+            ID_t batchID = BatchPool::get_batch_id(meshID, materialID);
+            if (batchID == NULL_ID)
             {
                 Debug::log(
                     "@MasterRenderer::submit "
-                    "No suitable batch found. Creating a new one..."
+                    "No suitable batch found for StaticMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                pBatch = BatchPool::create_static_batch(meshID, materialID);
+                batchID = BatchPool::create_static_batch(meshID, materialID);
             }
-            BatchPool::add_to_static_batch(pBatch, batchIdentifier, pTransform->globalMatrix);
+            BatchPool::add_to_static_batch(batchID, pTransform->globalMatrix, _currentFrame);
+        }
+
+        SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
+            entity.id,
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+            false,
+            false
+        );
+        if (pSkinnedRenderable)
+        {
+            const ID_t meshID = pSkinnedRenderable->meshID;
+            const ID_t materialID = pSkinnedRenderable->materialID;
+            ID_t batchID = BatchPool::get_batch_id(meshID, materialID);
+            if (batchID == NULL_ID)
+            {
+                Debug::log(
+                    "@MasterRenderer::submit "
+                    "No suitable batch found for SkinnedMeshRenderable. Creating a new one..."
+                );
+                // TODO: Error handling if creation fails
+                batchID = BatchPool::create_skinned_batch(meshID, materialID);
+            }
+
+            const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
+                entity.id,
+                ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+            );
+
+            // NOTE: Not sure are jointMatrices provided correctly here?
+            BatchPool::add_to_skinned_batch(
+                batchID,
+                (void*)pAnimation->jointMatrices,
+                sizeof(Matrix4f) * pAnimation->jointCount,
+                _currentFrame
+            );
         }
 
         for (auto& it : _renderers)
@@ -277,20 +315,18 @@ namespace platypus
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
     {
-        size_t frame = _swapchain.getCurrentFrame();
-
-        if (frame >= _primaryCommandBuffers.size())
+        if (_currentFrame >= _primaryCommandBuffers.size())
         {
             Debug::log(
                 "@MasterRenderer::recordCommandBuffer "
-                "Frame index(" + std::to_string(frame) + ") out of bounds! "
+                "Frame index(" + std::to_string(_currentFrame) + ") out of bounds! "
                 "Allocated command buffer count is " + std::to_string(_primaryCommandBuffers.size()),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
 
-        CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[frame];
+        CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
 
         currentCommandBuffer.begin(_swapchain.getRenderPass());
 
@@ -368,7 +404,7 @@ namespace platypus
             1.0f
         };
 
-        _scene3DDataUniformBuffers[frame]->updateDeviceAndHost(
+        _scene3DDataUniformBuffers[_currentFrame]->updateDeviceAndHost(
             &_scene3DData,
             sizeof(Scene3DData),
             0
@@ -383,8 +419,8 @@ namespace platypus
                     _swapchain.getRenderPass(),
                     swapchainExtent.width,
                     swapchainExtent.height,
-                    _scene3DDescriptorSets[frame],
-                    frame // NOTE: no idea should this be the "frame index" or "image index"
+                    _scene3DDescriptorSets[_currentFrame],
+                    _currentFrame // NOTE: no idea should this be the "frame index" or "image index"
                 )
             );
         }
@@ -392,7 +428,7 @@ namespace platypus
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!
-        BatchPool::update_device_side_buffers();
+        BatchPool::update_device_side_buffers(_currentFrame);
         secondaryCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
                 _swapchain.getRenderPass(),
@@ -411,7 +447,7 @@ namespace platypus
                 swapchainExtent.width,
                 swapchainExtent.height,
                 orthographicProjectionMatrix,
-                frame
+                _currentFrame
             )
         );
 
@@ -419,6 +455,9 @@ namespace platypus
 
         render::end_render_pass(currentCommandBuffer);
         currentCommandBuffer.end();
+
+        size_t maxFramesInFlight = _swapchain.getMaxFramesInFlight();
+        _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
 
         return currentCommandBuffer;
     }

@@ -26,8 +26,10 @@ namespace platypus
         Pipeline* pPipeline = nullptr;
         std::vector<std::vector<DescriptorSet>> descriptorSets;
         // NOTE: Currently should only use a single dynamic uniform buffer (Don't know what happens otherwise:D)
-        std::vector<uint32_t> dynamicDescriptorSetRanges;
-        std::vector<const Buffer*> vertexBuffers;
+        //std::vector<uint32_t> dynamicDescriptorSetRanges;
+        uint32_t dynamicUniformBufferElementSize = 0;
+        std::vector<const Buffer*> staticVertexBuffers;
+        std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
         const Buffer* pIndexBuffer = nullptr;
         size_t pushConstantsSize = 0;
         std::vector<UniformInfo> pushConstantsUniformInfos;
@@ -49,27 +51,55 @@ namespace platypus
         static std::unordered_map<ID_t, size_t> s_identifierBatchMapping;
 
         static size_t s_maxStaticBatchLength;
-        static std::vector<Buffer*> s_allocatedBuffers;
+        static size_t s_maxSkinnedBatchLength;
+        static size_t s_maxJoints;
+
+        static DescriptorSetLayout s_jointDescriptorSetLayout;
+
+        // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
+        static std::vector<std::vector<Buffer*>> s_allocatedBuffers;
+        static std::vector<std::vector<DescriptorSet>> s_descriptorSets;
+
         // This is fucking stupid!
         // Need to pass all vertex buffers as const ptr, so need a way to refer to the s_allocatedBuffers
         // when modifying it, instead of the Batch struct's member.
-        static std::unordered_map<ID_t, size_t> s_batchAdditionalBufferMapping;
+        static std::unordered_map<ID_t, size_t> s_batchBufferMapping;
+        static std::unordered_map<ID_t, size_t> s_batchDescriptorSetMapping;
 
     public:
+        static void init();
+        static void destroy();
+
+        // Returns batch identifier if found, NULL_ID if not.
         // NOTE: Entity might have components for multiple different batches!
         //  -> Need to call for each renderable type separately
-        static Batch* get_batch(ID_t meshID, ID_t materialID);
+        static ID_t get_batch_id(ID_t meshID, ID_t materialID);
 
-        static Batch* create_static_batch(ID_t meshID, ID_t materialID);
-        // NOTE: Dumb to pass both Batch and the identifier...
-        static void add_to_static_batch(Batch* pBatch, ID_t identifier, const Matrix4f& transformationMatrix);
+        // Returns batch identifier, if created successfully
+        static ID_t create_static_batch(ID_t meshID, ID_t materialID);
+        static ID_t create_skinned_batch(ID_t meshID, ID_t materialID);
 
-        static void update_device_side_buffers();
+        static void add_to_static_batch(
+            ID_t identifier,
+            const Matrix4f& transformationMatrix,
+            size_t currentFrame
+        );
+
+        static void add_to_skinned_batch(
+            ID_t identifier,
+            void* pJointData,
+            size_t jointDataSize,
+            size_t currentFrame
+        );
+
+        static void update_device_side_buffers(size_t currentFrame);
         // Clears instance and repeat counts for next round of submits.
         static void reset_for_next_frame();
 
         static void free_batches();
 
         static const std::vector<Batch*>& get_batches();
+
+        static const DescriptorSetLayout& get_joint_descriptor_set_layout();
     };
 }

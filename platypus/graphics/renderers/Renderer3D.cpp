@@ -41,22 +41,37 @@ namespace platypus
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
+        const size_t currentFrame = _masterRendererRef.getCurrentFrame();
         for (Batch* pBatch : toRender)
         {
+            // DANGER! Might dereference nullptr!
+            render::bind_pipeline(
+                currentCommandBuffer,
+                *pBatch->pPipeline
+            );
+
+            // TODO: Fix this mess!
+            //      * Should have better way of grouping all
+            // TODO: Don't alloc each time here!
+            std::vector<const Buffer*> vertexBuffers;
+            vertexBuffers.reserve(pBatch->staticVertexBuffers.size() + pBatch->dynamicVertexBuffers.size());
+            for (const Buffer* pBuffer : pBatch->staticVertexBuffers)
+                vertexBuffers.emplace_back(pBuffer);
+            for (std::vector<Buffer*>& dynamicVertexBuffers : pBatch->dynamicVertexBuffers)
+            {
+                // ISSUE: DANGER! Make sure not accessing outside bounds!
+                Buffer* pDynamicVertexBuffer = dynamicVertexBuffers[currentFrame];
+                vertexBuffers.emplace_back(pDynamicVertexBuffer);
+            }
+
+            render::bind_vertex_buffers(
+                currentCommandBuffer,
+                vertexBuffers
+            );
+            render::bind_index_buffer(currentCommandBuffer, pBatch->pIndexBuffer);
+
             for (uint32_t repeatIndex = 0; repeatIndex < pBatch->repeatCount; ++repeatIndex)
             {
-                // DANGER! Might dereference nullptr!
-                render::bind_pipeline(
-                    currentCommandBuffer,
-                    *pBatch->pPipeline
-                );
-
-                render::bind_vertex_buffers(
-                    currentCommandBuffer,
-                    pBatch->vertexBuffers
-                );
-                render::bind_index_buffer(currentCommandBuffer, pBatch->pIndexBuffer);
-
                 if (pBatch->pushConstantsSize > 0)
                 {
                     render::push_constants(
@@ -69,7 +84,7 @@ namespace platypus
                     );
                 }
 
-                if (pBatch->dynamicDescriptorSetRanges.empty())
+                if (pBatch->dynamicUniformBufferElementSize == 0)
                 {
                     render::bind_descriptor_sets(
                         currentCommandBuffer,
@@ -79,10 +94,11 @@ namespace platypus
                 }
                 else
                 {
+                    uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
                     render::bind_descriptor_sets(
                         currentCommandBuffer,
                         pBatch->descriptorSets[_currentFrame],
-                        { pBatch->dynamicDescriptorSetRanges[repeatIndex] }
+                        { dynamicUniformBufferOffset }
                     );
                 }
 
