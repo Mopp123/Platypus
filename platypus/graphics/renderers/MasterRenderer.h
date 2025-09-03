@@ -4,13 +4,10 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/ecs/components/Renderable.h"
-#include "Renderer.h"
 #include "GUIRenderer.h"
-#include "SkinnedMeshRenderer.hpp"
 #include "Renderer3D.hpp"
 #include "Batch.hpp"
 
-#include <map>
 #include <memory>
 
 
@@ -39,17 +36,8 @@ namespace platypus
         DescriptorSetLayout _scene3DDataDescriptorSetLayout;
         std::vector<DescriptorSet> _scene3DDescriptorSets;
 
-        // Testing new Renderer3D
-        // TODO: Remove old SkinnedMeshRenderer, when new one works!
-        std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
-
         std::unique_ptr<Renderer3D> _pRenderer3D;
-        // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
-        // *This was due to Renderer and Material rework
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
-
-        // Key is the required component mask for submitted components of the renderer
-        std::map<uint64_t, Renderer*> _renderers;
 
         size_t _currentFrame = 0;
 
@@ -63,9 +51,6 @@ namespace platypus
         void cleanUp();
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
-
-        inline SkinnedMeshRenderer* getSkinnedMeshRenderer() { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
-        inline const SkinnedMeshRenderer* getSkinnedMeshRenderer() const { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
 
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }

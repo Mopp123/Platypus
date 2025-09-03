@@ -154,7 +154,6 @@ namespace platypus
 
     ID_t BatchPool::create_skinned_batch(ID_t meshID, ID_t materialID)
     {
-        Device::wait_for_operations();
         ID_t identifier = ID::hash(meshID, materialID);
         if (s_identifierBatchMapping.find(identifier) != s_identifierBatchMapping.end())
         {
@@ -385,15 +384,23 @@ namespace platypus
 
     void BatchPool::update_device_side_buffers(size_t currentFrame)
     {
-        for (std::vector<Buffer*> buffers : s_allocatedBuffers)
+        std::unordered_map<ID_t, size_t>::const_iterator it;
+        for (it = s_batchBufferMapping.begin(); it != s_batchBufferMapping.end(); ++it)
         {
             // TODO: Make safer!
-            Buffer* pBuffer = buffers[currentFrame];
-            pBuffer->updateDevice(
-                pBuffer->accessData(),
-                pBuffer->getTotalSize(),
-                0
-            );
+            const ID_t batchID = it->first;
+            const Batch* pBatch = s_batches[s_identifierBatchMapping[batchID]];
+            if (pBatch->instanceCount > 0 || pBatch->repeatCount > 0)
+            {
+                // TODO: Make safer!
+                const size_t bufferIndex = s_batchBufferMapping[batchID];
+                Buffer* pBuffer = s_allocatedBuffers[bufferIndex][currentFrame];
+                pBuffer->updateDevice(
+                    pBuffer->accessData(),
+                    pBuffer->getTotalSize(),
+                    0
+                );
+            }
         }
     }
 

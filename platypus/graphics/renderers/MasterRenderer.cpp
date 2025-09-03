@@ -5,9 +5,9 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/components/Camera.h"
+#include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "StaticMeshRenderer.h"
 
 
 namespace platypus
@@ -37,21 +37,13 @@ namespace platypus
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
 
-        //_pSkinnedMeshRenderer = std::make_unique<SkinnedMeshRenderer>(
-        //    *this,
-        //    _descriptorPool,
-        //    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE | ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
-        //);
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
             _descriptorPool,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        //_renderers[_pSkinnedMeshRenderer->getRequiredComponentsMask()] = _pSkinnedMeshRenderer.get();
-
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
-
         createCommonShaderResources();
 
         BatchPool::init();
@@ -63,6 +55,7 @@ namespace platypus
 
         for (Buffer* pBuffer : _scene3DDataUniformBuffers)
             delete pBuffer;
+
         _scene3DDataUniformBuffers.clear();
         _scene3DDataDescriptorSetLayout.destroy();
 
@@ -72,21 +65,11 @@ namespace platypus
     void MasterRenderer::cleanRenderers()
     {
         Device::wait_for_operations();
-        for (auto& it : _renderers)
-            it.second->freeBatches();
 
         BatchPool::free_batches();
         _pGUIRenderer->freeBatches();
 
         freeShaderResources();
-
-        // NOTE: This is confusing as fuck atm:
-        //  -> need to create renderer specific descriptor
-        //  sets and uniform buffers here so they are ready for next scene
-        //      -> Current freeDescriptorSets() clears the materials'
-        //      descriptor sets and uniform buffers...
-        for (auto& it : _renderers)
-            it.second->createDescriptorSets();
     }
 
     void MasterRenderer::cleanUp()
@@ -177,11 +160,6 @@ namespace platypus
             );
         }
 
-        for (auto& it : _renderers)
-        {
-            if ((entity.componentMask & it.second->getRequiredComponentsMask()) == it.second->getRequiredComponentsMask())
-                it.second->submit(pScene, entity.id);
-        }
         if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
             _pGUIRenderer->submit(pScene, entity.id);
     }
@@ -223,8 +201,6 @@ namespace platypus
             count,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
         );
-        for (const auto& renderer : _renderers)
-            renderer.second->allocCommandBuffers(count);
 
         // TODO: Make all renderers alloc same way!
         _pRenderer3D->allocCommandBuffers();
@@ -233,14 +209,12 @@ namespace platypus
 
     void MasterRenderer::freeCommandBuffers()
     {
-        for (auto& it : _renderers)
-            it.second->freeCommandBuffers();
-
         _pGUIRenderer->freeCommandBuffers();
         _pRenderer3D->freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
             buffer.free();
+
         _primaryCommandBuffers.clear();
     }
 
@@ -298,9 +272,6 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->createShaderResources();
-
-        for (auto& it : _renderers)
-            it.second->createDescriptorSets();
     }
 
     void MasterRenderer::freeShaderResources()
@@ -308,9 +279,6 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->freeShaderResources();
-
-        for (auto& it : _renderers)
-            it.second->freeDescriptorSets();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
@@ -411,20 +379,6 @@ namespace platypus
         );
 
         const Extent2D swapchainExtent = _swapchain.getExtent();
-
-        for (auto& it : _renderers)
-        {
-            secondaryCommandBuffers.push_back(
-                it.second->recordCommandBuffer(
-                    _swapchain.getRenderPass(),
-                    swapchainExtent.width,
-                    swapchainExtent.height,
-                    _scene3DDescriptorSets[_currentFrame],
-                    _currentFrame // NOTE: no idea should this be the "frame index" or "image index"
-                )
-            );
-        }
-
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!

@@ -41,6 +41,7 @@ namespace platypus
 
         entityID_t createEntity();
         Entity getEntity(entityID_t entity) const;
+        bool entityExists(entityID_t entity) const;
         inline const std::vector<Entity>& getEntities() const { return _entities; }
         void destroyEntity(entityID_t entityID);
         void destroyComponent(entityID_t entityID, ComponentType componentType);
