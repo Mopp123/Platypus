@@ -1,6 +1,7 @@
 #include "SkinnedMeshTestScene.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
+#include "MaterialTestScene.h"
 #include <string>
 
 
@@ -186,24 +187,8 @@ void SkinnedMeshTestScene::init()
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
 
-    int area = 11;
+    int area = 2;
     float spacing = 3.25f;
-    /*
-    for (int x = 0; x < area; ++x)
-    {
-        for (int z = 0; z < area; ++z)
-        {
-            create_animated_entity(
-                this,
-                pAnimatedMesh,
-                bindPoses[0],
-                pAnimationAsset,
-                pMaterial,
-                { x * spacing, 0, -z * spacing }
-            );
-        }
-    }
-    */
 
     for (int x = 0; x < area; ++x)
     {
@@ -222,7 +207,6 @@ void SkinnedMeshTestScene::init()
                 _jointEntities
             );
 
-            /*
             const float cubeScale = 0.3f;
             entityID_t boxEntity = createEntity();
             create_transform(
@@ -264,7 +248,6 @@ void SkinnedMeshTestScene::init()
                 bindPoses[0],
                 "hand1"
             );
-            */
         }
     }
 
@@ -297,9 +280,10 @@ void SkinnedMeshTestScene::update()
     _camController.update();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
+    if (inputManager.isKeyDown(KeyName::KEY_0) && !s_tabDown)
+        Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
 
     // Test removing entities, especially from the middle of the hierarchy
-    /*
     if (inputManager.isKeyDown(KeyName::KEY_TAB) && !s_tabDown)
     {
         s_tabDown = true;
@@ -321,9 +305,11 @@ void SkinnedMeshTestScene::update()
         Debug::log(
             "___TEST___deleting joint: " + get_joint_name(_bindPose, _selectedJointIndex)
         );
-        destroyEntity(_selectedJointEntity);
+        if (entityExists(_selectedJointEntity))
+            destroyEntity(_selectedJointEntity);
+        else
+            Debug::log("___TEST___Entity has already been destroyed!");
     }
     if (!inputManager.isKeyDown(KeyName::KEY_BACKSPACE) && s_backspaceDown)
         s_backspaceDown = false;
-    */
 }

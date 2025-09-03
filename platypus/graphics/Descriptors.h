@@ -123,6 +123,8 @@ namespace platypus
     class DescriptorPool;
 
     struct DescriptorSetImpl;
+    // NOTE: Descriptor sets ARE ment to be copyable and assignable.
+    // -> They're just describing!
     class DescriptorSet
     {
     private:
@@ -130,17 +132,26 @@ namespace platypus
         DescriptorSetImpl* _pImpl = nullptr;
         std::vector<DescriptorSetComponent> _components;
 
-        const DescriptorSetLayout* _pLayout;
+        const DescriptorSetLayout* _pLayout = nullptr;
 
     public:
-        DescriptorSet() = default;
+        DescriptorSet();
 
         DescriptorSet(
             const std::vector<DescriptorSetComponent>& components,
             const DescriptorSetLayout* pLayout
         );
+
+        // NOTE: There has been quite a lot of weird issues when copying descriptor sets!
+        // PREVIOUS ISSUE: The way descriptor sets are created using DescriptorPool, had to add
+        // assignment operator that fixed an issue where segfaulting due to original descriptor set going
+        // out of scope, that hadn't set its members correctly...
         DescriptorSet(const DescriptorSet& other);
-        DescriptorSet& operator=(DescriptorSet&& other);
+        DescriptorSet& operator=(DescriptorSet other);
+        // Don't remember why I ever had below
+        //      -> copy constructor gets implicitly deleted if below is defined!
+        //          -> caused some issues, but this might cause issues in the future as well?
+        //DescriptorSet& operator=(DescriptorSet&& other);
 
         ~DescriptorSet();
 

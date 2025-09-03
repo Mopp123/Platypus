@@ -32,6 +32,7 @@ namespace platypus
 
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
+        inline Buffer* getVertexBuffer() { return _pVertexBuffer; }
         inline const Buffer* getIndexBuffer() const { return _pIndexBuffer; }
         inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }
     };

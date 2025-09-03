@@ -151,8 +151,13 @@ namespace platypus
         return outEntity;
     }
 
-    // NOTE: Incomplete and not tested! Propably doesnt work!!
-    // TODO: Finish and test this
+    bool Scene::entityExists(entityID_t entity) const
+    {
+        if (entity < 0 || entity >= _entities.size())
+            return false;
+        return _entities[entity].id != NULL_ENTITY_ID;
+    }
+
     void Scene::destroyEntity(entityID_t entityID)
     {
         if (!isValidEntity(entityID, "destroyEntity"))

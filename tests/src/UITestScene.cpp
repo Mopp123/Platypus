@@ -120,6 +120,7 @@ void UITestScene::init()
     UIElement panel1Child2 = panel1.addContainer(layout3);
     UIElement image = panel1Child2.addImage(pTestTexture);
     */
+    Debug::log("___TEST___GUI TEST INIT! Created " + std::to_string(getEntities().size()) + " entities.");
 }
 
 void UITestScene::update()

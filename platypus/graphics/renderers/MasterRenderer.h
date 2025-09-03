@@ -4,11 +4,10 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/ecs/components/Renderable.h"
-#include "Renderer.h"
 #include "GUIRenderer.h"
-#include "SkinnedMeshRenderer.hpp"
+#include "Renderer3D.hpp"
+#include "Batch.hpp"
 
-#include <map>
 #include <memory>
 
 
@@ -37,14 +36,10 @@ namespace platypus
         DescriptorSetLayout _scene3DDataDescriptorSetLayout;
         std::vector<DescriptorSet> _scene3DDescriptorSets;
 
-        std::unique_ptr<Renderer> _pStaticMeshRenderer;
-        std::unique_ptr<Renderer> _pSkinnedMeshRenderer;
-        // NOTE: GUIRenderer is atm a little special case and it doesn't inherit Renderer
-        // *This was due to Renderer and Material rework
+        std::unique_ptr<Renderer3D> _pRenderer3D;
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
-        // Key is the required component mask for submitted components of the renderer
-        std::map<uint64_t, Renderer*> _renderers;
+        size_t _currentFrame = 0;
 
     public:
         // NOTE: CommandPool and Device must exist when creating this
@@ -57,13 +52,13 @@ namespace platypus
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
 
-        inline SkinnedMeshRenderer* getSkinnedMeshRenderer() { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
-        inline const SkinnedMeshRenderer* getSkinnedMeshRenderer() const { return (SkinnedMeshRenderer*)_pSkinnedMeshRenderer.get(); }
-
         inline const Swapchain& getSwapchain() const { return _swapchain; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
+        inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
+
+        inline size_t getCurrentFrame() const { return _currentFrame; }
 
     private:
         void allocCommandBuffers(uint32_t count);

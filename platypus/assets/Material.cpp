@@ -411,7 +411,7 @@ namespace platypus
         Debug::log(
             beginStr +
             " Pipeline data was nullptr. "
-            "This Material may have been created but used by any renderable component.",
+            "This Material may have been created but not used by any renderable component.",
             Debug::MessageType::PLATYPUS_WARNING
         );
     }
