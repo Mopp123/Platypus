@@ -47,6 +47,10 @@ namespace platypus
     {
     };
 
+    DescriptorSet::DescriptorSet()
+    {
+    }
+
     DescriptorSet::DescriptorSet(
         const std::vector<DescriptorSetComponent>& components,
         const DescriptorSetLayout* pLayout
@@ -62,9 +66,10 @@ namespace platypus
     {
     }
 
-    DescriptorSet& DescriptorSet::operator=(DescriptorSet&& other)
+    DescriptorSet& DescriptorSet::operator=(DescriptorSet other)
     {
         _components = other._components;
+        _pLayout = other._pLayout;
         return *this;
     }
 

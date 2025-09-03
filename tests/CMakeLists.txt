@@ -30,7 +30,7 @@ if(${BUILD_TARGET} MATCHES "desktop")
     add_library(platypus SHARED IMPORTED)
     set_property(TARGET platypus PROPERTY IMPORTED_LOCATION "${PARENT_DIR}/build/libplatypus.so")
 elseif(${BUILD_TARGET} MATCHES "web")
-    add_compile_definitions(PLATYPUS_BUILD_WEB=1)
+    add_compile_definitions(PLATYPUS_BUILD_WEB=1 PLATYPUS_DEBUG=1)
     list(
         APPEND PROJECT_INCLUDES
         ${PARENT_DIR}/dependencies/stb

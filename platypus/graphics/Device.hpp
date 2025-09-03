@@ -4,6 +4,7 @@
 #include "CommandBuffer.h"
 #include "Swapchain.h"
 
+
 namespace platypus
 {
     struct DeviceImpl;

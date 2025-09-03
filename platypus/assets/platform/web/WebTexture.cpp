@@ -37,7 +37,6 @@ namespace platypus
 
 
     Texture::Texture(
-        const CommandPool& commandPool,
         const Image* pImage,
         ImageFormat targetFormat,
         const TextureSampler& sampler,

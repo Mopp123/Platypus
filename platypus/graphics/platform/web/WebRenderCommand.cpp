@@ -108,7 +108,8 @@ namespace platypus
 
             // Testing getting rid of UniformInfos
             // Reset useLocationIndex from "prev round"
-            pPipelineImpl->useLocationIndex = 0;
+            pPipelineImpl->constantsPushed = false;
+            pPipelineImpl->firstDescriptorSetLocation = 0;
 
             GL_FUNC(glFrontFace(pipeline.getFaceWindingOrder() == FrontFace::FRONT_FACE_COUNTER_CLOCKWISE ? GL_CCW : GL_CW));
 
@@ -412,7 +413,7 @@ namespace platypus
 
             PE_byte* pBuf = (PE_byte*)pValues;
             size_t bufOffset = 0;
-            int& useLocationIndex = pPipelineImpl->useLocationIndex;
+            int useLocationIndex = 0;
             for (const UniformInfo& uInfo : glUniformInfo)
             {
                 if (bufOffset >= size)
@@ -504,6 +505,8 @@ namespace platypus
                 }
                 bufOffset += get_shader_datatype_size(uInfo.type);
             }
+            pPipelineImpl->firstDescriptorSetLocation = useLocationIndex;
+            pPipelineImpl->constantsPushed = true;
         }
 
         void bind_descriptor_sets(
@@ -512,10 +515,25 @@ namespace platypus
             const std::vector<uint32_t>& offsets
         )
         {
-            PipelineImpl* pPipelineImpl = commandBuffer.getImpl()->pBoundPipeline->getImpl();
+            const Pipeline* pBoundPipeline = commandBuffer.getImpl()->pBoundPipeline;
+            PipelineImpl* pPipelineImpl = pBoundPipeline->getImpl();
+            #ifdef PLATYPUS_DEBUG
+                if ((pBoundPipeline->getPushConstantsSize() > 0) && !pPipelineImpl->constantsPushed)
+                {
+                    Debug::log(
+                        "@bind_descriptor_sets "
+                        "Bound pipeline has push constants that haven't yet been pushed! "
+                        "If pipeline has push constants these need to be pushed before binding descriptor sets!",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+            #endif
+
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
+            int useLocationIndex = pPipelineImpl->firstDescriptorSetLocation;
             for (const DescriptorSet& descriptorSet : descriptorSets)
             {
                 const DescriptorSetLayout* pLayout = descriptorSet.getLayout();
@@ -530,7 +548,6 @@ namespace platypus
                 //  buffers anymore...
                 int bufferBindingIndex = 0;
                 int bindingIndex = 0;
-                int& useLocationIndex = pPipelineImpl->useLocationIndex;
                 for (const DescriptorSetLayoutBinding& binding : pLayout->getBindings())
                 {
                     const std::vector<UniformInfo>& uniformInfo = binding.getUniformInfo();
@@ -703,6 +720,7 @@ namespace platypus
                     ++bindingIndex;
                 }
             }
+            pPipelineImpl->constantsPushed = false;
         }
 
         void draw_indexed(

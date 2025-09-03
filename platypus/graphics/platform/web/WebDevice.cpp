@@ -11,13 +11,16 @@ namespace platypus
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
     size_t Device::s_minUniformBufferOffsetAlignment = 1;
+    CommandPool* Device::s_pCommandPool = nullptr;
 
     void Device::create(Window* pWindow)
     {
+        s_pCommandPool = new CommandPool;
     }
 
     void Device::destroy()
     {
+        delete s_pCommandPool;
     }
 
     void Device::submit_primary_command_buffer(
@@ -39,6 +42,11 @@ namespace platypus
     size_t Device::get_min_uniform_buffer_offset_align()
     {
         return 1;
+    }
+
+    CommandPool* Device::get_command_pool()
+    {
+        return s_pCommandPool;
     }
 
     DeviceImpl* Device::get_impl()

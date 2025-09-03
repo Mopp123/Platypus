@@ -126,20 +126,6 @@ void SkinnedMeshTestScene::init()
         animations[0]
     );
 
-    std::vector<Pose> pistolBindPoses;
-    std::vector<std::vector<Pose>> pistolAnimations;
-    Model* pPistolModel = pAssetManager->loadModel(
-        "assets/models/Pistol.glb",
-        pistolBindPoses,
-        pistolAnimations
-    );
-    Mesh* pPistolMesh = pPistolModel->getMeshes()[0];
-    SkeletalAnimationData* pPistolAnimationAsset = pAssetManager->createSkeletalAnimation(
-        1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
-        pistolBindPoses[0],
-        pistolAnimations[0]
-    );
-
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
@@ -152,11 +138,6 @@ void SkinnedMeshTestScene::init()
         ImageFormat::R8G8B8A8_SRGB,
         textureSampler
     );
-    Texture* pPistolTexture = pAssetManager->loadTexture(
-        "assets/textures/Pistol.png",
-        ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
-    );
     Texture* pBoxDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/DiffuseTest.png",
         ImageFormat::R8G8B8A8_SRGB,
@@ -165,13 +146,6 @@ void SkinnedMeshTestScene::init()
 
     Material* pMaterial = pAssetManager->createMaterial(
         pDiffuseTexture->getID(),
-        pAssetManager->getWhiteTexture()->getID(),
-        NULL_ID,
-        0.8f,
-        16.0f
-    );
-    Material* pPistolMaterial = pAssetManager->createMaterial(
-        pPistolTexture->getID(),
         pAssetManager->getWhiteTexture()->getID(),
         NULL_ID,
         0.8f,
@@ -227,27 +201,6 @@ void SkinnedMeshTestScene::init()
                 bindPoses[0],
                 "hand0"
             );
-
-            float pistolScale = 0.125f;
-            std::vector<entityID_t> pistolJointEntities;
-            entityID_t pistolEntity = create_animated_entity(
-                this,
-                pPistolMesh,
-                pistolBindPoses[0],
-                pPistolAnimationAsset,
-                pPistolMaterial,
-                { 0, 0.15f, 0 },
-                { { 1, 0, 0}, PLATY_MATH_PI * -0.5f },
-                { pistolScale, pistolScale, pistolScale },
-                pistolJointEntities
-            );
-
-            glue_to_joint(
-                pistolEntity,
-                _jointEntities,
-                bindPoses[0],
-                "hand1"
-            );
         }
     }
 
@@ -273,43 +226,11 @@ static std::string get_joint_name(const Pose& bindPose, size_t index)
     return bindPose.joints[index].name;
 }
 
-static bool s_tabDown = false;
-static bool s_backspaceDown = false;
 void SkinnedMeshTestScene::update()
 {
     _camController.update();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
-    if (inputManager.isKeyDown(KeyName::KEY_0) && !s_tabDown)
+    if (inputManager.isKeyDown(KeyName::KEY_0))
         Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
-
-    // Test removing entities, especially from the middle of the hierarchy
-    if (inputManager.isKeyDown(KeyName::KEY_TAB) && !s_tabDown)
-    {
-        s_tabDown = true;
-        _selectedJointIndex = (_selectedJointIndex + 1) % _bindPose.joints.size();
-        _selectedJointEntity = _jointEntities[_selectedJointIndex];
-        std::string selectedJointName = get_joint_name(_bindPose, _selectedJointIndex);
-        Debug::log(
-            "___TEST___Selected joint: " + selectedJointName
-        );
-    }
-    if (!inputManager.isKeyDown(KeyName::KEY_TAB) && s_tabDown)
-        s_tabDown = false;
-
-
-    if (inputManager.isKeyDown(KeyName::KEY_BACKSPACE) && !s_backspaceDown)
-    {
-        s_backspaceDown = true;
-
-        Debug::log(
-            "___TEST___deleting joint: " + get_joint_name(_bindPose, _selectedJointIndex)
-        );
-        if (entityExists(_selectedJointEntity))
-            destroyEntity(_selectedJointEntity);
-        else
-            Debug::log("___TEST___Entity has already been destroyed!");
-    }
-    if (!inputManager.isKeyDown(KeyName::KEY_BACKSPACE) && s_backspaceDown)
-        s_backspaceDown = false;
 }

@@ -291,7 +291,7 @@ namespace platypus
 
         s_pImpl->vmaAllocator = vmaAllocator;
 
-        s_pCommandPool = new CommandPool();
+        s_pCommandPool = new CommandPool;
     }
 
     void Device::destroy()

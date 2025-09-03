@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+
+
 namespace platypus
 {
     struct TextureImpl

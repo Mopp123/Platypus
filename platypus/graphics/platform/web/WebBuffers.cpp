@@ -132,7 +132,6 @@ namespace platypus
 
 
     Buffer::Buffer(
-        const CommandPool& commandPool,
         void* pData,
         size_t elementSize,
         size_t dataLength,
