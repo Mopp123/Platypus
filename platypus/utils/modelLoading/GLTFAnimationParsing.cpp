@@ -172,8 +172,8 @@ namespace platypus
     struct NodeAnimationData
     {
         int node = -1;
-        Vector3f translation = { 0, 0, 0 };
-        Quaternion rotation = { 0, 0, 0, 0};
+        std::vector<Vector3f> translations;
+        std::vector<Quaternion> rotations;
     };
 
     struct KeyframeData
