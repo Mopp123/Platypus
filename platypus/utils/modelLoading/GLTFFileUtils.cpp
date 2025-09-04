@@ -118,6 +118,25 @@ namespace platypus
     }
 
 
+    std::string gltf_accessor_type_to_string(
+        int gltfAccessorType
+    )
+    {
+        switch (gltfAccessorType)
+        {
+            case TINYGLTF_TYPE_SCALAR: return "TINYGLTF_TYPE_SCALAR";
+            case TINYGLTF_TYPE_VEC2: return "TINYGLTF_TYPE_VEC2";
+            case TINYGLTF_TYPE_VEC3: return "TINYGLTF_TYPE_VEC3";
+            case TINYGLTF_TYPE_VEC4: return "TINYGLTF_TYPE_VEC4";
+            case TINYGLTF_TYPE_MAT2: return "TINYGLTF_TYPE_MAT2";
+            case TINYGLTF_TYPE_MAT3: return "TINYGLTF_TYPE_MAT3";
+            case TINYGLTF_TYPE_MAT4: return "TINYGLTF_TYPE_MAT4";
+            case TINYGLTF_TYPE_MATRIX: return "TINYGLTF_TYPE_MATRIX";
+            default: return "ERROR";
+        }
+    }
+
+
     Quaternion to_engine_quaternion(const std::vector<double>& gltfQuaternion)
     {
         if(gltfQuaternion.size() != 4)

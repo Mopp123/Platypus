@@ -180,7 +180,7 @@ void SkinnedMeshTestScene::init()
                 { animatedEntityScale, animatedEntityScale, animatedEntityScale },
                 _jointEntities
             );
-
+            /*
             const float cubeScale = 0.3f;
             entityID_t boxEntity = createEntity();
             create_transform(
@@ -201,6 +201,7 @@ void SkinnedMeshTestScene::init()
                 bindPoses[0],
                 "hand0"
             );
+            */
         }
     }
 

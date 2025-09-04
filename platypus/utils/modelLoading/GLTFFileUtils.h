@@ -54,6 +54,10 @@ namespace platypus
         int gltfAccessorComponentType
     );
 
+    std::string gltf_accessor_type_to_string(
+        int gltfAccessorType
+    );
+
     Quaternion to_engine_quaternion(const std::vector<double>& gltfQuaternion);
     Vector3f to_engine_vector3(const std::vector<double>& gltfVector);
     Matrix4f to_engine_matrix(const std::vector<double>& gltfMatrix);

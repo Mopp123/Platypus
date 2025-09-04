@@ -201,6 +201,7 @@ namespace platypus
                     nodeJointMapping
                 );
                 outAnimations.push_back(animationPoses);
+                Debug::log("___TEST___LOADED ANIM POSES: " + std::to_string(animationPoses.size()));
             }
         }
 

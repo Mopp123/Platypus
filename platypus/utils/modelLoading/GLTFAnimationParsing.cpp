@@ -4,6 +4,8 @@
 #include "platypus/core/Debug.h"
 
 #include <tiny_gltf.h>
+#include <unordered_map>
+#include <algorithm>
 
 
 namespace platypus
@@ -122,6 +124,7 @@ namespace platypus
 
             // Get anim data of this channel
             const tinygltf::Accessor& animDataAccessor = gltfModel.accessors[sampler.output];
+            Debug::log("___TEST___animDataAccessorCount = " + std::to_string(animDataAccessor.count));
             const tinygltf::BufferView& bufferView = gltfModel.bufferViews[animDataAccessor.bufferView];
             const tinygltf::Buffer& animDataBuffer = gltfModel.buffers[bufferView.buffer];
 
@@ -153,7 +156,7 @@ namespace platypus
                         "was null! Check your gltf export settings!",
                         Debug::MessageType::PLATYPUS_ERROR
                     );
-                    PLATYPUS_ASSERT(false);
+                    //PLATYPUS_ASSERT(false);
                 }
                 rotationValue = rotationValue.normalize();
                 jointRotationMatrix = rotationValue.toRotationMatrix();
@@ -166,6 +169,140 @@ namespace platypus
         return joint;
     }
 
+    struct NodeAnimationData
+    {
+        int node = -1;
+        Vector3f translation = { 0, 0, 0 };
+        Quaternion rotation = { 0, 0, 0, 0};
+    };
+
+    struct KeyframeData
+    {
+        float time;
+        std::unordered_map<int, NodeAnimationData> nodeData;
+    };
+
+    KeyframeData get_keyframe_data(float time, const std::vector<KeyframeData>& keyframeData)
+    {
+        for (size_t i = 0; i < keyframeData.size(); ++i)
+        {
+            if (keyframeData[i].time == time)
+                return keyframeData[i];
+        }
+        return { };
+    }
+
+    void insert_keyframes(
+        const std::vector<float>& timestamps,
+        const std::vector<Vector3f>& translations,
+        const std::vector<Quaternion>& rotations,
+        std::vector<KeyframeData>& outKeyframeData
+    )
+    {
+    }
+
+
+    std::map<int, NodeAnimationData> load_gltf_animations(tinygltf::Model& gltfModel, int& outKeyframeCount)
+    {
+        std::map<int, NodeAnimationData> nodeAnimations;
+        for (tinygltf::Animation& gltfAnimation : gltfModel.animations)
+        {
+            for (tinygltf::AnimationChannel& channel : gltfAnimation.channels)
+            {
+                int samplerIndex = channel.sampler;
+                int targetNode = channel.target_node;
+                std::string path = channel.target_path;
+
+                const tinygltf::AnimationSampler& sampler = gltfAnimation.samplers[samplerIndex];
+                size_t keyframeCount = gltfModel.accessors[sampler.input].count;
+                outKeyframeCount = std::max(outKeyframeCount, (int)keyframeCount);
+
+                // Get keyframe timestamp
+                const tinygltf::Accessor& keyframeAccessor = gltfModel.accessors[sampler.input];
+                const tinygltf::BufferView& keyframeBufferView = gltfModel.bufferViews[keyframeAccessor.bufferView];
+                const tinygltf::Buffer& keyframeBuffer = gltfModel.buffers[keyframeBufferView.buffer];
+                PE_byte* pKeyframeData = (PE_byte*)(keyframeBuffer.data.data()) + keyframeBufferView.byteOffset + keyframeAccessor.byteOffset;
+                std::vector<float> keyframes(keyframeAccessor.count);
+                memcpy((void*)keyframes.data(), pKeyframeData, sizeof(float) * keyframeAccessor.count);
+                std::string timestamps;
+                for (size_t i = 0; i < keyframes.size(); ++i)
+                {
+                    timestamps += std::to_string(keyframes[i]);
+                    if (i < keyframes.size() - 1)
+                        timestamps += ", ";
+                }
+                Debug::log("___TEST___KEYFRAMES( " + std::to_string(keyframes.size()) + ") : " + timestamps);
+
+                // Get anim data of this channel
+                const tinygltf::Accessor& animDataAccessor = gltfModel.accessors[sampler.output];
+                Debug::log("___TEST___Accessor component type = " + gltf_accessor_component_type_to_string(animDataAccessor.componentType) + " " +
+                    "count = " + std::to_string(animDataAccessor.count) + " "
+                    "type = " + gltf_accessor_type_to_string(animDataAccessor.type)
+                );
+                const tinygltf::BufferView& bufferView = gltfModel.bufferViews[animDataAccessor.bufferView];
+                const tinygltf::Buffer& animDataBuffer = gltfModel.buffers[bufferView.buffer];
+
+                size_t count = animDataAccessor.count;
+                PE_byte* pAnimData = (PE_byte*)&animDataBuffer.data[animDataAccessor.byteOffset + bufferView.byteOffset];
+                // TODO: Scale
+                // NOTE: VERY UNSAFE: TODO: MAKE SAFER!
+                NodeAnimationData& nodeAnimData = nodeAnimations[targetNode];
+                if (path == "translation")
+                {
+                    size_t valueCount = count / 3;
+                    nodeAnimData.translations.resize(valueCount);
+                    memcpy((void*)nodeAnimData.translations.data(), pAnimData, valueCount * sizeof(Vector3f));
+                }
+                else if (path == "rotation")
+                {
+                    size_t valueCount = count / 4;
+                    nodeAnimData.rotations.resize(valueCount);
+                    memcpy((void*)nodeAnimData.rotations.data(), pAnimData, valueCount * sizeof(Quaternion));
+                    for (Quaternion& rotation : nodeAnimData.rotations)
+                    {
+                        if (rotation.length() == 0.0f)
+                        {
+                            rotation = Quaternion(0, 0, 0, 1);
+                        }
+                    }
+                }
+            }
+        }
+        std::map<int, NodeAnimationData>::iterator it;
+        for (it = nodeAnimations.begin(); it != nodeAnimations.end(); ++it)
+        {
+            size_t translationsCount = it->second.translations.size();
+            size_t rotationsCount = it->second.rotations.size();
+            if (translationsCount > rotationsCount)
+            {
+                for (int i = 0; i < translationsCount - rotationsCount; ++i)
+                    it->second.rotations.push_back(Quaternion(0, 0, 0, 1));
+            }
+            else if (translationsCount < rotationsCount)
+            {
+                for (int i = 0; i < rotationsCount - translationsCount; ++i)
+                    it->second.translations.push_back(Vector3f(0, 0, 0));
+            }
+        }
+        Debug::log("___TEST___Loaded animations for " + std::to_string(nodeAnimations.size()) + " nodes:");
+        for (std::pair<int, NodeAnimationData> anim : nodeAnimations)
+        {
+            Debug::log("    Node: " + std::to_string(anim.first));
+            Debug::log("        translations: " + std::to_string(anim.second.translations.size()));
+            Debug::log("        rotations: " + std::to_string(anim.second.rotations.size()));
+        }
+
+        int selectedNode = 0;
+        Debug::log("___TEST___Node: " + std::to_string(selectedNode) + " animation data:");
+        for (size_t i = 0; i < nodeAnimations[selectedNode].translations.size(); ++i)
+        {
+            NodeAnimationData& data = nodeAnimations[selectedNode];
+            Debug::log("    keyframe: " + std::to_string(i));
+            Debug::log("        translations: " + data.translations[i].toString());
+            Debug::log("        rotations: " + data.rotations[i].toString());
+        }
+        return nodeAnimations;
+    }
 
     std::vector<Pose> load_gltf_anim_poses(
         tinygltf::Model& gltfModel,
@@ -173,11 +310,36 @@ namespace platypus
         std::unordered_map<int, int> nodePoseJointMapping
     )
     {
+        // TESTING:
+        int keyframes = 0;
+        std::map<int, NodeAnimationData> nodeAnimations = load_gltf_animations(gltfModel, keyframes);
+        std::vector<Pose> animPoses;
+        for (int i = 0; i < keyframes; ++i)
+        {
+            Pose pose;
+            pose.joints.resize(nodePoseJointMapping.size());
+            // Need to assign pose joint child mapping?
+            std::map<int, NodeAnimationData>::iterator it;
+            for (it = nodeAnimations.begin(); it != nodeAnimations.end(); ++it)
+            {
+                int jointIndex = nodePoseJointMapping[it->first];
+                Debug::log("___TEST___jointIndex = " + std::to_string(jointIndex) + " jointCount = " + std::to_string(pose.joints.size()) + " gltf translations = " + std::to_string(it->second.translations.size()) + " keyframeIndex = " + std::to_string(i));
+                pose.joints[jointIndex].translation = it->second.translations[i];
+                pose.joints[jointIndex].rotation = it->second.rotations[i];
+                pose.joints[jointIndex].scale = Vector3f(1, 1, 1);
+            }
+            animPoses.push_back(pose);
+            Debug::log("___TEST___Added new pose to animation. Pose joints: " + std::to_string(pose.joints.size()) + " animation pose count: " + std::to_string(animPoses.size()));
+        }
+        return animPoses;
+        // ---
+
         tinygltf::Animation& gltfAnim = gltfModel.animations[0];
 
         std::unordered_map<int, std::vector<tinygltf::AnimationChannel>> nodeChannelsMapping;
         // We require all nodes to have same amount of keyframes at same time here!
         size_t maxKeyframes = 0;
+        Debug::log("___TEST___anim channel count = " + std::to_string(gltfAnim.channels.size()));
         for (tinygltf::AnimationChannel& channel : gltfAnim.channels)
         {
             const tinygltf::AnimationSampler& sampler = gltfAnim.samplers[channel.sampler];
