@@ -201,6 +201,80 @@ namespace platypus
     {
     }
 
+    /*
+    static void insert_keyframe_translation(
+        int targetNode,
+        float time,
+        const Vector3f& translation,
+        const Quaternion& rotation,
+        std::vector<KeyframeData>& outKeyframeData
+    )
+    {
+        NodeAnimationData newNodeAnimData = { targetNode, translation, { 0, 0, 0, 0 }};
+        KeyframeData newKeyframeData;
+        newKeyframeData.time = time;
+        newKeyframeData.nodeAnimationData[targetNode] = newNodeAnimData;
+        if (outKeyframeData.empty())
+        {
+            outKeyframeData.push_back(newKeyframeData);
+            return;
+        }
+
+        for (size_t i = 0; i < outKeyframeData.size(); ++i)
+        {
+            if (outKeyframeData[i].time == time)
+            {
+                // Add to same pos
+                outKeyframeData[i].nodeAnimationData[targetNode].translation = translation;
+                return;
+            }
+        }
+
+        outKeyframeData.push_back(newKeyframeData);
+    }
+
+    NodeAnimationData find_previous_existing_keyframe(
+        int targetNode,
+        int currentKeyframe,
+        const std::vector<KeyframeData>& keyframeData
+    )
+    {
+        for (size_t i = currentKeyframe; i >= 0; --i)
+        {
+            std::unordered_map<int, NodeAnimationData>::const_iterator it = keyframeData[i].nodeAnimationData.find(targetNode);
+            if (it != keyframeData[i].nodeAnimationData.end())
+            {
+                std::cout << "Found previous for node: " << targetNode << " at frame " << i << std::endl;
+                return it->second;
+            }
+        }
+        return { };
+    }
+
+    static void add_missing_keyframes(
+        int keyframeCount,
+        std::vector<KeyframeData>& keyframeData,
+        std::vector<int> allNodes
+    )
+    {
+        for (size_t keyframeIndex = 0; keyframeIndex < keyframeData.size(); ++keyframeIndex)
+        {
+            for (int node : allNodes)
+            {
+                if (keyframeData[keyframeIndex].nodeAnimationData.find(node) == keyframeData[keyframeIndex].nodeAnimationData.end())
+                {
+                    NodeAnimationData prev = find_previous_existing_keyframe(
+                        node,
+                        keyframeIndex,
+                        keyframeData
+                    );
+                    keyframeData[keyframeIndex].nodeAnimationData[node] = prev;
+                }
+            }
+        }
+    }
+    */
+
 
     std::map<int, NodeAnimationData> load_gltf_animations(tinygltf::Model& gltfModel, int& outKeyframeCount)
     {
