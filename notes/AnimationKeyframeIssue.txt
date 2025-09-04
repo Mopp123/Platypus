@@ -1,0 +1,14 @@
+
+How the fuck there's 12 for 4 keyframes per node?!?!?!
+    -> Theres no discrepancy if "sampling animations"(packed full between keyframes)
+
+How anim channel "components"(translations, rotations) are supposed to be associated with
+the same accessor's keyframes?
+
+Current system fucked, since node's missing data is per translation and rotation channels!
+    -> the add_missing func doesn't work
+
+In other words:
+    Node has certain set of translation channels AND rotation channels.
+    There may be more translation channels than rotation channels per node!
+        -> Need to figure out how to add the missing ones, INDEPENDENTLY from one another!

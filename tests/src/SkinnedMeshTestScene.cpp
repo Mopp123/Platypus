@@ -114,7 +114,7 @@ void SkinnedMeshTestScene::init()
     std::vector<Pose> bindPoses;
     std::vector<std::vector<Pose>> animations;
     Model* pAnimatedModel = pAssetManager->loadModel(
-        "assets/models/SkeletonTest3.glb",
+        "assets/models/SimpleSkeletonTest.glb",
         bindPoses,
         animations
     );
