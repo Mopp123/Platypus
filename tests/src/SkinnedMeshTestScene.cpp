@@ -114,7 +114,7 @@ void SkinnedMeshTestScene::init()
     std::vector<Pose> bindPoses;
     std::vector<std::vector<Pose>> animations;
     Model* pAnimatedModel = pAssetManager->loadModel(
-        "assets/models/SkeletonTest3.glb",
+        "assets/models/SkeletonTestNonUniformKeyframes.glb",
         bindPoses,
         animations
     );
@@ -161,7 +161,7 @@ void SkinnedMeshTestScene::init()
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
 
-    int area = 2;
+    int area = 1;
     float spacing = 3.25f;
 
     for (int x = 0; x < area; ++x)
@@ -174,7 +174,7 @@ void SkinnedMeshTestScene::init()
                 pAnimatedMesh,
                 bindPoses[0],
                 pAnimationAsset,
-                pMaterial,
+                pBoxMaterial,
                 { x * spacing, 0, -z * spacing },
                 { { 0, 1, 0}, 0.0f },
                 { animatedEntityScale, animatedEntityScale, animatedEntityScale },
