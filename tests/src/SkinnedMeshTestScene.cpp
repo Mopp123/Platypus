@@ -113,6 +113,9 @@ void SkinnedMeshTestScene::init()
 
     std::vector<Pose> bindPoses;
     std::vector<std::vector<Pose>> animations;
+    // NOTE:
+    // File: "assets/models/SkeletonTest3Linear2.glb" works because it
+    // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/SkeletonTest3Linear2.glb",
         bindPoses,

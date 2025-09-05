@@ -375,7 +375,17 @@ namespace platypus
             }
             for (auto it = nodeRotations.begin(); it != nodeRotations.end(); ++it)
             {
-                PLATYPUS_ASSERT(it->second.second.size() < keyframeCount);
+                if (it->second.second.size() < keyframeCount)
+                {
+                    Debug::log(
+                        "@load_gltf_anim_poses "
+                        "Rotations count(" + std::to_string(it->second.second.size()) + ") "
+                        "was less than keyframe count(" + std::to_string(keyframeCount) + ") "
+                        "for node(index: " + std::to_string(it->first) + ", name: " + gltfModel.nodes[it->first].name + ").",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
                 int targetJoint = nodePoseJointMapping[it->first];
                 Quaternion rotation = it->second.second[keyframeIndex];
                 PLATYPUS_ASSERT(rotation.length() > 0.0f);
