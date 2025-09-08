@@ -79,29 +79,12 @@ namespace platypus
             if (pJoint)
             {
                 pBindPose = pAnimationAsset->getBindPosePtr();
-                pCurrentPose = pAnimationAsset->getPosePtr(pUseAnimation->currentPose);
-                pNextPose = pAnimationAsset->getPosePtr(pUseAnimation->nextPose);
-
                 size_t jointIndex = pJoint->jointIndex;
-                const Joint& jointCurrentPose = pCurrentPose->joints[jointIndex];
-                const Joint& jointNextPose = pNextPose->joints[jointIndex];
-
-                float amount = pUseAnimation->progress;
-                // TODO: Include scaling
-                Vector3f interpolatedTranslation = jointCurrentPose.translation.lerp(
-                    jointNextPose.translation,
-                    amount
+                Matrix4f animatedBoneMatrix = pAnimationAsset->getBoneMatrix(
+                    pUseAnimation->time,
+                    jointIndex
                 );
-                Matrix4f translationMatrix(1.0f);
-                translationMatrix[0 + 3 * 4] = interpolatedTranslation.x;
-                translationMatrix[1 + 3 * 4] = interpolatedTranslation.y;
-                translationMatrix[2 + 3 * 4] = interpolatedTranslation.z;
-                Quaternion interpolatedRotation = jointCurrentPose.rotation.slerp(
-                    jointNextPose.rotation,
-                    amount
-                );
-
-                localMatrix = translationMatrix * interpolatedRotation.toRotationMatrix();
+                localMatrix = animatedBoneMatrix;
             }
             // Went outside the bounds of prev anim joints -> reset anim
             else

@@ -1,0 +1,11 @@
+
+Animation Asset (data)
+    *anim. translation channels for each joint
+    *anim. rotation channels for each joint
+
+Animation Component
+    *calculates the correct pose according to current time
+
+
+PERF:
+    0.011 - 0.016

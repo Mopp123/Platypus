@@ -9,8 +9,7 @@ namespace platypus
 {
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
-        ID_t animationAssetID,
-        float speed
+        ID_t animationAssetID
     )
     {
         Application* pApp = Application::get_instance();
@@ -42,10 +41,8 @@ namespace platypus
         SkeletalAnimation* pAnimation = (SkeletalAnimation*)pComponent;
         pAnimation->mode = AnimationMode::ANIMATION_MODE_LOOP;
         pAnimation->animationID = animationAssetID;
-        pAnimation->currentPose = 0;
-        pAnimation->nextPose = 1;
-        pAnimation->progress = 0.0f;
-        pAnimation->speed = speed;
+        pAnimation->time = 0.0f;
+        pAnimation->length = pAsset->getLength();
         pAnimation->stopped = false;
         pAnimation->jointCount = pAsset->getBindPose().joints.size();
 

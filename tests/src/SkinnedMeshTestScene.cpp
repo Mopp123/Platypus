@@ -41,8 +41,7 @@ static entityID_t create_animated_entity(
     );
     create_skeletal_animation(
         rootJointEntity,
-        pAnimationAsset->getID(),
-        4.0f
+        pAnimationAsset->getID()
     );
 
     add_child(entity, rootJointEntity);
@@ -112,21 +111,21 @@ void SkinnedMeshTestScene::init()
     _camController.setOffsetPos({ 0, 0, 0 });
 
     std::vector<Pose> bindPoses;
-    std::vector<std::vector<Pose>> animations;
+    std::vector<std::pair<float, std::vector<BoneAnimationData>>> animations;
     // NOTE:
     // File: "assets/models/SkeletonTest3Linear2.glb" works because it
     // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
-        "assets/models/SkeletonTest3Linear2.glb",
+        "assets/models/SkeletonTestNonUniformKeyframes.glb",
         bindPoses,
         animations
     );
     _bindPose = bindPoses[0];
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
     SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
-        1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
+        animations[0].first, // animation length
         bindPoses[0],
-        animations[0]
+        animations[0].second // actual anim data
     );
 
     TextureSampler textureSampler(
@@ -163,8 +162,7 @@ void SkinnedMeshTestScene::init()
     );
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
-
-    int area = 1;
+    int area = 10;
     float spacing = 3.25f;
 
     for (int x = 0; x < area; ++x)
@@ -177,7 +175,7 @@ void SkinnedMeshTestScene::init()
                 pAnimatedMesh,
                 bindPoses[0],
                 pAnimationAsset,
-                pBoxMaterial,
+                pMaterial,
                 { x * spacing, 0, -z * spacing },
                 { { 0, 1, 0}, 0.0f },
                 { animatedEntityScale, animatedEntityScale, animatedEntityScale },

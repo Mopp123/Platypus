@@ -1,7 +1,6 @@
 #include "ModelLoading.h"
 #include "platypus/core/Debug.h"
 #include <unordered_map>
-#include <algorithm>
 
 // NOTE: GLTFVertexParsing and GLTFSkeletonParsing includes tinygltf as well
 // and needs to be included before below defines and tinygltf include!
@@ -33,7 +32,7 @@ namespace platypus
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
         std::vector<Pose>& outBindPoses,
-        std::vector<std::vector<Pose>>& outAnimations
+        std::vector<std::pair<float, std::vector<BoneAnimationData>>>& outAnimations
     )
     {
         tinygltf::Model gltfModel;
@@ -182,7 +181,6 @@ namespace platypus
             // NOTE: For now supporting just a single animation
             // TODO: Support multiple animations for multiple meshes
             size_t animCount = gltfModel.animations.size();
-            std::vector<Pose> animationPoses;
             if (animCount > 1)
             {
                 Debug::log(
@@ -195,13 +193,13 @@ namespace platypus
             }
             else if (animCount == 1)
             {
-                animationPoses = load_gltf_anim_poses(
+                std::pair<float, std::vector<BoneAnimationData>> keyframeData = load_gltf_anim_poses(
                     gltfModel,
                     bindPose,
                     nodeJointMapping
                 );
-                outAnimations.push_back(animationPoses);
-                Debug::log("___TEST___LOADED ANIM POSES: " + std::to_string(animationPoses.size()));
+                outAnimations.push_back(keyframeData);
+                Debug::log("___TEST___LOADED ANIM POSES: " + std::to_string(outAnimations.size()));
             }
         }
 

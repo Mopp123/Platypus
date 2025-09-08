@@ -1,11 +1,8 @@
 #pragma once
 
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/utils/Maths.h"
+#include "platypus/assets/SkeletalAnimationData.h"
 #include "platypus/utils/AnimationDataUtils.h"
 #include "RawMeshData.h"
-#include "platypus/Common.h"
 #include <vector>
 #include <string>
 
@@ -17,6 +14,6 @@ namespace platypus
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
         std::vector<Pose>& outBindPoses,
-        std::vector<std::vector<Pose>>& outAnimations
+        std::vector<std::pair<float, std::vector<BoneAnimationData>>>& outAnimations // pair's first is the total length of the animation
     );
 }

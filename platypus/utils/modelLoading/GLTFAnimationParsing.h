@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/utils/AnimationDataUtils.h"
+#include "platypus/assets/SkeletalAnimationData.h"
 #include <unordered_map>
 
 
@@ -21,7 +22,9 @@ namespace platypus
         std::unordered_map<int, int>& outNodeJointMapping
     );
 
-    std::vector<Pose> load_gltf_anim_poses(
+    // First = total length of the animation in seconds
+    // Second = animation data
+    std::pair<float, std::vector<BoneAnimationData>> load_gltf_anim_poses(
         tinygltf::Model& gltfModel,
         const Pose& bindPose,
         std::unordered_map<int, int> nodePoseJointMapping
