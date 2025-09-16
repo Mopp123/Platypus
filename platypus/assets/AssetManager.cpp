@@ -274,9 +274,8 @@ namespace platypus
     Model* AssetManager::loadModel(const std::string& filepath)
     {
         std::vector<MeshData> loadedMeshes;
-        std::vector<Pose> loadedBindPoses;
         std::vector<KeyframeAnimationData> loadedAnimations;
-        if (!load_gltf_model(filepath, loadedMeshes, loadedBindPoses, loadedAnimations))
+        if (!load_gltf_model(filepath, loadedMeshes, loadedAnimations))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -324,12 +323,11 @@ namespace platypus
 
     Model* AssetManager::loadModel(
         const std::string& filepath,
-        std::vector<Pose>& outBindPoses,
         std::vector<KeyframeAnimationData>& outAnimations
     )
     {
         std::vector<MeshData> loadedMeshes;
-        if (!load_gltf_model(filepath, loadedMeshes, outBindPoses, outAnimations))
+        if (!load_gltf_model(filepath, loadedMeshes, outAnimations))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -365,7 +363,8 @@ namespace platypus
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,
-                meshData.transformationMatrix
+                meshData.transformationMatrix,
+                meshData.bindPose
             );
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
@@ -376,12 +375,10 @@ namespace platypus
     }
 
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(
-        const Pose& bindPose,
         const KeyframeAnimationData& keyframes
     )
     {
         SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(
-            bindPose,
             keyframes
         );
         _assets[pAnimationData->getID()] = pAnimationData;

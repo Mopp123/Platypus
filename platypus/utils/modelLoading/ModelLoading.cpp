@@ -31,7 +31,6 @@ namespace platypus
     bool load_gltf_model(
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
-        std::vector<Pose>& outBindPoses,
         std::vector<KeyframeAnimationData>& outAnimations
     )
     {
@@ -169,12 +168,10 @@ namespace platypus
         {
             // Load skeleton (bind pose)
             std::unordered_map<int, int> nodeJointMapping;
-            outBindPoses.push_back(
-                load_gltf_joints(
-                    gltfModel,
-                    i,
-                    nodeJointMapping
-                )
+            outMeshes[i].bindPose = load_gltf_joints(
+                gltfModel,
+                i,
+                nodeJointMapping
             );
 
             // Load animations

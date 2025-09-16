@@ -19,6 +19,8 @@ namespace platypus
         // Not sure yet how I want to deal with this.
         Matrix4f _transformationMatrix = Matrix4f(1.0f);
 
+        Pose _bindPose;
+
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
@@ -28,6 +30,14 @@ namespace platypus
             const Matrix4f& transformationMatrix
         );
 
+        Mesh(
+            VertexBufferLayout vertexBufferLayout,
+            Buffer* pVertexBuffer,
+            Buffer* pIndexBuffer,
+            const Matrix4f& transformationMatrix,
+            Pose bindPose
+        );
+
         ~Mesh();
 
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
@@ -35,5 +45,9 @@ namespace platypus
         inline Buffer* getVertexBuffer() { return _pVertexBuffer; }
         inline const Buffer* getIndexBuffer() const { return _pIndexBuffer; }
         inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }
+        inline bool hasBindPose() const { return !_bindPose.joints.empty(); }
+        inline size_t getJointCount() const { return _bindPose.joints.size(); }
+        inline const Pose& getBindPose() const { return _bindPose; }
+        inline const Pose* getBindPosePtr() const { return &_bindPose; }
     };
 }

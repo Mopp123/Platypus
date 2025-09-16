@@ -9,7 +9,6 @@ class SkinnedMeshTestScene : public BaseScene
 private:
     platypus::CameraController _camController;
 
-    platypus::Pose _bindPose;
     std::vector<entityID_t> _rootJointEntities;
 
     platypus::SkeletalAnimationData* _pRunAnimationAsset = nullptr;

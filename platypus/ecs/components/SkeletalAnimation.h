@@ -21,8 +21,8 @@ namespace platypus
         float length = 0.0f; // Total length of the anim in seconds
         bool stopped = false;
 
-        size_t jointCount = 0;
         // Atm the matrices to throw to the shader
+        // NOTE: Currently the joint count used, should be fetched from the Mesh asset!
         Matrix4f jointMatrices[50];
     };
 

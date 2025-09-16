@@ -10,7 +10,6 @@ using namespace platypus;
 static entityID_t create_animated_entity(
     Scene* pScene,
     Mesh* pMesh,
-    const Pose& bindPose,
     SkeletalAnimationData* pAnimationAsset,
     Material* pMaterial,
     Vector3f position,
@@ -30,8 +29,8 @@ static entityID_t create_animated_entity(
     );
 
     outJointEntities = create_skeleton(
-        bindPose.joints,
-        bindPose.jointChildMapping
+        pMesh->getBindPose().joints,
+        pMesh->getBindPose().jointChildMapping
     );
     entityID_t rootJointEntity = outJointEntities[0];
     create_skinned_mesh_renderable(
@@ -53,7 +52,7 @@ static entityID_t create_animated_entity(
 static void glue_to_joint(
     entityID_t entity,
     std::vector<entityID_t>& jointEntities,
-    Pose& bindPose,
+    const Pose& bindPose,
     std::string jointName
 )
 {
@@ -110,26 +109,17 @@ void SkinnedMeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    std::vector<Pose> bindPoses;
     std::vector<KeyframeAnimationData> animations;
     // NOTE:
     // File: "assets/models/SkeletonTest3Linear2.glb" works because it
     // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/MultiAnimSkeletonTest.glb",
-        bindPoses,
         animations
     );
-    _bindPose = bindPoses[0];
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
-    _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(
-        bindPoses[0],
-        animations[0]
-    );
-    _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(
-        bindPoses[0],
-        animations[1]
-    );
+    _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
+    _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -177,7 +167,6 @@ void SkinnedMeshTestScene::init()
             entityID_t animatedEntity = create_animated_entity(
                 this,
                 pAnimatedMesh,
-                bindPoses[0],
                 _pIdleAnimationAsset,
                 pMaterial,
                 { x * spacing, 0, -z * spacing },
@@ -186,7 +175,6 @@ void SkinnedMeshTestScene::init()
                 jointEntities
             );
             _rootJointEntities.push_back(jointEntities[0]);
-            /*
             const float cubeScale = 0.3f;
             entityID_t boxEntity = createEntity();
             create_transform(
@@ -203,11 +191,10 @@ void SkinnedMeshTestScene::init()
 
             glue_to_joint(
                 boxEntity,
-                _jointEntities,
-                bindPoses[0],
+                jointEntities,
+                pAnimatedMesh->getBindPose(),
                 "hand0"
             );
-            */
         }
     }
 

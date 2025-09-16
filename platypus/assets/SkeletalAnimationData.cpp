@@ -11,11 +11,9 @@ namespace platypus
     }
 
     SkeletalAnimationData::SkeletalAnimationData(
-        const Pose& bindPose,
         const KeyframeAnimationData& animationData
     ) :
         Asset(AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA),
-        _bindPose(bindPose),
         _animationData(animationData)
     {}
 

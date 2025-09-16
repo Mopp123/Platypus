@@ -44,7 +44,6 @@ namespace platypus
         pAnimation->time = 0.0f;
         pAnimation->length = pAsset->getLength();
         pAnimation->stopped = false;
-        pAnimation->jointCount = pAsset->getBindPose().joints.size();
 
         return pAnimation;
     }

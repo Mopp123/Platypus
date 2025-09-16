@@ -150,12 +150,15 @@ namespace platypus
                 entity.id,
                 ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
             );
+            const Mesh* pSkinnedMesh = (const Mesh*)Application::get_instance()->getAssetManager()->getAsset(
+                pSkinnedRenderable->meshID,
+                AssetType::ASSET_TYPE_MESH
+            );
 
-            // NOTE: Not sure are jointMatrices provided correctly here?
             BatchPool::add_to_skinned_batch(
                 batchID,
                 (void*)pAnimation->jointMatrices,
-                sizeof(Matrix4f) * pAnimation->jointCount,
+                sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
                 _currentFrame
             );
         }

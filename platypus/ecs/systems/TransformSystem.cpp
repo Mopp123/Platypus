@@ -23,13 +23,31 @@ namespace platypus
         entityID_t parent,
         SkeletalAnimationData* pAnimationAsset,
         SkeletalAnimation* pUseAnimation,
-        Pose* pBindPose,
+        const Pose* pBindPose,
         Pose* pCurrentPose,
         Pose* pNextPose
     )
     {
+        // Attempt to find bind pose if exists
+        SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+            false,
+            false
+        );
+        if (pSkinnedRenderable)
+        {
+            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(
+                pSkinnedRenderable->meshID,
+                AssetType::ASSET_TYPE_MESH
+            );
+            if (pMesh->hasBindPose())
+                pBindPose = pMesh->getBindPosePtr();
+        }
+
+
         // Check if animation changes for this entity and its children
-        //  -> need to find new bind pose and animation asset
+        //  -> need to find new animation asset
         SkeletalAnimation* pEntityAnimation = (SkeletalAnimation*)pScene->getComponent(
             entity,
             ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
@@ -78,7 +96,6 @@ namespace platypus
             );
             if (pJoint)
             {
-                pBindPose = pAnimationAsset->getBindPosePtr();
                 size_t jointIndex = pJoint->jointIndex;
                 Matrix4f animatedBoneMatrix = pAnimationAsset->getBoneMatrix(
                     pUseAnimation->time,

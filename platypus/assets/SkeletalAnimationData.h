@@ -9,12 +9,10 @@ namespace platypus
     class SkeletalAnimationData : public Asset
     {
     private:
-        Pose _bindPose;
         KeyframeAnimationData _animationData;
 
     public:
         SkeletalAnimationData(
-            const Pose& bindPose,
             const KeyframeAnimationData& animationData
         );
         ~SkeletalAnimationData();
@@ -27,7 +25,5 @@ namespace platypus
 
         inline const std::string& getName() const { return _animationData.name; }
         inline float getLength() const { return _animationData.length; }
-        inline const Pose& getBindPose() const { return _bindPose; }
-        inline Pose* getBindPosePtr() { return &_bindPose; }
     };
 }
