@@ -9,24 +9,21 @@ namespace platypus
     class SkeletalAnimationData : public Asset
     {
     private:
-        float _speed = 1.0f;
-        Pose _bindPose;
-        std::vector<Pose> _poses;
+        KeyframeAnimationData _animationData;
 
     public:
         SkeletalAnimationData(
-            float speed,
-            const Pose& bindPose,
-            const std::vector<Pose>& poses
+            const KeyframeAnimationData& animationData
         );
         ~SkeletalAnimationData();
 
-        inline float getSpeed() const { return _speed; }
-        inline const Pose& getBindPose() const { return _bindPose; }
-        inline const Pose& getPose(uint32_t index) const { return _poses[index]; }
-        inline size_t getPoseCount() const { return _poses.size(); }
+        // Returns matrix containing the interpolated translation and rotation
+        // according to inputted time.
+        // TODO: Add scaling
+        // TODO: Optimize!
+        Matrix4f getBoneMatrix(float time, int boneIndex) const;
 
-        inline Pose* getBindPosePtr() { return &_bindPose; }
-        inline Pose* getPosePtr(uint32_t index) { return &_poses[(size_t)index]; }
+        inline const std::string& getName() const { return _animationData.name; }
+        inline float getLength() const { return _animationData.length; }
     };
 }

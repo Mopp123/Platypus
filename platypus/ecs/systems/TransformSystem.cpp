@@ -23,13 +23,31 @@ namespace platypus
         entityID_t parent,
         SkeletalAnimationData* pAnimationAsset,
         SkeletalAnimation* pUseAnimation,
-        Pose* pBindPose,
+        const Pose* pBindPose,
         Pose* pCurrentPose,
         Pose* pNextPose
     )
     {
+        // Attempt to find bind pose if exists
+        SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+            false,
+            false
+        );
+        if (pSkinnedRenderable)
+        {
+            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(
+                pSkinnedRenderable->meshID,
+                AssetType::ASSET_TYPE_MESH
+            );
+            if (pMesh->hasBindPose())
+                pBindPose = pMesh->getBindPosePtr();
+        }
+
+
         // Check if animation changes for this entity and its children
-        //  -> need to find new bind pose and animation asset
+        //  -> need to find new animation asset
         SkeletalAnimation* pEntityAnimation = (SkeletalAnimation*)pScene->getComponent(
             entity,
             ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
@@ -78,30 +96,12 @@ namespace platypus
             );
             if (pJoint)
             {
-                pBindPose = pAnimationAsset->getBindPosePtr();
-                pCurrentPose = pAnimationAsset->getPosePtr(pUseAnimation->currentPose);
-                pNextPose = pAnimationAsset->getPosePtr(pUseAnimation->nextPose);
-
                 size_t jointIndex = pJoint->jointIndex;
-                const Joint& jointCurrentPose = pCurrentPose->joints[jointIndex];
-                const Joint& jointNextPose = pNextPose->joints[jointIndex];
-
-                float amount = pUseAnimation->progress;
-                // TODO: Include scaling
-                Vector3f interpolatedTranslation = jointCurrentPose.translation.lerp(
-                    jointNextPose.translation,
-                    amount
+                Matrix4f animatedBoneMatrix = pAnimationAsset->getBoneMatrix(
+                    pUseAnimation->time,
+                    jointIndex
                 );
-                Matrix4f translationMatrix(1.0f);
-                translationMatrix[0 + 3 * 4] = interpolatedTranslation.x;
-                translationMatrix[1 + 3 * 4] = interpolatedTranslation.y;
-                translationMatrix[2 + 3 * 4] = interpolatedTranslation.z;
-                Quaternion interpolatedRotation = jointCurrentPose.rotation.slerp(
-                    jointNextPose.rotation,
-                    amount
-                );
-
-                localMatrix = translationMatrix * interpolatedRotation.toRotationMatrix();
+                localMatrix = animatedBoneMatrix;
             }
             // Went outside the bounds of prev anim joints -> reset anim
             else

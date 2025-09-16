@@ -1,5 +1,4 @@
 #include "AssetManager.h"
-#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/assets/SkeletalAnimationData.h"
 #include "platypus/core/Debug.h"
@@ -275,9 +274,8 @@ namespace platypus
     Model* AssetManager::loadModel(const std::string& filepath)
     {
         std::vector<MeshData> loadedMeshes;
-        std::vector<Pose> loadedBindPoses;
-        std::vector<std::vector<Pose>> loadedAnimations;
-        if (!load_gltf_model(filepath, loadedMeshes, loadedBindPoses, loadedAnimations))
+        std::vector<KeyframeAnimationData> loadedAnimations;
+        if (!load_gltf_model(filepath, loadedMeshes, loadedAnimations))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -325,12 +323,11 @@ namespace platypus
 
     Model* AssetManager::loadModel(
         const std::string& filepath,
-        std::vector<Pose>& outBindPoses,
-        std::vector<std::vector<Pose>>& outAnimations
+        std::vector<KeyframeAnimationData>& outAnimations
     )
     {
         std::vector<MeshData> loadedMeshes;
-        if (!load_gltf_model(filepath, loadedMeshes, outBindPoses, outAnimations))
+        if (!load_gltf_model(filepath, loadedMeshes, outAnimations))
         {
             Debug::log(
                 "@AssetManager::loadModel "
@@ -366,7 +363,8 @@ namespace platypus
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,
-                meshData.transformationMatrix
+                meshData.transformationMatrix,
+                meshData.bindPose
             );
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
@@ -377,12 +375,12 @@ namespace platypus
     }
 
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(
-        float speed,
-        const Pose& bindPose,
-        const std::vector<Pose>& poses
+        const KeyframeAnimationData& keyframes
     )
     {
-        SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(speed, bindPose, poses);
+        SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(
+            keyframes
+        );
         _assets[pAnimationData->getID()] = pAnimationData;
         return pAnimationData;
     }

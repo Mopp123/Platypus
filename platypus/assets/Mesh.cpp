@@ -16,6 +16,23 @@ namespace platypus
         _transformationMatrix(transformationMatrix)
     {}
 
+    Mesh::Mesh(
+        VertexBufferLayout vertexBufferLayout,
+        Buffer* pVertexBuffer,
+        Buffer* pIndexBuffer,
+        const Matrix4f& transformationMatrix,
+        Pose bindPose
+    ) :
+        Mesh(
+            vertexBufferLayout,
+            pVertexBuffer,
+            pIndexBuffer,
+            transformationMatrix
+        )
+    {
+        _bindPose = bindPose;
+    }
+
     Mesh::~Mesh()
     {
         delete _pVertexBuffer;

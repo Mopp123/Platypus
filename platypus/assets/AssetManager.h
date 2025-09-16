@@ -58,13 +58,10 @@ namespace platypus
         Model* loadModel(const std::string& filepath);
         Model* loadModel(
             const std::string& filepath,
-            std::vector<Pose>& outBindPoses,
-            std::vector<std::vector<Pose>>& outAnimations
+            std::vector<KeyframeAnimationData>& outAnimations
         );
         SkeletalAnimationData* createSkeletalAnimation(
-            float speed,
-            const Pose& bindPose,
-            const std::vector<Pose>& poses
+            const KeyframeAnimationData& keyframes
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 

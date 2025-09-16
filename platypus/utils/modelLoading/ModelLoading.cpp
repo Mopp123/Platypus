@@ -1,7 +1,6 @@
 #include "ModelLoading.h"
 #include "platypus/core/Debug.h"
 #include <unordered_map>
-#include <algorithm>
 
 // NOTE: GLTFVertexParsing and GLTFSkeletonParsing includes tinygltf as well
 // and needs to be included before below defines and tinygltf include!
@@ -32,8 +31,7 @@ namespace platypus
     bool load_gltf_model(
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
-        std::vector<Pose>& outBindPoses,
-        std::vector<std::vector<Pose>>& outAnimations
+        std::vector<KeyframeAnimationData>& outAnimations
     )
     {
         tinygltf::Model gltfModel;
@@ -165,44 +163,22 @@ namespace platypus
             outMeshes.push_back(m);
         }
 
-        // Indexing should follow above meshes indices
+        // Indexing should follow above meshes indices (skin per mesh)
         for (size_t i = 0; i < gltfModel.skins.size(); ++i)
         {
-            // Load skeleton (bind pose) (if found)
+            // Load skeleton (bind pose)
             std::unordered_map<int, int> nodeJointMapping;
-            Pose bindPose = load_gltf_joints(
+            outMeshes[i].bindPose = load_gltf_joints(
                 gltfModel,
                 i,
                 nodeJointMapping
             );
 
-            outBindPoses.push_back(bindPose);
-
-            // Load animations (if found)
-            // NOTE: For now supporting just a single animation
-            // TODO: Support multiple animations for multiple meshes
-            size_t animCount = gltfModel.animations.size();
-            std::vector<Pose> animationPoses;
-            if (animCount > 1)
-            {
-                Debug::log(
-                    "@load_gltf_model "
-                    "Multiple animations(" + std::to_string(animCount) + ") "
-                    "found from file: " + filepath + " Currently only a single animation is supported",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            else if (animCount == 1)
-            {
-                animationPoses = load_gltf_anim_poses(
-                    gltfModel,
-                    bindPose,
-                    nodeJointMapping
-                );
-                outAnimations.push_back(animationPoses);
-                Debug::log("___TEST___LOADED ANIM POSES: " + std::to_string(animationPoses.size()));
-            }
+            // Load animations
+            outAnimations = load_gltf_animations(
+                gltfModel,
+                nodeJointMapping
+            );
         }
 
         return true;

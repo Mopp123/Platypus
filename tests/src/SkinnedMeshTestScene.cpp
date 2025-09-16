@@ -10,7 +10,6 @@ using namespace platypus;
 static entityID_t create_animated_entity(
     Scene* pScene,
     Mesh* pMesh,
-    const Pose& bindPose,
     SkeletalAnimationData* pAnimationAsset,
     Material* pMaterial,
     Vector3f position,
@@ -30,8 +29,8 @@ static entityID_t create_animated_entity(
     );
 
     outJointEntities = create_skeleton(
-        bindPose.joints,
-        bindPose.jointChildMapping
+        pMesh->getBindPose().joints,
+        pMesh->getBindPose().jointChildMapping
     );
     entityID_t rootJointEntity = outJointEntities[0];
     create_skinned_mesh_renderable(
@@ -41,8 +40,7 @@ static entityID_t create_animated_entity(
     );
     create_skeletal_animation(
         rootJointEntity,
-        pAnimationAsset->getID(),
-        4.0f
+        pAnimationAsset->getID()
     );
 
     add_child(entity, rootJointEntity);
@@ -54,7 +52,7 @@ static entityID_t create_animated_entity(
 static void glue_to_joint(
     entityID_t entity,
     std::vector<entityID_t>& jointEntities,
-    Pose& bindPose,
+    const Pose& bindPose,
     std::string jointName
 )
 {
@@ -111,23 +109,17 @@ void SkinnedMeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    std::vector<Pose> bindPoses;
-    std::vector<std::vector<Pose>> animations;
+    std::vector<KeyframeAnimationData> animations;
     // NOTE:
     // File: "assets/models/SkeletonTest3Linear2.glb" works because it
     // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
-        "assets/models/SkeletonTest3Linear2.glb",
-        bindPoses,
+        "assets/models/MultiAnimSkeletonTest.glb",
         animations
     );
-    _bindPose = bindPoses[0];
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
-    SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
-        1.0f, // NOTE: seems that asset's speed isn't used but the component's speed instead
-        bindPoses[0],
-        animations[0]
-    );
+    _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
+    _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -163,8 +155,7 @@ void SkinnedMeshTestScene::init()
     );
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
-
-    int area = 1;
+    int area = 10;
     float spacing = 3.25f;
 
     for (int x = 0; x < area; ++x)
@@ -172,18 +163,18 @@ void SkinnedMeshTestScene::init()
         for (int z = 0; z < area; ++z)
         {
             float animatedEntityScale = 1.0f;
+            std::vector<entityID_t> jointEntities;
             entityID_t animatedEntity = create_animated_entity(
                 this,
                 pAnimatedMesh,
-                bindPoses[0],
-                pAnimationAsset,
-                pBoxMaterial,
+                _pIdleAnimationAsset,
+                pMaterial,
                 { x * spacing, 0, -z * spacing },
                 { { 0, 1, 0}, 0.0f },
                 { animatedEntityScale, animatedEntityScale, animatedEntityScale },
-                _jointEntities
+                jointEntities
             );
-            /*
+            _rootJointEntities.push_back(jointEntities[0]);
             const float cubeScale = 0.3f;
             entityID_t boxEntity = createEntity();
             create_transform(
@@ -200,11 +191,10 @@ void SkinnedMeshTestScene::init()
 
             glue_to_joint(
                 boxEntity,
-                _jointEntities,
-                bindPoses[0],
+                jointEntities,
+                pAnimatedMesh->getBindPose(),
                 "hand0"
             );
-            */
         }
     }
 
@@ -230,6 +220,24 @@ static std::string get_joint_name(const Pose& bindPose, size_t index)
     return bindPose.joints[index].name;
 }
 
+static void change_animation(
+    Scene* pScene,
+    std::vector<entityID_t>& entities,
+    SkeletalAnimationData* pAnimation
+)
+{
+    for (entityID_t entity : entities)
+    {
+        SkeletalAnimation* pAnim = (SkeletalAnimation*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+        );
+        pAnim->time = 0.0f;
+        pAnim->animationID = pAnimation->getID();
+        pAnim->length = pAnimation->getLength();
+    }
+}
+
 void SkinnedMeshTestScene::update()
 {
     _camController.update();
@@ -237,4 +245,9 @@ void SkinnedMeshTestScene::update()
     InputManager& inputManager = Application::get_instance()->getInputManager();
     if (inputManager.isKeyDown(KeyName::KEY_0))
         Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
+
+    if (inputManager.isKeyDown(KeyName::KEY_R))
+        change_animation(this, _rootJointEntities, _pRunAnimationAsset);
+    else if (inputManager.isKeyDown(KeyName::KEY_T))
+        change_animation(this, _rootJointEntities, _pIdleAnimationAsset);
 }

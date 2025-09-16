@@ -21,10 +21,9 @@ namespace platypus
         std::unordered_map<int, int>& outNodeJointMapping
     );
 
-    std::vector<Pose> load_gltf_anim_poses(
+    std::vector<KeyframeAnimationData> load_gltf_animations(
         tinygltf::Model& gltfModel,
-        const Pose& bindPose,
-        std::unordered_map<int, int> nodePoseJointMapping
+        const std::unordered_map<int, int>& nodePoseJointMapping
     );
 
     Pose load_gltf_joints(

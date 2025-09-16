@@ -1,0 +1,23 @@
+
+Bind pose is a part of mesh.
+What about animation data?
+    -> multiple meshes can use same animation data
+        -> animation asset
+            BUT
+            animation asset ends up being just an extra variable with the animation data struct
+                -> dumb as hell
+                    -> necessary evil?
+
+
+What animating requires:
+    *bind pose (asset)
+    *animation data (asset)
+    *animation state (instance)
+    *joint to animate (instance)
+    *target transform (instance)
+
+
+ISSUES:
+    Naming conventions for Anim asset and component
+    Want to provide only raw data through gltf loader
+        -> messy as fuck
