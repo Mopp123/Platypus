@@ -1,5 +1,4 @@
 #include "SkeletalAnimationData.h"
-#include "platypus/core/Debug.h"
 
 
 namespace platypus
@@ -9,25 +8,15 @@ namespace platypus
         float midWayLength = currentTime - prevTime;
         float framesDiff = nextTime - prevTime;
         return midWayLength / framesDiff;
-
-        /*
-        float scaleFactor = 0.0f;
-        float midWayLength = animationTime - lastTimeStamp;
-        float framesDiff = nextTimeStamp - lastTimeStamp;
-        scaleFactor = midWayLength / framesDiff;
-        return scaleFactor;
-        */
     }
 
     SkeletalAnimationData::SkeletalAnimationData(
-        float length,
         const Pose& bindPose,
-        const std::vector<BoneAnimationData>& keyframes
+        const KeyframeAnimationData& animationData
     ) :
         Asset(AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA),
-        _length(length),
         _bindPose(bindPose),
-        _keyframes(keyframes)
+        _animationData(animationData)
     {}
 
     SkeletalAnimationData::~SkeletalAnimationData()
@@ -36,7 +25,7 @@ namespace platypus
     Matrix4f SkeletalAnimationData::getBoneMatrix(float time, int boneIndex) const
     {
         // Get interpolated translation
-        const std::vector<TranslationKey>& translationKeys = _keyframes[boneIndex].translations;
+        const std::vector<TranslationKey>& translationKeys = _animationData.keyframes[boneIndex].translations;
         TranslationKey currentTranslationKey = translationKeys[0];
         TranslationKey nextTranslationKey = translationKeys[0];
         for (size_t i = 0; i < translationKeys.size() - 1; ++i)
@@ -63,7 +52,7 @@ namespace platypus
         }
 
         // Get interpolated rotation
-        const std::vector<RotationKey>& rotationKeys = _keyframes[boneIndex].rotations;
+        const std::vector<RotationKey>& rotationKeys = _animationData.keyframes[boneIndex].rotations;
         RotationKey currentRotationKey = rotationKeys[0];
         RotationKey nextRotationKey = rotationKeys[0];
         for (size_t i = 0; i < rotationKeys.size() - 1; ++i)

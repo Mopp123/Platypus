@@ -241,7 +241,8 @@ namespace platypus
         }
     }
 
-    std::pair<float, std::vector<BoneAnimationData>> load_gltf_anim_poses(
+    // TODO: fix the func that actually loads the data
+    KeyframeAnimationData load_gltf_anim_poses(
         tinygltf::Model& gltfModel,
         const Pose& bindPose,
         std::unordered_map<int, int> nodePoseJointMapping
@@ -255,7 +256,7 @@ namespace platypus
         size_t keyframeCount = 0;
         float totalAnimationLength = 0.0f;
         load_gltf_animations(gltfModel, nodeTranslations, nodeRotations, keyframeCount);
-        std::vector<BoneAnimationData> outKeyframeData(bindPose.joints.size());
+        std::vector<JointAnimationData> outKeyframeData(bindPose.joints.size());
         // TODO: Deal with situation where there's no animation for a joint at all!
         //  -> Need to have usable default values (resulting in non zero matrices)
         for (auto it : nodeTranslations)
@@ -287,12 +288,12 @@ namespace platypus
             }
         }
         // Make sure that at least 1 keyframe exists
-        for (BoneAnimationData& b : outKeyframeData)
+        for (JointAnimationData& b : outKeyframeData)
         {
             PLATYPUS_ASSERT(!b.translations.empty());
             PLATYPUS_ASSERT(!b.rotations.empty());
         }
-        return std::make_pair(totalAnimationLength, outKeyframeData);
+        return { totalAnimationLength, outKeyframeData };
     }
 
 

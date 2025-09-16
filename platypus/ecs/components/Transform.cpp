@@ -175,7 +175,7 @@ namespace platypus
             entity,
             matrix
         );
-        SkeletonJoint* pJoint = create_skeleton_joint(entity, jointIndex);
+        create_skeleton_joint(entity, jointIndex);
 
         const Joint& currentJoint = joints[jointIndex];
 

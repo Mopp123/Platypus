@@ -111,7 +111,7 @@ void SkinnedMeshTestScene::init()
     _camController.setOffsetPos({ 0, 0, 0 });
 
     std::vector<Pose> bindPoses;
-    std::vector<std::pair<float, std::vector<BoneAnimationData>>> animations;
+    std::vector<KeyframeAnimationData> animations;
     // NOTE:
     // File: "assets/models/SkeletonTest3Linear2.glb" works because it
     // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
@@ -123,9 +123,8 @@ void SkinnedMeshTestScene::init()
     _bindPose = bindPoses[0];
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
     SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
-        animations[0].first, // animation length
         bindPoses[0],
-        animations[0].second // actual anim data
+        animations[0]
     );
 
     TextureSampler textureSampler(

@@ -32,7 +32,7 @@ namespace platypus
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
         std::vector<Pose>& outBindPoses,
-        std::vector<std::pair<float, std::vector<BoneAnimationData>>>& outAnimations
+        std::vector<KeyframeAnimationData>& outAnimations
     )
     {
         tinygltf::Model gltfModel;
@@ -164,7 +164,7 @@ namespace platypus
             outMeshes.push_back(m);
         }
 
-        // Indexing should follow above meshes indices
+        // Indexing should follow above meshes indices (skin per mesh)
         for (size_t i = 0; i < gltfModel.skins.size(); ++i)
         {
             // Load skeleton (bind pose) (if found)
@@ -193,13 +193,12 @@ namespace platypus
             }
             else if (animCount == 1)
             {
-                std::pair<float, std::vector<BoneAnimationData>> keyframeData = load_gltf_anim_poses(
+                KeyframeAnimationData keyframeData = load_gltf_anim_poses(
                     gltfModel,
                     bindPose,
                     nodeJointMapping
                 );
                 outAnimations.push_back(keyframeData);
-                Debug::log("___TEST___LOADED ANIM POSES: " + std::to_string(outAnimations.size()));
             }
         }
 

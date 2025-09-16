@@ -130,25 +130,17 @@ namespace platypus
         return entity.id;
     }
 
+    // NOTE: Previously looped all entities, this should be faster
+    // BUT not sure if this is safe enough, especially when deleting
+    // entities from "between" entities.
     Entity Scene::getEntity(entityID_t entity) const
     {
-        Entity outEntity;
-        for (const Entity& e : _entities)
+        if (entity < _entities.size())
         {
-            if (e.id == entity)
-            {
-                if (!isValidEntity(entity, "getEntity"))
-                {
-                    PLATYPUS_ASSERT(false);
-                }
-                else
-                {
-                    outEntity = e;
-                }
-                break;
-            }
+            if (_entities[entity].id != NULL_ENTITY_ID)
+                return _entities[entity];
         }
-        return outEntity;
+        return { };
     }
 
     bool Scene::entityExists(entityID_t entity) const

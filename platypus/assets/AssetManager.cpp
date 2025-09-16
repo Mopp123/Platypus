@@ -1,5 +1,4 @@
 #include "AssetManager.h"
-#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/assets/SkeletalAnimationData.h"
 #include "platypus/core/Debug.h"
@@ -276,7 +275,7 @@ namespace platypus
     {
         std::vector<MeshData> loadedMeshes;
         std::vector<Pose> loadedBindPoses;
-        std::vector<std::pair<float, std::vector<BoneAnimationData>>> loadedAnimations;
+        std::vector<KeyframeAnimationData> loadedAnimations;
         if (!load_gltf_model(filepath, loadedMeshes, loadedBindPoses, loadedAnimations))
         {
             Debug::log(
@@ -326,7 +325,7 @@ namespace platypus
     Model* AssetManager::loadModel(
         const std::string& filepath,
         std::vector<Pose>& outBindPoses,
-        std::vector<std::pair<float, std::vector<BoneAnimationData>>>& outAnimations
+        std::vector<KeyframeAnimationData>& outAnimations
     )
     {
         std::vector<MeshData> loadedMeshes;
@@ -377,13 +376,11 @@ namespace platypus
     }
 
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(
-        float length,
         const Pose& bindPose,
-        const std::vector<BoneAnimationData>& keyframes
+        const KeyframeAnimationData& keyframes
     )
     {
         SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(
-            length,
             bindPose,
             keyframes
         );
