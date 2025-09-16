@@ -116,15 +116,19 @@ void SkinnedMeshTestScene::init()
     // File: "assets/models/SkeletonTest3Linear2.glb" works because it
     // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
-        "assets/models/SkeletonTestNonUniformKeyframes.glb",
+        "assets/models/MultiAnimSkeletonTest.glb",
         bindPoses,
         animations
     );
     _bindPose = bindPoses[0];
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
-    SkeletalAnimationData* pAnimationAsset = pAssetManager->createSkeletalAnimation(
+    _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(
         bindPoses[0],
         animations[0]
+    );
+    _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(
+        bindPoses[0],
+        animations[1]
     );
 
     TextureSampler textureSampler(
@@ -169,17 +173,19 @@ void SkinnedMeshTestScene::init()
         for (int z = 0; z < area; ++z)
         {
             float animatedEntityScale = 1.0f;
+            std::vector<entityID_t> jointEntities;
             entityID_t animatedEntity = create_animated_entity(
                 this,
                 pAnimatedMesh,
                 bindPoses[0],
-                pAnimationAsset,
+                _pIdleAnimationAsset,
                 pMaterial,
                 { x * spacing, 0, -z * spacing },
                 { { 0, 1, 0}, 0.0f },
                 { animatedEntityScale, animatedEntityScale, animatedEntityScale },
-                _jointEntities
+                jointEntities
             );
+            _rootJointEntities.push_back(jointEntities[0]);
             /*
             const float cubeScale = 0.3f;
             entityID_t boxEntity = createEntity();
@@ -227,6 +233,24 @@ static std::string get_joint_name(const Pose& bindPose, size_t index)
     return bindPose.joints[index].name;
 }
 
+static void change_animation(
+    Scene* pScene,
+    std::vector<entityID_t>& entities,
+    SkeletalAnimationData* pAnimation
+)
+{
+    for (entityID_t entity : entities)
+    {
+        SkeletalAnimation* pAnim = (SkeletalAnimation*)pScene->getComponent(
+            entity,
+            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+        );
+        pAnim->time = 0.0f;
+        pAnim->animationID = pAnimation->getID();
+        pAnim->length = pAnimation->getLength();
+    }
+}
+
 void SkinnedMeshTestScene::update()
 {
     _camController.update();
@@ -234,4 +258,9 @@ void SkinnedMeshTestScene::update()
     InputManager& inputManager = Application::get_instance()->getInputManager();
     if (inputManager.isKeyDown(KeyName::KEY_0))
         Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
+
+    if (inputManager.isKeyDown(KeyName::KEY_R))
+        change_animation(this, _rootJointEntities, _pRunAnimationAsset);
+    else if (inputManager.isKeyDown(KeyName::KEY_T))
+        change_animation(this, _rootJointEntities, _pIdleAnimationAsset);
 }

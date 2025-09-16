@@ -135,25 +135,42 @@ namespace platypus
     }
 
 
-    // TODO: Make more coherent... Could compose the BoneAnimationData here instead of the current fuckery
-    static void load_gltf_animations(tinygltf::Model& gltfModel,
-        std::unordered_map<int, std::pair<std::vector<float>, std::vector<Vector3f>>>& nodeTranslations,
-        std::unordered_map<int, std::pair<std::vector<float>, std::vector<Quaternion>>>& nodeRotations,
-        size_t& outKeyframes
+    std::vector<KeyframeAnimationData> load_gltf_animations(
+        tinygltf::Model& gltfModel,
+        const std::unordered_map<int, int>& nodePoseJointMapping
     )
     {
+        std::vector<KeyframeAnimationData> animations;
+        animations.resize(gltfModel.animations.size());
         static const std::set<std::string> allowedInterpolations = { "LINEAR" };
-        for (tinygltf::Animation& gltfAnimation : gltfModel.animations)
+
+        for (size_t animationIndex = 0; animationIndex < gltfModel.animations.size(); ++animationIndex)
         {
+            tinygltf::Animation& gltfAnimation = gltfModel.animations[animationIndex];
+            animations[animationIndex].keyframes.resize(nodePoseJointMapping.size());
+            float maxKeyframeTime = 0.0f;
             for (tinygltf::AnimationChannel& channel : gltfAnimation.channels)
             {
                 int targetNode = channel.target_node;
-                std::string path = channel.target_path;
+
+                std::unordered_map<int, int>::const_iterator poseJointMappingIt = nodePoseJointMapping.find(targetNode);
+                if (poseJointMappingIt == nodePoseJointMapping.end())
+                {
+                    Debug::log(
+                        "@load_gltf_animations "
+                        "Failed to find joint using glTF node(index: " + std::to_string(targetNode) + ", name: " + gltfModel.nodes[targetNode].name + ")",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return { };
+                }
+                int targetPoseJoint = poseJointMappingIt->second;
+
                 const tinygltf::AnimationSampler& sampler = gltfAnimation.samplers[channel.sampler];
                 if (allowedInterpolations.find(sampler.interpolation) == allowedInterpolations.end())
                 {
                     std::string allowedStr;
-                    int allowedIndex = 0;
+                    size_t allowedIndex = 0;
                     for (const std::string& s : allowedInterpolations)
                     {
                         allowedStr += s;
@@ -164,14 +181,14 @@ namespace platypus
                     }
 
                     Debug::log(
-                        "@load_gltf_animations_NEW "
+                        "@load_gltf_animations "
                         "Animation channel targeting node(index: " + std::to_string(targetNode) + ", name: " + gltfModel.nodes[targetNode].name + ") "
                         "uses " + sampler.interpolation + " interpolation. "
                         "Currently supported interpolations: " + allowedStr + " (spherical linear for rotations).",
                         Debug::MessageType::PLATYPUS_ERROR
                     );
                     PLATYPUS_ASSERT(false);
-                    return;
+                    return { };
                 }
 
                 // Get keyframe times
@@ -181,7 +198,6 @@ namespace platypus
                 PE_byte* pKeyframeData = (PE_byte*)(keyframeBuffer.data.data()) + keyframeBufferView.byteOffset + keyframeAccessor.byteOffset;
                 std::vector<float> keyframes(keyframeAccessor.count);
                 memcpy((void*)keyframes.data(), pKeyframeData, sizeof(float) * keyframeAccessor.count);
-                outKeyframes = std::max(outKeyframes, keyframes.size());
 
                 // Get anim data of this channel
                 const tinygltf::Accessor& animDataAccessor = gltfModel.accessors[sampler.output];
@@ -198,6 +214,7 @@ namespace platypus
 
                 PE_byte* pAnimData = (PE_byte*)&animDataBuffer.data[animDataAccessor.byteOffset + bufferView.byteOffset];
 
+                const std::string& path = channel.target_path;
                 // TODO: Scale
                 if (path == "translation")
                 {
@@ -208,15 +225,21 @@ namespace platypus
                     if (keyframes.size() != data.size())
                     {
                         Debug::log(
-                            "@load_gltf_animations_NEW "
-                            "Mismatch in keyframe and bone translation counts!",
+                            "@load_gltf_animations "
+                            "Mismatch in keyframe and joint translation counts!",
                             Debug::MessageType::PLATYPUS_ERROR
                         );
                         PLATYPUS_ASSERT(false);
+                        return { };
                     }
-
-                    nodeTranslations[targetNode].first = keyframes;
-                    nodeTranslations[targetNode].second = data;
+                    for (size_t i = 0; i < data.size(); ++i)
+                    {
+                        float time = keyframes[i];
+                        maxKeyframeTime = std::max(maxKeyframeTime, time);
+                        animations[animationIndex].keyframes[targetPoseJoint].translations.push_back(
+                            { time, data[i] }
+                        );
+                    }
                 }
                 else if (path == "rotation")
                 {
@@ -232,68 +255,23 @@ namespace platypus
                             Debug::MessageType::PLATYPUS_ERROR
                         );
                         PLATYPUS_ASSERT(false);
+                        return { };
                     }
-
-                    nodeRotations[targetNode].first = keyframes;
-                    nodeRotations[targetNode].second = data;
+                    for (size_t i = 0; i < data.size(); ++i)
+                    {
+                        float time = keyframes[i];
+                        maxKeyframeTime = std::max(maxKeyframeTime, time);
+                        animations[animationIndex].keyframes[targetPoseJoint].rotations.push_back(
+                            { time, data[i] }
+                        );
+                    }
                 }
             }
+            animations[animationIndex].length = maxKeyframeTime;
+            animations[animationIndex].name = gltfAnimation.name;
         }
-    }
 
-    // TODO: fix the func that actually loads the data
-    KeyframeAnimationData load_gltf_anim_poses(
-        tinygltf::Model& gltfModel,
-        const Pose& bindPose,
-        std::unordered_map<int, int> nodePoseJointMapping
-    )
-    {
-        // BRIEF EXPLANATION:
-        // Was figuring out how the anim stuff is stored, implemented the messy load_gltf_animations func.
-        // What we're doing here is that we put the stuff in a different form...
-        std::unordered_map<int, std::pair<std::vector<float>, std::vector<Vector3f>>> nodeTranslations;
-        std::unordered_map<int, std::pair<std::vector<float>, std::vector<Quaternion>>> nodeRotations;
-        size_t keyframeCount = 0;
-        float totalAnimationLength = 0.0f;
-        load_gltf_animations(gltfModel, nodeTranslations, nodeRotations, keyframeCount);
-        std::vector<JointAnimationData> outKeyframeData(bindPose.joints.size());
-        // TODO: Deal with situation where there's no animation for a joint at all!
-        //  -> Need to have usable default values (resulting in non zero matrices)
-        for (auto it : nodeTranslations)
-        {
-            int nodeIndex = it.first;
-            const std::vector<float>& keyframeTimes = nodeTranslations[nodeIndex].first;
-            const std::vector<Vector3f>& keyframeTranslations = nodeTranslations[nodeIndex].second;
-            int poseJointIndex = nodePoseJointMapping[nodeIndex];
-            for (size_t i = 0; i < keyframeTimes.size(); ++i)
-            {
-                float time = keyframeTimes[i];
-                totalAnimationLength = std::max(totalAnimationLength, time);
-                TranslationKey key = { time, keyframeTranslations[i] };
-                outKeyframeData[poseJointIndex].translations.push_back(key);
-            }
-        }
-        for (auto it : nodeRotations)
-        {
-            int nodeIndex = it.first;
-            const std::vector<float>& keyframeTimes = nodeRotations[nodeIndex].first;
-            const std::vector<Quaternion>& keyframeRotations = nodeRotations[nodeIndex].second;
-            int poseJointIndex = nodePoseJointMapping[nodeIndex];
-            for (size_t i = 0; i < keyframeTimes.size(); ++i)
-            {
-                float time = keyframeTimes[i];
-                totalAnimationLength = std::max(totalAnimationLength, time);
-                RotationKey key = { time, keyframeRotations[i] };
-                outKeyframeData[poseJointIndex].rotations.push_back(key);
-            }
-        }
-        // Make sure that at least 1 keyframe exists
-        for (JointAnimationData& b : outKeyframeData)
-        {
-            PLATYPUS_ASSERT(!b.translations.empty());
-            PLATYPUS_ASSERT(!b.rotations.empty());
-        }
-        return { totalAnimationLength, outKeyframeData };
+        return animations;
     }
 
 
@@ -314,6 +292,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         const tinygltf::Skin& skin = gltfModel.skins[gltfSkinIndex];
+        // NOTE: DANGER! NOT HANDLING THE CASE IF ENCOUNTERING NODE THAT ISN'T JOINT IN THE SKIN!
         int rootJointNodeIndex = skin.joints[0];
         Pose bindPose;
         add_gltf_joint(

@@ -167,39 +167,21 @@ namespace platypus
         // Indexing should follow above meshes indices (skin per mesh)
         for (size_t i = 0; i < gltfModel.skins.size(); ++i)
         {
-            // Load skeleton (bind pose) (if found)
+            // Load skeleton (bind pose)
             std::unordered_map<int, int> nodeJointMapping;
-            Pose bindPose = load_gltf_joints(
-                gltfModel,
-                i,
-                nodeJointMapping
+            outBindPoses.push_back(
+                load_gltf_joints(
+                    gltfModel,
+                    i,
+                    nodeJointMapping
+                )
             );
 
-            outBindPoses.push_back(bindPose);
-
-            // Load animations (if found)
-            // NOTE: For now supporting just a single animation
-            // TODO: Support multiple animations for multiple meshes
-            size_t animCount = gltfModel.animations.size();
-            if (animCount > 1)
-            {
-                Debug::log(
-                    "@load_gltf_model "
-                    "Multiple animations(" + std::to_string(animCount) + ") "
-                    "found from file: " + filepath + " Currently only a single animation is supported",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            else if (animCount == 1)
-            {
-                KeyframeAnimationData keyframeData = load_gltf_anim_poses(
-                    gltfModel,
-                    bindPose,
-                    nodeJointMapping
-                );
-                outAnimations.push_back(keyframeData);
-            }
+            // Load animations
+            outAnimations = load_gltf_animations(
+                gltfModel,
+                nodeJointMapping
+            );
         }
 
         return true;

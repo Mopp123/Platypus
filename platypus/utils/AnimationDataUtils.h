@@ -45,6 +45,7 @@ namespace platypus
     struct KeyframeAnimationData
     {
         float length = 0.0f;
+        std::string name;
         // Indexing of these follows the bind pose's joints' indexing
         // which this animation is ment for.
         std::vector<JointAnimationData> keyframes;

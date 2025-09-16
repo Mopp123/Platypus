@@ -25,6 +25,7 @@ namespace platypus
         // TODO: Optimize!
         Matrix4f getBoneMatrix(float time, int boneIndex) const;
 
+        inline const std::string& getName() const { return _animationData.name; }
         inline float getLength() const { return _animationData.length; }
         inline const Pose& getBindPose() const { return _bindPose; }
         inline Pose* getBindPosePtr() { return &_bindPose; }
