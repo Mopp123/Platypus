@@ -67,6 +67,7 @@ namespace platypus
 
         // NOTE: Currently creating only once the "common" shader resources
         void createCommonShaderResources();
+        void destroyCommonShaderResources();
 
         // Creates secondary renderers' and Material assets' shader resources
         void createShaderResources();

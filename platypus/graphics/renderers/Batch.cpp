@@ -84,7 +84,6 @@ namespace platypus
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
 
-        BatchType type = BatchType::STATIC_INSTANCED;
         Pipeline* pPipeline = pMaterial->getPipelineData()->pPipeline;
 
         // NOTE: DANGER! Pretty fucked up...
@@ -131,7 +130,7 @@ namespace platypus
         s_allocatedBuffers.push_back(instancedBuffers);
 
         Batch* pBatch = new Batch{
-            type,
+            BatchType::STATIC_INSTANCED,
             pPipeline,
             allDescriptorSets,
             0, // dynamic uniform buffer element size
@@ -184,7 +183,6 @@ namespace platypus
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
 
-        BatchType type = BatchType::SKINNED;
         Pipeline* pPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
 
         // Create joint uniform buffer and descriptor sets
@@ -256,7 +254,7 @@ namespace platypus
         }
 
         Batch* pBatch = new Batch{
-            type,
+            BatchType::SKINNED,
             pPipeline,
             allDescriptorSets,
             (uint32_t)uniformBufferElementSize, // dynamic uniform buffer element size

@@ -24,7 +24,10 @@ namespace platypus
 
         RenderPass _renderPass;
 
+        // NOTE: Currently these aren't touched by the web implementation at all.
+        // TODO: Maybe put these in the _pImpl?
         uint32_t _imageCount = 0;
+        uint32_t _previousImageCount = 0;
 
         // The latest image's index got using acquireImage
         uint32_t _currentImageIndex = 0;
@@ -45,7 +48,12 @@ namespace platypus
         Extent2D getExtent() const;
         inline const RenderPass& getRenderPass() const { return _renderPass; }
         inline const RenderPass* getRenderPassPtr() const { return &_renderPass; }
+
         inline uint32_t getImageCount() const { return _imageCount; }
+        inline uint32_t getPreviousImageCount() const { return _previousImageCount; }
+        inline bool imageCountChanged() const { return _previousImageCount != _imageCount; }
+        inline void resetChangedImageCount() { _previousImageCount = _imageCount; }
+
         inline uint32_t getCurrentImageIndex() const { return _currentImageIndex; }
         inline size_t getCurrentFrame() const { return _currentFrame; }
         inline const SwapchainImpl* getImpl() const { return _pImpl; }

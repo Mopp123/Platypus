@@ -51,12 +51,7 @@ namespace platypus
 
     MasterRenderer::~MasterRenderer()
     {
-        _descriptorPool.freeDescriptorSets(_scene3DDescriptorSets);
-
-        for (Buffer* pBuffer : _scene3DDataUniformBuffers)
-            delete pBuffer;
-
-        _scene3DDataUniformBuffers.clear();
+        destroyCommonShaderResources();
         _scene3DDataDescriptorSetLayout.destroy();
 
         BatchPool::destroy();
@@ -270,6 +265,17 @@ namespace platypus
         }
     }
 
+    void MasterRenderer::destroyCommonShaderResources()
+    {
+        _descriptorPool.freeDescriptorSets(_scene3DDescriptorSets);
+        _scene3DDescriptorSets.clear();
+
+        for (Buffer* pBuffer : _scene3DDataUniformBuffers)
+            delete pBuffer;
+
+        _scene3DDataUniformBuffers.clear();
+    }
+
     void MasterRenderer::createShaderResources()
     {
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -429,15 +435,39 @@ namespace platypus
         {
             Device::handle_window_resize();
             _swapchain.recreate(window);
-            freeShaderResources();
-            destroyPipelines();
-            freeCommandBuffers();
-            allocCommandBuffers(_swapchain.getMaxFramesInFlight());
-            createPipelines();
-            createShaderResources();
-            // NOTE: Makes window resizing even slower.
-            //  -> Required tho, because need to get new descriptor sets for batches!
-            BatchPool::free_batches();
+            if (_swapchain.imageCountChanged())
+            {
+                Debug::log(
+                    "@MasterRenderer::handleWindowResize "
+                    "Swapchain's image count changed! "
+                    "Recreating shader resources, command buffers, pipelines and batches...",
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+                destroyCommonShaderResources();
+                freeShaderResources();
+                destroyPipelines();
+                freeCommandBuffers();
+                allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+                createPipelines();
+                createCommonShaderResources();
+                createShaderResources();
+                // NOTE: Makes window resizing even slower.
+                //  -> Required tho, because need to get new descriptor sets for batches!
+                BatchPool::free_batches();
+            }
+            else
+            {
+                Debug::log(
+                    "@MasterRenderer::handleWindowResize "
+                    "Swapchain's image count didn't change. "
+                    "Recreating pipelines...",
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+                destroyPipelines();
+                createPipelines();
+            }
+
+            _swapchain.resetChangedImageCount();
             window.resetResized();
         }
         else
