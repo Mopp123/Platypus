@@ -52,9 +52,11 @@ namespace platypus
 
         static size_t s_maxStaticBatchLength;
         static size_t s_maxSkinnedBatchLength;
+        static size_t s_maxTerrainBatchLength;
         static size_t s_maxJoints;
 
         static DescriptorSetLayout s_jointDescriptorSetLayout;
+        static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
         static std::vector<std::vector<Buffer*>> s_allocatedBuffers;
@@ -78,6 +80,7 @@ namespace platypus
         // Returns batch identifier, if created successfully
         static ID_t create_static_batch(ID_t meshID, ID_t materialID);
         static ID_t create_skinned_batch(ID_t meshID, ID_t materialID);
+        static ID_t create_terrain_batch(ID_t terrainMeshID, ID_t terrainMaterialID);
 
         static void add_to_static_batch(
             ID_t identifier,
@@ -92,6 +95,14 @@ namespace platypus
             size_t currentFrame
         );
 
+        static void add_to_terrain_batch(
+            ID_t identifier,
+            const Matrix4f& transformationMatrix,
+            float tileSize,
+            uint32_t verticesPerRow,
+            size_t currentFrame
+        );
+
         static void update_device_side_buffers(size_t currentFrame);
         // Clears instance and repeat counts for next round of submits.
         static void reset_for_next_frame();
@@ -101,5 +112,6 @@ namespace platypus
         static const std::vector<Batch*>& get_batches();
 
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
+        static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
     };
 }

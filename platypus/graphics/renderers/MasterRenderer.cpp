@@ -8,6 +8,7 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
+#include "platypus/assets/TerrainMesh.hpp"
 
 
 namespace platypus
@@ -81,10 +82,12 @@ namespace platypus
     {
         uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
         uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
-        uint64_t requiredMask3 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
+        uint64_t requiredMask3 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE;
+        uint64_t requiredMask4 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
         if (!(entity.componentMask & requiredMask1) &&
             !(entity.componentMask & requiredMask2) &&
-            !(entity.componentMask & requiredMask3))
+            !(entity.componentMask & requiredMask3) &&
+            !(entity.componentMask & requiredMask4))
         {
             return;
         }
@@ -154,6 +157,40 @@ namespace platypus
                 batchID,
                 (void*)pAnimation->jointMatrices,
                 sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
+                _currentFrame
+            );
+        }
+
+        TerrainMeshRenderable* pTerrainRenderable = (TerrainMeshRenderable*)pScene->getComponent(
+            entity.id,
+            ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
+            false,
+            false
+        );
+        if (pTerrainRenderable)
+        {
+            const ID_t terrainMeshID = pTerrainRenderable->terrainMeshID;
+            const ID_t terrainMaterialID = pTerrainRenderable->terrainMaterialID;
+            ID_t batchID = BatchPool::get_batch_id(terrainMeshID, terrainMaterialID);
+            if (batchID == NULL_ID)
+            {
+                Debug::log(
+                    "@MasterRenderer::submit "
+                    "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
+                );
+                // TODO: Error handling if creation fails
+                batchID = BatchPool::create_terrain_batch(terrainMeshID, terrainMaterialID);
+            }
+
+            const TerrainMesh* pTerrainMesh = (const TerrainMesh*)Application::get_instance()->getAssetManager()->getAsset(
+                pTerrainRenderable->terrainMeshID,
+                AssetType::ASSET_TYPE_TERRAIN_MESH
+            );
+            BatchPool::add_to_terrain_batch(
+                batchID,
+                pTransform->globalMatrix,
+                pTerrainMesh->getTileSize(),
+                pTerrainMesh->getVerticesPerRow(),
                 _currentFrame
             );
         }

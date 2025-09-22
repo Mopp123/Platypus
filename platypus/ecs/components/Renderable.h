@@ -20,6 +20,12 @@ namespace platypus
         ID_t materialID = NULL_ID;
     };
 
+    struct TerrainMeshRenderable
+    {
+        ID_t terrainMeshID = NULL_ID;
+        ID_t terrainMaterialID = NULL_ID;
+    };
+
     // NOTE: When adding strings, make sure to take into accout
     // the move constructor thing when allocating from component pool!
     // -> if using std::string it's underlying mem is nullptr initially!
@@ -45,6 +51,12 @@ namespace platypus
         entityID_t target,
         ID_t meshAssetID,
         ID_t materialAssetID
+    );
+
+    TerrainMeshRenderable* create_terrain_mesh_renderable(
+        entityID_t target,
+        ID_t terrainMeshAssetID,
+        ID_t terrainMaterialAssetID
     );
 
     GUIRenderable* create_gui_renderable(

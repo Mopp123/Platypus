@@ -3,6 +3,7 @@
 #include "Pipeline.h"
 #include "platypus/assets/Mesh.h"
 #include "platypus/assets/Material.h"
+#include "platypus/assets/TerrainMaterial.hpp"
 
 namespace platypus
 {
@@ -11,5 +12,9 @@ namespace platypus
         bool instanced,
         bool skinned,
         Material* pMaterial
+    );
+
+    Pipeline* create_terrain_material_pipeline(
+        TerrainMaterial* pMaterial
     );
 }

@@ -239,6 +239,43 @@ namespace platypus
         return pMaterial;
     }
 
+    TerrainMaterial* AssetManager::createTerrainMaterial(
+        ID_t diffuseTextureID
+    )
+    {
+        std::unordered_map<ID_t, Asset*>::const_iterator diffuseTextureIt = _assets.find(diffuseTextureID);
+        Texture* pDiffuseTexture = nullptr;
+        if (diffuseTextureIt != _assets.end())
+        {
+            AssetType foundAssetType = _assets[diffuseTextureID]->getType();
+            if (foundAssetType != AssetType::ASSET_TYPE_TEXTURE)
+            {
+                Debug::log(
+                    "@AssetManager::createTerrainMaterial "
+                    "Invalid asset type: " + asset_type_to_string(foundAssetType) + " " +
+                    "for diffuse texture",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            pDiffuseTexture = (Texture*)_assets[diffuseTextureID];
+        }
+        else
+        {
+            Debug::log(
+                "@AssetManager::createTerrainMaterial "
+                "Failed to find texture with ID: " + std::to_string(diffuseTextureID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+
+            pDiffuseTexture = _pWhiteTexture;
+        }
+        TerrainMaterial* pTerrainMaterial = new TerrainMaterial(pDiffuseTexture->getID());
+        _assets[pTerrainMaterial->getID()] = pTerrainMaterial;
+        return pTerrainMaterial;
+    }
+
     Mesh* AssetManager::createMesh(
         const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
@@ -372,6 +409,17 @@ namespace platypus
         Model* pModel = new Model(createdMeshes);
         _assets[pModel->getID()] = pModel;
         return pModel;
+    }
+
+    TerrainMesh* AssetManager::createTerrainMesh(
+        float tileSize,
+        const std::vector<float>& heightmapData,
+        bool dynamic
+    )
+    {
+        TerrainMesh* pTerrainMesh = new TerrainMesh(tileSize, heightmapData, dynamic);
+        _assets[pTerrainMesh->getID()] = pTerrainMesh;
+        return pTerrainMesh;
     }
 
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(

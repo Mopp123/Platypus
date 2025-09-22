@@ -261,7 +261,7 @@ namespace platypus
         }
 
         if (!destroyed)
-            warnUnassigned("@destroyPipeline");
+            warnUnassigned("@Material::destroyPipeline");
     }
 
     void Material::createShaderResources()

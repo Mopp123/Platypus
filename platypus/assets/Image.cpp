@@ -32,6 +32,34 @@ namespace platypus
             delete[] _pData;
     }
 
+    int Image::getChannelValue(uint32_t x, uint32_t y, uint32_t channelIndex) const
+    {
+        if (channelIndex >= _channels)
+        {
+            Debug::log(
+                "@Image::getChannelValue "
+                "Invalid channel index(" + std::to_string(channelIndex) + ") "
+                "this image has " + std::to_string(_channels) + " channels.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        if (x >= _width || y >= _height)
+        {
+            Debug::log(
+                "@Image::getChannelValue "
+                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
+                "out of bounds of the image! "
+                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        return _pData[(x + y * _width) * _channels + channelIndex];
+    }
+
     Image* Image::load_image(const std::string& filepath)
     {
         int width = 0;

@@ -5,6 +5,14 @@
 
 namespace platypus
 {
+    enum ImageChannelIndex
+    {
+        IMAGE_CHANNEL_INDEX_RED = 0,
+        IMAGE_CHANNEL_INDEX_GREEN,
+        IMAGE_CHANNEL_INDEX_BLUE,
+        IMAGE_CHANNEL_INDEX_ALPHA
+    };
+
     class Image : public Asset
     {
     private:
@@ -22,6 +30,8 @@ namespace platypus
             int channels
         );
         ~Image();
+
+        int getChannelValue(uint32_t x, uint32_t y, uint32_t channelIndex) const;
 
         static Image* load_image(const std::string& filepath);
 

@@ -1,6 +1,7 @@
 #include "PipelineFactory.hpp"
 #include "platypus/core/Application.h"
 #include "Swapchain.h"
+#include "platypus/assets/TerrainMesh.hpp"
 #include "renderers/MasterRenderer.h"
 #include "renderers/Batch.hpp"
 #include <string>
@@ -94,6 +95,38 @@ namespace platypus
             pUseVertexShader,
             pUseFragmentShader,
             CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // Enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
+            true, // Enable color blend
+            0, // Push constants size
+            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+        );
+
+        return pPipeline;
+    }
+
+    Pipeline* create_terrain_material_pipeline(
+        TerrainMaterial* pMaterial
+    )
+    {
+        // Figure out descriptor set layouts and shaders
+        const MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        std::vector<DescriptorSetLayout> useDescriptorSetLayouts = {
+            pMasterRenderer->getScene3DDataDescriptorSetLayout(),
+            BatchPool::get_terrain_descriptor_set_layout(),
+            pMaterial->getDescriptorSetLayout()
+        };
+
+        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
+        // NOTE: Currently sending proj mat as push constant
+        Pipeline* pPipeline = new Pipeline(
+            swapchain.getRenderPassPtr(),
+            { TerrainMesh::get_vertex_buffer_layout() },
+            useDescriptorSetLayouts,
+            pMaterial->getVertexShader(),
+            pMaterial->getFragmentShader(),
+            CullMode::CULL_MODE_NONE,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

@@ -56,8 +56,7 @@ namespace platypus
 
         void recreateExistingPipeline();
         void destroyPipeline();
-        // NOTE: This also creates the uniform buffer
-        //  -> should that be a separate func or name this more clearly?
+
         void createShaderResources();
         void freeShaderResources();
 

@@ -3,9 +3,11 @@
 #include "Asset.h"
 #include "Image.h"
 #include "Mesh.h"
+#include "TerrainMesh.hpp"
 #include "Model.h"
 #include "Texture.h"
 #include "Material.h"
+#include "TerrainMaterial.hpp"
 #include "Font.h"
 #include "SkeletalAnimationData.h"
 #include <unordered_map>
@@ -50,6 +52,9 @@ namespace platypus
             float shininess = 1.0f,
             bool shadeless = false
         );
+        TerrainMaterial* createTerrainMaterial(
+            ID_t diffuseTextureID
+        );
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,
             const std::vector<float>& vertexData,
@@ -60,6 +65,12 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
+        TerrainMesh* createTerrainMesh(
+            float tileSize,
+            const std::vector<float>& heightmapData,
+            bool dynamic
+        );
+
         SkeletalAnimationData* createSkeletalAnimation(
             const KeyframeAnimationData& keyframes
         );
