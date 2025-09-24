@@ -16,7 +16,7 @@ namespace platypus
     MasterRenderer::MasterRenderer(const Window& window) :
         _swapchain(window),
         _descriptorPool(_swapchain),
-        _batcher(*this, 1000, 1000, 9, 50),
+        _batcher(*this, _descriptorPool, 1000, 1000, 9, 50),
 
         _scene3DDataDescriptorSetLayout(
             {

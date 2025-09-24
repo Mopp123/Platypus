@@ -5,6 +5,18 @@
 
 #define PLATYPUS_ASSERT(arg) assert(arg)
 
+#if defined(__clang__)
+    // NOTE: Not sure if works. Not tested!
+    #define PLATYPUS_CURRENT_FUNC_NAME __func__
+#elif defined(__GNUC__) || defined(__GNUG__)
+    #define PLATYPUS_CURRENT_FUNC_NAME __func__
+#elif defined(_MSC_VER)
+    // NOTE: Not sure if works. Not tested!
+    #define PLATYPUS_CURRENT_FUNC_NAME __FUNCTION__
+#else
+    #define PLATYPUS_CURRENT_FUNC_NAME "<FAILED TO GET FUNC NAME>"
+#endif
+
 namespace platypus
 {
     class Debug

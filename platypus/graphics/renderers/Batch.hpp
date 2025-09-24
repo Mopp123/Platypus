@@ -47,6 +47,7 @@ namespace platypus
     {
     private:
         MasterRenderer& _masterRendererRef;
+        DescriptorPool& _descriptorPoolRef;
 
         std::vector<Batch*> _batches;
         std::unordered_map<ID_t, size_t> _identifierBatchMapping;
@@ -72,6 +73,7 @@ namespace platypus
     public:
         Batcher(
             MasterRenderer& masterRenderer,
+            DescriptorPool& descriptorPool,
             size_t maxStaticBatchLength,
             size_t maxSkinnedBatchLength,
             size_t maxTerrainBatchLength,
@@ -120,5 +122,64 @@ namespace platypus
 
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
+
+    private:
+        void createBatchInstancedBuffers(
+            ID_t batchID,
+            size_t bufferElementSize,
+            size_t maxBatchLength,
+            size_t framesInFlight,
+            std::vector<Buffer*>& outBuffers
+        );
+        // Creates dynamic uniform buffers and descriptor sets for the whole batch
+        void createBatchShaderResources(
+            ID_t batchID,
+            size_t bufferElementSize,
+            size_t maxBatchLength,
+            size_t framesInFlight,
+            const DescriptorSetLayout& descriptorSetLayout,
+            std::vector<Buffer*>& outUniformBuffers,
+            std::vector<DescriptorSet>& outDescriptorSets
+        );
+
+        // When fetching the descriptor sets from anywhere, they are stored in
+        // a vector containing descriptor set for each frame in flight.
+        // This function converts the given descriptor sets in a format that the batch can use,
+        // where the outer vector is for each frame in flight and inner vector all the descriptor sets to bind.
+        //
+        // Give the descriptorSetsToUse in following manner:
+        //  {
+        //      someDescriptorSets(for each frame in flight),
+        //      someOtherDescriptorSets(for each frame in flight),
+        //      ...
+        //  }
+        void combineUsedDescriptorSets(
+            size_t framesInFlight,
+            const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse,
+            std::vector<std::vector<DescriptorSet>>& outDescriptorSets
+        );
+
+        Batch* getBatch(ID_t batchID);
+        Buffer* getBatchBuffer(ID_t batchID, size_t frame);
+        // ...dumb I know, just want to make sure...
+        bool validateBatchDoesntExist(const char* callLocation, ID_t batchID) const;
+        bool validateBatchBufferDoesntExist(const char* callLocation, ID_t batchID) const;
+
+        bool validateDescriptorSetCounts(
+            const char* callLocation,
+            size_t framesInFlight,
+            size_t commonDescriptorSetCount,
+            size_t materialDescriptorSetCount
+        ) const;
+
+        bool validateDescriptorSetCounts(
+            const char* callLocation,
+            size_t framesInFlight,
+            size_t commonDescriptorSetCount,
+            size_t batchDescriptorSetCount,
+            size_t materialDescriptorSetCount
+        ) const;
+
+
     };
 }
