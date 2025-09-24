@@ -394,7 +394,7 @@ namespace platypus
 
     void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        if (!_hostSideUpdated)
+        if (!_hostSideUpdated && _pData)
         {
             Debug::log(
                 "@Buffer::updateDevice "

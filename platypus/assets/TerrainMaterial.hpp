@@ -5,6 +5,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
 
+#define PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS 5
 
 namespace platypus
 {
@@ -18,7 +19,8 @@ namespace platypus
     class TerrainMaterial : public Asset
     {
     private:
-        ID_t _diffuseTextureID = NULL_ID;
+        ID_t _blendmapTextureID = NULL_ID;
+        ID_t _channelTextures[PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS];
 
         TerrainMaterialPipelineData* _pPipelineData = nullptr;
         // NOTE: This contains ALL descriptor set layouts for pipeline!
@@ -28,7 +30,9 @@ namespace platypus
 
     public:
         TerrainMaterial(
-            ID_t diffuseTextureID
+            ID_t blendmapTextureID,
+            ID_t* channelTextureIDs,
+            size_t channelCount
         );
         ~TerrainMaterial();
 
@@ -41,7 +45,8 @@ namespace platypus
         void createShaderResources();
         void freeShaderResources();
 
-        Texture* getDiffuseTexture() const;
+        Texture* getBlendmapTexture() const;
+        Texture* getChannelTexture(size_t channel) const;
 
         inline const TerrainMaterialPipelineData* getPipelineData() { return _pPipelineData; }
         inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }

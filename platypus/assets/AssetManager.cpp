@@ -240,38 +240,40 @@ namespace platypus
     }
 
     TerrainMaterial* AssetManager::createTerrainMaterial(
-        ID_t diffuseTextureID
+        ID_t blendmapTextureID,
+        std::vector<ID_t> channelTextures
     )
     {
-        std::unordered_map<ID_t, Asset*>::const_iterator diffuseTextureIt = _assets.find(diffuseTextureID);
-        Texture* pDiffuseTexture = nullptr;
-        if (diffuseTextureIt != _assets.end())
-        {
-            AssetType foundAssetType = _assets[diffuseTextureID]->getType();
-            if (foundAssetType != AssetType::ASSET_TYPE_TEXTURE)
-            {
-                Debug::log(
-                    "@AssetManager::createTerrainMaterial "
-                    "Invalid asset type: " + asset_type_to_string(foundAssetType) + " " +
-                    "for diffuse texture",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            pDiffuseTexture = (Texture*)_assets[diffuseTextureID];
-        }
-        else
+        if (channelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
                 "@AssetManager::createTerrainMaterial "
-                "Failed to find texture with ID: " + std::to_string(diffuseTextureID),
+                "Too many channel textures provided(" + std::to_string(channelTextures.size()) + ") "
+                "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
-
-            pDiffuseTexture = _pWhiteTexture;
         }
-        TerrainMaterial* pTerrainMaterial = new TerrainMaterial(pDiffuseTexture->getID());
+
+        ID_t useBlendmapTextureID = blendmapTextureID;
+        if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, blendmapTextureID, AssetType::ASSET_TYPE_TEXTURE))
+            useBlendmapTextureID = _pBlackTexture->getID();
+
+        std::vector<ID_t> useChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
+        for (size_t textureChannel = 0; textureChannel < channelTextures.size(); ++textureChannel)
+        {
+            ID_t channelTextureID = channelTextures[textureChannel];
+            if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, channelTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                channelTextureID = _pBlackTexture->getID();
+
+            useChannelTextureIDs[textureChannel] = channelTextureID;
+        }
+
+        TerrainMaterial* pTerrainMaterial = new TerrainMaterial(
+            useBlendmapTextureID,
+            useChannelTextureIDs.data(),
+            useChannelTextureIDs.size()
+        );
         _assets[pTerrainMaterial->getID()] = pTerrainMaterial;
         return pTerrainMaterial;
     }
@@ -487,5 +489,40 @@ namespace platypus
                 foundAssets.push_back(asset.second);
         }
         return foundAssets;
+    }
+
+    bool AssetManager::validateAsset(
+        const char* callLocation,
+        ID_t assetID,
+        AssetType requiredType
+    )
+    {
+        const std::string callLocationStr(callLocation);
+        const std::string locationStr(PLATYPUS_CURRENT_FUNC_NAME);
+        std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
+        if (it == _assets.end())
+        {
+            Debug::log(
+                "@AssetManager::" + locationStr + "(" + locationStr + ") "
+                "Failed to find asset with ID: " + std::to_string(assetID) + " "
+                "with type: " + asset_type_to_string(requiredType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        if (_assets[assetID]->getType() != requiredType)
+        {
+            Debug::log(
+                "@AssetManager::" + locationStr + "(" + locationStr + ") "
+                "Invalid asset type: " + asset_type_to_string(_assets[assetID]->getType()) + " "
+                "for asset ID: " + std::to_string(assetID) + " "
+                "required type was: " + asset_type_to_string(requiredType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        return true;
     }
 }

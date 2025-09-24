@@ -53,7 +53,8 @@ namespace platypus
             bool shadeless = false
         );
         TerrainMaterial* createTerrainMaterial(
-            ID_t diffuseTextureID
+            ID_t blendmapTextureID,
+            std::vector<ID_t> channelTextures
         );
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,
@@ -81,5 +82,12 @@ namespace platypus
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
+
+    private:
+        bool validateAsset(
+            const char* callLocation,
+            ID_t assetID,
+            AssetType requiredType
+        );
     };
 }

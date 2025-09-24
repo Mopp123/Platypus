@@ -1,6 +1,7 @@
 #include "TerrainTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
+#include <cmath>
 
 
 using namespace platypus;
@@ -44,25 +45,60 @@ void TerrainTestScene::init()
         true,
         0
     );
-    Texture* pDiffuseTexture = pAssetManager->loadTexture(
-        "assets/textures/TerrainGrass.png",
-        ImageFormat::R8G8B8A8_SRGB,
+    ImageFormat texImageFormat = ImageFormat::R8G8B8A8_SRGB;
+    Texture* pBlendmapTexture = pAssetManager->loadTexture(
+        "assets/textures/terrain/Blendmap.png",
+        ImageFormat::R8G8B8A8_UNORM,
+        textureSampler
+    );
+    Texture* pChannel0Texture = pAssetManager->loadTexture(
+        "assets/textures/terrain/ground_dry2_d.png",
+        texImageFormat,
+        textureSampler
+    );
+    Texture* pChannel1Texture = pAssetManager->loadTexture(
+        "assets/textures/terrain/grass_ground_d.png",
+        texImageFormat,
+        textureSampler
+    );
+    Texture* pChannel2Texture = pAssetManager->loadTexture(
+        "assets/textures/terrain/grass_rocky_d.png",
+        texImageFormat,
+        textureSampler
+    );
+    Texture* pChannel3Texture = pAssetManager->loadTexture(
+        "assets/textures/terrain/ground_mud_d.png",
+        texImageFormat,
+        textureSampler
+    );
+    Texture* pChannel4Texture = pAssetManager->loadTexture(
+        "assets/textures/terrain/jungle_mntn2_d.png",
+        texImageFormat,
         textureSampler
     );
 
     TerrainMaterial* pTerrainMaterial = pAssetManager->createTerrainMaterial(
-        pDiffuseTexture->getID()
+        pBlendmapTexture->getID(),
+        {
+            pChannel0Texture->getID(),
+            pChannel1Texture->getID(),
+            pChannel2Texture->getID(),
+            pChannel3Texture->getID(),
+            pChannel4Texture->getID(),
+        }
     );
 
     size_t heightmapWidth = 32;
     size_t heightmapArea = heightmapWidth * heightmapWidth;
-    std::vector<float> heightmap(heightmapArea);
-    float heightModifier = 0.01f;
-    for (float& h : heightmap)
+    _heightmap1.resize(heightmapArea);
+    _heightmap2.resize(heightmapArea);
+    float heightModifier = 0.003f;
+    for (size_t i = 0; i < heightmapArea; ++i)
     {
-        h = (float)(std::rand() % 256) * heightModifier;
+        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
     }
-    TerrainMesh* pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, heightmap, false);
+    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, false);
 
     entityID_t terrainEntity = createEntity();
     create_transform(
@@ -71,10 +107,33 @@ void TerrainTestScene::init()
         { { 0, 1, 0}, 0 },
         { 1, 1, 1 }
     );
-    create_terrain_mesh_renderable(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
+    create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), pTerrainMaterial->getID());
 }
 
+
+static float s_time = 0.0f;
 void TerrainTestScene::update()
 {
     _camController.update();
+
+    /*
+    float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;
+    Debug::log("___TEST___amount: " + std::to_string(interpolationAmount));
+    for (size_t i = 0; i < _heightmap1.size(); ++i)
+    {
+        float h1 = _heightmap1[i];
+        float h2 = _heightmap2[i];
+        float interpolatedHeight = h1 + ((h2 - h1) * interpolationAmount);
+        size_t stride = sizeof(Vector3f) * 2;
+
+        Buffer* pVertexBuffer = _pTerrainMesh->getVertexBuffer();
+        pVertexBuffer->updateDevice(
+            &interpolatedHeight,
+            sizeof(float),
+            i * stride + sizeof(float)
+        );
+    }
+
+    s_time += 1.0f * Timing::get_delta_time();
+    */
 }

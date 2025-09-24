@@ -1,9 +1,9 @@
-#version 450
+precision mediump float;
 
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec3 normal;
+attribute vec3 position;
+attribute vec3 normal;
 
-layout(set = 0, binding = 0) uniform SceneData
+struct SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
@@ -11,26 +11,29 @@ layout(set = 0, binding = 0) uniform SceneData
     vec4 lightDirection;
     vec4 lightColor;
     vec4 ambientLightColor;
-} sceneData;
+};
+uniform SceneData sceneData;
 
-layout(set = 1, binding = 0) uniform InstanceData
+
+// InstanceData.meshProperties.x = tileSize
+// InstanceData.meshProperties.y = verticesPerRow
+struct InstanceData
 {
     mat4 transformationMatrix;
     vec2 meshProperties;
-    // meshProperties.x = tileSize
-    // meshProperties.y = verticesPerRow
-} instanceData;
+} ;
+uniform InstanceData instanceData;
 
-layout(location = 0) out vec3 var_normal;
-layout(location = 1) out vec2 var_texCoord;
-layout(location = 2) out vec3 var_fragPos;
-layout(location = 3) out vec3 var_cameraPos;
-layout(location = 4) out vec3 var_lightDir;
-layout(location = 5) out vec4 var_lightColor;
-layout(location = 6) out vec4 var_ambientLightColor;
+varying vec3 var_normal;
+varying vec2 var_texCoord;
+varying vec3 var_fragPos;
+varying vec3 var_cameraPos;
+varying vec3 var_lightDir;
+varying vec4 var_lightColor;
+varying vec4 var_ambientLightColor;
 
-layout(location = 7) out float var_tileSize;
-layout(location = 8) out float var_verticesPerRow;
+varying float var_tileSize;
+varying float var_verticesPerRow;
 
 void main()
 {
@@ -39,9 +42,9 @@ void main()
     vec4 rotatedNormal = instanceData.transformationMatrix * vec4(normal, 0.0);
     var_normal = rotatedNormal.xyz;
 
-    const float tileSize = instanceData.meshProperties.x;
-    const float verticesPerRow = instanceData.meshProperties.y;
-    const float tilesPerRow = verticesPerRow - 1;
+    float tileSize = instanceData.meshProperties.x;
+    float verticesPerRow = instanceData.meshProperties.y;
+    float tilesPerRow = verticesPerRow - 1.0;
     var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
 
     var_fragPos = translatedPos.xyz;

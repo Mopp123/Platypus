@@ -263,6 +263,8 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->recreateExistingPipeline();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
+            ((TerrainMaterial*)pAsset)->recreateExistingPipeline();
     }
 
     void MasterRenderer::destroyPipelines()
@@ -272,6 +274,8 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
+            ((TerrainMaterial*)pAsset)->destroyPipeline();
     }
 
     void MasterRenderer::createCommonShaderResources()
@@ -315,6 +319,8 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->createShaderResources();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
+            ((TerrainMaterial*)pAsset)->createShaderResources();
     }
 
     void MasterRenderer::freeShaderResources()
@@ -322,6 +328,8 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->freeShaderResources();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
+            ((TerrainMaterial*)pAsset)->freeShaderResources();
     }
 
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
