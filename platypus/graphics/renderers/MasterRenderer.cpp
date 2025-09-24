@@ -16,6 +16,7 @@ namespace platypus
     MasterRenderer::MasterRenderer(const Window& window) :
         _swapchain(window),
         _descriptorPool(_swapchain),
+        _batcher(*this, 1000, 1000, 9, 50),
 
         _scene3DDataDescriptorSetLayout(
             {
@@ -46,23 +47,19 @@ namespace platypus
 
         allocCommandBuffers(_swapchain.getMaxFramesInFlight());
         createCommonShaderResources();
-
-        BatchPool::init();
     }
 
     MasterRenderer::~MasterRenderer()
     {
         destroyCommonShaderResources();
         _scene3DDataDescriptorSetLayout.destroy();
-
-        BatchPool::destroy();
     }
 
     void MasterRenderer::cleanRenderers()
     {
         Device::wait_for_operations();
 
-        BatchPool::free_batches();
+        _batcher.freeBatches();
         _pGUIRenderer->freeBatches();
 
         freeShaderResources();
@@ -70,7 +67,7 @@ namespace platypus
 
     void MasterRenderer::cleanUp()
     {
-        BatchPool::free_batches();
+        _batcher.freeBatches();
         cleanRenderers();
         destroyPipelines();
         // NOTE: Why need to free command buffers here?
@@ -110,7 +107,7 @@ namespace platypus
         {
             const ID_t meshID = pStaticRenderable->meshID;
             const ID_t materialID = pStaticRenderable->materialID;
-            ID_t batchID = BatchPool::get_batch_id(meshID, materialID);
+            ID_t batchID = _batcher.getBatchID(meshID, materialID);
             if (batchID == NULL_ID)
             {
                 Debug::log(
@@ -118,9 +115,9 @@ namespace platypus
                     "No suitable batch found for StaticMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = BatchPool::create_static_batch(meshID, materialID);
+                batchID = _batcher.createStaticBatch(meshID, materialID);
             }
-            BatchPool::add_to_static_batch(batchID, pTransform->globalMatrix, _currentFrame);
+            _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
         }
 
         SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
@@ -133,7 +130,7 @@ namespace platypus
         {
             const ID_t meshID = pSkinnedRenderable->meshID;
             const ID_t materialID = pSkinnedRenderable->materialID;
-            ID_t batchID = BatchPool::get_batch_id(meshID, materialID);
+            ID_t batchID = _batcher.getBatchID(meshID, materialID);
             if (batchID == NULL_ID)
             {
                 Debug::log(
@@ -141,7 +138,7 @@ namespace platypus
                     "No suitable batch found for SkinnedMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = BatchPool::create_skinned_batch(meshID, materialID);
+                batchID = _batcher.createSkinnedBatch(meshID, materialID);
             }
 
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
@@ -153,7 +150,7 @@ namespace platypus
                 AssetType::ASSET_TYPE_MESH
             );
 
-            BatchPool::add_to_skinned_batch(
+            _batcher.addToSkinnedBatch(
                 batchID,
                 (void*)pAnimation->jointMatrices,
                 sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
@@ -171,7 +168,7 @@ namespace platypus
         {
             const ID_t terrainMeshID = pTerrainRenderable->terrainMeshID;
             const ID_t terrainMaterialID = pTerrainRenderable->terrainMaterialID;
-            ID_t batchID = BatchPool::get_batch_id(terrainMeshID, terrainMaterialID);
+            ID_t batchID = _batcher.getBatchID(terrainMeshID, terrainMaterialID);
             if (batchID == NULL_ID)
             {
                 Debug::log(
@@ -179,14 +176,14 @@ namespace platypus
                     "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = BatchPool::create_terrain_batch(terrainMeshID, terrainMaterialID);
+                batchID = _batcher.createTerrainBatch(terrainMeshID, terrainMaterialID);
             }
 
             const TerrainMesh* pTerrainMesh = (const TerrainMesh*)Application::get_instance()->getAssetManager()->getAsset(
                 pTerrainRenderable->terrainMeshID,
                 AssetType::ASSET_TYPE_TERRAIN_MESH
             );
-            BatchPool::add_to_terrain_batch(
+            _batcher.addToTerrainBatch(
                 batchID,
                 pTransform->globalMatrix,
                 pTerrainMesh->getTileSize(),
@@ -428,18 +425,18 @@ namespace platypus
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!
-        BatchPool::update_device_side_buffers(_currentFrame);
+        _batcher.updateDeviceSideBuffers(_currentFrame);
         secondaryCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
                 _swapchain.getRenderPass(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
-                BatchPool::get_batches()
+                _batcher.getBatches()
             )
         );
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
-        BatchPool::reset_for_next_frame();
+        _batcher.resetForNextFrame();
 
         secondaryCommandBuffers.push_back(
             _pGUIRenderer->recordCommandBuffer(
@@ -490,7 +487,7 @@ namespace platypus
                 createShaderResources();
                 // NOTE: Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
-                BatchPool::free_batches();
+                _batcher.freeBatches();
             }
             else
             {

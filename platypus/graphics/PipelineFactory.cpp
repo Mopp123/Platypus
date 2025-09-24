@@ -69,10 +69,10 @@ namespace platypus
         };
         if (skinned)
         {
-            // NOTE: Too confusing to access joint descriptor set layout from BatchPool here?!
+            // NOTE: Too confusing to access joint descriptor set layout from Batcher here?!
             // TODO: Fix plz?
             useDescriptorSetLayouts.push_back(
-                BatchPool::get_joint_descriptor_set_layout()
+                Batcher::get_joint_descriptor_set_layout()
             );
 
             pUseVertexShader = pMaterial->getSkinnedVertexShader();
@@ -114,7 +114,7 @@ namespace platypus
         const MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         std::vector<DescriptorSetLayout> useDescriptorSetLayouts = {
             pMasterRenderer->getScene3DDataDescriptorSetLayout(),
-            BatchPool::get_terrain_descriptor_set_layout(),
+            Batcher::get_terrain_descriptor_set_layout(),
             pMaterial->getDescriptorSetLayout()
         };
 

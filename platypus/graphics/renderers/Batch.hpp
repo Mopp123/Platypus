@@ -4,7 +4,6 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderPass.h"
-#include "Batch.hpp"
 #include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/Renderable.h"
 
@@ -42,60 +41,68 @@ namespace platypus
         uint32_t instanceCount = 0;
     };
 
-
+    class MasterRenderer;
     // TODO: A way to update batch descriptor sets if those were changed (count may have changed as well!)
-    class BatchPool
+    class Batcher
     {
     private:
-        static std::vector<Batch*> s_batches;
-        static std::unordered_map<ID_t, size_t> s_identifierBatchMapping;
+        MasterRenderer& _masterRendererRef;
 
-        static size_t s_maxStaticBatchLength;
-        static size_t s_maxSkinnedBatchLength;
-        static size_t s_maxTerrainBatchLength;
-        static size_t s_maxJoints;
+        std::vector<Batch*> _batches;
+        std::unordered_map<ID_t, size_t> _identifierBatchMapping;
+
+        size_t _maxStaticBatchLength;
+        size_t _maxSkinnedBatchLength;
+        size_t _maxTerrainBatchLength;
+        size_t _maxSkinnedMeshJoints;
 
         static DescriptorSetLayout s_jointDescriptorSetLayout;
         static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
-        static std::vector<std::vector<Buffer*>> s_allocatedBuffers;
-        static std::vector<std::vector<DescriptorSet>> s_descriptorSets;
+        std::vector<std::vector<Buffer*>> _allocatedBuffers;
+        std::vector<std::vector<DescriptorSet>> _descriptorSets;
 
         // This is fucking stupid!
         // Need to pass all vertex buffers as const ptr, so need a way to refer to the s_allocatedBuffers
         // when modifying it, instead of the Batch struct's member.
-        static std::unordered_map<ID_t, size_t> s_batchBufferMapping;
-        static std::unordered_map<ID_t, size_t> s_batchDescriptorSetMapping;
+        std::unordered_map<ID_t, size_t> _batchBufferMapping;
+        std::unordered_map<ID_t, size_t> _batchDescriptorSetMapping;
 
     public:
-        static void init();
-        static void destroy();
+        Batcher(
+            MasterRenderer& masterRenderer,
+            size_t maxStaticBatchLength,
+            size_t maxSkinnedBatchLength,
+            size_t maxTerrainBatchLength,
+            size_t maxSkinnedMeshJoints
+        );
+        ~Batcher();
 
         // Returns batch identifier if found, NULL_ID if not.
         // NOTE: Entity might have components for multiple different batches!
         //  -> Need to call for each renderable type separately
-        static ID_t get_batch_id(ID_t meshID, ID_t materialID);
+        ID_t getBatchID(ID_t meshID, ID_t materialID);
 
         // Returns batch identifier, if created successfully
-        static ID_t create_static_batch(ID_t meshID, ID_t materialID);
-        static ID_t create_skinned_batch(ID_t meshID, ID_t materialID);
-        static ID_t create_terrain_batch(ID_t terrainMeshID, ID_t terrainMaterialID);
+        ID_t createStaticBatch(ID_t meshID, ID_t materialID);
+        ID_t createSkinnedBatch(ID_t meshID, ID_t materialID);
+        ID_t createTerrainBatch(ID_t terrainMeshID, ID_t terrainMaterialID);
 
-        static void add_to_static_batch(
+        void addToStaticBatch(
             ID_t identifier,
             const Matrix4f& transformationMatrix,
             size_t currentFrame
         );
 
-        static void add_to_skinned_batch(
+        void addToSkinnedBatch(
             ID_t identifier,
             void* pJointData,
             size_t jointDataSize,
             size_t currentFrame
         );
 
-        static void add_to_terrain_batch(
+        void addToTerrainBatch(
             ID_t identifier,
             const Matrix4f& transformationMatrix,
             float tileSize,
@@ -103,13 +110,13 @@ namespace platypus
             size_t currentFrame
         );
 
-        static void update_device_side_buffers(size_t currentFrame);
+        void updateDeviceSideBuffers(size_t currentFrame);
         // Clears instance and repeat counts for next round of submits.
-        static void reset_for_next_frame();
+        void resetForNextFrame();
 
-        static void free_batches();
+        void freeBatches();
 
-        static const std::vector<Batch*>& get_batches();
+        const std::vector<Batch*>& getBatches() const;
 
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();

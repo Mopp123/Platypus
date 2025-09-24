@@ -72,7 +72,6 @@ void TerrainTestScene::init()
         { 1, 1, 1 }
     );
     create_terrain_mesh_renderable(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
-
 }
 
 void TerrainTestScene::update()

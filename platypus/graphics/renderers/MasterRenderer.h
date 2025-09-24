@@ -28,6 +28,7 @@ namespace platypus
     private:
         Swapchain _swapchain;
         DescriptorPool _descriptorPool;
+        Batcher _batcher;
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
         // Shared descriptor sets among multiple renderers

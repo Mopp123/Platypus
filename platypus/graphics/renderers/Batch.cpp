@@ -1,30 +1,29 @@
 #include "Batch.hpp"
-#include "platypus/core/Application.h"
 #include "platypus/assets/TerrainMesh.hpp"
 #include "platypus/assets/TerrainMaterial.hpp"
+#include "platypus/core/Application.h"
+#include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/Device.hpp"
 
 
 namespace platypus
 {
-    std::vector<Batch*> BatchPool::s_batches;
-    std::unordered_map<ID_t, size_t> BatchPool::s_identifierBatchMapping;
-    size_t BatchPool::s_maxStaticBatchLength = 10000; // TODO: Make this configurable
-    size_t BatchPool::s_maxSkinnedBatchLength = 1024; // TODO: Make this configurable
-    size_t BatchPool::s_maxTerrainBatchLength = 9; // TODO: Make this configurable
-    size_t BatchPool::s_maxJoints = 50;
+    DescriptorSetLayout Batcher::s_jointDescriptorSetLayout;
+    DescriptorSetLayout Batcher::s_terrainDescriptorSetLayout;
 
-    DescriptorSetLayout BatchPool::s_jointDescriptorSetLayout;
-    DescriptorSetLayout BatchPool::s_terrainDescriptorSetLayout;
-
-    std::vector<std::vector<Buffer*>> BatchPool::s_allocatedBuffers;
-    std::vector<std::vector<DescriptorSet>> BatchPool::s_descriptorSets;
-    std::unordered_map<ID_t, size_t> BatchPool::s_batchBufferMapping;
-    std::unordered_map<ID_t, size_t> BatchPool::s_batchDescriptorSetMapping;
-
-
-    void BatchPool::init()
+    Batcher::Batcher(
+        MasterRenderer& masterRenderer,
+        size_t maxStaticBatchLength,
+        size_t maxSkinnedBatchLength,
+        size_t maxTerrainBatchLength,
+        size_t maxSkinnedMeshJoints
+    ) :
+        _masterRendererRef(masterRenderer),
+        _maxStaticBatchLength(maxStaticBatchLength),
+        _maxSkinnedBatchLength(maxSkinnedBatchLength),
+        _maxTerrainBatchLength(maxTerrainBatchLength),
+        _maxSkinnedMeshJoints(maxSkinnedMeshJoints)
     {
         s_jointDescriptorSetLayout = DescriptorSetLayout(
             {
@@ -33,7 +32,7 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                    { { 5, ShaderDataType::Mat4, (int)s_maxJoints } }
+                    { { 5, ShaderDataType::Mat4, (int)_maxSkinnedMeshJoints } }
                 }
             }
         );
@@ -54,42 +53,46 @@ namespace platypus
         );
     }
 
-    void BatchPool::destroy()
+    Batcher::~Batcher()
     {
         s_jointDescriptorSetLayout.destroy();
         s_terrainDescriptorSetLayout.destroy();
     }
 
-    ID_t BatchPool::get_batch_id(ID_t meshID, ID_t materialID)
+    ID_t Batcher::getBatchID(ID_t meshID, ID_t materialID)
     {
         ID_t identifier = ID::hash(meshID, materialID);
 
-        std::unordered_map<ID_t, size_t>::const_iterator indexIt = s_identifierBatchMapping.find(identifier);
-        if (indexIt != s_identifierBatchMapping.end())
+        std::unordered_map<ID_t, size_t>::const_iterator indexIt = _identifierBatchMapping.find(identifier);
+        if (indexIt != _identifierBatchMapping.end())
             return indexIt->first;
 
         return NULL_ID;
     }
 
+
+    // 1. Check that batch doesn't exist yet
+    // 2. Check that "batch buffer" hasn't been created
+
     // NOTE: Could even create the pipelines dynamically here, so wouldn't require having those inside
     // Material anymore?
-    ID_t BatchPool::create_static_batch(ID_t meshID, ID_t materialID)
+    ID_t Batcher::createStaticBatch(ID_t meshID, ID_t materialID)
     {
         ID_t identifier = ID::hash(meshID, materialID);
-        if (s_identifierBatchMapping.find(identifier) != s_identifierBatchMapping.end())
+        if (_identifierBatchMapping.find(identifier) != _identifierBatchMapping.end())
         {
             Debug::log(
-                "@BatchPool::create_static_batch "
+                "@Batcher::createStaticBatch "
                 "Batch already exists for identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return NULL_ID;
         }
-        if (s_batchBufferMapping.find(identifier) != s_batchBufferMapping.end())
+        if (_batchBufferMapping.find(identifier) != _batchBufferMapping.end())
         {
             Debug::log(
-                "@BatchPool::create_static_batch "
+                "@Batcher::createStaticBatch "
                 "Instanced vertex buffer has already been created for batch identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -97,9 +100,7 @@ namespace platypus
             return NULL_ID;
         }
 
-        Application* pApp = Application::get_instance();
-        AssetManager* pAssetManager = pApp->getAssetManager();
-        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
 
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
@@ -108,7 +109,7 @@ namespace platypus
 
         // NOTE: DANGER! Pretty fucked up...
         // TODO: Some better way to deal with these?
-        size_t descriptorSetCountPerFrame = pMasterRenderer->getScene3DDataDescriptorSets().size();
+        size_t descriptorSetCountPerFrame = _masterRendererRef.getScene3DDataDescriptorSets().size();
         if (pMaterial->getDescriptorSets().size() != descriptorSetCountPerFrame)
         {
             Debug::log(
@@ -125,15 +126,15 @@ namespace platypus
         for (size_t i = 0; i < descriptorSetCountPerFrame; ++i)
         {
             allDescriptorSets[i] = {
-                pMasterRenderer->getScene3DDataDescriptorSets()[i],
+                _masterRendererRef.getScene3DDataDescriptorSets()[i],
                 pMaterial->getDescriptorSets()[i]
             };
         }
 
         // Create the instanced transforms buffer
         // NOTE: Should these be created separately for each frame in flight as well?
-        std::vector<Matrix4f> transformsBuffer(s_maxStaticBatchLength);
-        const size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
+        std::vector<Matrix4f> transformsBuffer(_maxStaticBatchLength);
+        const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         std::vector<Buffer*> instancedBuffers(framesInFlight);
         for (size_t i = 0; i < framesInFlight; ++i)
         {
@@ -146,8 +147,8 @@ namespace platypus
                 true
             );
         }
-        s_batchBufferMapping[identifier] = s_allocatedBuffers.size();
-        s_allocatedBuffers.push_back(instancedBuffers);
+        _batchBufferMapping[identifier] = _allocatedBuffers.size();
+        _allocatedBuffers.push_back(instancedBuffers);
 
         Batch* pBatch = new Batch{
             BatchType::STATIC_INSTANCED,
@@ -166,28 +167,28 @@ namespace platypus
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
-        s_identifierBatchMapping[identifier] = s_batches.size();
-        s_batches.push_back(pBatch);
+        _identifierBatchMapping[identifier] = _batches.size();
+        _batches.push_back(pBatch);
         return identifier;
     }
 
-    ID_t BatchPool::create_skinned_batch(ID_t meshID, ID_t materialID)
+    ID_t Batcher::createSkinnedBatch(ID_t meshID, ID_t materialID)
     {
         ID_t identifier = ID::hash(meshID, materialID);
-        if (s_identifierBatchMapping.find(identifier) != s_identifierBatchMapping.end())
+        if (_identifierBatchMapping.find(identifier) != _identifierBatchMapping.end())
         {
             Debug::log(
-                "@BatchPool::create_skinned_batch "
+                "@Batcher::createSkinnedBatch "
                 "Batch already exists for identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return NULL_ID;
         }
-        if (s_batchBufferMapping.find(identifier) != s_batchBufferMapping.end())
+        if (_batchBufferMapping.find(identifier) != _batchBufferMapping.end())
         {
             Debug::log(
-                "@BatchPool::create_skinned_batch "
+                "@Batcher::createSkinnedBatch "
                 "Joint uniform buffer has already been created for batch identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -195,10 +196,8 @@ namespace platypus
             return NULL_ID;
         }
 
-        Application* pApp = Application::get_instance();
-        AssetManager* pAssetManager = pApp->getAssetManager();
-        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        DescriptorPool& descriptorPool = _masterRendererRef.getDescriptorPool();
 
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
@@ -207,12 +206,12 @@ namespace platypus
 
         // Create joint uniform buffer and descriptor sets
         size_t uniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
-            sizeof(Matrix4f) * s_maxJoints
+            sizeof(Matrix4f) * _maxSkinnedMeshJoints
         );
-        std::vector<char> jointBufferData(uniformBufferElementSize * s_maxSkinnedBatchLength);
+        std::vector<char> jointBufferData(uniformBufferElementSize * _maxSkinnedBatchLength);
         memset(jointBufferData.data(), 0, jointBufferData.size());
 
-        size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
+        size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         std::vector<Buffer*> jointBuffers(framesInFlight);
         std::vector<DescriptorSet> jointDescriptorSets(framesInFlight);
 
@@ -221,7 +220,7 @@ namespace platypus
             Buffer* pJointUniformBuffer = new Buffer(
                 jointBufferData.data(),
                 uniformBufferElementSize,
-                s_maxSkinnedBatchLength,
+                _maxSkinnedBatchLength,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
                 true
@@ -236,15 +235,15 @@ namespace platypus
             );
         }
 
-        s_batchBufferMapping[identifier] = s_allocatedBuffers.size();
-        s_allocatedBuffers.push_back(jointBuffers);
+        _batchBufferMapping[identifier] = _allocatedBuffers.size();
+        _allocatedBuffers.push_back(jointBuffers);
 
-        s_batchDescriptorSetMapping[identifier] = s_descriptorSets.size();
-        s_descriptorSets.push_back(jointDescriptorSets);
+        _batchDescriptorSetMapping[identifier] = _descriptorSets.size();
+        _descriptorSets.push_back(jointDescriptorSets);
 
         // NOTE: DANGER! Pretty fucked up...
         // TODO: Some better way to deal with these?
-        const size_t commonDescriptorSetCount = pMasterRenderer->getScene3DDataDescriptorSets().size();
+        const size_t commonDescriptorSetCount = _masterRendererRef.getScene3DDataDescriptorSets().size();
         const size_t materialDescriptorSetCount = pMaterial->getDescriptorSets().size();
         const size_t jointDataDescriptorSetCount = jointDescriptorSets.size();
         if ((commonDescriptorSetCount != framesInFlight) ||
@@ -253,7 +252,7 @@ namespace platypus
              (materialDescriptorSetCount != jointDataDescriptorSetCount))
         {
             Debug::log(
-                "@BatchPool::create_skinned_batch "
+                "@Batcher::createSkinnedBatch "
                 "Mismatch in descriptor set counts for " + std::to_string(framesInFlight) + " frames in flight! "
                 "Common descriptor set count: " + std::to_string(commonDescriptorSetCount) + " "
                 "Material descriptor set count: " + std::to_string(materialDescriptorSetCount) + " "
@@ -267,7 +266,7 @@ namespace platypus
         for (size_t i = 0; i < framesInFlight; ++i)
         {
             allDescriptorSets[i] = {
-                pMasterRenderer->getScene3DDataDescriptorSets()[i],
+                _masterRendererRef.getScene3DDataDescriptorSets()[i],
                 jointDescriptorSets[i],
                 pMaterial->getDescriptorSets()[i]
             };
@@ -290,28 +289,28 @@ namespace platypus
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
-        s_identifierBatchMapping[identifier] = s_batches.size();
-        s_batches.push_back(pBatch);
+        _identifierBatchMapping[identifier] = _batches.size();
+        _batches.push_back(pBatch);
         return identifier;
     }
 
-    ID_t BatchPool::create_terrain_batch(ID_t terrainMeshID, ID_t terrainMaterialID)
+    ID_t Batcher::createTerrainBatch(ID_t terrainMeshID, ID_t terrainMaterialID)
     {
         ID_t identifier = ID::hash(terrainMeshID, terrainMaterialID);
-        if (s_identifierBatchMapping.find(identifier) != s_identifierBatchMapping.end())
+        if (_identifierBatchMapping.find(identifier) != _identifierBatchMapping.end())
         {
             Debug::log(
-                "@BatchPool::create_terrain_batch "
+                "@Batcher::createTerrainBatch "
                 "Batch already exists for identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return NULL_ID;
         }
-        if (s_batchBufferMapping.find(identifier) != s_batchBufferMapping.end())
+        if (_batchBufferMapping.find(identifier) != _batchBufferMapping.end())
         {
             Debug::log(
-                "@BatchPool::create_terrain_batch "
+                "@Batcher::createTerrainBatch "
                 "Uniform buffer has already been created for batch identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -319,10 +318,8 @@ namespace platypus
             return NULL_ID;
         }
 
-        Application* pApp = Application::get_instance();
-        AssetManager* pAssetManager = pApp->getAssetManager();
-        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        DescriptorPool& descriptorPool = _masterRendererRef.getDescriptorPool();
 
         TerrainMesh* pMesh = (TerrainMesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_TERRAIN_MESH);
         TerrainMaterial* pMaterial = (TerrainMaterial*)pAssetManager->getAsset(terrainMaterialID, AssetType::ASSET_TYPE_TERRAIN_MATERIAL);
@@ -336,10 +333,10 @@ namespace platypus
         size_t uniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f) + sizeof(Vector2f)
         );
-        std::vector<char> uniformBufferData(uniformBufferElementSize * s_maxSkinnedBatchLength);
+        std::vector<char> uniformBufferData(uniformBufferElementSize * _maxSkinnedBatchLength);
         memset(uniformBufferData.data(), 0, uniformBufferData.size());
 
-        size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
+        size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
         std::vector<Buffer*> uniformBuffers(framesInFlight);
         std::vector<DescriptorSet> terrainDataDescriptorSets(framesInFlight);
 
@@ -348,7 +345,7 @@ namespace platypus
             Buffer* pJointUniformBuffer = new Buffer(
                 uniformBufferData.data(),
                 uniformBufferElementSize,
-                s_maxTerrainBatchLength,
+                _maxTerrainBatchLength,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
                 true
@@ -363,15 +360,15 @@ namespace platypus
             );
         }
 
-        s_batchBufferMapping[identifier] = s_allocatedBuffers.size();
-        s_allocatedBuffers.push_back(uniformBuffers);
+        _batchBufferMapping[identifier] = _allocatedBuffers.size();
+        _allocatedBuffers.push_back(uniformBuffers);
 
-        s_batchDescriptorSetMapping[identifier] = s_descriptorSets.size();
-        s_descriptorSets.push_back(terrainDataDescriptorSets);
+        _batchDescriptorSetMapping[identifier] = _descriptorSets.size();
+        _descriptorSets.push_back(terrainDataDescriptorSets);
 
         // NOTE: DANGER! Pretty fucked up...
         // TODO: Some better way to deal with these?
-        const size_t commonDescriptorSetCount = pMasterRenderer->getScene3DDataDescriptorSets().size();
+        const size_t commonDescriptorSetCount = _masterRendererRef.getScene3DDataDescriptorSets().size();
         const size_t materialDescriptorSetCount = pMaterial->getDescriptorSets().size();
         const size_t terrainDataDescriptorSetCount = terrainDataDescriptorSets.size();
         if ((commonDescriptorSetCount != framesInFlight) ||
@@ -394,7 +391,7 @@ namespace platypus
         for (size_t i = 0; i < framesInFlight; ++i)
         {
             allDescriptorSets[i] = {
-                pMasterRenderer->getScene3DDataDescriptorSets()[i],
+                _masterRendererRef.getScene3DDataDescriptorSets()[i],
                 terrainDataDescriptorSets[i],
                 pMaterial->getDescriptorSets()[i]
             };
@@ -417,31 +414,31 @@ namespace platypus
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
-        s_identifierBatchMapping[identifier] = s_batches.size();
-        s_batches.push_back(pBatch);
+        _identifierBatchMapping[identifier] = _batches.size();
+        _batches.push_back(pBatch);
         return identifier;
     }
 
-    void BatchPool::add_to_static_batch(ID_t identifier, const Matrix4f& transformationMatrix, size_t currentFrame)
+    void Batcher::addToStaticBatch(ID_t identifier, const Matrix4f& transformationMatrix, size_t currentFrame)
     {
-        std::unordered_map<ID_t, size_t>::iterator batchIndexIt = s_identifierBatchMapping.find(identifier);
-        if (batchIndexIt == s_identifierBatchMapping.end())
+        std::unordered_map<ID_t, size_t>::iterator batchIndexIt = _identifierBatchMapping.find(identifier);
+        if (batchIndexIt == _identifierBatchMapping.end())
         {
             Debug::log(
-                "@BatchPool::add_to_static_batch "
+                "@Batcher::addToStaticBatch "
                 "Failed to find batch using identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
-        Batch* pBatch = s_batches[batchIndexIt->second];
+        Batch* pBatch = _batches[batchIndexIt->second];
 
-        std::unordered_map<ID_t, size_t>::const_iterator instancedBufferIndexIt = s_batchBufferMapping.find(identifier);
-        if (instancedBufferIndexIt == s_batchBufferMapping.end())
+        std::unordered_map<ID_t, size_t>::const_iterator instancedBufferIndexIt = _batchBufferMapping.find(identifier);
+        if (instancedBufferIndexIt == _batchBufferMapping.end())
         {
             Debug::log(
-                "@BatchPool::add_to_static_batch "
+                "@Batcher::addToStaticBatch "
                 "Failed to find instanced buffer using identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -451,18 +448,18 @@ namespace platypus
 
         // TODO: Create new batch if this one is full!
         //  -> Need to have some kind of mapping where multiple batches can exist for the same identifier
-        if (pBatch->instanceCount >= s_maxStaticBatchLength)
+        if (pBatch->instanceCount >= _maxStaticBatchLength)
         {
             Debug::log(
-                "@BatchPool::add_to_static_batch "
-                "Batch is full. Maximum static batch length is " + std::to_string(s_maxStaticBatchLength),
+                "@Batcher::addToStaticBatch "
+                "Batch is full. Maximum static batch length is " + std::to_string(_maxStaticBatchLength),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
 
-        s_allocatedBuffers[instancedBufferIndexIt->second][currentFrame]->updateHost(
+        _allocatedBuffers[instancedBufferIndexIt->second][currentFrame]->updateHost(
             (void*)(&transformationMatrix),
             sizeof(Matrix4f),
             sizeof(Matrix4f) * pBatch->instanceCount
@@ -471,31 +468,31 @@ namespace platypus
         pBatch->repeatCount = 1;
     }
 
-    void BatchPool::add_to_skinned_batch(
+    void Batcher::addToSkinnedBatch(
         ID_t identifier,
         void* pJointData,
         size_t jointDataSize,
         size_t currentFrame
     )
     {
-        std::unordered_map<ID_t, size_t>::iterator batchIndexIt = s_identifierBatchMapping.find(identifier);
-        if (batchIndexIt == s_identifierBatchMapping.end())
+        std::unordered_map<ID_t, size_t>::iterator batchIndexIt = _identifierBatchMapping.find(identifier);
+        if (batchIndexIt == _identifierBatchMapping.end())
         {
             Debug::log(
-                "@BatchPool::add_to_skinned_batch "
+                "@Batcher::addToSkinnedBatch "
                 "Failed to find batch using identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
-        Batch* pBatch = s_batches[batchIndexIt->second];
+        Batch* pBatch = _batches[batchIndexIt->second];
 
-        std::unordered_map<ID_t, size_t>::const_iterator jointBufferIndexIt = s_batchBufferMapping.find(identifier);
-        if (jointBufferIndexIt == s_batchBufferMapping.end())
+        std::unordered_map<ID_t, size_t>::const_iterator jointBufferIndexIt = _batchBufferMapping.find(identifier);
+        if (jointBufferIndexIt == _batchBufferMapping.end())
         {
             Debug::log(
-                "@BatchPool::add_to_skinned_batch "
+                "@Batcher::addToSkinnedBatch "
                 "Failed to find joint uniform buffer using identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -505,18 +502,18 @@ namespace platypus
 
         // TODO: Create new batch if this one is full!
         //  -> Need to have some kind of mapping where multiple batches can exist for the same identifier
-        if (pBatch->repeatCount >= s_maxSkinnedBatchLength)
+        if (pBatch->repeatCount >= _maxSkinnedBatchLength)
         {
             Debug::log(
-                "@BatchPool::add_to_skinned_batch "
-                "Batch is full. Maximum skinned batch length is " + std::to_string(s_maxSkinnedBatchLength),
+                "@Batcher::addToSkinnedBatch "
+                "Batch is full. Maximum skinned batch length is " + std::to_string(_maxSkinnedBatchLength),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
 
-        Buffer* pJointBuffer = s_allocatedBuffers[jointBufferIndexIt->second][currentFrame];
+        Buffer* pJointBuffer = _allocatedBuffers[jointBufferIndexIt->second][currentFrame];
         uint32_t jointBufferOffset = pBatch->repeatCount * pJointBuffer->getDataElemSize();
         pJointBuffer->updateHost(
             pJointData,
@@ -527,7 +524,7 @@ namespace platypus
         ++pBatch->repeatCount;
     }
 
-    void BatchPool::add_to_terrain_batch(
+    void Batcher::addToTerrainBatch(
         ID_t identifier,
         const Matrix4f& transformationMatrix,
         float tileSize,
@@ -535,24 +532,24 @@ namespace platypus
         size_t currentFrame
     )
     {
-        std::unordered_map<ID_t, size_t>::iterator batchIndexIt = s_identifierBatchMapping.find(identifier);
-        if (batchIndexIt == s_identifierBatchMapping.end())
+        std::unordered_map<ID_t, size_t>::iterator batchIndexIt = _identifierBatchMapping.find(identifier);
+        if (batchIndexIt == _identifierBatchMapping.end())
         {
             Debug::log(
-                "@BatchPool::add_to_terrain_batch "
+                "@Batcher::addToTerrainBatch "
                 "Failed to find batch using identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
-        Batch* pBatch = s_batches[batchIndexIt->second];
+        Batch* pBatch = _batches[batchIndexIt->second];
 
-        std::unordered_map<ID_t, size_t>::const_iterator terrainBufferIndexIt = s_batchBufferMapping.find(identifier);
-        if (terrainBufferIndexIt == s_batchBufferMapping.end())
+        std::unordered_map<ID_t, size_t>::const_iterator terrainBufferIndexIt = _batchBufferMapping.find(identifier);
+        if (terrainBufferIndexIt == _batchBufferMapping.end())
         {
             Debug::log(
-                "@BatchPool::add_to_terrain_batch "
+                "@Batcher::addToTerrainBatch "
                 "Failed to find terrain uniform buffer using identifier: " + std::to_string(identifier),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -562,11 +559,11 @@ namespace platypus
 
         // TODO: Create new batch if this one is full!
         //  -> Need to have some kind of mapping where multiple batches can exist for the same identifier
-        if (pBatch->repeatCount >= s_maxTerrainBatchLength)
+        if (pBatch->repeatCount >= _maxTerrainBatchLength)
         {
             Debug::log(
-                "@BatchPool::add_to_terrain_batch "
-                "Batch is full. Maximum skinned batch length is " + std::to_string(s_maxSkinnedBatchLength),
+                "@Batcher::addToTerrainBatch "
+                "Batch is full. Maximum skinned batch length is " + std::to_string(_maxSkinnedBatchLength),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -580,7 +577,7 @@ namespace platypus
         float fVerticesPerRow = verticesPerRow;
         memcpy(terrainData.data() + sizeof(Matrix4f) + sizeof(float), &fVerticesPerRow, sizeof(float));
 
-        Buffer* pTerrainBuffer = s_allocatedBuffers[terrainBufferIndexIt->second][currentFrame];
+        Buffer* pTerrainBuffer = _allocatedBuffers[terrainBufferIndexIt->second][currentFrame];
         uint32_t terrainBufferOffset = pBatch->repeatCount * pTerrainBuffer->getDataElemSize();
         pTerrainBuffer->updateHost(
             terrainData.data(),
@@ -591,19 +588,19 @@ namespace platypus
         ++pBatch->repeatCount;
     }
 
-    void BatchPool::update_device_side_buffers(size_t currentFrame)
+    void Batcher::updateDeviceSideBuffers(size_t currentFrame)
     {
         std::unordered_map<ID_t, size_t>::const_iterator it;
-        for (it = s_batchBufferMapping.begin(); it != s_batchBufferMapping.end(); ++it)
+        for (it = _batchBufferMapping.begin(); it != _batchBufferMapping.end(); ++it)
         {
             // TODO: Make safer!
             const ID_t batchID = it->first;
-            const Batch* pBatch = s_batches[s_identifierBatchMapping[batchID]];
+            const Batch* pBatch = _batches[_identifierBatchMapping[batchID]];
             if (pBatch->instanceCount > 0 || pBatch->repeatCount > 0)
             {
                 // TODO: Make safer!
-                const size_t bufferIndex = s_batchBufferMapping[batchID];
-                Buffer* pBuffer = s_allocatedBuffers[bufferIndex][currentFrame];
+                const size_t bufferIndex = _batchBufferMapping[batchID];
+                Buffer* pBuffer = _allocatedBuffers[bufferIndex][currentFrame];
                 pBuffer->updateDevice(
                     pBuffer->accessData(),
                     pBuffer->getTotalSize(),
@@ -613,56 +610,56 @@ namespace platypus
         }
     }
 
-    void BatchPool::reset_for_next_frame()
+    void Batcher::resetForNextFrame()
     {
-        for (Batch* pBatch : s_batches)
+        for (Batch* pBatch : _batches)
         {
             pBatch->repeatCount = 0;
             pBatch->instanceCount = 0;
         }
     }
 
-    void BatchPool::free_batches()
+    void Batcher::freeBatches()
     {
         // Free batches themselves
-        for (Batch* pBatch : s_batches)
+        for (Batch* pBatch : _batches)
             delete pBatch;
 
-        s_batches.clear();
-        s_identifierBatchMapping.clear();
+        _batches.clear();
+        _identifierBatchMapping.clear();
 
         // Free descriptor sets
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-        for (std::vector<DescriptorSet>& descriptorSets : s_descriptorSets)
+        for (std::vector<DescriptorSet>& descriptorSets : _descriptorSets)
             descriptorPool.freeDescriptorSets(descriptorSets);
 
-        s_descriptorSets.clear();
-        s_batchDescriptorSetMapping.clear();
+        _descriptorSets.clear();
+        _batchDescriptorSetMapping.clear();
 
         // Free buffers
-        for (std::vector<Buffer*>& buffers : s_allocatedBuffers)
+        for (std::vector<Buffer*>& buffers : _allocatedBuffers)
         {
             for (Buffer* pBuffer : buffers)
                 delete pBuffer;
 
             buffers.clear();
         }
-        s_allocatedBuffers.clear();
-        s_batchBufferMapping.clear();
+        _allocatedBuffers.clear();
+        _batchBufferMapping.clear();
     }
 
-    const std::vector<Batch*>& BatchPool::get_batches()
+    const std::vector<Batch*>& Batcher::getBatches() const
     {
-        return s_batches;
+        return _batches;
     }
 
-    const DescriptorSetLayout& BatchPool::get_joint_descriptor_set_layout()
+    const DescriptorSetLayout& Batcher::get_joint_descriptor_set_layout()
     {
         return s_jointDescriptorSetLayout;
     }
 
-    const DescriptorSetLayout& BatchPool::get_terrain_descriptor_set_layout()
+    const DescriptorSetLayout& Batcher::get_terrain_descriptor_set_layout()
     {
         return s_terrainDescriptorSetLayout;
     }
