@@ -34,6 +34,14 @@ namespace platypus
         EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webglContext;
 
         // key = vaoID, value = bufferIDs of that vao
+        //
+        // EXPLANATION:
+        //      When binding vertex buffers a VAO is searched that includes all the vertex buffers.
+        //          -> If VAO is found, this gets bound.
+        //          -> If VAO not found, a new one gets created
+        //      When vertex buffer gets deleted, it gets removed from the VAO mapping. When all the VAO's
+        //      vertex buffers gets deleted, the VAO is deleted (through Buffer's destructor).
+        //      NOTE: Possible issue, if trying to use the VAO after a single vbo gets deleted -> the VAO becomes invalid!
         std::unordered_map<uint32_t, std::set<uint32_t>> vaoBufferMapping;
 
         // Some renderer's have their own "complementary buffers" like per instance buffers

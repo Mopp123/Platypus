@@ -208,7 +208,7 @@ namespace platypus
             // Scissor isn't used for now so whole window is included
         }
 
-
+        // Creates VAOs for inputted vertexBuffers using inputted vertexBufferLayouts.
         static void create_vao(
             const OpenglShaderProgram* pShaderProgram,
             const std::vector<VertexBufferLayout>& vertexBufferLayouts,
@@ -321,6 +321,8 @@ namespace platypus
         }
 
 
+        // Returns a VAO that includes all the inputted vertex buffers if such VAO exists.
+        // Returns 0 if no VAO found.
         static uint32_t get_common_vao(const std::vector<const Buffer*>& vertexBuffers)
         {
             std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_impl()->vaoBufferMapping;
