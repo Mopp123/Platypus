@@ -20,9 +20,15 @@ namespace platypus
     {
     private:
         ID_t _blendmapTextureID = NULL_ID;
-        ID_t _channelTextures[PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS];
+        ID_t _diffuseChannelTextureIDs[PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS];
+        ID_t _specularChannelTextureIDs[PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS];
+
+        float _specularStrength = 1.0f;
+        float _shininess = 1.0f;
+        bool _shadeless = false;
 
         TerrainMaterialPipelineData* _pPipelineData = nullptr;
+        std::vector<Buffer*> _uniformBuffers;
         // NOTE: This contains ALL descriptor set layouts for pipeline!
         // Currently the last one is the actual material's layout!
         DescriptorSetLayout _descriptorSetLayout;
@@ -31,8 +37,10 @@ namespace platypus
     public:
         TerrainMaterial(
             ID_t blendmapTextureID,
-            ID_t* channelTextureIDs,
-            size_t channelCount
+            ID_t* diffuseChannelTextureIDs,
+            size_t diffuseChannelCount,
+            ID_t* specularChannelTextureIDs,
+            size_t specularChannelCount
         );
         ~TerrainMaterial();
 
@@ -46,7 +54,8 @@ namespace platypus
         void freeShaderResources();
 
         Texture* getBlendmapTexture() const;
-        Texture* getChannelTexture(size_t channel) const;
+        Texture* getDiffuseChannelTexture(size_t channel) const;
+        Texture* getSpecularChannelTexture(size_t channel) const;
 
         inline const TerrainMaterialPipelineData* getPipelineData() { return _pPipelineData; }
         inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }

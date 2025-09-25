@@ -369,12 +369,12 @@ namespace platypus
             return;
         }
 
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
         for (Buffer* pBuffer : _uniformBuffers)
             delete pBuffer;
 
         _uniformBuffers.clear();
 
+        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
         descriptorPool.freeDescriptorSets(_descriptorSets);
         _descriptorSets.clear();
     }

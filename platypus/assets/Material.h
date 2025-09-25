@@ -25,7 +25,6 @@ namespace platypus
 
         float _specularStrength = 1.0f;
         float _shininess = 1.0f;
-
         bool _shadeless = false;
 
         MaterialPipelineData* _pPipelineData = nullptr;

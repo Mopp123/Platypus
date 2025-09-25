@@ -19,6 +19,10 @@ namespace platypus
         Image* pBlackImage = createImage(blackPixels, 1, 1, 4);
         _persistentAssets[pBlackImage->getID()] = pBlackImage;
 
+        PE_ubyte zeroPixels[4] = { 0, 0, 0, 0 };
+        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4);
+        _persistentAssets[pZeroImage->getID()] = pZeroImage;
+
         TextureSampler defaultTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -35,8 +39,14 @@ namespace platypus
             ImageFormat::R8G8B8A8_SRGB,
             defaultTextureSampler
         );
+        _pZeroTexture = createTexture(
+            pZeroImage->getID(),
+            ImageFormat::R8G8B8A8_SRGB,
+            defaultTextureSampler
+        );
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
+        _persistentAssets[_pZeroTexture->getID()] = _pZeroTexture;
     }
 
     AssetManager::~AssetManager()
@@ -241,14 +251,25 @@ namespace platypus
 
     TerrainMaterial* AssetManager::createTerrainMaterial(
         ID_t blendmapTextureID,
-        std::vector<ID_t> channelTextures
+        std::vector<ID_t> diffuseChannelTextures,
+        std::vector<ID_t> specularChannelTextures
     )
     {
-        if (channelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        if (diffuseChannelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
                 "@AssetManager::createTerrainMaterial "
-                "Too many channel textures provided(" + std::to_string(channelTextures.size()) + ") "
+                "Too many diffuse channel textures provided(" + std::to_string(diffuseChannelTextures.size()) + ") "
+                "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if (specularChannelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "@AssetManager::createTerrainMaterial "
+                "Too many specular channel textures provided(" + std::to_string(specularChannelTextures.size()) + ") "
                 "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -259,20 +280,45 @@ namespace platypus
         if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, blendmapTextureID, AssetType::ASSET_TYPE_TEXTURE))
             useBlendmapTextureID = _pBlackTexture->getID();
 
-        std::vector<ID_t> useChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
-        for (size_t textureChannel = 0; textureChannel < channelTextures.size(); ++textureChannel)
+        ID_t defaultTextureID = _pBlackTexture->getID();
+        // Validate diffuse and specular textures. Use default(black texture) if invalid or not given.
+        std::vector<ID_t> useDiffuseChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
+        std::vector<ID_t> useSpecularChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
+        for (size_t textureChannel = 0; textureChannel < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++textureChannel)
         {
-            ID_t channelTextureID = channelTextures[textureChannel];
-            if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, channelTextureID, AssetType::ASSET_TYPE_TEXTURE))
-                channelTextureID = _pBlackTexture->getID();
+            if (textureChannel >= diffuseChannelTextures.size())
+            {
+                useDiffuseChannelTextureIDs[textureChannel] = defaultTextureID;
+            }
+            else
+            {
+                ID_t diffuseTextureID = diffuseChannelTextures[textureChannel];
+                if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, diffuseTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                    diffuseTextureID = defaultTextureID;
 
-            useChannelTextureIDs[textureChannel] = channelTextureID;
+                useDiffuseChannelTextureIDs[textureChannel] = diffuseTextureID;
+            }
+
+            if (textureChannel >= specularChannelTextures.size())
+            {
+                useSpecularChannelTextureIDs[textureChannel] = defaultTextureID;
+            }
+            else
+            {
+                ID_t specularTextureID = specularChannelTextures[textureChannel];
+                if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, specularTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                    specularTextureID = defaultTextureID;
+
+                useSpecularChannelTextureIDs[textureChannel] = specularTextureID;
+            }
         }
 
         TerrainMaterial* pTerrainMaterial = new TerrainMaterial(
             useBlendmapTextureID,
-            useChannelTextureIDs.data(),
-            useChannelTextureIDs.size()
+            useDiffuseChannelTextureIDs.data(),
+            useDiffuseChannelTextureIDs.size(),
+            useSpecularChannelTextureIDs.data(),
+            useSpecularChannelTextureIDs.size()
         );
         _assets[pTerrainMaterial->getID()] = pTerrainMaterial;
         return pTerrainMaterial;

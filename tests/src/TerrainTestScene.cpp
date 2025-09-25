@@ -51,40 +51,56 @@ void TerrainTestScene::init()
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
-    Texture* pChannel0Texture = pAssetManager->loadTexture(
+    Texture* pDiffuseChannel0Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/ground_dry2_d.png",
         texImageFormat,
         textureSampler
     );
-    Texture* pChannel1Texture = pAssetManager->loadTexture(
+    Texture* pDiffuseChannel1Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/grass_ground_d.png",
         texImageFormat,
         textureSampler
     );
-    Texture* pChannel2Texture = pAssetManager->loadTexture(
+    Texture* pDiffuseChannel2Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/grass_rocky_d.png",
         texImageFormat,
         textureSampler
     );
-    Texture* pChannel3Texture = pAssetManager->loadTexture(
+    Texture* pDiffuseChannel3Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/ground_mud_d.png",
         texImageFormat,
         textureSampler
     );
-    Texture* pChannel4Texture = pAssetManager->loadTexture(
+    Texture* pDiffuseChannel4Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/jungle_mntn2_d.png",
         texImageFormat,
         textureSampler
     );
+    Texture* pSpecularChannel4Texture = pAssetManager->loadTexture(
+        "assets/textures/terrain/jungle_mntn2_s.png",
+        texImageFormat,
+        textureSampler
+    );
+
+    ID_t zeroTextureID = pAssetManager->getZeroTexture()->getID();
+    ID_t blackTextureID = pAssetManager->getBlackTexture()->getID();
+    ID_t whiteTextureID = pAssetManager->getWhiteTexture()->getID();
 
     TerrainMaterial* pTerrainMaterial = pAssetManager->createTerrainMaterial(
         pBlendmapTexture->getID(),
         {
-            pChannel0Texture->getID(),
-            pChannel1Texture->getID(),
-            pChannel2Texture->getID(),
-            pChannel3Texture->getID(),
-            pChannel4Texture->getID(),
+            pDiffuseChannel0Texture->getID(),
+            pDiffuseChannel1Texture->getID(),
+            pDiffuseChannel2Texture->getID(),
+            pDiffuseChannel3Texture->getID(),
+            pDiffuseChannel4Texture->getID(),
+        },
+        {
+            blackTextureID,
+            blackTextureID,
+            blackTextureID,
+            blackTextureID,
+            pSpecularChannel4Texture->getID()
         }
     );
 

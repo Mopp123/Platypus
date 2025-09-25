@@ -13,15 +13,21 @@ layout(location = 8) in float var_verticesPerRow;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 layout(set = 2, binding = 0) uniform sampler2D blendmapTexture;
-layout(set = 2, binding = 1) uniform sampler2D channel0Texture;
-layout(set = 2, binding = 2) uniform sampler2D channel1Texture;
-layout(set = 2, binding = 3) uniform sampler2D channel2Texture;
-layout(set = 2, binding = 4) uniform sampler2D channel3Texture;
-layout(set = 2, binding = 5) uniform sampler2D channel4Texture;
+layout(set = 2, binding = 1) uniform sampler2D diffuseTextureChannel0;
+layout(set = 2, binding = 2) uniform sampler2D diffuseTextureChannel1;
+layout(set = 2, binding = 3) uniform sampler2D diffuseTextureChannel2;
+layout(set = 2, binding = 4) uniform sampler2D diffuseTextureChannel3;
+layout(set = 2, binding = 5) uniform sampler2D diffuseTextureChannel4;
+
+layout(set = 2, binding = 6) uniform sampler2D specularTextureChannel0;
+layout(set = 2, binding = 7) uniform sampler2D specularTextureChannel1;
+layout(set = 2, binding = 8) uniform sampler2D specularTextureChannel2;
+layout(set = 2, binding = 9) uniform sampler2D specularTextureChannel3;
+layout(set = 2, binding = 10) uniform sampler2D specularTextureChannel4;
+
 
 // NOTE: Not sure if need to pass that kind of material stuff here just yet
-/*
-layout(set = 1, binding = 2) uniform MaterialData
+layout(set = 2, binding = 11) uniform MaterialData
 {
     vec4 data;
     // x = specular strength
@@ -29,7 +35,6 @@ layout(set = 1, binding = 2) uniform MaterialData
     // z = is shadeless
     // w = dunno...
 } materialData;
-*/
 
 
 layout(location = 0) out vec4 fragColor;
@@ -38,17 +43,29 @@ void main()
 {
     vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
     vec4 blendmapColor = texture(blendmapTexture, var_texCoord);
-    float blackAmount = max(1.0 - blendmapColor.r - blendmapColor.g - blendmapColor.b - blendmapColor.a, 0.0);
+    float transparency = 1.0 - blendmapColor.a;
+    float blackAmount = max(1.0 - blendmapColor.r - blendmapColor.g - blendmapColor.b - transparency, 0.0);
 
-    vec4 blackChannelColor =    texture(channel0Texture, tiledCoord) * blackAmount;
-    vec4 redChannelColor =      texture(channel1Texture, tiledCoord) * blendmapColor.r;
+    vec4 diffuseChannel0Color = texture(diffuseTextureChannel0, tiledCoord) * blackAmount;
+    vec4 diffuseChannel1Color = texture(diffuseTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 diffuseChannel2Color = texture(diffuseTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 diffuseChannel3Color = texture(diffuseTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 diffuseChannel4Color = texture(diffuseTextureChannel4, tiledCoord) * transparency;
 
-    vec4 greenChannelColor =    texture(channel2Texture, tiledCoord) * blendmapColor.g;
-    vec4 blueChannelColor =     texture(channel3Texture, tiledCoord) * blendmapColor.b;
-    vec4 alphaChannelColor =    texture(channel4Texture, tiledCoord) * blendmapColor.a;
+    vec4 specularChannel0Color = texture(specularTextureChannel0, tiledCoord) * blackAmount;
+    vec4 specularChannel1Color = texture(specularTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 specularChannel2Color = texture(specularTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 specularChannel3Color = texture(specularTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 specularChannel4Color = texture(specularTextureChannel4, tiledCoord) * transparency;
 
-    vec4 totalTextureColor = blackChannelColor + redChannelColor + greenChannelColor + blueChannelColor + alphaChannelColor;
+    vec4 totalDiffuseColor = diffuseChannel0Color + diffuseChannel1Color + diffuseChannel2Color + diffuseChannel3Color + diffuseChannel4Color;
+    vec4 totalSpecularColor = specularChannel0Color + specularChannel1Color + specularChannel2Color + specularChannel3Color + specularChannel4Color;
 
+    //float specularStrength = materialData.data.x;
+    //float shininess = materialData.data.y;
+    float specularStrength = 0.75;
+    float shininess = 32.0;
+    float isShadeless = materialData.data.z;
 
     vec3 unitLightDir = normalize(var_lightDir.xyz);
     vec3 toLight = -unitLightDir;
@@ -57,12 +74,13 @@ void main()
     vec4 lightColor = vec4(var_lightColor.rgb, 1.0);
 
     float diffuseFactor = max(dot(toLight, unitNormal), 0.0);
-    vec4 lightDiffuseColor = diffuseFactor * lightColor;
 
-    //vec3 reflectedLight = normalize(reflect(unitLightDir, unitNormal));
     vec3 halfWay = normalize(toLight + toCamera);
+    float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
 
-    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor) * totalTextureColor;
+    vec4 finalAmbientColor = var_ambientLightColor * totalDiffuseColor;
+    vec4 finalDiffuseColor = lightColor * diffuseFactor * totalDiffuseColor;
+    vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
 
-    fragColor = finalColor;
+    fragColor = finalAmbientColor + finalDiffuseColor + finalSpecularColor;
 }

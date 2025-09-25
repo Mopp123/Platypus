@@ -8,45 +8,81 @@
 
 namespace platypus
 {
-    static std::vector<DescriptorSetLayoutBinding> create_descriptor_set_layout_bindings(uint32_t textureChannels)
+    static std::vector<DescriptorSetLayoutBinding> create_descriptor_set_layout_bindings()
     {
         int uniformLocationBegin = 8; // NOTE: Might be wrong atm for web
         std::vector<DescriptorSetLayoutBinding> layoutBindings;
-        for (uint32_t i = 0; i < textureChannels + 1; ++i) // +1 since also the blendmap
+        const int diffuseChannelCount = PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS;
+        const int specularChannelCount = PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS;
+        const int totalTextureBindings = diffuseChannelCount + specularChannelCount + 1; // +1 since also the blendmap
+        for (int i = 0; i < totalTextureBindings; ++i)
         {
             layoutBindings.push_back(
                 {
-                    i,
+                    (uint32_t)i,
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { uniformLocationBegin + (int)i } }
+                    { { uniformLocationBegin + i } }
                 }
             );
         }
+
+        layoutBindings.push_back(
+            {
+                (uint32_t)totalTextureBindings,
+                1,
+                DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                { { uniformLocationBegin + totalTextureBindings , ShaderDataType::Float4 } }
+            }
+        );
         return layoutBindings;
     }
 
 
     TerrainMaterial::TerrainMaterial(
         ID_t blendmapTextureID,
-        ID_t* channelTextureIDs,
-        size_t channelCount
+        ID_t* diffuseChannelTextureIDs,
+        size_t diffuseChannelCount,
+        ID_t* specularChannelTextureIDs,
+        size_t specularChannelCount
     ) :
         Asset(AssetType::ASSET_TYPE_TERRAIN_MATERIAL),
         _blendmapTextureID(blendmapTextureID)
     {
-        if (channelCount != PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        if (diffuseChannelCount != PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
-                "@TerrainMaterial::TerrainMaterial " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS) + " required! "
-                "Given channels: " + std::to_string(channelCount),
+                "@TerrainMaterial::TerrainMaterial " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS) + " "
+                "required for diffuse channels! "
+                "Given channels: " + std::to_string(diffuseChannelCount),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
-        _descriptorSetLayout = { create_descriptor_set_layout_bindings(channelCount) };
-        memcpy(_channelTextures, channelTextureIDs, sizeof(ID_t) * PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
+        if (specularChannelCount != PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "@TerrainMaterial::TerrainMaterial " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS) + " "
+                "required for specular channels! "
+                "Given channels: " + std::to_string(specularChannelCount),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        _descriptorSetLayout = { create_descriptor_set_layout_bindings() };
+        memcpy(
+            _diffuseChannelTextureIDs,
+            diffuseChannelTextureIDs,
+            sizeof(ID_t) * PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS
+        );
+        memcpy(
+            _specularChannelTextureIDs,
+            specularChannelTextureIDs,
+            sizeof(ID_t) * PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS
+        );
     }
 
     TerrainMaterial::~TerrainMaterial()
@@ -154,17 +190,38 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
+
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-
-        std::vector<DescriptorSetComponent> descriptorSetComponents;
-        descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getBlendmapTexture() });
-        for (uint32_t i = 0; i < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++i)
-            descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getChannelTexture(i) });
-
         size_t maxFramesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
+
+        Vector4f materialProperties(
+            _specularStrength,
+            _shininess,
+            _shadeless,
+            0
+        );
+
         for (size_t i = 0; i < maxFramesInFlight; ++i)
         {
+            std::vector<DescriptorSetComponent> descriptorSetComponents;
+            descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getBlendmapTexture() });
+            for (uint32_t j = 0; j < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++j)
+                descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getDiffuseChannelTexture(j) });
+            for (uint32_t j = 0; j < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++j)
+                descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getSpecularChannelTexture(j) });
+
+            Buffer* pUniformBuffer = new Buffer(
+                &materialProperties,
+                sizeof(Vector4f),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            _uniformBuffers.push_back(pUniformBuffer);
+            descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pUniformBuffer });
+
             _descriptorSets.push_back(
                 descriptorPool.createDescriptorSet(
                     &_descriptorSetLayout,
@@ -192,6 +249,11 @@ namespace platypus
             return;
         }
 
+        for (Buffer* pBuffer : _uniformBuffers)
+            delete pBuffer;
+
+        _uniformBuffers.clear();
+
         DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
         descriptorPool.freeDescriptorSets(_descriptorSets);
         _descriptorSets.clear();
@@ -206,12 +268,12 @@ namespace platypus
         );
     }
 
-    Texture* TerrainMaterial::getChannelTexture(size_t channel) const
+    Texture* TerrainMaterial::getDiffuseChannelTexture(size_t channel) const
     {
         if (channel >= PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
-                "@TerrainMaterial::getChannelTexture "
+                "@TerrainMaterial::getDiffuseChannelTexture "
                 "Invalid channel: " + std::to_string(channel) + " "
                 "Available channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
                 Debug::MessageType::PLATYPUS_ERROR
@@ -221,7 +283,27 @@ namespace platypus
         }
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         return (Texture*)pAssetManager->getAsset(
-            _channelTextures[channel],
+            _diffuseChannelTextureIDs[channel],
+            AssetType::ASSET_TYPE_TEXTURE
+        );
+    }
+
+    Texture* TerrainMaterial::getSpecularChannelTexture(size_t channel) const
+    {
+        if (channel >= PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "@TerrainMaterial::getSpecularChannelTexture "
+                "Invalid channel: " + std::to_string(channel) + " "
+                "Available channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        return (Texture*)pAssetManager->getAsset(
+            _specularChannelTextureIDs[channel],
             AssetType::ASSET_TYPE_TEXTURE
         );
     }

@@ -24,6 +24,7 @@ namespace platypus
 
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
+        Texture* _pZeroTexture = nullptr;
 
     public:
         AssetManager();
@@ -54,7 +55,8 @@ namespace platypus
         );
         TerrainMaterial* createTerrainMaterial(
             ID_t blendmapTextureID,
-            std::vector<ID_t> channelTextures
+            std::vector<ID_t> diffuseChannelTextures,
+            std::vector<ID_t> specularChannelTextures
         );
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,
@@ -82,6 +84,7 @@ namespace platypus
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
+        inline Texture* getZeroTexture() const { return _pZeroTexture; }
 
     private:
         bool validateAsset(
