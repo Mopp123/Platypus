@@ -131,7 +131,8 @@ namespace platypus
             nullptr, // push constants data
             ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
             1, // repeat count
-            0 // instance count
+            0, // instance count
+            materialID // materialAssetID
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
@@ -213,7 +214,8 @@ namespace platypus
             nullptr, // push constants data
             ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
             0, // repeat count
-            0 // instance count
+            0, // instance count
+            materialID // materialAssetID
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
@@ -251,11 +253,13 @@ namespace platypus
             _maxTerrainBatchLength,
             {
                 {
+                    ShaderResourceType::ANY,
                     dynamicUniformBufferElementSize,
                     s_terrainDescriptorSetLayout,
                     { }
                 },
                 {
+                    ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
                     pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
@@ -286,7 +290,7 @@ namespace platypus
         );
 
         Batch* pBatch = new Batch{
-            BatchType::SKINNED,
+            BatchType::TERRAIN,
             pPipeline,
             useDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
@@ -298,7 +302,8 @@ namespace platypus
             nullptr, // push constants data
             ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
             0, // repeat count
-            0 // instance count
+            0, // instance count,
+            terrainMaterialID // materialAssetID
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
@@ -410,12 +415,14 @@ namespace platypus
             terrainDataSize,
             terrainBufferOffset
         );
+
         pBatch->instanceCount = 1;
         ++pBatch->repeatCount;
     }
 
     void Batcher::updateDeviceSideBuffers(size_t currentFrame)
     {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         std::unordered_map<ID_t, size_t>::const_iterator it;
         for (it = _batchShaderResourceMapping.begin(); it != _batchShaderResourceMapping.end(); ++it)
         {
@@ -429,11 +436,45 @@ namespace platypus
                 for (BatchShaderResource& shaderResource : _allocatedShaderResources[resourceIndex])
                 {
                     Buffer* pBuffer = shaderResource.buffer[currentFrame];
-                    pBuffer->updateDevice(
-                        pBuffer->accessData(),
-                        pBuffer->getTotalSize(),
-                        0
-                    );
+                    // Update material properties if resource was marked as Material
+                    // TODO: Make this less fucked up
+                    if (shaderResource.type == ShaderResourceType::MATERIAL && pBatch->materialAssetID != NULL_ID)
+                    {
+                        Vector4f materialProperties(0, 0, 0, 0);
+                        if (pBatch->type == BatchType::TERRAIN)
+                        {
+                            TerrainMaterial* pTerrainMaterial = (TerrainMaterial*)pAssetManager->getAsset(
+                                pBatch->materialAssetID,
+                                AssetType::ASSET_TYPE_TERRAIN_MATERIAL
+                            );
+                            materialProperties.x = pTerrainMaterial->getSpecularStrength();
+                            materialProperties.y = pTerrainMaterial->getShininess();
+                            materialProperties.z = pTerrainMaterial->isShadeless();
+                        }
+                        else
+                        {
+                            Material* pMaterial = (Material*)pAssetManager->getAsset(
+                                pBatch->materialAssetID,
+                                AssetType::ASSET_TYPE_MATERIAL
+                            );
+                            materialProperties.x = pMaterial->getSpecularStrength();
+                            materialProperties.y = pMaterial->getShininess();
+                            materialProperties.z = pMaterial->isShadeless();
+                        }
+                        pBuffer->updateDeviceAndHost(
+                            &materialProperties,
+                            sizeof(Vector4f),
+                            0
+                        );
+                    }
+                    else
+                    {
+                        pBuffer->updateDevice(
+                            pBuffer->accessData(),
+                            pBuffer->getTotalSize(),
+                            0
+                        );
+                    }
                 }
             }
         }
@@ -511,43 +552,6 @@ namespace platypus
         addToAllocatedShaderResources(batchID, outBuffers, {});
     }
 
-    /*
-    void Batcher::createBatchShaderResources(
-        ID_t batchID,
-        size_t bufferElementSize,
-        size_t maxBatchLength,
-        size_t framesInFlight,
-        const DescriptorSetLayout& descriptorSetLayout,
-        std::vector<Buffer*>& outUniformBuffers,
-        std::vector<DescriptorSet>& outDescriptorSets
-    )
-    {
-        std::vector<char> bufferData(bufferElementSize * maxBatchLength);
-        memset(bufferData.data(), 0, bufferData.size());
-
-        for (size_t i = 0; i < framesInFlight; ++i)
-        {
-            Buffer* pUniformBuffer = new Buffer(
-                bufferData.data(),
-                bufferElementSize,
-                maxBatchLength,
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            outUniformBuffers[i] = pUniformBuffer;
-
-            outDescriptorSets[i] = _descriptorPoolRef.createDescriptorSet(
-                &descriptorSetLayout,
-                {
-                    { DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, pUniformBuffer }
-                }
-            );
-        }
-        addToAllocatedShaderResources(batchID, outUniformBuffers, outDescriptorSets);
-    }
-    */
-
     void Batcher::createBatchShaderResource(
         ID_t batchID,
         size_t bufferElementSize,
@@ -619,6 +623,7 @@ namespace platypus
         {
             const ShaderResourceLayout& resourceLayout = resourceLayouts[resourceIndex];
             BatchShaderResource& outResource = outResources[resourceIndex];
+            outResource.type = resourceLayout.type;
             outResource.buffer.resize(framesInFlight);
             outResource.descriptorSet.resize(framesInFlight);
             for (size_t frameIndex = 0; frameIndex < framesInFlight; ++frameIndex)
@@ -676,8 +681,8 @@ namespace platypus
                     descriptorSetComponents
                 );
             }
-            addToAllocatedShaderResources(batchID, outResource.buffer, outResource.descriptorSet);
         }
+        addToAllocatedShaderResources(batchID, outResources);
     }
 
     void Batcher::combineUsedDescriptorSets(
@@ -799,6 +804,24 @@ namespace platypus
 
     void Batcher::addToAllocatedShaderResources(
         ID_t batchID,
+        std::vector<BatchShaderResource>& shaderResources
+    )
+    {
+        if (_batchShaderResourceMapping.find(batchID) == _batchShaderResourceMapping.end())
+        {
+            _batchShaderResourceMapping[batchID] = _allocatedShaderResources.size();
+            _allocatedShaderResources.push_back(shaderResources);
+        }
+        else
+        {
+            std::vector<BatchShaderResource>& existingResources = _allocatedShaderResources[_batchShaderResourceMapping[batchID]];
+            existingResources.insert(existingResources.end(), shaderResources.begin(), shaderResources.end());
+        }
+    }
+
+    // TODO: delete below after fixing static and skinned batches
+    void Batcher::addToAllocatedShaderResources(
+        ID_t batchID,
         const std::vector<Buffer*>& buffers,
         const std::vector<DescriptorSet> descriptorSets
     )
@@ -806,11 +829,11 @@ namespace platypus
         if (_batchShaderResourceMapping.find(batchID) == _batchShaderResourceMapping.end())
         {
             _batchShaderResourceMapping[batchID] = _allocatedShaderResources.size();
-            _allocatedShaderResources.push_back({ { buffers, descriptorSets } });
+            _allocatedShaderResources.push_back({ { ShaderResourceType::ANY, buffers, descriptorSets } });
         }
         else
         {
-            _allocatedShaderResources[_batchShaderResourceMapping[batchID]].push_back({ buffers, descriptorSets });
+            _allocatedShaderResources[_batchShaderResourceMapping[batchID]].push_back({ ShaderResourceType::ANY, buffers, descriptorSets });
         }
     }
 }

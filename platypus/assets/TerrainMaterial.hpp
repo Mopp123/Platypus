@@ -52,6 +52,10 @@ namespace platypus
         Texture* getSpecularChannelTexture(size_t channel) const;
         std::vector<Texture*> getTextures() const;
 
+        inline float getSpecularStrength() const { return _specularStrength; }
+        inline float getShininess() const { return _shininess; }
+        inline bool isShadeless() const { return _shadeless; }
+
         inline const TerrainMaterialPipelineData* getPipelineData() { return _pPipelineData; }
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }

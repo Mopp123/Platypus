@@ -401,7 +401,6 @@ namespace platypus
                 "Host side buffer exists but wasn't updated!",
                 Debug::MessageType::PLATYPUS_WARNING
             );
-            PLATYPUS_ASSERT(false);
         }
 
         if (!validateUpdate(pData, dataSize, offset))

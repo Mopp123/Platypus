@@ -12,15 +12,15 @@
 
 namespace platypus
 {
-    enum class BatchType
+    enum class ShaderResourceType
     {
-        NONE,
-        STATIC_INSTANCED,
-        SKINNED
+        ANY,
+        MATERIAL
     };
 
     struct ShaderResourceLayout
     {
+        ShaderResourceType type;
         size_t uniformBufferElementSize;
         DescriptorSetLayout descriptorSetLayout;
         std::vector<Texture*> textures;
@@ -28,9 +28,18 @@ namespace platypus
 
     struct BatchShaderResource
     {
+        ShaderResourceType type;
         // *Per each frame in flight
         std::vector<Buffer*> buffer;
         std::vector<DescriptorSet> descriptorSet;
+    };
+
+    enum class BatchType
+    {
+        NONE,
+        STATIC_INSTANCED,
+        SKINNED,
+        TERRAIN
     };
 
     struct Batch
@@ -53,6 +62,7 @@ namespace platypus
         uint32_t repeatCount = 0;
         // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
         uint32_t instanceCount = 0;
+        ID_t materialAssetID = NULL_ID;
     };
 
     class MasterRenderer;
@@ -126,6 +136,8 @@ namespace platypus
             size_t currentFrame
         );
 
+        // This also updates stuff that doesn't need to be done per instance but for whole
+        // batch. Material data for example(if some properties have changed).
         void updateDeviceSideBuffers(size_t currentFrame);
         // Clears instance and repeat counts for next round of submits.
         void resetForNextFrame();
@@ -145,19 +157,10 @@ namespace platypus
             size_t framesInFlight,
             std::vector<Buffer*>& outBuffers
         );
-        // Creates dynamic uniform buffers and descriptor sets for the whole batch
-        //void createBatchShaderResources(
-        //    ID_t batchID,
-        //    size_t bufferElementSize,
-        //    size_t maxBatchLength,
-        //    size_t framesInFlight,
-        //    const DescriptorSetLayout& descriptorSetLayout,
-        //    std::vector<Buffer*>& outUniformBuffers,
-        //    std::vector<DescriptorSet>& outDescriptorSets
-        //);
 
         // *Creates a single descriptor set
         // TODO: Better name (this creates "a part of shader resource")
+        // NOTE: Shouldn't be used anymore! Remove!
         void createBatchShaderResource(
             ID_t batchID,
             size_t bufferElementSize,
@@ -168,6 +171,7 @@ namespace platypus
             DescriptorSet& outDescriptorSet
         );
 
+        // Creates dynamic uniform buffers and descriptor sets for the whole batch
         void createBatchShaderResources(
             size_t framesInFlight,
             ID_t batchID,
@@ -213,6 +217,11 @@ namespace platypus
             size_t materialDescriptorSetCount
         ) const;
 
+        void addToAllocatedShaderResources(
+            ID_t batchID,
+            std::vector<BatchShaderResource>& shaderResources
+        );
+        // TODO: delete below after fixing static and skinned batches
         void addToAllocatedShaderResources(
             ID_t batchID,
             const std::vector<Buffer*>& buffers,
