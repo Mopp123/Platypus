@@ -77,9 +77,7 @@ namespace platypus
     ID_t Batcher::createStaticBatch(ID_t meshID, ID_t materialID)
     {
         ID_t identifier = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier) ||
-            !validateBatchBufferDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier)
-        )
+        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
         {
             return NULL_ID;
         }
@@ -145,9 +143,7 @@ namespace platypus
     ID_t Batcher::createSkinnedBatch(ID_t meshID, ID_t materialID)
     {
         ID_t identifier = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier) ||
-            !validateBatchBufferDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier)
-        )
+        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
         {
             return NULL_ID;
         }
@@ -164,12 +160,20 @@ namespace platypus
         );
         std::vector<Buffer*> jointUniformBuffers(framesInFlight);
         std::vector<DescriptorSet> jointDescriptorSets(framesInFlight);
-        createBatchShaderResources(
+        for (size_t i = 0; i < framesInFlight; ++i)
+        {
+            createBatchShaderResource(
+                identifier,
+                dynamicUniformBufferElementSize,
+                _maxSkinnedBatchLength,
+                s_jointDescriptorSetLayout,
+                { },
+                &jointUniformBuffers[i],
+                jointDescriptorSets[i]
+            );
+        }
+        addToAllocatedShaderResources(
             identifier,
-            dynamicUniformBufferElementSize,
-            _maxSkinnedBatchLength,
-            framesInFlight,
-            s_jointDescriptorSetLayout,
             jointUniformBuffers,
             jointDescriptorSets
         );
@@ -221,9 +225,7 @@ namespace platypus
     ID_t Batcher::createTerrainBatch(ID_t terrainMeshID, ID_t terrainMaterialID)
     {
         ID_t identifier = ID::hash(terrainMeshID, terrainMaterialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier) ||
-            !validateBatchBufferDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier)
-        )
+        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
         {
             return NULL_ID;
         }
@@ -241,27 +243,35 @@ namespace platypus
         size_t dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f) + sizeof(Vector2f)
         );
-        std::vector<Buffer*> uniformBuffers(framesInFlight);
-        std::vector<DescriptorSet> descriptorSets(framesInFlight);
+
+        std::vector<BatchShaderResource> shaderResources(framesInFlight);
         createBatchShaderResources(
-            identifier,
-            dynamicUniformBufferElementSize,
-            _maxTerrainBatchLength,
             framesInFlight,
-            s_terrainDescriptorSetLayout,
-            uniformBuffers,
-            descriptorSets
+            identifier,
+            _maxTerrainBatchLength,
+            {
+                {
+                    dynamicUniformBufferElementSize,
+                    s_terrainDescriptorSetLayout,
+                    { }
+                },
+                {
+                    sizeof(Vector4f),
+                    pMaterial->getDescriptorSetLayout(),
+                    pMaterial->getTextures()
+                }
+            },
+            shaderResources
         );
 
         // TODO: Some better way to deal with these?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
         validateDescriptorSetCounts(
             PLATYPUS_CURRENT_FUNC_NAME,
             framesInFlight,
             commonDescriptorSets.size(),
-            descriptorSets.size(),
-            materialDescriptorSets.size()
+            shaderResources[0].descriptorSet.size(),
+            shaderResources[1].descriptorSet.size()
         );
 
         std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
@@ -269,8 +279,8 @@ namespace platypus
             framesInFlight,
             {
                 commonDescriptorSets,
-                descriptorSets,
-                materialDescriptorSets
+                shaderResources[0].descriptorSet,
+                shaderResources[1].descriptorSet
             },
             useDescriptorSets
         );
@@ -320,7 +330,7 @@ namespace platypus
             return;
         }
 
-        Buffer* pInstancedBuffer = getBatchBuffer(identifier, currentFrame);
+        Buffer* pInstancedBuffer = getBatchBuffer(identifier, 0, currentFrame);
         pInstancedBuffer->updateHost(
             (void*)(&transformationMatrix),
             sizeof(Matrix4f),
@@ -352,7 +362,7 @@ namespace platypus
             return;
         }
 
-        Buffer* pJointBuffer = getBatchBuffer(identifier, currentFrame);
+        Buffer* pJointBuffer = getBatchBuffer(identifier, 0, currentFrame);
         uint32_t jointBufferOffset = pBatch->repeatCount * pJointBuffer->getDataElemSize();
         pJointBuffer->updateHost(
             pJointData,
@@ -393,7 +403,7 @@ namespace platypus
         float fVerticesPerRow = verticesPerRow;
         memcpy(terrainData.data() + sizeof(Matrix4f) + sizeof(float), &fVerticesPerRow, sizeof(float));
 
-        Buffer* pTerrainBuffer = getBatchBuffer(identifier, currentFrame);
+        Buffer* pTerrainBuffer = getBatchBuffer(identifier, 0, currentFrame);
         uint32_t terrainBufferOffset = pBatch->repeatCount * pTerrainBuffer->getDataElemSize();
         pTerrainBuffer->updateHost(
             terrainData.data(),
@@ -407,7 +417,7 @@ namespace platypus
     void Batcher::updateDeviceSideBuffers(size_t currentFrame)
     {
         std::unordered_map<ID_t, size_t>::const_iterator it;
-        for (it = _batchBufferMapping.begin(); it != _batchBufferMapping.end(); ++it)
+        for (it = _batchShaderResourceMapping.begin(); it != _batchShaderResourceMapping.end(); ++it)
         {
             // TODO: Make safer!
             const ID_t batchID = it->first;
@@ -415,13 +425,16 @@ namespace platypus
             if (pBatch->instanceCount > 0 || pBatch->repeatCount > 0)
             {
                 // TODO: Make safer!
-                const size_t bufferIndex = _batchBufferMapping[batchID];
-                Buffer* pBuffer = _allocatedBuffers[bufferIndex][currentFrame];
-                pBuffer->updateDevice(
-                    pBuffer->accessData(),
-                    pBuffer->getTotalSize(),
-                    0
-                );
+                const size_t resourceIndex = _batchShaderResourceMapping[batchID];
+                for (BatchShaderResource& shaderResource : _allocatedShaderResources[resourceIndex])
+                {
+                    Buffer* pBuffer = shaderResource.buffer[currentFrame];
+                    pBuffer->updateDevice(
+                        pBuffer->accessData(),
+                        pBuffer->getTotalSize(),
+                        0
+                    );
+                }
             }
         }
     }
@@ -444,25 +457,20 @@ namespace platypus
         _batches.clear();
         _identifierBatchMapping.clear();
 
-        // Free descriptor sets
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-        for (std::vector<DescriptorSet>& descriptorSets : _descriptorSets)
-            descriptorPool.freeDescriptorSets(descriptorSets);
-
-        _descriptorSets.clear();
-        _batchDescriptorSetMapping.clear();
-
-        // Free buffers
-        for (std::vector<Buffer*>& buffers : _allocatedBuffers)
+        for (std::vector<BatchShaderResource>& batchResources : _allocatedShaderResources)
         {
-            for (Buffer* pBuffer : buffers)
-                delete pBuffer;
+            for (BatchShaderResource& resource : batchResources)
+            {
+                for (Buffer* pBuffer : resource.buffer)
+                    delete pBuffer;
 
-            buffers.clear();
+                descriptorPool.freeDescriptorSets(resource.descriptorSet);
+            }
         }
-        _allocatedBuffers.clear();
-        _batchBufferMapping.clear();
+        _allocatedShaderResources.clear();
+        _batchShaderResourceMapping.clear();
     }
 
     const std::vector<Batch*>& Batcher::getBatches() const
@@ -500,10 +508,10 @@ namespace platypus
                 true
             );
         }
-        _batchBufferMapping[batchID] = _allocatedBuffers.size();
-        _allocatedBuffers.push_back(outBuffers);
+        addToAllocatedShaderResources(batchID, outBuffers, {});
     }
 
+    /*
     void Batcher::createBatchShaderResources(
         ID_t batchID,
         size_t bufferElementSize,
@@ -536,12 +544,140 @@ namespace platypus
                 }
             );
         }
+        addToAllocatedShaderResources(batchID, outUniformBuffers, outDescriptorSets);
+    }
+    */
 
-        _batchBufferMapping[batchID] = _allocatedBuffers.size();
-        _allocatedBuffers.push_back(outUniformBuffers);
+    void Batcher::createBatchShaderResource(
+        ID_t batchID,
+        size_t bufferElementSize,
+        size_t maxBatchLength,
+        const DescriptorSetLayout& descriptorSetLayout,
+        const std::vector<Texture*>& textures,
+        Buffer** pOutUniformBuffer,
+        DescriptorSet& outDescriptorSet
+    )
+    {
+        const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = descriptorSetLayout.getBindings();
+        std::vector<DescriptorSetComponent> descriptorSetComponents(descriptorSetLayoutBindings.size());
+        size_t useTextureIndex = 0;
+        for (size_t i = 0; i < descriptorSetComponents.size(); ++i)
+        {
+            const DescriptorSetLayoutBinding& binding = descriptorSetLayoutBindings[i];
+            const DescriptorType& descriptorType = binding.getType();
+            if (descriptorType == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+            {
+                if (useTextureIndex >= textures.size())
+                {
+                    Debug::log(
+                        "@Batcher::createBatchShaderResource "
+                        "Descriptor set layout binding was: DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER "
+                        "at index: " + std::to_string(i) + " "
+                        "but no texture provided(useTextureIndex = " + std::to_string(useTextureIndex) + ")",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
 
-        _batchDescriptorSetMapping[batchID] = _descriptorSets.size();
-        _descriptorSets.push_back(outDescriptorSets);
+                descriptorSetComponents[i] = { descriptorType, textures[useTextureIndex] };
+                ++useTextureIndex;
+            }
+            else if (descriptorType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                    descriptorType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER
+                    )
+            {
+                std::vector<char> bufferData(bufferElementSize * maxBatchLength);
+                memset(bufferData.data(), 0, bufferData.size());
+                *pOutUniformBuffer = new Buffer(
+                    bufferData.data(),
+                    bufferElementSize,
+                    maxBatchLength,
+                    BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                    true
+                );
+
+                descriptorSetComponents[i] = { descriptorType, *pOutUniformBuffer };
+            }
+        }
+
+        outDescriptorSet = _descriptorPoolRef.createDescriptorSet(
+            &descriptorSetLayout, descriptorSetComponents
+        );
+    }
+
+    void Batcher::createBatchShaderResources(
+        size_t framesInFlight,
+        ID_t batchID,
+        size_t maxBatchLength,
+        const std::vector<ShaderResourceLayout>& resourceLayouts,
+        std::vector<BatchShaderResource>& outResources
+    )
+    {
+        for (size_t resourceIndex = 0; resourceIndex < outResources.size(); ++resourceIndex)
+        {
+            const ShaderResourceLayout& resourceLayout = resourceLayouts[resourceIndex];
+            BatchShaderResource& outResource = outResources[resourceIndex];
+            outResource.buffer.resize(framesInFlight);
+            outResource.descriptorSet.resize(framesInFlight);
+            for (size_t frameIndex = 0; frameIndex < framesInFlight; ++frameIndex)
+            {
+                const DescriptorSetLayout& descriptorSetLayout = resourceLayout.descriptorSetLayout;
+                const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = descriptorSetLayout.getBindings();
+                std::vector<DescriptorSetComponent> descriptorSetComponents(descriptorSetLayoutBindings.size());
+                size_t useTextureIndex = 0;
+                for (size_t i = 0; i < descriptorSetComponents.size(); ++i)
+                {
+                    const DescriptorSetLayoutBinding& binding = descriptorSetLayoutBindings[i];
+                    const DescriptorType& descriptorType = binding.getType();
+                    const std::vector<Texture*>& textures = resourceLayout.textures;
+                    if (descriptorType == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                    {
+                        if (useTextureIndex >= textures.size())
+                        {
+                            Debug::log(
+                                "@Batcher::createBatchShaderResources "
+                                "Descriptor set layout binding was: DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER "
+                                "at index: " + std::to_string(i) + " "
+                                "but no texture provided(useTextureIndex = " + std::to_string(useTextureIndex) + ")",
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                            return;
+                        }
+
+                        descriptorSetComponents[i] = { descriptorType, textures[useTextureIndex] };
+                        ++useTextureIndex;
+                    }
+                    else if (descriptorType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                            descriptorType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER
+                            )
+                    {
+                        const size_t bufferElementSize = resourceLayout.uniformBufferElementSize;
+                        std::vector<char> bufferData(bufferElementSize * maxBatchLength);
+                        memset(bufferData.data(), 0, bufferData.size());
+                        Buffer* pUniformBuffer = new Buffer(
+                            bufferData.data(),
+                            bufferElementSize,
+                            maxBatchLength,
+                            BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                            true
+                        );
+                        outResource.buffer[frameIndex] = pUniformBuffer;
+
+                        descriptorSetComponents[i] = { descriptorType, pUniformBuffer };
+                    }
+                }
+
+                outResource.descriptorSet[frameIndex] = _descriptorPoolRef.createDescriptorSet(
+                    &descriptorSetLayout,
+                    descriptorSetComponents
+                );
+            }
+            addToAllocatedShaderResources(batchID, outResource.buffer, outResource.descriptorSet);
+        }
     }
 
     void Batcher::combineUsedDescriptorSets(
@@ -575,20 +711,22 @@ namespace platypus
         return _batches[it->second];
     }
 
-    Buffer* Batcher::getBatchBuffer(ID_t batchID, size_t frame)
+    Buffer* Batcher::getBatchBuffer(ID_t batchID, size_t resourceIndex, size_t frame)
     {
-        std::unordered_map<ID_t, size_t>::const_iterator it = _batchBufferMapping.find(batchID);
-        if (it == _batchBufferMapping.end())
+        std::unordered_map<ID_t, size_t>::const_iterator it = _batchShaderResourceMapping.find(batchID);
+        if (it == _batchShaderResourceMapping.end())
         {
             Debug::log(
                 "@Batcher::getBatchBuffer "
-                "Failed to find batch buffer using identifier: " + std::to_string(batchID),
+                "Failed to find batch shader resource using identifier: " + std::to_string(batchID) + " "
+                "resourceIndex = " + std::to_string(resourceIndex),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        return _allocatedBuffers[it->second][frame];
+        // TODO: Make safer?
+        return _allocatedShaderResources[it->second][resourceIndex].buffer[frame];
     }
 
     bool Batcher::validateBatchDoesntExist(const char* callLocation, ID_t batchID) const
@@ -599,22 +737,6 @@ namespace platypus
             Debug::log(
                 "@Batcher::" + locationStr +" "
                 "Batch already exists for identifier: " + std::to_string(batchID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool Batcher::validateBatchBufferDoesntExist(const char* callLocation, ID_t batchID) const
-    {
-        const std::string locationStr(callLocation);
-        if (_batchBufferMapping.find(batchID) != _batchBufferMapping.end())
-        {
-            Debug::log(
-                "@Batcher::addToStaticBatch "
-                "Batch buffer already exists for identifier: " + std::to_string(batchID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -673,5 +795,22 @@ namespace platypus
             return false;
         }
         return true;
+    }
+
+    void Batcher::addToAllocatedShaderResources(
+        ID_t batchID,
+        const std::vector<Buffer*>& buffers,
+        const std::vector<DescriptorSet> descriptorSets
+    )
+    {
+        if (_batchShaderResourceMapping.find(batchID) == _batchShaderResourceMapping.end())
+        {
+            _batchShaderResourceMapping[batchID] = _allocatedShaderResources.size();
+            _allocatedShaderResources.push_back({ { buffers, descriptorSets } });
+        }
+        else
+        {
+            _allocatedShaderResources[_batchShaderResourceMapping[batchID]].push_back({ buffers, descriptorSets });
+        }
     }
 }

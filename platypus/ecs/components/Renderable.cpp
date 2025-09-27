@@ -150,8 +150,8 @@ namespace platypus
                 "TerrainMaterial didn't have pipeline data yet -> creating..."
             );
             pMaterial->createPipeline();
-            if (!pMaterial->hasDescriptorSets())
-                pMaterial->createShaderResources();
+            //if (!pMaterial->hasDescriptorSets())
+            //    pMaterial->createShaderResources();
         }
 
         return pRenderable;

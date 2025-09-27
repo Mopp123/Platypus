@@ -28,11 +28,9 @@ namespace platypus
         bool _shadeless = false;
 
         TerrainMaterialPipelineData* _pPipelineData = nullptr;
-        std::vector<Buffer*> _uniformBuffers;
         // NOTE: This contains ALL descriptor set layouts for pipeline!
         // Currently the last one is the actual material's layout!
         DescriptorSetLayout _descriptorSetLayout;
-        std::vector<DescriptorSet> _descriptorSets;
 
     public:
         TerrainMaterial(
@@ -48,18 +46,13 @@ namespace platypus
 
         void recreateExistingPipeline();
         void destroyPipeline();
-        // NOTE: This also creates the uniform buffer
-        //  -> should that be a separate func or name this more clearly?
-        void createShaderResources();
-        void freeShaderResources();
 
         Texture* getBlendmapTexture() const;
         Texture* getDiffuseChannelTexture(size_t channel) const;
         Texture* getSpecularChannelTexture(size_t channel) const;
+        std::vector<Texture*> getTextures() const;
 
         inline const TerrainMaterialPipelineData* getPipelineData() { return _pPipelineData; }
-        inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }
-        inline bool hasDescriptorSets() const { return !_descriptorSets.empty(); }
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
 

@@ -87,8 +87,6 @@ namespace platypus
 
     TerrainMaterial::~TerrainMaterial()
     {
-        freeShaderResources();
-
         _descriptorSetLayout.destroy();
         // TODO: Unfuck below
         // NOTE: Important that the pipeline gets destroyed before shaders,
@@ -168,97 +166,6 @@ namespace platypus
             warnUnassigned("@TerrainMaterial::destroyPipeline");
     }
 
-    void TerrainMaterial::createShaderResources()
-    {
-        if (!_pPipelineData)
-        {
-            Debug::log(
-                "@TerrainMaterial::createDescriptorSets "
-                "Pipeline data was nullptr for terrain material with ID: " + std::to_string(getID()) + " "
-                "This material may have been created but never used by any renderable component!",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-            return;
-        }
-
-        if (!_descriptorSets.empty())
-        {
-            Debug::log(
-                "@TerrainMaterial::createDescriptorSets "
-                "Descriptor sets already exists for terrain material with ID: " + std::to_string(getID()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-        size_t maxFramesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
-
-        Vector4f materialProperties(
-            _specularStrength,
-            _shininess,
-            _shadeless,
-            0
-        );
-
-        for (size_t i = 0; i < maxFramesInFlight; ++i)
-        {
-            std::vector<DescriptorSetComponent> descriptorSetComponents;
-            descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getBlendmapTexture() });
-            for (uint32_t j = 0; j < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++j)
-                descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getDiffuseChannelTexture(j) });
-            for (uint32_t j = 0; j < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++j)
-                descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, getSpecularChannelTexture(j) });
-
-            Buffer* pUniformBuffer = new Buffer(
-                &materialProperties,
-                sizeof(Vector4f),
-                1,
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            _uniformBuffers.push_back(pUniformBuffer);
-            descriptorSetComponents.push_back({ DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pUniformBuffer });
-
-            _descriptorSets.push_back(
-                descriptorPool.createDescriptorSet(
-                    &_descriptorSetLayout,
-                    descriptorSetComponents
-                )
-            );
-        }
-
-        Debug::log(
-            "@TerrainMaterial::createDescriptorSets "
-            "New descriptor sets created for terrain material: " + std::to_string(getID())
-        );
-    }
-
-    void TerrainMaterial::freeShaderResources()
-    {
-        if (!_pPipelineData)
-        {
-            Debug::log(
-                "@TerrainMaterial::freeDescriptorSets "
-                "Pipeline data was nullptr for terrain material with ID: " + std::to_string(getID()) + " "
-                "This material may have been created but never used by any renderable component!",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-            return;
-        }
-
-        for (Buffer* pBuffer : _uniformBuffers)
-            delete pBuffer;
-
-        _uniformBuffers.clear();
-
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
-        descriptorPool.freeDescriptorSets(_descriptorSets);
-        _descriptorSets.clear();
-    }
-
     Texture* TerrainMaterial::getBlendmapTexture() const
     {
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -306,6 +213,23 @@ namespace platypus
             _specularChannelTextureIDs[channel],
             AssetType::ASSET_TYPE_TEXTURE
         );
+    }
+
+    std::vector<Texture*> TerrainMaterial::getTextures() const
+    {
+        const size_t totalChannelTextureCount = PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS * 2;
+        const size_t totalTextureCount = totalChannelTextureCount + 1;
+        std::vector<Texture*> textures(totalTextureCount);
+        textures[0] = getBlendmapTexture();
+        for (size_t i = 0; i < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++i)
+        {
+            size_t diffuseTargetIndex = 1 + i;
+            size_t specularTargetIndex = 1 + i + PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS;
+            textures[diffuseTargetIndex] = getDiffuseChannelTexture(i);
+            textures[specularTargetIndex] = getSpecularChannelTexture(i);
+        }
+
+        return textures;
     }
 
     void TerrainMaterial::warnUnassigned(const std::string& beginStr)

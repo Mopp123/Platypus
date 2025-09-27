@@ -19,6 +19,20 @@ namespace platypus
         SKINNED
     };
 
+    struct ShaderResourceLayout
+    {
+        size_t uniformBufferElementSize;
+        DescriptorSetLayout descriptorSetLayout;
+        std::vector<Texture*> textures;
+    };
+
+    struct BatchShaderResource
+    {
+        // *Per each frame in flight
+        std::vector<Buffer*> buffer;
+        std::vector<DescriptorSet> descriptorSet;
+    };
+
     struct Batch
     {
         BatchType type = BatchType::NONE;
@@ -61,14 +75,14 @@ namespace platypus
         static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
-        std::vector<std::vector<Buffer*>> _allocatedBuffers;
-        std::vector<std::vector<DescriptorSet>> _descriptorSets;
+        //std::vector<std::vector<Buffer*>> _allocatedBuffers;
+        //std::vector<std::vector<DescriptorSet>> _descriptorSets;
+        std::vector<std::vector<BatchShaderResource>> _allocatedShaderResources;
 
         // This is fucking stupid!
         // Need to pass all vertex buffers as const ptr, so need a way to refer to the s_allocatedBuffers
         // when modifying it, instead of the Batch struct's member.
-        std::unordered_map<ID_t, size_t> _batchBufferMapping;
-        std::unordered_map<ID_t, size_t> _batchDescriptorSetMapping;
+        std::unordered_map<ID_t, size_t> _batchShaderResourceMapping;
 
     public:
         Batcher(
@@ -132,14 +146,34 @@ namespace platypus
             std::vector<Buffer*>& outBuffers
         );
         // Creates dynamic uniform buffers and descriptor sets for the whole batch
-        void createBatchShaderResources(
+        //void createBatchShaderResources(
+        //    ID_t batchID,
+        //    size_t bufferElementSize,
+        //    size_t maxBatchLength,
+        //    size_t framesInFlight,
+        //    const DescriptorSetLayout& descriptorSetLayout,
+        //    std::vector<Buffer*>& outUniformBuffers,
+        //    std::vector<DescriptorSet>& outDescriptorSets
+        //);
+
+        // *Creates a single descriptor set
+        // TODO: Better name (this creates "a part of shader resource")
+        void createBatchShaderResource(
             ID_t batchID,
             size_t bufferElementSize,
             size_t maxBatchLength,
-            size_t framesInFlight,
             const DescriptorSetLayout& descriptorSetLayout,
-            std::vector<Buffer*>& outUniformBuffers,
-            std::vector<DescriptorSet>& outDescriptorSets
+            const std::vector<Texture*>& textures,
+            Buffer** pOutUniformBuffer,
+            DescriptorSet& outDescriptorSet
+        );
+
+        void createBatchShaderResources(
+            size_t framesInFlight,
+            ID_t batchID,
+            size_t maxBatchLength,
+            const std::vector<ShaderResourceLayout>& resourceLayouts,
+            std::vector<BatchShaderResource>& outResources
         );
 
         // When fetching the descriptor sets from anywhere, they are stored in
@@ -160,10 +194,9 @@ namespace platypus
         );
 
         Batch* getBatch(ID_t batchID);
-        Buffer* getBatchBuffer(ID_t batchID, size_t frame);
+        Buffer* getBatchBuffer(ID_t batchID, size_t resourceIndex, size_t frame);
         // ...dumb I know, just want to make sure...
         bool validateBatchDoesntExist(const char* callLocation, ID_t batchID) const;
-        bool validateBatchBufferDoesntExist(const char* callLocation, ID_t batchID) const;
 
         bool validateDescriptorSetCounts(
             const char* callLocation,
@@ -180,6 +213,10 @@ namespace platypus
             size_t materialDescriptorSetCount
         ) const;
 
-
+        void addToAllocatedShaderResources(
+            ID_t batchID,
+            const std::vector<Buffer*>& buffers,
+            const std::vector<DescriptorSet> descriptorSets
+        );
     };
 }
