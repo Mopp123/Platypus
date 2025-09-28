@@ -161,6 +161,7 @@ namespace platypus
         // *Creates a single descriptor set
         // TODO: Better name (this creates "a part of shader resource")
         // NOTE: Shouldn't be used anymore! Remove!
+        /*
         void createBatchShaderResource(
             ID_t batchID,
             size_t bufferElementSize,
@@ -170,6 +171,7 @@ namespace platypus
             Buffer** pOutUniformBuffer,
             DescriptorSet& outDescriptorSet
         );
+        */
 
         // Creates dynamic uniform buffers and descriptor sets for the whole batch
         void createBatchShaderResources(

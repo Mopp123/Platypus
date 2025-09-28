@@ -51,8 +51,6 @@ namespace platypus
                 "Material didn't have pipeline data yet -> creating..."
             );
             pMaterial->createPipeline(pMesh);
-            if (!pMaterial->hasDescriptorSets())
-                pMaterial->createShaderResources();
         }
 
         return pRenderable;
@@ -100,8 +98,6 @@ namespace platypus
                 "Material didn't have pipeline data yet -> creating..."
             );
             pMaterial->createSkinnedPipeline(pMesh);
-            if (!pMaterial->hasDescriptorSets())
-                pMaterial->createShaderResources();
         }
 
         return pRenderable;

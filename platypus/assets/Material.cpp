@@ -4,6 +4,7 @@
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+#include <vector>
 
 
 namespace platypus
@@ -95,8 +96,6 @@ namespace platypus
 
     Material::~Material()
     {
-        freeShaderResources();
-
         _descriptorSetLayout.destroy();
         // TODO: Unfuck below
         // NOTE: Important that the pipeline gets destroyed before shaders,
@@ -264,121 +263,6 @@ namespace platypus
             warnUnassigned("@Material::destroyPipeline");
     }
 
-    void Material::createShaderResources()
-    {
-        if (!(_pPipelineData || _pSkinnedPipelineData))
-        {
-            Debug::log(
-                "@Material::createDescriptorSets "
-                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()) + " "
-                "This material may have been created but never used by any renderable component!",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-            return;
-        }
-
-        if (!_descriptorSets.empty())
-        {
-            Debug::log(
-                "@Material::createDescriptorSets "
-                "Descriptor sets already exists for material with ID: " + std::to_string(getID()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        if (!_uniformBuffers.empty())
-        {
-            Debug::log(
-                "@Material::createDescriptorSets "
-                "Descriptor set uniform buffers already exists for material with ID: " + std::to_string(getID()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-
-        const Texture* pDiffuseTexture = getDiffuseTexture();
-        const Texture* pSpecularTexture = getSpecularTexture();
-        const Texture* pNormalTexture = hasNormalMap() ? getNormalTexture() : nullptr;
-        Vector4f materialProperties(
-            _specularStrength,
-            _shininess,
-            _shadeless,
-            0
-        );
-
-        size_t maxFramesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
-        for (size_t i = 0; i < maxFramesInFlight; ++i)
-        {
-            Buffer* pUniformBuffer = new Buffer(
-                &materialProperties,
-                sizeof(Vector4f),
-                1,
-                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                true
-            );
-            _uniformBuffers.push_back(pUniformBuffer);
-
-            if (hasNormalMap())
-            {
-                _descriptorSets.push_back(
-                    descriptorPool.createDescriptorSet(
-                        &_descriptorSetLayout,
-                        {
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pNormalTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pUniformBuffer }
-                        }
-                    )
-                );
-            }
-            else
-            {
-                _descriptorSets.push_back(
-                    descriptorPool.createDescriptorSet(
-                        &_descriptorSetLayout,
-                        {
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDiffuseTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSpecularTexture },
-                            { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pUniformBuffer }
-                        }
-                    )
-                );
-            }
-        }
-
-        Debug::log(
-            "@Material::createDescriptorSets "
-            "New descriptor sets created for material: " + std::to_string(getID())
-        );
-    }
-
-    void Material::freeShaderResources()
-    {
-        if (!(_pPipelineData || _pSkinnedPipelineData))
-        {
-            Debug::log(
-                "@Material::freeDescriptorSets "
-                "Pipeline data was nullptr for material with ID: " + std::to_string(getID()) + " "
-                "This material may have been created but never used by any renderable component!",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-            return;
-        }
-
-        for (Buffer* pBuffer : _uniformBuffers)
-            delete pBuffer;
-
-        _uniformBuffers.clear();
-
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
-        descriptorPool.freeDescriptorSets(_descriptorSets);
-        _descriptorSets.clear();
-    }
-
     Texture* Material::getDiffuseTexture() const
     {
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -404,6 +288,17 @@ namespace platypus
             _normalTextureID,
             AssetType::ASSET_TYPE_TEXTURE
         );
+    }
+
+    std::vector<Texture*> Material::getTextures() const
+    {
+        std::vector<Texture*> textures;
+        textures.push_back(getDiffuseTexture());
+        textures.push_back(getSpecularTexture());
+        if (hasNormalMap())
+            textures.push_back(getNormalTexture());
+
+        return textures;
     }
 
     void Material::warnUnassigned(const std::string& beginStr)

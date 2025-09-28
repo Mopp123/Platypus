@@ -263,8 +263,8 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->recreateExistingPipeline();
-        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
-        //    ((TerrainMaterial*)pAsset)->recreateExistingPipeline();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
+            ((TerrainMaterial*)pAsset)->recreateExistingPipeline();
     }
 
     void MasterRenderer::destroyPipelines()
@@ -274,8 +274,8 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
-        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
-        //    ((TerrainMaterial*)pAsset)->destroyPipeline();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
+            ((TerrainMaterial*)pAsset)->destroyPipeline();
     }
 
     void MasterRenderer::createCommonShaderResources()
@@ -314,20 +314,22 @@ namespace platypus
         _scene3DDataUniformBuffers.clear();
     }
 
+    // TODO: Remove?
     void MasterRenderer::createShaderResources()
     {
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->createShaderResources();
+        //AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        //    ((Material*)pAsset)->createShaderResources();
         //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
         //    ((TerrainMaterial*)pAsset)->createShaderResources();
     }
 
+    // TODO: Remove?
     void MasterRenderer::freeShaderResources()
     {
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->freeShaderResources();
+        //AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        //    ((Material*)pAsset)->freeShaderResources();
         //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
         //    ((TerrainMaterial*)pAsset)->freeShaderResources();
     }

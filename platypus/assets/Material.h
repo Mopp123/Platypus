@@ -29,11 +29,8 @@ namespace platypus
 
         MaterialPipelineData* _pPipelineData = nullptr;
         MaterialPipelineData* _pSkinnedPipelineData = nullptr;
-        std::vector<Buffer*> _uniformBuffers;
-        // NOTE: This contains ALL descriptor set layouts for pipeline!
-        // Currently the last one is the actual material's layout!
+
         DescriptorSetLayout _descriptorSetLayout;
-        std::vector<DescriptorSet> _descriptorSets;
 
     public:
         Material(
@@ -56,12 +53,10 @@ namespace platypus
         void recreateExistingPipeline();
         void destroyPipeline();
 
-        void createShaderResources();
-        void freeShaderResources();
-
         Texture* getDiffuseTexture() const;
         Texture* getSpecularTexture() const;
         Texture* getNormalTexture() const;
+        std::vector<Texture*> getTextures() const;
 
         inline float getSpecularStrength() const { return _specularStrength; }
         inline float getShininess() const { return _shininess; }
@@ -69,9 +64,6 @@ namespace platypus
         inline bool hasNormalMap() const { return _normalTextureID != NULL_ID;  }
         inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
         inline const MaterialPipelineData* getSkinnedPipelineData() { return _pSkinnedPipelineData; }
-        inline const std::vector<Buffer*>& getUniformBuffers() const { return _uniformBuffers; }
-        inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }
-        inline bool hasDescriptorSets() const { return !_descriptorSets.empty(); }
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
 

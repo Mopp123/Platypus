@@ -98,14 +98,29 @@ namespace platypus
             transformBuffers
         );
 
+        std::vector<BatchShaderResource> shaderResources(1);
+        createBatchShaderResources(
+            framesInFlight,
+            identifier,
+            1,
+            {
+                {
+                    ShaderResourceType::MATERIAL,
+                    sizeof(Vector4f),
+                    pMaterial->getDescriptorSetLayout(),
+                    pMaterial->getTextures()
+                }
+            },
+            shaderResources
+        );
+
         // TODO: Some better way to deal with this?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
         validateDescriptorSetCounts(
             PLATYPUS_CURRENT_FUNC_NAME,
             framesInFlight,
             commonDescriptorSets.size(),
-            materialDescriptorSets.size()
+            shaderResources[0].descriptorSet.size()
         );
 
         std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
@@ -113,7 +128,7 @@ namespace platypus
             framesInFlight,
             {
                 commonDescriptorSets,
-                materialDescriptorSets
+                shaderResources[0].descriptorSet
             },
             useDescriptorSets
         );
@@ -159,35 +174,37 @@ namespace platypus
         size_t dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f) * _maxSkinnedMeshJoints
         );
-        std::vector<Buffer*> jointUniformBuffers(framesInFlight);
-        std::vector<DescriptorSet> jointDescriptorSets(framesInFlight);
-        for (size_t i = 0; i < framesInFlight; ++i)
-        {
-            createBatchShaderResource(
-                identifier,
-                dynamicUniformBufferElementSize,
-                _maxSkinnedBatchLength,
-                s_jointDescriptorSetLayout,
-                { },
-                &jointUniformBuffers[i],
-                jointDescriptorSets[i]
-            );
-        }
-        addToAllocatedShaderResources(
+
+        std::vector<BatchShaderResource> shaderResources(2);
+        createBatchShaderResources(
+            framesInFlight,
             identifier,
-            jointUniformBuffers,
-            jointDescriptorSets
+            _maxSkinnedBatchLength,
+            {
+                {
+                    ShaderResourceType::ANY,
+                    dynamicUniformBufferElementSize,
+                    s_jointDescriptorSetLayout,
+                    { }
+                },
+                {
+                    ShaderResourceType::MATERIAL,
+                    sizeof(Vector4f),
+                    pMaterial->getDescriptorSetLayout(),
+                    pMaterial->getTextures()
+                }
+            },
+            shaderResources
         );
 
         // TODO: Some better way to deal with this?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
         validateDescriptorSetCounts(
             PLATYPUS_CURRENT_FUNC_NAME,
             framesInFlight,
             commonDescriptorSets.size(),
-            jointDescriptorSets.size(),
-            materialDescriptorSets.size()
+            shaderResources[0].descriptorSet.size(),
+            shaderResources[1].descriptorSet.size()
         );
 
         std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
@@ -195,8 +212,8 @@ namespace platypus
             framesInFlight,
             {
                 commonDescriptorSets,
-                jointDescriptorSets,
-                materialDescriptorSets
+                shaderResources[0].descriptorSet,
+                shaderResources[1].descriptorSet
             },
             useDescriptorSets
         );
@@ -246,7 +263,7 @@ namespace platypus
             sizeof(Matrix4f) + sizeof(Vector2f)
         );
 
-        std::vector<BatchShaderResource> shaderResources(framesInFlight);
+        std::vector<BatchShaderResource> shaderResources(2);
         createBatchShaderResources(
             framesInFlight,
             identifier,
@@ -550,65 +567,6 @@ namespace platypus
             );
         }
         addToAllocatedShaderResources(batchID, outBuffers, {});
-    }
-
-    void Batcher::createBatchShaderResource(
-        ID_t batchID,
-        size_t bufferElementSize,
-        size_t maxBatchLength,
-        const DescriptorSetLayout& descriptorSetLayout,
-        const std::vector<Texture*>& textures,
-        Buffer** pOutUniformBuffer,
-        DescriptorSet& outDescriptorSet
-    )
-    {
-        const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = descriptorSetLayout.getBindings();
-        std::vector<DescriptorSetComponent> descriptorSetComponents(descriptorSetLayoutBindings.size());
-        size_t useTextureIndex = 0;
-        for (size_t i = 0; i < descriptorSetComponents.size(); ++i)
-        {
-            const DescriptorSetLayoutBinding& binding = descriptorSetLayoutBindings[i];
-            const DescriptorType& descriptorType = binding.getType();
-            if (descriptorType == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-            {
-                if (useTextureIndex >= textures.size())
-                {
-                    Debug::log(
-                        "@Batcher::createBatchShaderResource "
-                        "Descriptor set layout binding was: DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER "
-                        "at index: " + std::to_string(i) + " "
-                        "but no texture provided(useTextureIndex = " + std::to_string(useTextureIndex) + ")",
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                    return;
-                }
-
-                descriptorSetComponents[i] = { descriptorType, textures[useTextureIndex] };
-                ++useTextureIndex;
-            }
-            else if (descriptorType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-                    descriptorType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER
-                    )
-            {
-                std::vector<char> bufferData(bufferElementSize * maxBatchLength);
-                memset(bufferData.data(), 0, bufferData.size());
-                *pOutUniformBuffer = new Buffer(
-                    bufferData.data(),
-                    bufferElementSize,
-                    maxBatchLength,
-                    BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
-                    true
-                );
-
-                descriptorSetComponents[i] = { descriptorType, *pOutUniformBuffer };
-            }
-        }
-
-        outDescriptorSet = _descriptorPoolRef.createDescriptorSet(
-            &descriptorSetLayout, descriptorSetComponents
-        );
     }
 
     void Batcher::createBatchShaderResources(
