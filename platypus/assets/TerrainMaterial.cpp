@@ -10,7 +10,6 @@ namespace platypus
 {
     static std::vector<DescriptorSetLayoutBinding> create_descriptor_set_layout_bindings()
     {
-        int uniformLocationBegin = 8; // NOTE: Might be wrong atm for web
         std::vector<DescriptorSetLayoutBinding> layoutBindings;
         const int diffuseChannelCount = PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS;
         const int specularChannelCount = PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS;
@@ -23,7 +22,7 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { uniformLocationBegin + i } }
+                    { { } }
                 }
             );
         }
@@ -34,7 +33,7 @@ namespace platypus
                 1,
                 DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                { { uniformLocationBegin + totalTextureBindings , ShaderDataType::Float4 } }
+                { { ShaderDataType::Float4 } }
             }
         );
         return layoutBindings;

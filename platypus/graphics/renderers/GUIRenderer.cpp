@@ -30,7 +30,7 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { 2 } }
+                    { { } }
                 }
             }
         ),
@@ -348,8 +348,8 @@ namespace platypus
                     sizeof(Matrix4f) + sizeof(float),
                     pushConstantsData,
                     {
-                        { 0, ShaderDataType::Mat4 },
-                        { 1, ShaderDataType::Float }
+                        { ShaderDataType::Mat4 },
+                        { ShaderDataType::Float }
                     }
                 );
 

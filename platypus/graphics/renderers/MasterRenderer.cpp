@@ -26,12 +26,12 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     {
-                        { 0, ShaderDataType::Mat4 },
-                        { 1, ShaderDataType::Mat4 },
-                        { 2, ShaderDataType::Float4 },
-                        { 3, ShaderDataType::Float4 },
-                        { 4, ShaderDataType::Float4 },
-                        { 5, ShaderDataType::Float4 }
+                        { ShaderDataType::Mat4 },
+                        { ShaderDataType::Mat4 },
+                        { ShaderDataType::Float4 },
+                        { ShaderDataType::Float4 },
+                        { ShaderDataType::Float4 },
+                        { ShaderDataType::Float4 }
                     }
                 }
             }
@@ -61,8 +61,6 @@ namespace platypus
 
         _batcher.freeBatches();
         _pGUIRenderer->freeBatches();
-
-        freeShaderResources();
     }
 
     void MasterRenderer::cleanUp()

@@ -34,7 +34,7 @@ namespace platypus
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                    { { 5, ShaderDataType::Mat4, (int)_maxSkinnedMeshJoints } }
+                    { { ShaderDataType::Mat4, (int)_maxSkinnedMeshJoints } }
                 }
             }
         );
@@ -47,8 +47,8 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     {
-                        { 6, ShaderDataType::Mat4 },
-                        { 7, ShaderDataType::Float2 },
+                        { ShaderDataType::Mat4 },
+                        { ShaderDataType::Float2 },
                     }
                 }
             }
