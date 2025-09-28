@@ -97,13 +97,13 @@ void MaterialTestScene::init()
         textureSampler
     );
 
-    //Material* pMaterial = pAssetManager->createMaterial(
-    //    pDiffuseTexture->getID(),
-    //    pAssetManager->getWhiteTexture()->getID(),
-    //    pNormalTexture->getID(),
-    //    0.8f,
-    //    16.0f
-    //);
+    Material* pMaterial = pAssetManager->createMaterial(
+        pDiffuseTexture->getID(),
+        pAssetManager->getWhiteTexture()->getID(),
+        pNormalTexture->getID(),
+        0.8f,
+        16.0f
+    );
     Material* pMaterial2 = pAssetManager->createMaterial(
         pDiffuseTexture->getID(),
         pAssetManager->getWhiteTexture()->getID(),
@@ -111,13 +111,13 @@ void MaterialTestScene::init()
         0.8f,
         16.0f
     );
-    //Material* pFloorMaterial = pAssetManager->createMaterial(
-    //    pFloorTexture->getID(),
-    //    pFloorSpecularTexture->getID(),
-    //    pFloorNormalTexture->getID(),
-    //    0.8f,
-    //    64.0f
-    //);
+    Material* pFloorMaterial = pAssetManager->createMaterial(
+        pFloorTexture->getID(),
+        pFloorSpecularTexture->getID(),
+        pFloorNormalTexture->getID(),
+        0.8f,
+        64.0f
+    );
 
     Model* pModel = pAssetManager->loadModel("assets/TestCubeTangents.glb");
     Model* pModel2 = pAssetManager->loadModel("assets/TestCube.glb");
@@ -158,11 +158,11 @@ void MaterialTestScene::init()
         { { 0, 1, 0 }, 0 },
         { 1, 1, 1 }
     );
-    //StaticMeshRenderable* pFloorRenderable = create_static_mesh_renderable(
-    //    floorEntity,
-    //    pFloorModel->getMeshes()[0]->getID(),
-    //    pMaterial2->getID()//pFloorMaterial->getID()
-    //);
+    StaticMeshRenderable* pFloorRenderable = create_static_mesh_renderable(
+        floorEntity,
+        pFloorModel->getMeshes()[0]->getID(),
+        pFloorMaterial->getID()
+    );
 
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(

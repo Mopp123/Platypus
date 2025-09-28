@@ -90,7 +90,6 @@ namespace platypus
         {
             pMaterial->createPipeline(pMesh);
             pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-            Debug::log("___TEST___Material pipeline created!");
         }
 
         // Create the instanced transforms buffer
@@ -105,7 +104,6 @@ namespace platypus
         );
 
         std::vector<BatchShaderResource> shaderResources(1);
-        Debug::log("___TEST___Creating static batch shader resources... textures: " + std::to_string(pMaterial->getTextures().size()));
         createBatchShaderResources(
             framesInFlight,
             identifier,
@@ -120,17 +118,6 @@ namespace platypus
             },
             shaderResources
         );
-
-        Debug::log("___TEST___Created shader resources: " + std::to_string(shaderResources.size()));
-        Debug::log("___TEST___Created descriptor sets: " + std::to_string(shaderResources[0].descriptorSet.size()));
-        // NOTE: ERROR HERE! used descriptor set layout doesn't have any bindings!??!!?
-        Debug::log("___TEST___Created bindings: " + std::to_string(shaderResources[0].descriptorSet[0].getLayout()->getBindings().size()));
-        for (size_t i = 0; i < shaderResources[0].descriptorSet[0].getLayout()->getBindings().size(); ++i)
-        {
-            const DescriptorSetLayoutBinding& binding = shaderResources[0].descriptorSet[0].getLayout()->getBindings()[i];
-            Debug::log(" [" + std::to_string(i) + "]: binding = " + std::to_string(binding.getBinding()) + " type = " + std::to_string(binding.getType()));
-        }
-        Debug::log("___TEST___Success!");
 
         // TODO: Some better way to deal with this?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
