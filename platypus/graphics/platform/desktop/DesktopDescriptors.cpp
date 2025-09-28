@@ -121,18 +121,15 @@ namespace platypus
     }
 
     DescriptorSet::DescriptorSet(
-        const std::vector<DescriptorSetComponent>& components,
-        const DescriptorSetLayout* pLayout
+        const std::vector<DescriptorSetComponent>& components
     ) :
-        _components(components),
-        _pLayout(pLayout)
+        _components(components)
     {
         _pImpl = new DescriptorSetImpl;
     }
 
     DescriptorSet::DescriptorSet(const DescriptorSet& other) :
-        _components(other._components),
-        _pLayout(other._pLayout)
+        _components(other._components)
     {
         _pImpl = new DescriptorSetImpl;
         _pImpl->handle = other._pImpl->handle;
@@ -141,7 +138,6 @@ namespace platypus
     DescriptorSet& DescriptorSet::operator=(DescriptorSet other)
     {
         _components = other._components;
-        _pLayout = other._pLayout;
         _pImpl = new DescriptorSetImpl;
         _pImpl->handle = other._pImpl->handle;
         return *this;
@@ -165,14 +161,14 @@ namespace platypus
 
     static VkDescriptorSet alloc_descriptor_set(
         VkDescriptorPool vkDescriptorPool,
-        const DescriptorSetLayout* pLayout
+        const DescriptorSetLayout& layout
     )
     {
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = vkDescriptorPool;
         allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &pLayout->getImpl()->handle;
+        allocInfo.pSetLayouts = &(layout.getImpl()->handle);
 
         VkDescriptorSet descriptorSetHandle;
         VkDevice device = Device::get_impl()->device;
@@ -414,11 +410,11 @@ namespace platypus
 
 
     DescriptorSet DescriptorPool::createDescriptorSet(
-        const DescriptorSetLayout* pLayout,
+        const DescriptorSetLayout& layout,
         const std::vector<DescriptorSetComponent>& components
     )
     {
-        const std::vector<DescriptorSetLayoutBinding>& bindings = pLayout->getBindings();
+        const std::vector<DescriptorSetLayoutBinding>& bindings = layout.getBindings();
         if (bindings.size() != components.size())
         {
             Debug::log(
@@ -431,7 +427,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        VkDescriptorSet vkDescriptorSetHandle = alloc_descriptor_set(_pImpl->handle, pLayout);
+        VkDescriptorSet vkDescriptorSetHandle = alloc_descriptor_set(_pImpl->handle, layout);
 
         for (size_t i = 0; i < bindings.size(); ++i)
         {
@@ -512,7 +508,7 @@ namespace platypus
             );
         }
 
-        DescriptorSet createdDescriptorSet(components, pLayout);
+        DescriptorSet createdDescriptorSet(components);
         createdDescriptorSet._pImpl->handle = vkDescriptorSetHandle;
         return createdDescriptorSet;
     }

@@ -112,7 +112,7 @@ namespace platypus
                 {
                     ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
-                    &pMaterial->getDescriptorSetLayout(),
+                    pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
                 }
             },
@@ -194,13 +194,13 @@ namespace platypus
                 {
                     ShaderResourceType::ANY,
                     dynamicUniformBufferElementSize,
-                    &s_jointDescriptorSetLayout,
+                    s_jointDescriptorSetLayout,
                     { }
                 },
                 {
                     ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
-                    &pMaterial->getDescriptorSetLayout(),
+                    pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
                 }
             },
@@ -287,13 +287,13 @@ namespace platypus
                 {
                     ShaderResourceType::ANY,
                     dynamicUniformBufferElementSize,
-                    &s_terrainDescriptorSetLayout,
+                    s_terrainDescriptorSetLayout,
                     { }
                 },
                 {
                     ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
-                    &pMaterial->getDescriptorSetLayout(),
+                    pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
                 }
             },
@@ -601,8 +601,8 @@ namespace platypus
             outResource.descriptorSet.resize(framesInFlight);
             for (size_t frameIndex = 0; frameIndex < framesInFlight; ++frameIndex)
             {
-                const DescriptorSetLayout* pDescriptorSetLayout = resourceLayout.pDescriptorSetLayout;
-                const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = pDescriptorSetLayout->getBindings();
+                const DescriptorSetLayout& descriptorSetLayout = resourceLayout.descriptorSetLayout;
+                const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = descriptorSetLayout.getBindings();
                 std::vector<DescriptorSetComponent> descriptorSetComponents(descriptorSetLayoutBindings.size());
                 size_t useTextureIndex = 0;
                 for (size_t i = 0; i < descriptorSetComponents.size(); ++i)
@@ -650,7 +650,7 @@ namespace platypus
                 }
 
                 outResource.descriptorSet[frameIndex] = _descriptorPoolRef.createDescriptorSet(
-                    pDescriptorSetLayout,
+                    descriptorSetLayout,
                     descriptorSetComponents
                 );
             }

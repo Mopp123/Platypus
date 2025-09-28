@@ -296,7 +296,7 @@ namespace platypus
 
             _scene3DDescriptorSets.push_back(
                 _descriptorPool.createDescriptorSet(
-                    &_scene3DDataDescriptorSetLayout,
+                    _scene3DDataDescriptorSetLayout,
                     { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pScene3DDataUniformBuffer } }
                 )
             );

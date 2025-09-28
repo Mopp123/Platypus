@@ -9,7 +9,6 @@
 
 namespace platypus
 {
-
     static std::string get_shader_filename(uint32_t shaderStage, bool normalMapping, bool skinned)
     {
         // Example shader names:
