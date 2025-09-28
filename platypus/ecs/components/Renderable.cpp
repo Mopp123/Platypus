@@ -40,19 +40,6 @@ namespace platypus
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 
-        // Create material pipeline and initial descriptor sets
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialAssetID, AssetType::ASSET_TYPE_MATERIAL);
-        if (!pMaterial->getPipelineData())
-        {
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshAssetID, AssetType::ASSET_TYPE_MESH);
-            Debug::log(
-                "@create_static_mesh_renderable "
-                "Material didn't have pipeline data yet -> creating..."
-            );
-            pMaterial->createPipeline(pMesh);
-        }
-
         return pRenderable;
     }
 
@@ -87,19 +74,6 @@ namespace platypus
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 
-        // Create material pipeline and initial descriptor sets
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialAssetID, AssetType::ASSET_TYPE_MATERIAL);
-        if (!pMaterial->getSkinnedPipelineData())
-        {
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshAssetID, AssetType::ASSET_TYPE_MESH);
-            Debug::log(
-                "@create_skinned_mesh_renderable "
-                "Material didn't have pipeline data yet -> creating..."
-            );
-            pMaterial->createSkinnedPipeline(pMesh);
-        }
-
         return pRenderable;
     }
 
@@ -132,23 +106,6 @@ namespace platypus
         TerrainMeshRenderable* pRenderable = (TerrainMeshRenderable*)pComponent;
         pRenderable->terrainMeshID = terrainMeshAssetID;
         pRenderable->terrainMaterialID = terrainMaterialAssetID;
-
-        // Create material pipeline and initial descriptor sets
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        TerrainMaterial* pMaterial = (TerrainMaterial*)pAssetManager->getAsset(
-            terrainMaterialAssetID,
-            AssetType::ASSET_TYPE_TERRAIN_MATERIAL
-        );
-        if (!pMaterial->getPipelineData())
-        {
-            Debug::log(
-                "@create_terrain_mesh_renderable "
-                "TerrainMaterial didn't have pipeline data yet -> creating..."
-            );
-            pMaterial->createPipeline();
-            //if (!pMaterial->hasDescriptorSets())
-            //    pMaterial->createShaderResources();
-        }
 
         return pRenderable;
     }

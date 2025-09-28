@@ -37,7 +37,7 @@ namespace platypus
      * */
     struct UniformInfo
     {
-        int locationIndex;
+        int locationIndex; // NOTE: This isn't actually used anymore! Attempting to figure out locations dynamically in web impl. TODO: Remove?
         ShaderDataType type;
         // NOTE: should be using DescriptorSetLayoutBinding's "descriptorCount" instead of "arrayLen"
         // when I was writing this initially, I forgot how Vulkan deals with that kind of stuff...
@@ -103,7 +103,7 @@ namespace platypus
         DescriptorSetLayout(const std::vector<DescriptorSetLayoutBinding>& bindings);
         DescriptorSetLayout(const DescriptorSetLayout& other);
         DescriptorSetLayout& operator=(DescriptorSetLayout&& other);
-        DescriptorSetLayout& operator=(DescriptorSetLayout& other);
+        //DescriptorSetLayout& operator=(DescriptorSetLayout& other);
         ~DescriptorSetLayout();
 
         void destroy();

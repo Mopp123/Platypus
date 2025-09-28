@@ -85,7 +85,13 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pPipeline = pMaterial->getPipelineData()->pPipeline;
+        Pipeline* pMaterialPipeline = nullptr;
+        if (pMaterial->getPipelineData() == nullptr)
+        {
+            pMaterial->createPipeline(pMesh);
+            pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
+            Debug::log("___TEST___Material pipeline created!");
+        }
 
         // Create the instanced transforms buffer
         const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
@@ -99,6 +105,7 @@ namespace platypus
         );
 
         std::vector<BatchShaderResource> shaderResources(1);
+        Debug::log("___TEST___Creating static batch shader resources... textures: " + std::to_string(pMaterial->getTextures().size()));
         createBatchShaderResources(
             framesInFlight,
             identifier,
@@ -107,12 +114,23 @@ namespace platypus
                 {
                     ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
+                    &pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
                 }
             },
             shaderResources
         );
+
+        Debug::log("___TEST___Created shader resources: " + std::to_string(shaderResources.size()));
+        Debug::log("___TEST___Created descriptor sets: " + std::to_string(shaderResources[0].descriptorSet.size()));
+        // NOTE: ERROR HERE! used descriptor set layout doesn't have any bindings!??!!?
+        Debug::log("___TEST___Created bindings: " + std::to_string(shaderResources[0].descriptorSet[0].getLayout()->getBindings().size()));
+        for (size_t i = 0; i < shaderResources[0].descriptorSet[0].getLayout()->getBindings().size(); ++i)
+        {
+            const DescriptorSetLayoutBinding& binding = shaderResources[0].descriptorSet[0].getLayout()->getBindings()[i];
+            Debug::log(" [" + std::to_string(i) + "]: binding = " + std::to_string(binding.getBinding()) + " type = " + std::to_string(binding.getType()));
+        }
+        Debug::log("___TEST___Success!");
 
         // TODO: Some better way to deal with this?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
@@ -135,7 +153,7 @@ namespace platypus
 
         Batch* pBatch = new Batch{
             BatchType::STATIC_INSTANCED,
-            pPipeline,
+            pMaterialPipeline,
             useDescriptorSets,
             0, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -167,7 +185,12 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
+        Pipeline* pMaterialSkinnedPipeline = nullptr;
+        if (pMaterial->getSkinnedPipelineData() == nullptr)
+        {
+            pMaterial->createSkinnedPipeline(pMesh);
+            pMaterialSkinnedPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
+        }
 
         // Create joint uniform buffer and descriptor sets
         size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
@@ -184,13 +207,13 @@ namespace platypus
                 {
                     ShaderResourceType::ANY,
                     dynamicUniformBufferElementSize,
-                    s_jointDescriptorSetLayout,
+                    &s_jointDescriptorSetLayout,
                     { }
                 },
                 {
                     ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
+                    &pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
                 }
             },
@@ -220,7 +243,7 @@ namespace platypus
 
         Batch* pBatch = new Batch{
             BatchType::SKINNED,
-            pPipeline,
+            pMaterialSkinnedPipeline,
             useDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -252,7 +275,12 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         TerrainMesh* pMesh = (TerrainMesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_TERRAIN_MESH);
         TerrainMaterial* pMaterial = (TerrainMaterial*)pAssetManager->getAsset(terrainMaterialID, AssetType::ASSET_TYPE_TERRAIN_MATERIAL);
-        Pipeline* pPipeline = pMaterial->getPipelineData()->pPipeline;
+        Pipeline* pMaterialPipeline = nullptr;
+        if (pMaterial->getPipelineData() == nullptr)
+        {
+            pMaterial->createPipeline();
+            pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
+        }
 
         // Create uniform buffers holding transformation matrix, tile size
         // and vertices. Also create descriptor sets for these
@@ -272,13 +300,13 @@ namespace platypus
                 {
                     ShaderResourceType::ANY,
                     dynamicUniformBufferElementSize,
-                    s_terrainDescriptorSetLayout,
+                    &s_terrainDescriptorSetLayout,
                     { }
                 },
                 {
                     ShaderResourceType::MATERIAL,
                     sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
+                    &pMaterial->getDescriptorSetLayout(),
                     pMaterial->getTextures()
                 }
             },
@@ -308,7 +336,7 @@ namespace platypus
 
         Batch* pBatch = new Batch{
             BatchType::TERRAIN,
-            pPipeline,
+            pMaterialPipeline,
             useDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -586,8 +614,8 @@ namespace platypus
             outResource.descriptorSet.resize(framesInFlight);
             for (size_t frameIndex = 0; frameIndex < framesInFlight; ++frameIndex)
             {
-                const DescriptorSetLayout& descriptorSetLayout = resourceLayout.descriptorSetLayout;
-                const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = descriptorSetLayout.getBindings();
+                const DescriptorSetLayout* pDescriptorSetLayout = resourceLayout.pDescriptorSetLayout;
+                const std::vector<DescriptorSetLayoutBinding>& descriptorSetLayoutBindings = pDescriptorSetLayout->getBindings();
                 std::vector<DescriptorSetComponent> descriptorSetComponents(descriptorSetLayoutBindings.size());
                 size_t useTextureIndex = 0;
                 for (size_t i = 0; i < descriptorSetComponents.size(); ++i)
@@ -635,7 +663,7 @@ namespace platypus
                 }
 
                 outResource.descriptorSet[frameIndex] = _descriptorPoolRef.createDescriptorSet(
-                    &descriptorSetLayout,
+                    pDescriptorSetLayout,
                     descriptorSetComponents
                 );
             }

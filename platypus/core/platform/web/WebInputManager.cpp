@@ -128,7 +128,7 @@ namespace platypus
                 "Failed to find key: " + std::string(keyEvent->key),
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            return true;
+            return false;
         }
 
         KeyName keyName = keyIt->second;
@@ -151,7 +151,7 @@ namespace platypus
             pInputManager->processCharInputEvents(codepoint);
         }
 
-        return true;
+        return false;
     }
 
     static EM_BOOL keyup_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)

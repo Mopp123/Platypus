@@ -36,7 +36,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/dependencies/tinygltf
     )
     # NOTE: Below doesn't work if using add_compile_options() instead! ...for some reason...
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
     set(CMAKE_EXECUTABLE_SUFFIX .html)
     set(HTML_SHELL_LOCATION "${PROJECT_SOURCE_DIR}/shell.html")
     # NOTE: This gets converted to camel case for some reason...

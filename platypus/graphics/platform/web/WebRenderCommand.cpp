@@ -535,10 +535,16 @@ namespace platypus
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
+            int descriptorSetIndex = 0;
             int useLocationIndex = pPipelineImpl->firstDescriptorSetLocation;
             for (const DescriptorSet& descriptorSet : descriptorSets)
             {
                 const DescriptorSetLayout* pLayout = descriptorSet.getLayout();
+                if (!pLayout)
+                {
+                    Debug::log("___TEST___Descriptor set layout was nullptr!");
+                    PLATYPUS_ASSERT(false);
+                }
                 const std::vector<DescriptorSetComponent>& descriptorSetComponents = descriptorSet.getComponents();
 
                 // Not to be confused with binding number.
@@ -556,10 +562,13 @@ namespace platypus
 
                     DescriptorType bindingType = binding.getType();
                     #ifdef PLATYPUS_DEBUG
+                    Debug::log("___TEST___binding descriptor set " + std::to_string(descriptorSetIndex) + " with " + std::to_string(descriptorSetComponents.size()) + " components");
                         if (descriptorSetComponents[bindingIndex].type != bindingType)
                         {
                             Debug::log(
                                 "@bind_descriptor_sets "
+                                "Descriptor set: " + std::to_string(descriptorSetIndex) + " "
+                                "(" + std::to_string(descriptorSetComponents.size()) + " components) "
                                 "Invalid descriptor component type: " + std::to_string(descriptorSetComponents[bindingIndex].type) + " "
                                 "for binding index: " + std::to_string(bindingIndex) + " "
                                 "binding type: " + std::to_string(bindingType),
@@ -721,6 +730,7 @@ namespace platypus
                     }
                     ++bindingIndex;
                 }
+                ++descriptorSetIndex;
             }
             pPipelineImpl->constantsPushed = false;
         }

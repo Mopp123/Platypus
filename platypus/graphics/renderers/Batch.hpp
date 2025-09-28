@@ -22,7 +22,7 @@ namespace platypus
     {
         ShaderResourceType type;
         size_t uniformBufferElementSize;
-        DescriptorSetLayout descriptorSetLayout;
+        const DescriptorSetLayout* pDescriptorSetLayout;
         std::vector<Texture*> textures;
     };
 
