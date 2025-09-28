@@ -70,11 +70,6 @@ namespace platypus
         void createCommonShaderResources();
         void destroyCommonShaderResources();
 
-        // Creates secondary renderers' and Material assets' shader resources
-        void createShaderResources();
-        // Frees secondary renderers' and Material assets' shader resources
-        void freeShaderResources();
-
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();
     };

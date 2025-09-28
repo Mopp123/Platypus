@@ -314,26 +314,6 @@ namespace platypus
         _scene3DDataUniformBuffers.clear();
     }
 
-    // TODO: Remove?
-    void MasterRenderer::createShaderResources()
-    {
-        //AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-        //    ((Material*)pAsset)->createShaderResources();
-        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
-        //    ((TerrainMaterial*)pAsset)->createShaderResources();
-    }
-
-    // TODO: Remove?
-    void MasterRenderer::freeShaderResources()
-    {
-        //AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-        //    ((Material*)pAsset)->freeShaderResources();
-        //for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
-        //    ((TerrainMaterial*)pAsset)->freeShaderResources();
-    }
-
     const CommandBuffer& MasterRenderer::recordCommandBuffer()
     {
         if (_currentFrame >= _primaryCommandBuffers.size())
@@ -488,13 +468,11 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_WARNING
                 );
                 destroyCommonShaderResources();
-                freeShaderResources();
                 destroyPipelines();
                 freeCommandBuffers();
                 allocCommandBuffers(_swapchain.getMaxFramesInFlight());
                 createPipelines();
                 createCommonShaderResources();
-                createShaderResources();
                 // NOTE: Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
