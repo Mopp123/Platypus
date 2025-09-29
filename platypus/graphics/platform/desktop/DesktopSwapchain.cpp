@@ -456,6 +456,7 @@ namespace platypus
             vkDestroyImageView(device, imageView, nullptr);
         _pImpl->imageViews.clear();
 
+        _previousImageCount = _imageCount;
         _imageCount = 0;
 
         vkDestroySwapchainKHR(device, _pImpl->handle, nullptr);

@@ -4,6 +4,7 @@
 #include "platypus/core/Debug.h"
 
 #include <emscripten.h>
+#include <emscripten/em_types.h>
 #include <emscripten/html5.h>
 
 
@@ -128,7 +129,7 @@ namespace platypus
                 "Failed to find key: " + std::string(keyEvent->key),
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            return true;
+            return EMSCRIPTEN_RESULT_SUCCESS;
         }
 
         KeyName keyName = keyIt->second;
@@ -151,7 +152,7 @@ namespace platypus
             pInputManager->processCharInputEvents(codepoint);
         }
 
-        return true;
+        return EMSCRIPTEN_RESULT_SUCCESS;
     }
 
     static EM_BOOL keyup_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
@@ -165,7 +166,7 @@ namespace platypus
                 "Failed to find key: " + std::string(keyEvent->key),
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            return true;
+            return 0;
         }
 
         KeyName keyName = keyIt->second;
@@ -175,7 +176,7 @@ namespace platypus
         int mods = 0;
         pInputManager->processKeyEvents(keyName, scancode, InputAction::RELEASE, mods);
 
-        return true;
+        return 0;
     }
 
     static EM_BOOL mouse_down_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
@@ -189,7 +190,7 @@ namespace platypus
                 "Failed to find button: " + std::to_string(mouseEvent->button),
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            return true;
+            return 0;
         }
 
         MouseButtonName buttonName = buttonIt->second;
@@ -197,7 +198,7 @@ namespace platypus
         int mods = 0;
         pInputManager->processMouseButtonEvents(buttonName, InputAction::PRESS, mods);
 
-        return true;
+        return 0;
     }
 
     static EM_BOOL mouse_up_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
@@ -211,7 +212,7 @@ namespace platypus
                 "Failed to find button: " + std::to_string(mouseEvent->button),
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            return true;
+            return 0;
         }
 
         MouseButtonName buttonName = buttonIt->second;
@@ -219,7 +220,7 @@ namespace platypus
         int mods = 0;
         pInputManager->processMouseButtonEvents(buttonName, InputAction::RELEASE, mods);
 
-        return true;
+        return 0;
     }
 
     static EM_BOOL cursor_pos_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData)
@@ -236,7 +237,7 @@ namespace platypus
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
 
-        return true;
+        return 0;
     }
 
     static EM_BOOL scroll_callback(int eventType, const EmscriptenWheelEvent* wheelEvent, void* userData)
@@ -247,7 +248,7 @@ namespace platypus
         // Maybe take deltaX into account too eventually
         pInputManager->processScrollEvents(0, scroll);
 
-        return true;
+        return 0;
     }
 
     // NOTE: On web platform "window" resizing works differently from desktop.
@@ -278,7 +279,7 @@ namespace platypus
             pInputManager->processWindowResizeEvents(actualWidth, actualHeight);
         }
 
-        return true;
+        return 0;
     }
 
 

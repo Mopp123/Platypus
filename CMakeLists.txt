@@ -13,20 +13,16 @@ else()
     message(FATAL_ERROR "No build target specified!")
 endif()
 
-
-# For our vim setup's YCM plugin to work
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_compile_options(
+    -Wall -g
+)
 
 add_compile_definitions(
     PLATYPUS_DEBUG=1
+    PLATYPUS_BUILD_DESKTOP=1
 )
-
-# -g to to use gdb debugger
-add_compile_options(
-    -Wall -std=c++17 -g
-)
-
-add_compile_definitions(PLATYPUS_BUILD_DESKTOP=1)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}

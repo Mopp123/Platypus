@@ -3,12 +3,22 @@
 #include "Asset.h"
 #include "Texture.h"
 #include "Mesh.h"
+#include "TerrainMesh.hpp"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
+
+#define PE_MAX_MATERIAL_TEX_CHANNELS 5
 
 
 namespace platypus
 {
+    // Used to determine which shader to use
+    enum class MaterialType
+    {
+        MESH,
+        TERRAIN
+    };
+
     struct MaterialPipelineData
     {
         Shader* pVertexShader;
@@ -19,61 +29,64 @@ namespace platypus
     class Material : public Asset
     {
     private:
-        ID_t _diffuseTextureID = NULL_ID;
-        ID_t _specularTextureID = NULL_ID;
-        ID_t _normalTextureID = NULL_ID;
+        MaterialType _type;
+        ID_t _blendmapTextureID = NULL_ID;
+        ID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        ID_t _specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        ID_t _normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        size_t _diffuseTextureCount = 0;
+        size_t _specularTextureCount = 0;
+        size_t _normalTextureCount = 0;
 
-        float _specularStrength = 1.0f;
-        float _shininess = 1.0f;
-
+        float _specularStrength;
+        float _shininess;
         bool _shadeless = false;
 
         MaterialPipelineData* _pPipelineData = nullptr;
         MaterialPipelineData* _pSkinnedPipelineData = nullptr;
-        std::vector<Buffer*> _uniformBuffers;
-        // NOTE: This contains ALL descriptor set layouts for pipeline!
-        // Currently the last one is the actual material's layout!
+
         DescriptorSetLayout _descriptorSetLayout;
-        std::vector<DescriptorSet> _descriptorSets;
 
     public:
         Material(
-            ID_t diffuseTextureID,
-            ID_t specularTextureID,
-            ID_t normalTextureID,
-            float specularStrength = 1.0f,
-            float shininess = 1.0f,
+            MaterialType type,
+            ID_t blendmapTextureID,
+            ID_t* pDiffuseTextureIDs,
+            ID_t* pSpecularTextureIDs,
+            ID_t* pNormalTextureIDs,
+            size_t diffuseTextureCount,
+            size_t specularTextureCount,
+            size_t normalTextureCount,
+            float specularStrength,
+            float shininess,
             bool shadeless = false
         );
         ~Material();
 
-        void createPipeline(
-            const Mesh* pMesh
-        );
-        void createSkinnedPipeline(
-            const Mesh* pMesh
-        );
+        // TODO: Unfuck this mess plz!
+        void createPipeline(const Mesh* pMesh);
+        void createSkinnedPipeline(const Mesh* pMesh);
+        void createTerrainPipeline(const TerrainMesh* pTerrainMesh);
 
         void recreateExistingPipeline();
         void destroyPipeline();
-        // NOTE: This also creates the uniform buffer
-        //  -> should that be a separate func or name this more clearly?
-        void createShaderResources();
-        void freeShaderResources();
 
-        Texture* getDiffuseTexture() const;
-        Texture* getSpecularTexture() const;
-        Texture* getNormalTexture() const;
+        Texture* getBlendmapTexture() const;
+        Texture* getDiffuseTexture(size_t channel) const;
+        Texture* getSpecularTexture(size_t channel) const;
+        Texture* getNormalTexture(size_t channel) const;
+        std::vector<Texture*> getTextures() const;
 
+        inline size_t getTotalTextureCount() const
+        {
+            return _diffuseTextureCount + _specularTextureCount + _normalTextureCount + (_blendmapTextureID != NULL_ID ? 1 : 0);
+        }
         inline float getSpecularStrength() const { return _specularStrength; }
         inline float getShininess() const { return _shininess; }
         inline bool isShadeless() const { return _shadeless; }
-        inline bool hasNormalMap() const { return _normalTextureID != NULL_ID;  }
+
         inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
         inline const MaterialPipelineData* getSkinnedPipelineData() { return _pSkinnedPipelineData; }
-        inline const std::vector<Buffer*>& getUniformBuffers() const { return _uniformBuffers; }
-        inline const std::vector<DescriptorSet>& getDescriptorSets() const { return _descriptorSets; }
-        inline bool hasDescriptorSets() const { return !_descriptorSets.empty(); }
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
 
@@ -86,7 +99,10 @@ namespace platypus
         void warnUnassigned(const std::string& beginStr);
 
     private:
+        void validateTextureCounts();
+        void createDescriptorSetLayout();
+
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, bool normalMapping, bool skinned);
+        std::string getShaderFilename(uint32_t shaderStage, bool skinned);
     };
 }

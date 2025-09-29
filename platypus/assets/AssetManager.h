@@ -3,6 +3,7 @@
 #include "Asset.h"
 #include "Image.h"
 #include "Mesh.h"
+#include "TerrainMesh.hpp"
 #include "Model.h"
 #include "Texture.h"
 #include "Material.h"
@@ -22,6 +23,7 @@ namespace platypus
 
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
+        Texture* _pZeroTexture = nullptr;
 
     public:
         AssetManager();
@@ -43,11 +45,13 @@ namespace platypus
             uint32_t textureAtlasRows = 1
         );
         Material* createMaterial(
-            ID_t diffuseTextureID,
-            ID_t specularTextureID,
-            ID_t normalTextureID,
-            float specularStrength = 1.0f,
-            float shininess = 1.0f,
+            MaterialType type,
+            ID_t blendmapTextureID,
+            std::vector<ID_t> diffuseTextureIDs,
+            std::vector<ID_t> specularTextureIDs,
+            std::vector<ID_t> normalTextureIDs,
+            float specularStrength = 0.625f,
+            float shininess = 16.0f,
             bool shadeless = false
         );
         Mesh* createMesh(
@@ -60,6 +64,13 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
+        TerrainMesh* createTerrainMesh(
+            float tileSize,
+            const std::vector<float>& heightmapData,
+            bool dynamic,
+            bool generateTangents
+        );
+
         SkeletalAnimationData* createSkeletalAnimation(
             const KeyframeAnimationData& keyframes
         );
@@ -70,5 +81,13 @@ namespace platypus
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
+        inline Texture* getZeroTexture() const { return _pZeroTexture; }
+
+    private:
+        bool validateAsset(
+            const char* callLocation,
+            ID_t assetID,
+            AssetType requiredType
+        );
     };
 }

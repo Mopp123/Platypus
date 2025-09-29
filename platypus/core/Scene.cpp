@@ -40,6 +40,12 @@ namespace platypus
             maxEntityCount,
             true
         );
+        _componentPools[ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
+            sizeof(TerrainMeshRenderable),
+            maxEntityCount,
+            true
+        );
         _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
             ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
             sizeof(SkeletalAnimation),

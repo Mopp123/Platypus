@@ -281,7 +281,7 @@ namespace platypus
             pScene->addToComponentMask(target, ComponentType::COMPONENT_TYPE_CHILDREN);
             pChildren = (Children*)pChildrenComponent;
             pChildren->count = 0;
-            memset(pChildren, 0, sizeof(Children));
+            memset((void*)pChildren, 0, sizeof(Children));
         }
 
         // Make sure child count within limits

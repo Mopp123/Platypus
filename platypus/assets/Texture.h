@@ -22,22 +22,6 @@ namespace platypus
         SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
     };
 
-    enum class ImageFormat
-    {
-        R8_SRGB,
-        R8G8B8_SRGB,
-        R8G8B8A8_SRGB,
-
-        R8_UNORM,
-        R8G8B8_UNORM,
-        R8G8B8A8_UNORM
-    };
-
-    std::string image_format_to_string(ImageFormat format);
-
-    bool is_image_format_valid(ImageFormat imageFormat, int imageColorChannels);
-
-
     // NOTE: Atm TextureSampler is supposed to be passed around as const ref!
     // That's why pImpl is shared_ptr in this case
     struct TextureSamplerImpl;
@@ -71,6 +55,7 @@ namespace platypus
     {
     private:
         TextureImpl* _pImpl = nullptr;
+        ImageFormat _imageFormat;
         std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
         uint32_t _atlasRowCount = 1;
 
@@ -88,5 +73,6 @@ namespace platypus
         inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
         inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
         inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
+        inline ImageFormat getImageFormat() const { return _imageFormat; }
     };
 }

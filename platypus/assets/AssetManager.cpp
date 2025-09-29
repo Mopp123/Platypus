@@ -19,6 +19,10 @@ namespace platypus
         Image* pBlackImage = createImage(blackPixels, 1, 1, 4);
         _persistentAssets[pBlackImage->getID()] = pBlackImage;
 
+        PE_ubyte zeroPixels[4] = { 0, 0, 0, 0 };
+        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4);
+        _persistentAssets[pZeroImage->getID()] = pZeroImage;
+
         TextureSampler defaultTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -35,8 +39,14 @@ namespace platypus
             ImageFormat::R8G8B8A8_SRGB,
             defaultTextureSampler
         );
+        _pZeroTexture = createTexture(
+            pZeroImage->getID(),
+            ImageFormat::R8G8B8A8_SRGB,
+            defaultTextureSampler
+        );
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
+        _persistentAssets[_pZeroTexture->getID()] = _pZeroTexture;
     }
 
     AssetManager::~AssetManager()
@@ -173,64 +183,52 @@ namespace platypus
     }
 
     Material* AssetManager::createMaterial(
-        ID_t diffuseTextureID,
-        ID_t specularTextureID,
-        ID_t normalTextureID,
+        MaterialType type,
+        ID_t blendmapTextureID,
+        std::vector<ID_t> diffuseTextureIDs,
+        std::vector<ID_t> specularTextureIDs,
+        std::vector<ID_t> normalTextureIDs,
         float specularStrength,
         float shininess,
         bool shadeless
     )
     {
+        // At least a single diffuse texture is required.
+        // If not provided or invalid -> use some default texture
+        if (diffuseTextureIDs.empty())
+            diffuseTextureIDs.push_back(_pBlackTexture->getID());
 
-        std::unordered_map<ID_t, Asset*>::const_iterator diffuseTextureIt = _assets.find(diffuseTextureID);
-        std::unordered_map<ID_t, Asset*>::const_iterator specularTextureIt = _assets.find(specularTextureID);
-
-        Texture* pDiffuseTexture = nullptr;
-        Texture* pSpecularTexture = nullptr;
-        if (diffuseTextureIt != _assets.end())
+        // If textures were provided -> validate they exist
+        if (blendmapTextureID)
         {
-            AssetType foundAssetType = _assets[diffuseTextureID]->getType();
-            if (foundAssetType != AssetType::ASSET_TYPE_TEXTURE)
-            {
-                Debug::log(
-                    "@AssetManager::createMaterial "
-                    "Invalid asset type: " + asset_type_to_string(foundAssetType) + " " +
-                    "for diffuse texture",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            pDiffuseTexture = (Texture*)_assets[diffuseTextureID];
+            if (!validateAsset("createMaterial (blendmap texture validation)", blendmapTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                return nullptr;
         }
-        else
+        for (ID_t diffuseTextureID : diffuseTextureIDs)
         {
-            pDiffuseTexture = _pWhiteTexture;
+            if (!validateAsset("createMaterial (diffuse texture validation)", diffuseTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                return nullptr;
         }
-
-        if (specularTextureIt != _assets.end())
+        for (ID_t specularTextureID : diffuseTextureIDs)
         {
-            AssetType foundAssetType = _assets[specularTextureID]->getType();
-            if (foundAssetType != AssetType::ASSET_TYPE_TEXTURE)
-            {
-                Debug::log(
-                    "@AssetManager::createMaterial "
-                    "Invalid asset type: " + asset_type_to_string(foundAssetType) + " " +
-                    "for specular texture",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            pSpecularTexture = (Texture*)_assets[specularTextureID];
+            if (!validateAsset("createMaterial (specular texture validation)", specularTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                return nullptr;
         }
-        else
+        for (ID_t normalTextureID : diffuseTextureIDs)
         {
-            pSpecularTexture = _pBlackTexture;
+            if (!validateAsset("createMaterial (normal texture validation)", normalTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                return nullptr;
         }
 
         Material* pMaterial = new Material(
-            pDiffuseTexture->getID(),
-            pSpecularTexture->getID(),
-            normalTextureID,
+            type,
+            blendmapTextureID,
+            diffuseTextureIDs.data(),
+            specularTextureIDs.data(),
+            normalTextureIDs.data(),
+            diffuseTextureIDs.size(),
+            specularTextureIDs.size(),
+            normalTextureIDs.size(),
             specularStrength,
             shininess,
             shadeless
@@ -238,6 +236,83 @@ namespace platypus
         _assets[pMaterial->getID()] = pMaterial;
         return pMaterial;
     }
+
+    /*
+    TerrainMaterial* AssetManager::createTerrainMaterial(
+        ID_t blendmapTextureID,
+        std::vector<ID_t> diffuseChannelTextures,
+        std::vector<ID_t> specularChannelTextures
+    )
+    {
+        if (diffuseChannelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "@AssetManager::createTerrainMaterial "
+                "Too many diffuse channel textures provided(" + std::to_string(diffuseChannelTextures.size()) + ") "
+                "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if (specularChannelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "@AssetManager::createTerrainMaterial "
+                "Too many specular channel textures provided(" + std::to_string(specularChannelTextures.size()) + ") "
+                "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        ID_t useBlendmapTextureID = blendmapTextureID;
+        if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, blendmapTextureID, AssetType::ASSET_TYPE_TEXTURE))
+            useBlendmapTextureID = _pBlackTexture->getID();
+
+        ID_t defaultTextureID = _pBlackTexture->getID();
+        // Validate diffuse and specular textures. Use default(black texture) if invalid or not given.
+        std::vector<ID_t> useDiffuseChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
+        std::vector<ID_t> useSpecularChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
+        for (size_t textureChannel = 0; textureChannel < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++textureChannel)
+        {
+            if (textureChannel >= diffuseChannelTextures.size())
+            {
+                useDiffuseChannelTextureIDs[textureChannel] = defaultTextureID;
+            }
+            else
+            {
+                ID_t diffuseTextureID = diffuseChannelTextures[textureChannel];
+                if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, diffuseTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                    diffuseTextureID = defaultTextureID;
+
+                useDiffuseChannelTextureIDs[textureChannel] = diffuseTextureID;
+            }
+
+            if (textureChannel >= specularChannelTextures.size())
+            {
+                useSpecularChannelTextureIDs[textureChannel] = defaultTextureID;
+            }
+            else
+            {
+                ID_t specularTextureID = specularChannelTextures[textureChannel];
+                if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, specularTextureID, AssetType::ASSET_TYPE_TEXTURE))
+                    specularTextureID = defaultTextureID;
+
+                useSpecularChannelTextureIDs[textureChannel] = specularTextureID;
+            }
+        }
+
+        TerrainMaterial* pTerrainMaterial = new TerrainMaterial(
+            useBlendmapTextureID,
+            useDiffuseChannelTextureIDs.data(),
+            useDiffuseChannelTextureIDs.size(),
+            useSpecularChannelTextureIDs.data(),
+            useSpecularChannelTextureIDs.size()
+        );
+        _assets[pTerrainMaterial->getID()] = pTerrainMaterial;
+        return pTerrainMaterial;
+    }
+*/
 
     Mesh* AssetManager::createMesh(
         const VertexBufferLayout& vertexBufferLayout,
@@ -374,6 +449,18 @@ namespace platypus
         return pModel;
     }
 
+    TerrainMesh* AssetManager::createTerrainMesh(
+        float tileSize,
+        const std::vector<float>& heightmapData,
+        bool dynamic,
+        bool generateTangents
+    )
+    {
+        TerrainMesh* pTerrainMesh = new TerrainMesh(tileSize, heightmapData, dynamic, generateTangents);
+        _assets[pTerrainMesh->getID()] = pTerrainMesh;
+        return pTerrainMesh;
+    }
+
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(
         const KeyframeAnimationData& keyframes
     )
@@ -439,5 +526,40 @@ namespace platypus
                 foundAssets.push_back(asset.second);
         }
         return foundAssets;
+    }
+
+    bool AssetManager::validateAsset(
+        const char* callLocation,
+        ID_t assetID,
+        AssetType requiredType
+    )
+    {
+        const std::string callLocationStr(callLocation);
+        const std::string locationStr(PLATYPUS_CURRENT_FUNC_NAME);
+        std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
+        if (it == _assets.end())
+        {
+            Debug::log(
+                "@AssetManager::" + locationStr + "(" + locationStr + ") "
+                "Failed to find asset with ID: " + std::to_string(assetID) + " "
+                "with type: " + asset_type_to_string(requiredType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        if (_assets[assetID]->getType() != requiredType)
+        {
+            Debug::log(
+                "@AssetManager::" + locationStr + "(" + locationStr + ") "
+                "Invalid asset type: " + asset_type_to_string(_assets[assetID]->getType()) + " "
+                "for asset ID: " + std::to_string(assetID) + " "
+                "required type was: " + asset_type_to_string(requiredType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        return true;
     }
 }

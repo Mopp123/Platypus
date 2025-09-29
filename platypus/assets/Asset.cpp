@@ -7,6 +7,7 @@ namespace platypus
         switch (type)
         {
             case AssetType::ASSET_TYPE_MESH: return "ASSET_TYPE_MESH";
+            case AssetType::ASSET_TYPE_TERRAIN_MESH: return "ASSET_TYPE_TERRAIN_MESH";
             case AssetType::ASSET_TYPE_MODEL: return "ASSET_TYPE_MODEL";
             case AssetType::ASSET_TYPE_IMAGE: return "ASSET_TYPE_IMAGE";
             case AssetType::ASSET_TYPE_TEXTURE: return "ASSET_TYPE_TEXTURE";

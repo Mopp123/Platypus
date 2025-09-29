@@ -7,9 +7,14 @@
 namespace platypus
 {
     Pipeline* create_material_pipeline(
-        const Mesh* pMesh,
+        const VertexBufferLayout& meshVertexBufferLayout,
         bool instanced,
         bool skinned,
+        Material* pMaterial
+    );
+
+    Pipeline* create_terrain_material_pipeline(
+        const VertexBufferLayout& meshVertexBufferLayout,
         Material* pMaterial
     );
 }

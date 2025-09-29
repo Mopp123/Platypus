@@ -1,6 +1,7 @@
 #include "PipelineFactory.hpp"
 #include "platypus/core/Application.h"
 #include "Swapchain.h"
+#include "platypus/assets/TerrainMesh.hpp"
 #include "renderers/MasterRenderer.h"
 #include "renderers/Batch.hpp"
 #include <string>
@@ -8,44 +9,18 @@
 
 namespace platypus
 {
-
-    static std::string get_shader_filename(uint32_t shaderStage, bool normalMapping, bool skinned)
-    {
-        // Example shader names:
-        // vertex shader: "StaticVertexShader", "StaticHDVertexShader", "SkinnedHDVertexShader"
-        // fragment shader: "StaticFragmentShader", "StaticHDFragmentShader", "SkinnedHDFragmentShader"
-        std::string shaderName = "";
-        if (!skinned)
-            shaderName += "Static";
-        else
-            shaderName += "Skinned";
-
-        if (normalMapping)
-            shaderName += "HD";
-
-        if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
-            shaderName += "Vertex";
-        else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
-            shaderName += "Fragment";
-
-        shaderName += "Shader";
-
-        return shaderName;
-    }
-
     Pipeline* create_material_pipeline(
-        const Mesh* pMesh,
+        const VertexBufferLayout& meshVertexBufferLayout,
         bool instanced,
         bool skinned,
         Material* pMaterial
     )
     {
         // Figure out vertex buffer layouts
-        const VertexBufferLayout& meshVBLayout = pMesh->getVertexBufferLayout();
-        std::vector<VertexBufferLayout> useVertexBufferLayouts = { meshVBLayout };
+        std::vector<VertexBufferLayout> useVertexBufferLayouts = { meshVertexBufferLayout };
         if (instanced)
         {
-            uint32_t meshVBLayoutElements = (uint32_t)meshVBLayout.getElements().size();
+            uint32_t meshVBLayoutElements = (uint32_t)meshVertexBufferLayout.getElements().size();
             VertexBufferLayout instancedVBLayout = {
                 {
                     { meshVBLayoutElements, ShaderDataType::Float4 },
@@ -68,10 +43,10 @@ namespace platypus
         };
         if (skinned)
         {
-            // NOTE: Too confusing to access joint descriptor set layout from BatchPool here?!
+            // NOTE: Too confusing to access joint descriptor set layout from Batcher here?!
             // TODO: Fix plz?
             useDescriptorSetLayouts.push_back(
-                BatchPool::get_joint_descriptor_set_layout()
+                Batcher::get_joint_descriptor_set_layout()
             );
 
             pUseVertexShader = pMaterial->getSkinnedVertexShader();
@@ -94,6 +69,39 @@ namespace platypus
             pUseVertexShader,
             pUseFragmentShader,
             CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // Enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
+            true, // Enable color blend
+            0, // Push constants size
+            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+        );
+
+        return pPipeline;
+    }
+
+    Pipeline* create_terrain_material_pipeline(
+        const VertexBufferLayout& meshVertexBufferLayout,
+        Material* pMaterial
+    )
+    {
+        // Figure out descriptor set layouts and shaders
+        const MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        std::vector<DescriptorSetLayout> useDescriptorSetLayouts = {
+            pMasterRenderer->getScene3DDataDescriptorSetLayout(),
+            Batcher::get_terrain_descriptor_set_layout(),
+            pMaterial->getDescriptorSetLayout()
+        };
+
+        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
+        // NOTE: Currently sending proj mat as push constant
+        Pipeline* pPipeline = new Pipeline(
+            swapchain.getRenderPassPtr(),
+            { meshVertexBufferLayout },
+            useDescriptorSetLayouts,
+            pMaterial->getVertexShader(),
+            pMaterial->getFragmentShader(),
+            CullMode::CULL_MODE_NONE,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

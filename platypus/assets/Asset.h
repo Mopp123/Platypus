@@ -10,6 +10,7 @@ namespace platypus
     {
         ASSET_TYPE_NONE,
         ASSET_TYPE_MESH,
+        ASSET_TYPE_TERRAIN_MESH,
         ASSET_TYPE_MODEL,
         ASSET_TYPE_IMAGE,
         ASSET_TYPE_TEXTURE,

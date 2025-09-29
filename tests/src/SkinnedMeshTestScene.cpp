@@ -140,22 +140,26 @@ void SkinnedMeshTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        pDiffuseTexture->getID(),
-        pAssetManager->getWhiteTexture()->getID(),
+        MaterialType::MESH,
         NULL_ID,
+        { pDiffuseTexture->getID() },
+        { pAssetManager->getWhiteTexture()->getID() },
+        { },
         0.8f,
         16.0f
     );
     Material* pBoxMaterial = pAssetManager->createMaterial(
-        pBoxDiffuseTexture->getID(),
-        pAssetManager->getWhiteTexture()->getID(),
+        MaterialType::MESH,
         NULL_ID,
+        { pBoxDiffuseTexture->getID() },
+        { pAssetManager->getWhiteTexture()->getID() },
+        { },
         0.8f,
         16.0f
     );
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
-    int area = 10;
+    int area = 1;
     float spacing = 3.25f;
 
     for (int x = 0; x < area; ++x)

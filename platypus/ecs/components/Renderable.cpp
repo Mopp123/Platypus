@@ -1,5 +1,8 @@
 #include "Renderable.h"
 #include "platypus/core/Application.h"
+#include "platypus/assets/Material.h"
+#include "platypus/assets/Mesh.h"
+#include "platypus/assets/TerrainMesh.hpp"
 #include "platypus/core/Scene.h"
 #include "platypus/core/Debug.h"
 
@@ -36,21 +39,6 @@ namespace platypus
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 
-        // Create material pipeline and initial descriptor sets
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialAssetID, AssetType::ASSET_TYPE_MATERIAL);
-        if (!pMaterial->getPipelineData())
-        {
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshAssetID, AssetType::ASSET_TYPE_MESH);
-            Debug::log(
-                "@create_static_mesh_renderable "
-                "Material didn't have pipeline data yet -> creating..."
-            );
-            pMaterial->createPipeline(pMesh);
-            if (!pMaterial->hasDescriptorSets())
-                pMaterial->createShaderResources();
-        }
-
         return pRenderable;
     }
 
@@ -85,20 +73,38 @@ namespace platypus
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 
-        // Create material pipeline and initial descriptor sets
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialAssetID, AssetType::ASSET_TYPE_MATERIAL);
-        if (!pMaterial->getSkinnedPipelineData())
+        return pRenderable;
+    }
+
+    TerrainMeshRenderable* create_terrain_mesh_renderable(
+        entityID_t target,
+        ID_t terrainMeshAssetID,
+        ID_t materialAssetID
+    )
+    {
+        Application* pApp = Application::get_instance();
+        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
+        if (!pScene->isValidEntity(target, "create_terrain_mesh_renderable"))
         {
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshAssetID, AssetType::ASSET_TYPE_MESH);
-            Debug::log(
-                "@create_skinned_mesh_renderable "
-                "Material didn't have pipeline data yet -> creating..."
-            );
-            pMaterial->createSkinnedPipeline(pMesh);
-            if (!pMaterial->hasDescriptorSets())
-                pMaterial->createShaderResources();
+            PLATYPUS_ASSERT(false);
+            return nullptr;
         }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE;
+        void* pComponent = pScene->allocateComponent(target, componentType);
+        if (!pComponent)
+        {
+            Debug::log(
+                "@create_terrain_mesh_renderable "
+                "Failed to allocate TerrainMeshRenderable component for entity: " + std::to_string(target),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        pScene->addToComponentMask(target, componentType);
+        TerrainMeshRenderable* pRenderable = (TerrainMeshRenderable*)pComponent;
+        pRenderable->terrainMeshID = terrainMeshAssetID;
+        pRenderable->materialID = materialAssetID;
 
         return pRenderable;
     }

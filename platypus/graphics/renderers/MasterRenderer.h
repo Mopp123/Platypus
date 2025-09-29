@@ -28,6 +28,7 @@ namespace platypus
     private:
         Swapchain _swapchain;
         DescriptorPool _descriptorPool;
+        Batcher _batcher;
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
         // Shared descriptor sets among multiple renderers
@@ -67,11 +68,7 @@ namespace platypus
 
         // NOTE: Currently creating only once the "common" shader resources
         void createCommonShaderResources();
-
-        // Creates secondary renderers' and Material assets' shader resources
-        void createShaderResources();
-        // Frees secondary renderers' and Material assets' shader resources
-        void freeShaderResources();
+        void destroyCommonShaderResources();
 
         const CommandBuffer& recordCommandBuffer();
         void handleWindowResize();

@@ -37,7 +37,6 @@ namespace platypus
      * */
     struct UniformInfo
     {
-        int locationIndex;
         ShaderDataType type;
         // NOTE: should be using DescriptorSetLayoutBinding's "descriptorCount" instead of "arrayLen"
         // when I was writing this initially, I forgot how Vulkan deals with that kind of stuff...
@@ -103,7 +102,7 @@ namespace platypus
         DescriptorSetLayout(const std::vector<DescriptorSetLayoutBinding>& bindings);
         DescriptorSetLayout(const DescriptorSetLayout& other);
         DescriptorSetLayout& operator=(DescriptorSetLayout&& other);
-        DescriptorSetLayout& operator=(DescriptorSetLayout& other);
+        //DescriptorSetLayout& operator=(DescriptorSetLayout& other);
         ~DescriptorSetLayout();
 
         void destroy();
@@ -132,14 +131,11 @@ namespace platypus
         DescriptorSetImpl* _pImpl = nullptr;
         std::vector<DescriptorSetComponent> _components;
 
-        const DescriptorSetLayout* _pLayout = nullptr;
-
     public:
         DescriptorSet();
 
         DescriptorSet(
-            const std::vector<DescriptorSetComponent>& components,
-            const DescriptorSetLayout* pLayout
+            const std::vector<DescriptorSetComponent>& components
         );
 
         // NOTE: There has been quite a lot of weird issues when copying descriptor sets!
@@ -156,7 +152,6 @@ namespace platypus
         ~DescriptorSet();
 
         inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
-        inline const DescriptorSetLayout* getLayout() const { return _pLayout; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
     };
 
@@ -171,21 +166,8 @@ namespace platypus
         DescriptorPool(const Swapchain& swapchain);
         ~DescriptorPool();
 
-        // Buffer and/or Texture has to be provided for each binding in the layout!
-        /*
         DescriptorSet createDescriptorSet(
-            const DescriptorSetLayout* pLayout,
-            const std::vector<const Buffer*>& buffers
-        );
-        DescriptorSet createDescriptorSet(
-            const DescriptorSetLayout* pLayout,
-            const std::vector<const Texture*>& textures
-        );
-        */
-
-
-        DescriptorSet createDescriptorSet(
-            const DescriptorSetLayout* pLayout,
+            const DescriptorSetLayout& layout,
             const std::vector<DescriptorSetComponent>& components
         );
 
