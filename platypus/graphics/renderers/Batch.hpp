@@ -113,7 +113,7 @@ namespace platypus
         // Returns batch identifier, if created successfully
         ID_t createStaticBatch(ID_t meshID, ID_t materialID);
         ID_t createSkinnedBatch(ID_t meshID, ID_t materialID);
-        ID_t createTerrainBatch(ID_t terrainMeshID, ID_t terrainMaterialID);
+        ID_t createTerrainBatch(ID_t terrainMeshID, ID_t materialID);
 
         void addToStaticBatch(
             ID_t identifier,

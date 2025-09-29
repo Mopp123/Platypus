@@ -1,6 +1,5 @@
 #include "Batch.hpp"
 #include "platypus/assets/TerrainMesh.hpp"
-#include "platypus/assets/TerrainMaterial.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
@@ -87,10 +86,9 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = nullptr;
         if (pMaterial->getPipelineData() == nullptr)
-        {
             pMaterial->createPipeline(pMesh);
-            pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-        }
+
+        pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
 
         // Create the instanced transforms buffer
         const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
@@ -174,10 +172,9 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialSkinnedPipeline = nullptr;
         if (pMaterial->getSkinnedPipelineData() == nullptr)
-        {
             pMaterial->createSkinnedPipeline(pMesh);
-            pMaterialSkinnedPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
-        }
+
+        pMaterialSkinnedPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
 
         // Create joint uniform buffer and descriptor sets
         size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
@@ -251,9 +248,9 @@ namespace platypus
         return identifier;
     }
 
-    ID_t Batcher::createTerrainBatch(ID_t terrainMeshID, ID_t terrainMaterialID)
+    ID_t Batcher::createTerrainBatch(ID_t terrainMeshID, ID_t materialID)
     {
-        ID_t identifier = ID::hash(terrainMeshID, terrainMaterialID);
+        ID_t identifier = ID::hash(terrainMeshID, materialID);
         if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
         {
             return NULL_ID;
@@ -261,13 +258,12 @@ namespace platypus
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         TerrainMesh* pMesh = (TerrainMesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_TERRAIN_MESH);
-        TerrainMaterial* pMaterial = (TerrainMaterial*)pAssetManager->getAsset(terrainMaterialID, AssetType::ASSET_TYPE_TERRAIN_MATERIAL);
+        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = nullptr;
         if (pMaterial->getPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline();
-            pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-        }
+            pMaterial->createTerrainPipeline();
+
+        pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
 
         // Create uniform buffers holding transformation matrix, tile size
         // and vertices. Also create descriptor sets for these
@@ -335,7 +331,7 @@ namespace platypus
             ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
             0, // repeat count
             0, // instance count,
-            terrainMaterialID // materialAssetID
+            materialID // materialAssetID
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
@@ -469,30 +465,17 @@ namespace platypus
                 {
                     Buffer* pBuffer = shaderResource.buffer[currentFrame];
                     // Update material properties if resource was marked as Material
-                    // TODO: Make this less fucked up
                     if (shaderResource.type == ShaderResourceType::MATERIAL && pBatch->materialAssetID != NULL_ID)
                     {
                         Vector4f materialProperties(0, 0, 0, 0);
-                        if (pBatch->type == BatchType::TERRAIN)
-                        {
-                            TerrainMaterial* pTerrainMaterial = (TerrainMaterial*)pAssetManager->getAsset(
-                                pBatch->materialAssetID,
-                                AssetType::ASSET_TYPE_TERRAIN_MATERIAL
-                            );
-                            materialProperties.x = pTerrainMaterial->getSpecularStrength();
-                            materialProperties.y = pTerrainMaterial->getShininess();
-                            materialProperties.z = pTerrainMaterial->isShadeless();
-                        }
-                        else
-                        {
-                            Material* pMaterial = (Material*)pAssetManager->getAsset(
-                                pBatch->materialAssetID,
-                                AssetType::ASSET_TYPE_MATERIAL
-                            );
-                            materialProperties.x = pMaterial->getSpecularStrength();
-                            materialProperties.y = pMaterial->getShininess();
-                            materialProperties.z = pMaterial->isShadeless();
-                        }
+                        Material* pMaterial = (Material*)pAssetManager->getAsset(
+                            pBatch->materialAssetID,
+                            AssetType::ASSET_TYPE_MATERIAL
+                        );
+                        materialProperties.x = pMaterial->getSpecularStrength();
+                        materialProperties.y = pMaterial->getShininess();
+                        materialProperties.z = pMaterial->isShadeless();
+
                         pBuffer->updateDeviceAndHost(
                             &materialProperties,
                             sizeof(Vector4f),

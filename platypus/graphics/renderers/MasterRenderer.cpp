@@ -165,8 +165,8 @@ namespace platypus
         if (pTerrainRenderable)
         {
             const ID_t terrainMeshID = pTerrainRenderable->terrainMeshID;
-            const ID_t terrainMaterialID = pTerrainRenderable->terrainMaterialID;
-            ID_t batchID = _batcher.getBatchID(terrainMeshID, terrainMaterialID);
+            const ID_t materialID = pTerrainRenderable->materialID;
+            ID_t batchID = _batcher.getBatchID(terrainMeshID, materialID);
             if (batchID == NULL_ID)
             {
                 Debug::log(
@@ -174,7 +174,7 @@ namespace platypus
                     "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createTerrainBatch(terrainMeshID, terrainMaterialID);
+                batchID = _batcher.createTerrainBatch(terrainMeshID, materialID);
             }
 
             const TerrainMesh* pTerrainMesh = (const TerrainMesh*)Application::get_instance()->getAssetManager()->getAsset(
@@ -261,8 +261,6 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->recreateExistingPipeline();
-        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
-            ((TerrainMaterial*)pAsset)->recreateExistingPipeline();
     }
 
     void MasterRenderer::destroyPipelines()
@@ -272,8 +270,6 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
-        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_TERRAIN_MATERIAL))
-            ((TerrainMaterial*)pAsset)->destroyPipeline();
     }
 
     void MasterRenderer::createCommonShaderResources()

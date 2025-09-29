@@ -86,7 +86,8 @@ void TerrainTestScene::init()
     ID_t blackTextureID = pAssetManager->getBlackTexture()->getID();
     ID_t whiteTextureID = pAssetManager->getWhiteTexture()->getID();
 
-    TerrainMaterial* pTerrainMaterial = pAssetManager->createTerrainMaterial(
+    Material* pTerrainMaterial = pAssetManager->createMaterial(
+        MaterialType::TERRAIN,
         pBlendmapTexture->getID(),
         {
             pDiffuseChannel0Texture->getID(),
@@ -101,6 +102,8 @@ void TerrainTestScene::init()
             blackTextureID,
             blackTextureID,
             pSpecularChannel4Texture->getID()
+        },
+        {
         }
     );
 
@@ -109,21 +112,29 @@ void TerrainTestScene::init()
     _heightmap1.resize(heightmapArea);
     _heightmap2.resize(heightmapArea);
     float heightModifier = 0.003f;
-    for (size_t i = 0; i < heightmapArea; ++i)
+    float tileWidth = 2.0f;
+    float totalTerrainWidth = heightmapWidth * tileWidth;
+    for (size_t z = 0; z < 2; ++z)
     {
-        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-    }
-    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, false);
+        for (size_t x = 0; x < 2; ++x)
+        {
+            for (size_t i = 0; i < heightmapArea; ++i)
+            {
+                _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+                _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+            }
+            TerrainMesh* pTerrainMesh = pAssetManager->createTerrainMesh(tileWidth, _heightmap1, false);
 
-    entityID_t terrainEntity = createEntity();
-    create_transform(
-        terrainEntity,
-        { 0, 0, 0 },
-        { { 0, 1, 0}, 0 },
-        { 1, 1, 1 }
-    );
-    create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), pTerrainMaterial->getID());
+            entityID_t terrainEntity = createEntity();
+            create_transform(
+                terrainEntity,
+                { x * totalTerrainWidth, 0, z * totalTerrainWidth },
+                { { 0, 1, 0}, 0 },
+                { 1, 1, 1 }
+            );
+            create_terrain_mesh_renderable(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
+        }
+    }
 }
 
 

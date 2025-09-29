@@ -7,7 +7,6 @@
 #include "Model.h"
 #include "Texture.h"
 #include "Material.h"
-#include "TerrainMaterial.hpp"
 #include "Font.h"
 #include "SkeletalAnimationData.h"
 #include <unordered_map>
@@ -46,17 +45,14 @@ namespace platypus
             uint32_t textureAtlasRows = 1
         );
         Material* createMaterial(
-            ID_t diffuseTextureID,
-            ID_t specularTextureID,
-            ID_t normalTextureID,
-            float specularStrength = 1.0f,
-            float shininess = 1.0f,
-            bool shadeless = false
-        );
-        TerrainMaterial* createTerrainMaterial(
+            MaterialType type,
             ID_t blendmapTextureID,
-            std::vector<ID_t> diffuseChannelTextures,
-            std::vector<ID_t> specularChannelTextures
+            std::vector<ID_t> diffuseTextureIDs,
+            std::vector<ID_t> specularTextureIDs,
+            std::vector<ID_t> normalTextureIDs,
+            float specularStrength = 0.625f,
+            float shininess = 16.0f,
+            bool shadeless = false
         );
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,

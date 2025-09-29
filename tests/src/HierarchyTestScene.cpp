@@ -41,9 +41,11 @@ void HierarchyTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        pDiffuseTexture->getID(),
-        pAssetManager->getWhiteTexture()->getID(),
+        MaterialType::MESH,
         NULL_ID,
+        { pDiffuseTexture->getID() },
+        { pAssetManager->getWhiteTexture()->getID() },
+        { },
         0.8f,
         16.0f
     );

@@ -23,7 +23,7 @@ namespace platypus
     struct TerrainMeshRenderable
     {
         ID_t terrainMeshID = NULL_ID;
-        ID_t terrainMaterialID = NULL_ID;
+        ID_t materialID = NULL_ID;
     };
 
     // NOTE: When adding strings, make sure to take into accout
@@ -56,7 +56,7 @@ namespace platypus
     TerrainMeshRenderable* create_terrain_mesh_renderable(
         entityID_t target,
         ID_t terrainMeshAssetID,
-        ID_t terrainMaterialAssetID
+        ID_t materialAssetID
     );
 
     GUIRenderable* create_gui_renderable(

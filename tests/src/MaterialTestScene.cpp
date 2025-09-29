@@ -98,23 +98,29 @@ void MaterialTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        pDiffuseTexture->getID(),
-        pAssetManager->getWhiteTexture()->getID(),
-        pNormalTexture->getID(),
+        MaterialType::MESH,
+        NULL_ID,
+        { pDiffuseTexture->getID() },
+        { pAssetManager->getWhiteTexture()->getID() },
+        { pNormalTexture->getID() },
         0.8f,
         16.0f
     );
     Material* pMaterial2 = pAssetManager->createMaterial(
-        pDiffuseTexture->getID(),
-        pAssetManager->getWhiteTexture()->getID(),
+        MaterialType::MESH,
         NULL_ID,
+        { pDiffuseTexture->getID() },
+        { pAssetManager->getWhiteTexture()->getID() },
+        { },
         0.8f,
         16.0f
     );
     Material* pFloorMaterial = pAssetManager->createMaterial(
-        pFloorTexture->getID(),
-        pFloorSpecularTexture->getID(),
-        pFloorNormalTexture->getID(),
+        MaterialType::MESH,
+        NULL_ID,
+        { pFloorTexture->getID() },
+        { pFloorSpecularTexture->getID() },
+        { pFloorNormalTexture->getID() },
         0.8f,
         64.0f
     );

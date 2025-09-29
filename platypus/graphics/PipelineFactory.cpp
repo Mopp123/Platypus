@@ -9,43 +9,18 @@
 
 namespace platypus
 {
-    static std::string get_shader_filename(uint32_t shaderStage, bool normalMapping, bool skinned)
-    {
-        // Example shader names:
-        // vertex shader: "StaticVertexShader", "StaticHDVertexShader", "SkinnedHDVertexShader"
-        // fragment shader: "StaticFragmentShader", "StaticHDFragmentShader", "SkinnedHDFragmentShader"
-        std::string shaderName = "";
-        if (!skinned)
-            shaderName += "Static";
-        else
-            shaderName += "Skinned";
-
-        if (normalMapping)
-            shaderName += "HD";
-
-        if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
-            shaderName += "Vertex";
-        else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
-            shaderName += "Fragment";
-
-        shaderName += "Shader";
-
-        return shaderName;
-    }
-
     Pipeline* create_material_pipeline(
-        const Mesh* pMesh,
+        const VertexBufferLayout& meshVertexBufferLayout,
         bool instanced,
         bool skinned,
         Material* pMaterial
     )
     {
         // Figure out vertex buffer layouts
-        const VertexBufferLayout& meshVBLayout = pMesh->getVertexBufferLayout();
-        std::vector<VertexBufferLayout> useVertexBufferLayouts = { meshVBLayout };
+        std::vector<VertexBufferLayout> useVertexBufferLayouts = { meshVertexBufferLayout };
         if (instanced)
         {
-            uint32_t meshVBLayoutElements = (uint32_t)meshVBLayout.getElements().size();
+            uint32_t meshVBLayoutElements = (uint32_t)meshVertexBufferLayout.getElements().size();
             VertexBufferLayout instancedVBLayout = {
                 {
                     { meshVBLayoutElements, ShaderDataType::Float4 },
@@ -106,7 +81,7 @@ namespace platypus
     }
 
     Pipeline* create_terrain_material_pipeline(
-        TerrainMaterial* pMaterial
+        Material* pMaterial
     )
     {
         // Figure out descriptor set layouts and shaders
