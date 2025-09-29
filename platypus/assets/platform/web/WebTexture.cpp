@@ -43,6 +43,7 @@ namespace platypus
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _imageFormat(targetFormat),
         _atlasRowCount(atlasRowCount)
     {
         if (!is_image_format_valid(targetFormat, pImage->getChannels()))

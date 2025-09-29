@@ -17,6 +17,9 @@ glslc -fshader-stage=frag SkinnedFragmentShader_ds.glsl -o SkinnedFragmentShader
 glslc -fshader-stage=vert TerrainVertexShader.glsl -o TerrainVertexShader.spv
 glslc -fshader-stage=frag TerrainFragmentShader_ds.glsl -o TerrainFragmentShader_ds.spv
 
+glslc -fshader-stage=vert TerrainVertexShader_tangent.glsl -o TerrainVertexShader_tangent.spv
+glslc -fshader-stage=frag TerrainFragmentShader_dsn.glsl -o TerrainFragmentShader_dsn.spv
+
 glslc -fshader-stage=vert GUIVertexShader.glsl -o GUIVertexShader.spv
 glslc -fshader-stage=frag GUIFragmentShader.glsl -o GUIFragmentShader.spv
 

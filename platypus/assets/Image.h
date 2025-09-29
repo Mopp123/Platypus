@@ -3,8 +3,26 @@
 #include "platypus/Common.h"
 #include "Asset.h"
 
+#define PE_IMAGE_MAX_CHANNELS 4
+
+
 namespace platypus
 {
+    enum class ImageFormat
+    {
+        R8_SRGB,
+        R8G8B8_SRGB,
+        R8G8B8A8_SRGB,
+
+        R8_UNORM,
+        R8G8B8_UNORM,
+        R8G8B8A8_UNORM
+    };
+
+    std::string image_format_to_string(ImageFormat format);
+    size_t get_image_format_channel_count(ImageFormat format);
+    bool is_image_format_valid(ImageFormat format, int imageColorChannels);
+
     enum ImageChannelIndex
     {
         IMAGE_CHANNEL_INDEX_RED = 0,

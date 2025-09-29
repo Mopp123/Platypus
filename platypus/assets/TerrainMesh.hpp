@@ -18,18 +18,15 @@ namespace platypus
         float _tileSize = 1.0f;
         uint32_t _verticesPerRow = 2;
 
-        static VertexBufferLayout s_vertexBufferLayout;
-
     public:
         TerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,
-            bool dynamic
+            bool dynamic,
+            bool generateTangents
         );
 
         ~TerrainMesh();
-
-        static VertexBufferLayout get_vertex_buffer_layout();
 
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }

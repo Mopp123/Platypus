@@ -366,6 +366,7 @@ namespace platypus
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _imageFormat(targetFormat),
         _pSamplerImpl(sampler.getImpl()),
         _atlasRowCount(atlasRowCount)
     {

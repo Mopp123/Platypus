@@ -261,7 +261,7 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = nullptr;
         if (pMaterial->getPipelineData() == nullptr)
-            pMaterial->createTerrainPipeline();
+            pMaterial->createTerrainPipeline(pMesh);
 
         pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
 

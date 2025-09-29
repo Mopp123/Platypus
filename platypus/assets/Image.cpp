@@ -10,6 +10,49 @@
 
 namespace platypus
 {
+    size_t get_image_format_channel_count(ImageFormat format)
+    {
+        switch (format)
+        {
+            case ImageFormat::R8_SRGB: return 1;
+            case ImageFormat::R8G8B8_SRGB: return 3;
+            case ImageFormat::R8G8B8A8_SRGB: return 4;
+
+            case ImageFormat::R8_UNORM: return 1;
+            case ImageFormat::R8G8B8_UNORM: return 3;
+            case ImageFormat::R8G8B8A8_UNORM: return 4;
+
+            default: return 0;
+        }
+    }
+
+    bool is_image_format_valid(ImageFormat format, int imageColorChannels)
+    {
+        if ((format == ImageFormat::R8_SRGB || format == ImageFormat::R8_UNORM) && imageColorChannels == 1)
+            return true;
+        else if ((format == ImageFormat::R8G8B8_SRGB || format == ImageFormat::R8G8B8_UNORM) && imageColorChannels == 3)
+            return true;
+        else if ((format == ImageFormat::R8G8B8A8_SRGB || format == ImageFormat::R8G8B8A8_UNORM) && imageColorChannels == 4)
+            return true;
+        else
+            return false;
+    }
+
+    std::string image_format_to_string(ImageFormat format)
+    {
+        switch (format)
+        {
+            case ImageFormat::R8_SRGB: return "R8_SRGB";
+            case ImageFormat::R8G8B8_SRGB: return "R8G8B8_SRGB";
+            case ImageFormat::R8G8B8A8_SRGB: return "R8G8B8A8_SRGB";
+
+            case ImageFormat::R8_UNORM: return "R8_UNORM";
+            case ImageFormat::R8G8B8_UNORM: return "R8G8B8_UNORM";
+            case ImageFormat::R8G8B8A8_UNORM: return "R8G8B8A8_UNORM";
+
+            default: return "INVALID FORMAT";
+        }
+    }
     Image::Image(
         PE_ubyte* pData,
         int width,

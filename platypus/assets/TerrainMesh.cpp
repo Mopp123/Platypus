@@ -7,20 +7,11 @@
 
 namespace platypus
 {
-    VertexBufferLayout TerrainMesh::s_vertexBufferLayout =
-    {
-        {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 }
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
-
     TerrainMesh::TerrainMesh(
         float tileSize,
         const std::vector<float>& heightmapData,
-        bool dynamic
+        bool dynamic,
+        bool generateTangents
     ) :
         Asset(AssetType::ASSET_TYPE_TERRAIN_MESH),
         _tileSize(tileSize)
@@ -45,10 +36,22 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
+
+        std::vector<VertexBufferElement> vertexBufferLayoutElements;
+        uint32_t vertexBufferLayoutElementCount = generateTangents ? 3 : 2;
+        for (uint32_t i = 0; i < vertexBufferLayoutElementCount; ++i)
+            vertexBufferLayoutElements.push_back({ i, ShaderDataType::Float3 });
+
+        _vertexBufferLayout =
+        {
+            vertexBufferLayoutElements,
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
+
 		_verticesPerRow = sqrt(heightmapData.size());
         const size_t vertexCount = _verticesPerRow * _verticesPerRow;
-        // TODO: Generate with heightmap
-        const size_t stride = sizeof(Vector3f) * 2;
+        const size_t stride = sizeof(Vector3f) * (generateTangents ? 3 : 2);
         const size_t dataSize = _verticesPerRow * _verticesPerRow * stride;
         std::vector<PE_byte> vertexData(dataSize);
         size_t dataOffset = 0;
@@ -81,6 +84,23 @@ namespace platypus
                 PE_byte* pTarget = vertexData.data();
                 memcpy((void*)(pTarget + dataOffset), &position, sizeof(Vector3f));
                 memcpy((void*)(pTarget + dataOffset + sizeof(Vector3f)), &normal, sizeof(Vector3f));
+
+                if (generateTangents)
+                {
+                    Vector3f tangent(1, 0, 0);
+                    if (x + 1 < _verticesPerRow)
+                    {
+                        float rightHeight = heightmapData[(x + 1) + z * _verticesPerRow];
+                        Vector3f rightVertexPosition = { (x + 1) * _tileSize, rightHeight, z * _tileSize };
+                        if (rightVertexPosition.length() > 0.0f)
+                        {
+                            tangent = rightVertexPosition - position;
+                            tangent = tangent.normalize();
+                        }
+                    }
+                    memcpy((void*)(pTarget + dataOffset + sizeof(Vector3f) * 2), &tangent, sizeof(Vector3f));
+                }
+
                 dataOffset += stride;
             }
         }
@@ -154,10 +174,5 @@ namespace platypus
     {
         delete _pVertexBuffer;
         delete _pIndexBuffer;
-    }
-
-    VertexBufferLayout TerrainMesh::get_vertex_buffer_layout()
-    {
-        return s_vertexBufferLayout;
     }
 }

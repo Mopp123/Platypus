@@ -6,6 +6,26 @@
 
 using namespace platypus;
 
+static std::vector<ID_t> load_textures(
+    AssetManager* pAssetManager,
+    ImageFormat imageFormat,
+    TextureSampler sampler,
+    std::vector<std::string> filepaths
+)
+{
+    std::vector<ID_t> textures;
+    for (const std::string& path : filepaths)
+    {
+        textures.push_back(
+            pAssetManager->loadTexture(
+                path,
+                imageFormat,
+                sampler
+            )->getID()
+        );
+    }
+    return textures;
+}
 
 TerrainTestScene::TerrainTestScene()
 {
@@ -37,7 +57,8 @@ void TerrainTestScene::init()
         _lightEntity,
         ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
     );
-    pDirLight->direction = { 0.75f, -1.5f, 1.0f };
+    pDirLight->direction = { 1.0f, -1.0f, 0.0f };
+    pDirLight->direction = pDirLight->direction.normalize();
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -51,35 +72,44 @@ void TerrainTestScene::init()
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
-    Texture* pDiffuseChannel0Texture = pAssetManager->loadTexture(
+    std::vector<std::string> diffuseTexturePaths = {
         "assets/textures/terrain/ground_dry2_d.png",
-        texImageFormat,
-        textureSampler
-    );
-    Texture* pDiffuseChannel1Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/grass_ground_d.png",
-        texImageFormat,
-        textureSampler
-    );
-    Texture* pDiffuseChannel2Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/grass_rocky_d.png",
-        texImageFormat,
-        textureSampler
-    );
-    Texture* pDiffuseChannel3Texture = pAssetManager->loadTexture(
         "assets/textures/terrain/ground_mud_d.png",
+        "assets/textures/terrain/jungle_mntn2_d.png"
+    };
+    std::vector<std::string> specularTexturePaths = {
+        "assets/textures/terrain/ground_dry2_s.png",
+        "assets/textures/terrain/grass_ground_s.png",
+        "assets/textures/terrain/grass_rocky_s.png",
+        "assets/textures/terrain/ground_mud_s.png",
+        "assets/textures/terrain/jungle_mntn2_s.png"
+    };
+    std::vector<std::string> normalTexturePaths = {
+        "assets/textures/terrain/ground_dry2_n.png",
+        "assets/textures/terrain/grass_ground_n.png",
+        "assets/textures/terrain/grass_rocky_n.png",
+        "assets/textures/terrain/ground_mud_n.png",
+        "assets/textures/terrain/jungle_mntn2_n.png"
+    };
+    std::vector<ID_t> diffuseTextures = load_textures(
+        pAssetManager,
         texImageFormat,
-        textureSampler
+        textureSampler,
+        diffuseTexturePaths
     );
-    Texture* pDiffuseChannel4Texture = pAssetManager->loadTexture(
-        "assets/textures/terrain/jungle_mntn2_d.png",
+    std::vector<ID_t> specularTextures = load_textures(
+        pAssetManager,
         texImageFormat,
-        textureSampler
+        textureSampler,
+        specularTexturePaths
     );
-    Texture* pSpecularChannel4Texture = pAssetManager->loadTexture(
-        "assets/textures/terrain/jungle_mntn2_s.png",
-        texImageFormat,
-        textureSampler
+    std::vector<ID_t> normalTextures = load_textures(
+        pAssetManager,
+        ImageFormat::R8G8B8A8_UNORM,
+        textureSampler,
+        normalTexturePaths
     );
 
     ID_t zeroTextureID = pAssetManager->getZeroTexture()->getID();
@@ -89,22 +119,11 @@ void TerrainTestScene::init()
     Material* pTerrainMaterial = pAssetManager->createMaterial(
         MaterialType::TERRAIN,
         pBlendmapTexture->getID(),
-        {
-            pDiffuseChannel0Texture->getID(),
-            pDiffuseChannel1Texture->getID(),
-            pDiffuseChannel2Texture->getID(),
-            pDiffuseChannel3Texture->getID(),
-            pDiffuseChannel4Texture->getID(),
-        },
-        {
-            blackTextureID,
-            blackTextureID,
-            blackTextureID,
-            blackTextureID,
-            pSpecularChannel4Texture->getID()
-        },
-        {
-        }
+        diffuseTextures,
+        specularTextures,
+        normalTextures,
+        0.625f,
+        32.0f
     );
 
     size_t heightmapWidth = 32;
@@ -112,29 +131,21 @@ void TerrainTestScene::init()
     _heightmap1.resize(heightmapArea);
     _heightmap2.resize(heightmapArea);
     float heightModifier = 0.003f;
-    float tileWidth = 2.0f;
-    float totalTerrainWidth = heightmapWidth * tileWidth;
-    for (size_t z = 0; z < 2; ++z)
+    for (size_t i = 0; i < heightmapArea; ++i)
     {
-        for (size_t x = 0; x < 2; ++x)
-        {
-            for (size_t i = 0; i < heightmapArea; ++i)
-            {
-                _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-                _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-            }
-            TerrainMesh* pTerrainMesh = pAssetManager->createTerrainMesh(tileWidth, _heightmap1, false);
-
-            entityID_t terrainEntity = createEntity();
-            create_transform(
-                terrainEntity,
-                { x * totalTerrainWidth, 0, z * totalTerrainWidth },
-                { { 0, 1, 0}, 0 },
-                { 1, 1, 1 }
-            );
-            create_terrain_mesh_renderable(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
-        }
+        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
     }
+    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, false, true);
+
+    entityID_t terrainEntity = createEntity();
+    create_transform(
+        terrainEntity,
+        { 0, 0, 0 },
+        { { 0, 1, 0}, 0 },
+        { 1, 1, 1 }
+    );
+    create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), pTerrainMaterial->getID());
 }
 
 

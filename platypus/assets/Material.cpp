@@ -42,6 +42,28 @@ namespace platypus
         memcpy(_specularTextureIDs, pSpecularTextureIDs, sizeof(ID_t) * _specularTextureCount);
         memcpy(_normalTextureIDs, pNormalTextureIDs, sizeof(ID_t) * _normalTextureCount);
 
+        // Make sure not to use SRGB textures for normal maps.
+        // ...so u don't waste a fuckload of time figuring out why the normals are fucked again:D
+        // NOTE: This probably should be checked in "no debug" too?
+        #ifdef PLATYPUS_DEBUG
+            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+            for (size_t i = 0; i < _normalTextureCount; ++i)
+            {
+                Texture* pNormalTexture = (Texture*)pAssetManager->getAsset(_normalTextureIDs[i], AssetType::ASSET_TYPE_TEXTURE);
+                if ((pNormalTexture->getImageFormat() == ImageFormat::R8G8B8A8_SRGB))
+                {
+                    Debug::log(
+                        "@Material::Material "
+                        "Normal texture at index: " + std::to_string(i) + " "
+                        "was sRGB! You probably don't want that if you're using this "
+                        "for normal mapping!",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+            }
+        #endif
+
         createDescriptorSetLayout();
     }
 
@@ -166,7 +188,7 @@ namespace platypus
         _pSkinnedPipelineData->pPipeline->create();
     }
 
-    void Material::createTerrainPipeline()
+    void Material::createTerrainPipeline(const TerrainMesh* pTerrainMesh)
     {
         if (_pPipelineData != nullptr)
         {
@@ -202,7 +224,7 @@ namespace platypus
         );
         _pPipelineData->pVertexShader = pVertexShader;
         _pPipelineData->pFragmentShader = pFragmentShader;
-        Pipeline* pPipeline = create_terrain_material_pipeline(this);
+        Pipeline* pPipeline = create_terrain_material_pipeline(pTerrainMesh->getVertexBufferLayout(), this);
         _pPipelineData->pPipeline = pPipeline;
         _pPipelineData->pPipeline->create();
     }

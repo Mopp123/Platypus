@@ -96,7 +96,6 @@ namespace platypus
         void create();
         void destroy();
 
-
         const std::vector<VertexBufferLayout>& getVertexBufferLayouts() const { return _vertexBufferLayouts; }
         const std::vector<DescriptorSetLayout>& getDescriptorSetLayouts() const { return _descriptorSetLayouts; }
         CullMode getCullMode() const { return _cullMode; }

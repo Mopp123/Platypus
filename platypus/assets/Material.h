@@ -3,6 +3,7 @@
 #include "Asset.h"
 #include "Texture.h"
 #include "Mesh.h"
+#include "TerrainMesh.hpp"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
 
@@ -63,13 +64,9 @@ namespace platypus
         ~Material();
 
         // TODO: Unfuck this mess plz!
-        void createPipeline(
-            const Mesh* pMesh
-        );
-        void createSkinnedPipeline(
-            const Mesh* pMesh
-        );
-        void createTerrainPipeline();
+        void createPipeline(const Mesh* pMesh);
+        void createSkinnedPipeline(const Mesh* pMesh);
+        void createTerrainPipeline(const TerrainMesh* pTerrainMesh);
 
         void recreateExistingPipeline();
         void destroyPipeline();

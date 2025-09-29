@@ -33,20 +33,19 @@ void main() {
 
     // Make it between -1 and 1
     vec3 normalMapNormal = normalTextureColor.rgb * 2.0 - 1.0;
+    vec3 unitNormal = normalize(normalMapNormal);
 
     float specularStrength = materialData.data.x;
     float shininess = materialData.data.y;
     float isShadeless = materialData.data.z;
 
     vec3 toLight = normalize(-var_lightDir);
-    vec3 unitNormal = normalize(normalMapNormal);
 
     float diffuseFactor = max(dot(toLight, unitNormal), 0.0);
     vec4 lightDiffuseColor = diffuseFactor * var_lightColor;
 
     //vec3 reflectedLight = normalize(reflect(unitLightDir, unitNormal));
     vec3 halfWay = normalize(toLight + var_toCamera);
-
     float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
     vec4 specularColor = var_lightColor * specularFactor * specularStrength * specularTextureColor;
 

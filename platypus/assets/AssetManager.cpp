@@ -452,10 +452,11 @@ namespace platypus
     TerrainMesh* AssetManager::createTerrainMesh(
         float tileSize,
         const std::vector<float>& heightmapData,
-        bool dynamic
+        bool dynamic,
+        bool generateTangents
     )
     {
-        TerrainMesh* pTerrainMesh = new TerrainMesh(tileSize, heightmapData, dynamic);
+        TerrainMesh* pTerrainMesh = new TerrainMesh(tileSize, heightmapData, dynamic, generateTangents);
         _assets[pTerrainMesh->getID()] = pTerrainMesh;
         return pTerrainMesh;
     }

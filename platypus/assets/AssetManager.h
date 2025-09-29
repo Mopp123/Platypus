@@ -67,7 +67,8 @@ namespace platypus
         TerrainMesh* createTerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,
-            bool dynamic
+            bool dynamic,
+            bool generateTangents
         );
 
         SkeletalAnimationData* createSkeletalAnimation(
