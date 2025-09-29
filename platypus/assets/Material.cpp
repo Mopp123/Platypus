@@ -13,65 +13,31 @@ namespace platypus
         bool normalMapping
     )
     {
-        if (!normalMapping)
+        std::vector<DescriptorSetLayoutBinding> layoutBindings;
+        uint32_t textureBindingCount = normalMapping ? 3 : 2;
+        for (uint32_t textureBinding = 0; textureBinding < textureBindingCount; ++textureBinding)
         {
-            return {
+            layoutBindings.push_back(
                 {
-                    0,
+                    textureBinding,
                     1,
                     DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
                     { { } }
-                },
-                {
-                    1,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { } }
-                },
-                {
-                    2,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { ShaderDataType::Float4 } }
                 }
-            };
+            );
         }
-        else
-        {
-            return {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { } }
-                },
-                {
-                    1,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { } }
-                },
-                {
-                    2,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { } }
-                },
-                {
-                    3,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                    { { ShaderDataType::Float4 } }
-                }
-            };
-        }
+
+        layoutBindings.push_back(
+            {
+                textureBindingCount,
+                1,
+                DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                { { ShaderDataType::Float4 } }
+            }
+        );
+        return layoutBindings;
     }
 
 
