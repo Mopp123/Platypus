@@ -2,6 +2,7 @@
 
 #include "platypus/core/Window.hpp"
 #include "RenderPass.h"
+#include "Framebuffer.hpp"
 #include <platypus/Common.h>
 
 
@@ -23,6 +24,11 @@ namespace platypus
         SwapchainImpl* _pImpl = nullptr;
 
         RenderPass _renderPass;
+        std::vector<Image*> _colorImages;
+        std::vector<Texture*> _colorTextures;
+        Image* _pDepthImage;
+        Texture* _pDepthTexture;
+        std::vector<Framebuffer*> _framebuffers;
 
         // NOTE: Currently these aren't touched by the web implementation at all.
         // TODO: Maybe put these in the _pImpl?
@@ -48,6 +54,9 @@ namespace platypus
         Extent2D getExtent() const;
         inline const RenderPass& getRenderPass() const { return _renderPass; }
         inline const RenderPass* getRenderPassPtr() const { return &_renderPass; }
+
+        inline const Image* getDepthImage() const { return _pDepthImage; }
+        inline const std::vector<Framebuffer*>& getFramebuffers() const { return _framebuffers; }
 
         inline uint32_t getImageCount() const { return _imageCount; }
         inline uint32_t getPreviousImageCount() const { return _previousImageCount; }

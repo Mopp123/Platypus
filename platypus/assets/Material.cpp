@@ -50,7 +50,7 @@ namespace platypus
             for (size_t i = 0; i < _normalTextureCount; ++i)
             {
                 Texture* pNormalTexture = (Texture*)pAssetManager->getAsset(_normalTextureIDs[i], AssetType::ASSET_TYPE_TEXTURE);
-                if ((pNormalTexture->getImageFormat() == ImageFormat::R8G8B8A8_SRGB))
+                if ((pNormalTexture->getImage()->getFormat() == ImageFormat::R8G8B8A8_SRGB))
                 {
                     Debug::log(
                         "@Material::Material "

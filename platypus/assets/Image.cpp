@@ -10,6 +10,22 @@
 
 namespace platypus
 {
+    std::string image_format_to_string(ImageFormat format)
+    {
+        switch (format)
+        {
+            case ImageFormat::R8_SRGB: return "R8_SRGB";
+            case ImageFormat::R8G8B8_SRGB: return "R8G8B8_SRGB";
+            case ImageFormat::R8G8B8A8_SRGB: return "R8G8B8A8_SRGB";
+
+            case ImageFormat::R8_UNORM: return "R8_UNORM";
+            case ImageFormat::R8G8B8_UNORM: return "R8G8B8_UNORM";
+            case ImageFormat::R8G8B8A8_UNORM: return "R8G8B8A8_UNORM";
+
+            default: return "INVALID FORMAT";
+        }
+    }
+
     size_t get_image_format_channel_count(ImageFormat format)
     {
         switch (format)
@@ -26,6 +42,34 @@ namespace platypus
         }
     }
 
+    ImageFormat channel_count_to_image_format(size_t channelCount, bool sRGB)
+    {
+        if (sRGB)
+        {
+            switch (channelCount)
+            {
+                case 1: return ImageFormat::R8_SRGB;
+                case 3: return ImageFormat::R8G8B8_SRGB;
+                case 4: return ImageFormat::R8G8B8A8_SRGB;
+            }
+        }
+
+        switch (channelCount)
+        {
+            case 1: return ImageFormat::R8_UNORM;
+            case 3: return ImageFormat::R8G8B8_UNORM;
+            case 4: return ImageFormat::R8G8B8A8_UNORM;
+        }
+
+        Debug::log(
+            "@channel_count_to_image_format "
+            "Unsupported channel count: " + std::to_string(channelCount),
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return ImageFormat::R8_SRGB;
+    }
+
     bool is_image_format_valid(ImageFormat format, int imageColorChannels)
     {
         if ((format == ImageFormat::R8_SRGB || format == ImageFormat::R8_UNORM) && imageColorChannels == 1)
@@ -38,35 +82,26 @@ namespace platypus
             return false;
     }
 
-    std::string image_format_to_string(ImageFormat format)
-    {
-        switch (format)
-        {
-            case ImageFormat::R8_SRGB: return "R8_SRGB";
-            case ImageFormat::R8G8B8_SRGB: return "R8G8B8_SRGB";
-            case ImageFormat::R8G8B8A8_SRGB: return "R8G8B8A8_SRGB";
 
-            case ImageFormat::R8_UNORM: return "R8_UNORM";
-            case ImageFormat::R8G8B8_UNORM: return "R8G8B8_UNORM";
-            case ImageFormat::R8G8B8A8_UNORM: return "R8G8B8A8_UNORM";
-
-            default: return "INVALID FORMAT";
-        }
-    }
     Image::Image(
         PE_ubyte* pData,
         int width,
         int height,
-        int channels
+        int channels,
+        ImageFormat format
     ) :
         Asset(AssetType::ASSET_TYPE_IMAGE),
         _width(width),
         _height(height),
-        _channels(channels)
+        _channels(channels),
+        _format(format)
     {
-        const size_t size = getSize();
-        _pData = new PE_ubyte[size];
-        memcpy(_pData, pData, size);
+        if (pData)
+        {
+            const size_t size = getSize();
+            _pData = new PE_ubyte[size];
+            memcpy(_pData, pData, size);
+        }
     }
 
     Image::~Image()
@@ -75,35 +110,7 @@ namespace platypus
             delete[] _pData;
     }
 
-    int Image::getChannelValue(uint32_t x, uint32_t y, uint32_t channelIndex) const
-    {
-        if (channelIndex >= _channels)
-        {
-            Debug::log(
-                "@Image::getChannelValue "
-                "Invalid channel index(" + std::to_string(channelIndex) + ") "
-                "this image has " + std::to_string(_channels) + " channels.",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return 0;
-        }
-        if (x >= _width || y >= _height)
-        {
-            Debug::log(
-                "@Image::getChannelValue "
-                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
-                "out of bounds of the image! "
-                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return 0;
-        }
-        return _pData[(x + y * _width) * _channels + channelIndex];
-    }
-
-    Image* Image::load_image(const std::string& filepath)
+    Image* Image::load_image(const std::string& filepath, ImageFormat format)
     {
         int width = 0;
         int height = 0;
@@ -118,9 +125,51 @@ namespace platypus
             stbi_image_free(pStbImageData);
             return nullptr;
         }
-
-        Image* pImage = new Image(pStbImageData, width, height, channels);
+        Image* pImage = new Image(pStbImageData, width, height, channels, format);
         stbi_image_free(pStbImageData);
         return pImage;
+    }
+
+    int Image::getColorChannelValue(
+        const Image * const pImage,
+        uint32_t x,
+        uint32_t y,
+        uint32_t channelIndex
+    ) const
+    {
+        if (!_pData)
+        {
+            Debug::log(
+                "@Image::getColorChannelValue "
+                "Image data was nullptr!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        if (channelIndex >= _channels)
+        {
+            Debug::log(
+                "@Image::getColorChannelValue "
+                "Invalid channel index(" + std::to_string(channelIndex) + ") "
+                "this image has " + std::to_string(_channels) + " channels.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        if (x >= _width || y >= _height)
+        {
+            Debug::log(
+                "@Image::getColorChannelValue "
+                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
+                "out of bounds of the image! "
+                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        return _pData[(x + y * _width) * _channels + channelIndex];
     }
 }

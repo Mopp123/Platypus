@@ -14,14 +14,25 @@ namespace platypus
         R8G8B8_SRGB,
         R8G8B8A8_SRGB,
 
+        B8G8R8A8_SRGB,
+        B8G8R8_SRGB,
+
         R8_UNORM,
         R8G8B8_UNORM,
-        R8G8B8A8_UNORM
+        R8G8B8A8_UNORM,
+
+        B8G8R8A8_UNORM,
+        B8G8R8_UNORM,
+
+        D32_SFLOAT
     };
 
-    std::string image_format_to_string(ImageFormat format);
-    size_t get_image_format_channel_count(ImageFormat format);
-    bool is_image_format_valid(ImageFormat format, int imageColorChannels);
+    enum class ImageLayout
+    {
+        UNDEFINED,
+        TRANSFER_DST_OPTIMAL,
+        SHADER_READ_ONLY_OPTIMAL
+    };
 
     enum ImageChannelIndex
     {
@@ -31,13 +42,21 @@ namespace platypus
         IMAGE_CHANNEL_INDEX_ALPHA
     };
 
+    std::string image_format_to_string(ImageFormat format);
+    size_t get_image_format_channel_count(ImageFormat format);
+    ImageFormat channel_count_to_image_format(size_t channelCount, bool sRGB);
+    bool is_image_format_valid(ImageFormat format, int imageColorChannels);
+
+    struct ImageImpl;
     class Image : public Asset
     {
     private:
+        ImageImpl* _pImpl = nullptr;
         PE_ubyte* _pData = nullptr;
         int _width = -1;
         int _height = -1;
         int _channels = -1;
+        ImageFormat _format;
 
     public:
         // NOTE: pData gets copied here, ownership doesn't transfer!
@@ -45,18 +64,26 @@ namespace platypus
             PE_ubyte* pData,
             int width,
             int height,
-            int channels
+            int channels,
+            ImageFormat format
         );
         ~Image();
 
-        int getChannelValue(uint32_t x, uint32_t y, uint32_t channelIndex) const;
+        static Image* load_image(const std::string& filepath, ImageFormat format);
+        int getColorChannelValue(
+            const Image * const pImage,
+            uint32_t x,
+            uint32_t y,
+            uint32_t channelIndex
+        ) const;
 
-        static Image* load_image(const std::string& filepath);
-
+        inline ImageImpl* getImpl() { return _pImpl; }
         inline const PE_ubyte* getData() const { return _pData; }
         inline int getWidth() const { return _width; }
         inline int getHeight() const { return _height; }
         inline int getChannels() const { return _channels; }
         inline size_t getSize() const { return _width * _height * _channels; }
+        inline ImageFormat getFormat() const { return _format; }
     };
+
 }

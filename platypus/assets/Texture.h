@@ -55,14 +55,16 @@ namespace platypus
     {
     private:
         TextureImpl* _pImpl = nullptr;
-        ImageFormat _imageFormat;
+        const Image* _pImage = nullptr;
         std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
         uint32_t _atlasRowCount = 1;
 
     public:
+        // Needed for Vulkan swapchain's color and depth textures. ...fucking dumb
+        // This should ONLY create the _pImpl!
+        Texture(bool empty);
         Texture(
             const Image* pImage,
-            ImageFormat targetFormat,
             const TextureSampler& sampler,
             uint32_t atlasRowCount = 1
         );
@@ -70,9 +72,10 @@ namespace platypus
         ~Texture();
 
         inline const TextureImpl* getImpl() const { return _pImpl; }
+        inline TextureImpl* getImpl() { return _pImpl; }
         inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
         inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
         inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
-        inline ImageFormat getImageFormat() const { return _imageFormat; }
+        inline const Image* getImage() const { return _pImage; }
     };
 }

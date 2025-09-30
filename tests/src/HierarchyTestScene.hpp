@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platypus/Platypus.h"
-#include "BaseScene.h"
+#include "BaseScene.hpp"
 #include "platypus/assets/Material.h"
 #include "platypus/ecs/Entity.h"
 

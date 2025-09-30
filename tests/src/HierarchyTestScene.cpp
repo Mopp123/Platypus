@@ -1,4 +1,4 @@
-#include "HierarchyTestScene.h"
+#include "HierarchyTestScene.hpp"
 #include "platypus/utils/Maths.h"
 
 using namespace platypus;

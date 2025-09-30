@@ -1,6 +1,7 @@
 #include "platypus/graphics/RenderPass.h"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Device.hpp"
+#include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include "DesktopDevice.hpp"
 #include "DesktopRenderPass.h"
 #include "DesktopSwapchain.h"
@@ -49,7 +50,8 @@ namespace platypus
         colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         colorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        VkFormat depthImageFormat = swapchain._pImpl->depthImageFormat;
+
+        VkFormat depthImageFormat = to_vk_format(swapchain.getDepthImage()->getFormat());
         VkAttachmentDescription depthAttachmentDescription{};
         depthAttachmentDescription.format = depthImageFormat;
         depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;

@@ -1,6 +1,6 @@
-#include "MaterialTestScene.h"
-#include "UITestScene.h"
-#include "SkinnedMeshTestScene.h"
+#include "MaterialTestScene.hpp"
+#include "UITestScene.hpp"
+#include "SkinnedMeshTestScene.hpp"
 
 using namespace platypus;
 

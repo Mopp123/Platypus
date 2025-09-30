@@ -1,5 +1,6 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "DesktopSwapchain.h"
+#include "DesktopFramebuffer.hpp"
 #include "platypus/graphics/RenderPass.h"
 #include "DesktopRenderPass.h"
 #include "DesktopCommandBuffer.h"
@@ -28,7 +29,7 @@ namespace platypus
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             beginInfo.renderPass = swapchain.getRenderPass().getImpl()->handle;
-            beginInfo.framebuffer = swapchain.getImpl()->framebuffers[swapchain.getCurrentImageIndex()];
+            beginInfo.framebuffer = swapchain.getFramebuffers()[swapchain.getCurrentImageIndex()]->getImpl()->handle;
 
             VkClearValue clearColorValue{};
             clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};

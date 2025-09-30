@@ -36,21 +36,27 @@ namespace platypus
     }
 
 
+    Texture::Texture(bool empty) :
+        Asset(AssetType::ASSET_TYPE_TEXTURE)
+    {
+        _pImpl = new TextureImpl;
+    }
+
     Texture::Texture(
         const Image* pImage,
-        ImageFormat targetFormat,
         const TextureSampler& sampler,
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _imageFormat(targetFormat),
+        _pImage(pImage),
         _atlasRowCount(atlasRowCount)
     {
-        if (!is_image_format_valid(targetFormat, pImage->getChannels()))
+        ImageFormat imageFormat = _pImage->getFormat();
+        if (!is_image_format_valid(imageFormat, pImage->getChannels()))
         {
             Debug::log(
                 "@Texture::Texture "
-                "Invalid target format: " + image_format_to_string(targetFormat) + " "
+                "Invalid target format: " + image_format_to_string(imageFormat) + " "
                 "for image with " + std::to_string(pImage->getChannels()) + " channels",
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -179,8 +185,6 @@ namespace platypus
 
         _pImpl = new TextureImpl;
         _pImpl->id = id;
-
-        Debug::log("___TEST___ texture created successfully");
     }
 
     Texture::~Texture()

@@ -1,7 +1,7 @@
-#include "SkinnedMeshTestScene.h"
+#include "SkinnedMeshTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
-#include "MaterialTestScene.h"
+#include "MaterialTestScene.hpp"
 #include <string>
 
 

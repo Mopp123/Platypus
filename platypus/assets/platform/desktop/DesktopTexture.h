@@ -1,5 +1,7 @@
 #pragma once
 
+#include "platypus/assets/Image.h"
+
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <vector>
@@ -20,6 +22,8 @@ namespace platypus
         ~TextureSamplerImpl();
     };
 
+    VkFormat to_vk_format(ImageFormat format);
+    ImageFormat to_engine_format(VkFormat format);
 
     struct TextureImpl
     {

@@ -1,4 +1,4 @@
-#include "BaseScene.h"
+#include "BaseScene.hpp"
 
 using namespace platypus;
 

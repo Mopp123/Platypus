@@ -11,6 +11,7 @@
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
 #include <cmath>
+#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -86,7 +87,7 @@ namespace platypus
 
     // NOTE: If formats' *_SRGB not supported by the device whole texture creation fails!
     // TODO: Query supported formats and handle depending on requested channels that way
-    static VkFormat to_vk_format(ImageFormat imageFormat)
+    VkFormat to_vk_format(ImageFormat imageFormat)
     {
         switch (imageFormat)
         {
@@ -94,14 +95,55 @@ namespace platypus
             case ImageFormat::R8G8B8_SRGB: return VK_FORMAT_R8G8B8_SRGB;
             case ImageFormat::R8G8B8A8_SRGB: return VK_FORMAT_R8G8B8A8_SRGB;
 
+            case ImageFormat::B8G8R8A8_SRGB: return VK_FORMAT_B8G8R8A8_SRGB;
+            case ImageFormat::B8G8R8_SRGB: return VK_FORMAT_B8G8R8_SRGB;
+
             case ImageFormat::R8_UNORM: return VK_FORMAT_R8_UNORM;
             case ImageFormat::R8G8B8_UNORM: return VK_FORMAT_R8G8B8_UNORM;
             case ImageFormat::R8G8B8A8_UNORM: return VK_FORMAT_R8G8B8A8_UNORM;
+
+            case ImageFormat::B8G8R8A8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+            case ImageFormat::B8G8R8_UNORM: return VK_FORMAT_B8G8R8_UNORM;
+
+            case ImageFormat::D32_SFLOAT: return VK_FORMAT_D32_SFLOAT;
         }
         PLATYPUS_ASSERT(false);
         return VK_FORMAT_UNDEFINED;
     }
 
+    ImageFormat to_engine_format(VkFormat format)
+    {
+        switch (format)
+        {
+            case VK_FORMAT_R8_SRGB: return ImageFormat::R8_SRGB;
+            case VK_FORMAT_R8G8B8_SRGB: return ImageFormat::R8G8B8_SRGB;
+            case VK_FORMAT_R8G8B8A8_SRGB: return ImageFormat::R8G8B8A8_SRGB;
+
+            case VK_FORMAT_B8G8R8A8_SRGB: return ImageFormat::B8G8R8A8_SRGB;
+            case VK_FORMAT_B8G8R8_SRGB: return ImageFormat::B8G8R8_SRGB;
+
+            case VK_FORMAT_R8_UNORM: return ImageFormat::R8_UNORM;
+            case VK_FORMAT_R8G8B8_UNORM: return ImageFormat::R8G8B8_UNORM;
+            case VK_FORMAT_R8G8B8A8_UNORM: return ImageFormat::R8G8B8A8_UNORM;
+
+            case VK_FORMAT_B8G8R8A8_UNORM: return ImageFormat::B8G8R8A8_UNORM;
+            case VK_FORMAT_B8G8R8_UNORM: return ImageFormat::B8G8R8_UNORM;
+
+            case VK_FORMAT_D32_SFLOAT: return ImageFormat::D32_SFLOAT;
+
+            default:
+            {
+                std::string formatStr = string_VkFormat(format);
+                Debug::log(
+                    "@to_engine_format "
+                    "Invalid format: " + formatStr,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return ImageFormat::R8_SRGB;
+            }
+        }
+    }
 
     static VkFilter to_vk_sampler_filter_mode(TextureSamplerFilterMode mode)
     {
@@ -359,22 +401,28 @@ namespace platypus
     {}
 
 
+    Texture::Texture(bool empty) :
+        Asset(AssetType::ASSET_TYPE_TEXTURE)
+    {
+        _pImpl = new TextureImpl;
+    }
+
     Texture::Texture(
         const Image* pImage,
-        ImageFormat targetFormat,
         const TextureSampler& sampler,
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _imageFormat(targetFormat),
+        _pImage(pImage),
         _pSamplerImpl(sampler.getImpl()),
         _atlasRowCount(atlasRowCount)
     {
-        if (!is_image_format_valid(targetFormat, pImage->getChannels()))
+        ImageFormat imageFormat = _pImage->getFormat();
+        if (!is_image_format_valid(imageFormat, pImage->getChannels()))
         {
             Debug::log(
                 "@Texture::Texture "
-                "Invalid target format: " + image_format_to_string(targetFormat) + " "
+                "Invalid target format: " + image_format_to_string(imageFormat) + " "
                 "for image with " + std::to_string(pImage->getChannels()) + " channels",
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -390,13 +438,13 @@ namespace platypus
             false
         );
 
-        VkFormat imageFormat = to_vk_format(targetFormat);
+        VkFormat vkImageFormat = to_vk_format(imageFormat);
 
         // Using vkCmdBlit to create mipmaps, so make sure this is supported
         VkFormatProperties imageFormatProperties;
         vkGetPhysicalDeviceFormatProperties(
             Device::get_impl()->physicalDevice,
-            imageFormat,
+            vkImageFormat,
             &imageFormatProperties
         );
         if (!(imageFormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
@@ -410,7 +458,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        if (imageFormat == VK_FORMAT_R8G8B8_SRGB)
+        if (vkImageFormat == VK_FORMAT_R8G8B8_SRGB)
         {
             Debug::log(
                 "@Texture::Texture "
@@ -441,7 +489,7 @@ namespace platypus
         imageCreateInfo.extent.depth = 1;
         imageCreateInfo.mipLevels = mipLevelCount;
         imageCreateInfo.arrayLayers = 1;
-        imageCreateInfo.format = imageFormat;
+        imageCreateInfo.format = vkImageFormat;
         imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageCreateInfo.usage = imageUsageFlags;
@@ -492,7 +540,7 @@ namespace platypus
         {
             generate_mipmaps(
                 imageHandle,
-                imageFormat,
+                vkImageFormat,
                 imageWidth,
                 imageHeight,
                 mipLevelCount,
@@ -519,7 +567,7 @@ namespace platypus
         VkImageView imageView = create_image_views(
             Device::get_impl()->device,
             { imageHandle },
-            imageFormat,
+            vkImageFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
             mipLevelCount
         )[0];
@@ -538,7 +586,9 @@ namespace platypus
         {
             DeviceImpl* pDeviceImpl = Device::get_impl();
             vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
-            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+            if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
+                vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+
             delete _pImpl;
         }
     }
