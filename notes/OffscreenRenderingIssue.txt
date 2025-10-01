@@ -1,0 +1,20 @@
+
+Offscreen rendering requires separate Pipeline, because Pipeline depends on RenderPass.
+    Theres 2 possible approaches
+        1. Submit entity's components into a separate offscreen batch
+            + It would be easy to manage which entities cast shadows and which dont!!
+            - Batch creation and submitting becomes heavier!
+            BUT: Keeping in mind view frustum culling!
+        2. While submitting, check components' status's and create the offscreen pipeline
+        for the batch, if necessary
+            -> Renderer3D has func to handle the secondary command buffers for batches
+            containing the offscreen Pipeline
+
+        Common problem with both of these: Where should the offscreen pipeline live?
+        Currently the Pipeline is inside the Material. Would it make sense to actually
+        have all the Pipelines live inside the Batcher? -> would make the Material more light?
+
+
+        Just need to have some quick way to test this shit, no matter how bad its performance wise!!!
+            -> Make Terrain rendering batch also create an offscreen pipeline for the batch?
+                -> Add offscreen recordCommandBuffers func for Renderer3D which just uses the batch's offscreen pipeline?

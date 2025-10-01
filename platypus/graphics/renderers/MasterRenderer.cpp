@@ -54,13 +54,14 @@ namespace platypus
         allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
         createCommonShaderResources();
 
-        // TESTING
+        // TESTING ------------------------------------------------------------
         uint32_t swapchainWidth = _swapchainRef.getExtent().width;
         uint32_t swapchainHeight = _swapchainRef.getExtent().height;
+        ImageFormat testFramebufferColorFormat = ImageFormat::B8G8R8A8_SRGB;
         _pTestFramebufferColorTexture = new Texture(
             TextureUsage::FRAMEBUFFER_COLOR,
             _testFramebufferTextureSampler,
-            ImageFormat::R8G8B8A8_UNORM, // TODO: Query available color format instead of hard coding here!!!!
+            testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
             swapchainWidth,
             swapchainHeight
         );
@@ -74,7 +75,7 @@ namespace platypus
             swapchainHeight
         );
         _testRenderPass.create(
-            ImageFormat::R8G8B8A8_UNORM,
+            testFramebufferColorFormat,
             ImageFormat::D32_SFLOAT,
             true
         );
@@ -371,28 +372,6 @@ namespace platypus
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
 
-        // TESTING MULTIPLE PASSEs
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _testRenderPass,
-            *_pTestFramebuffer,
-            { 1, 0, 1, 1 },
-            true
-        );
-        render::end_render_pass(currentCommandBuffer);
-
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _swapchainRef.getRenderPass(),
-            *_swapchainRef.getFramebuffers()[_swapchainRef.getCurrentImageIndex()],
-            pScene->environmentProperties.clearColor,
-            true
-        );
-
-        // NOTE: We create new copies of secondary command buffers here
-        // TODO: Figure out some nice way to optimize this!
-        std::vector<CommandBuffer> secondaryCommandBuffers;
-
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
@@ -457,13 +436,55 @@ namespace platypus
             sizeof(Scene3DData),
             0
         );
-
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!
         _batcher.updateDeviceSideBuffers(_currentFrame);
+
+
+
+
+
+        // TESTING MULTIPLE PASSES -----------------------------------
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _testRenderPass,
+            *_pTestFramebuffer,
+            { 1, 0, 1, 1 },
+            true
+        );
+
+        //std::vector<CommandBuffer> testSecondaries;
+        //testSecondaries.push_back(
+        //    _pRenderer3D->recordCommandBuffer(
+        //        _testRenderPass,//_swapchainRef.getRenderPass(),
+        //        (float)swapchainExtent.width,
+        //        (float)swapchainExtent.height,
+        //        _batcher.getBatches()
+        //    )
+        //);
+
+        //render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
+        render::end_render_pass(currentCommandBuffer);
+        // TESTING END ^^^ -------------------------------------------
+
+
+
+
+
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _swapchainRef.getRenderPass(),
+            *_swapchainRef.getFramebuffers()[_swapchainRef.getCurrentImageIndex()],
+            pScene->environmentProperties.clearColor,
+            true
+        );
+
+        // NOTE: We create new copies of secondary command buffers here
+        // TODO: Figure out some nice way to optimize this!
+        std::vector<CommandBuffer> secondaryCommandBuffers;
         secondaryCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
                 _swapchainRef.getRenderPass(),
