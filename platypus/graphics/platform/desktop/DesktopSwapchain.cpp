@@ -430,7 +430,7 @@ namespace platypus
             &_pDepthTexture
         );
 
-        _renderPass.create(*this);
+        _renderPass.create(_colorImages[0]->getFormat(), _pDepthImage->getFormat(), false);
 
         create_framebuffers(
             _colorTextures,

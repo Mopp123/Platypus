@@ -408,6 +408,91 @@ namespace platypus
     }
 
     Texture::Texture(
+        TextureUsage usage,
+        const TextureSampler& sampler,
+        ImageFormat format,
+        uint32_t width,
+        uint32_t height
+    ):
+        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _pSamplerImpl(sampler.getImpl())
+    {
+        if ((usage != TextureUsage::FRAMEBUFFER_COLOR) && (usage != TextureUsage::FRAMEBUFFER_DEPTH))
+        {
+            Debug::log(
+                "@Texture::Texture "
+                "Texture usage was not FRAMEBUFFER! "
+                "This constructor is currently only for testing framebuffer textures. ",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        VkFormat vkImageFormat = to_vk_format(format);
+        VkImageCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		createInfo.imageType = VK_IMAGE_TYPE_2D;
+		createInfo.format = vkImageFormat;
+		createInfo.extent.width = width;
+		createInfo.extent.height = height;
+		createInfo.extent.depth = 1;
+		createInfo.mipLevels = 1;
+		createInfo.arrayLayers = 1;
+		createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+        if (usage == TextureUsage::FRAMEBUFFER_COLOR)
+		    createInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        else if (usage == TextureUsage::FRAMEBUFFER_DEPTH)
+		    createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        VmaAllocationCreateInfo allocCreateInfo{};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+        allocCreateInfo.priority = 1.0f;
+
+        VkImage imageHandle = VK_NULL_HANDLE;
+        VmaAllocation vmaAllocation = VK_NULL_HANDLE;
+        VkResult createImageResult = vmaCreateImage(
+            Device::get_impl()->vmaAllocator,
+            &createInfo,
+            &allocCreateInfo,
+            &imageHandle,
+            &vmaAllocation,
+            nullptr
+        );
+        if (createImageResult != VK_SUCCESS)
+        {
+            const std::string resultStr(string_VkResult(createImageResult));
+            Debug::log(
+                "@Texture::Texture(FRAMEBUFFER TEST) "
+                "Failed to create VkImage for texture! VkResult: " + resultStr,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        VkImageAspectFlags imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+        if (usage == TextureUsage::FRAMEBUFFER_DEPTH)
+            imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        VkImageView imageView = create_image_views(
+            Device::get_impl()->device,
+            { imageHandle },
+            vkImageFormat,
+            imageAspectFlags,
+            1
+        )[0];
+
+        _pImpl = new TextureImpl
+        {
+            imageHandle,
+            imageView,
+            vmaAllocation
+        };
+    }
+
+    Texture::Texture(
         const Image* pImage,
         const TextureSampler& sampler,
         uint32_t atlasRowCount

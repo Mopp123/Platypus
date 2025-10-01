@@ -35,6 +35,12 @@ namespace platypus
                     }
                 }
             }
+        ),
+        _testFramebufferTextureSampler(
+            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+            TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            false,
+            0
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
@@ -47,10 +53,46 @@ namespace platypus
 
         allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
         createCommonShaderResources();
+
+        // TESTING
+        uint32_t swapchainWidth = _swapchainRef.getExtent().width;
+        uint32_t swapchainHeight = _swapchainRef.getExtent().height;
+        _pTestFramebufferColorTexture = new Texture(
+            TextureUsage::FRAMEBUFFER_COLOR,
+            _testFramebufferTextureSampler,
+            ImageFormat::R8G8B8A8_UNORM, // TODO: Query available color format instead of hard coding here!!!!
+            swapchainWidth,
+            swapchainHeight
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
+
+        _pTestFramebufferDepthTexture = new Texture(
+            TextureUsage::FRAMEBUFFER_DEPTH,
+            _testFramebufferTextureSampler,
+            ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
+            swapchainWidth,
+            swapchainHeight
+        );
+        _testRenderPass.create(
+            ImageFormat::R8G8B8A8_UNORM,
+            ImageFormat::D32_SFLOAT,
+            true
+        );
+        _pTestFramebuffer = new Framebuffer(
+            _testRenderPass,
+            { _pTestFramebufferColorTexture, _pTestFramebufferDepthTexture },
+            swapchainWidth,
+            swapchainHeight
+        );
     }
 
     MasterRenderer::~MasterRenderer()
     {
+        delete _pTestFramebuffer;
+        _testRenderPass.destroy();
+        delete _pTestFramebufferDepthTexture;
+        //delete _pTestFramebufferColorTexture;
+
         destroyCommonShaderResources();
         _scene3DDataDescriptorSetLayout.destroy();
     }
@@ -329,9 +371,20 @@ namespace platypus
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
 
+        // TESTING MULTIPLE PASSEs
         render::begin_render_pass(
             currentCommandBuffer,
-            _swapchainRef,
+            _testRenderPass,
+            *_pTestFramebuffer,
+            { 1, 0, 1, 1 },
+            true
+        );
+        render::end_render_pass(currentCommandBuffer);
+
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _swapchainRef.getRenderPass(),
+            *_swapchainRef.getFramebuffers()[_swapchainRef.getCurrentImageIndex()],
             pScene->environmentProperties.clearColor,
             true
         );
@@ -406,6 +459,7 @@ namespace platypus
         );
 
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
+
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!

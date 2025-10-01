@@ -167,9 +167,10 @@ void TerrainTestScene::init()
         { 0, 0 },
         { 400, 256 }
     );
+    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        _pTestTexture1->getID()
+        pMasterRenderer->getTestFramebufferColorTexture()->getID()
     );
 }
 
@@ -181,10 +182,6 @@ void TerrainTestScene::update()
 
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
-    GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
-        _framebufferDebugEntity,
-        ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-    );
 
     /*
     float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;

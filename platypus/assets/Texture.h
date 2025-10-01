@@ -22,6 +22,16 @@ namespace platypus
         SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
     };
 
+    enum class TextureUsage
+    {
+        NONE,
+        TEXTURE2D,
+        SWAPCHAIN_FRAMEBUFFER_COLOR,
+        SWAPCHAIN_FRAMEBUFFER_DEPTH,
+        FRAMEBUFFER_COLOR,
+        FRAMEBUFFER_DEPTH
+    };
+
     // NOTE: Atm TextureSampler is supposed to be passed around as const ref!
     // That's why pImpl is shared_ptr in this case
     struct TextureSamplerImpl;
@@ -63,6 +73,13 @@ namespace platypus
         // Needed for Vulkan swapchain's color and depth textures. ...fucking dumb
         // This should ONLY create the _pImpl!
         Texture(bool empty);
+        Texture(
+            TextureUsage usage,
+            const TextureSampler& sampler,
+            ImageFormat format,
+            uint32_t width,
+            uint32_t height
+        );
         Texture(
             const Image* pImage,
             const TextureSampler& sampler,

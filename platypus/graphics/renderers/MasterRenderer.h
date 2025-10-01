@@ -4,6 +4,7 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/graphics/Framebuffer.hpp"
 #include "GUIRenderer.h"
 #include "Renderer3D.hpp"
 #include "Batch.hpp"
@@ -40,6 +41,12 @@ namespace platypus
         std::unique_ptr<Renderer3D> _pRenderer3D;
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
+        RenderPass _testRenderPass;
+        Framebuffer* _pTestFramebuffer = nullptr;
+        TextureSampler _testFramebufferTextureSampler;
+        Texture* _pTestFramebufferColorTexture = nullptr;
+        Texture* _pTestFramebufferDepthTexture = nullptr;
+
         size_t _currentFrame = 0;
 
     public:
@@ -52,6 +59,8 @@ namespace platypus
         void cleanUp();
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
+
+        inline Texture* getTestFramebufferColorTexture() { return _pTestFramebufferColorTexture; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }

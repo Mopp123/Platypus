@@ -1,8 +1,8 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "DesktopSwapchain.h"
-#include "DesktopFramebuffer.hpp"
 #include "platypus/graphics/RenderPass.h"
 #include "DesktopRenderPass.h"
+#include "DesktopFramebuffer.hpp"
 #include "DesktopCommandBuffer.h"
 #include "DesktopPipeline.h"
 #include "DesktopBuffers.h"
@@ -21,15 +21,16 @@ namespace platypus
         // of the whole swapchain.
         void begin_render_pass(
             const CommandBuffer& primaryCmdBuf,
-            const Swapchain& swapchain,
+            const RenderPass& renderPass,
+            const Framebuffer& framebuffer,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         )
         {
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            beginInfo.renderPass = swapchain.getRenderPass().getImpl()->handle;
-            beginInfo.framebuffer = swapchain.getFramebuffers()[swapchain.getCurrentImageIndex()]->getImpl()->handle;
+            beginInfo.renderPass = renderPass.getImpl()->handle;
+            beginInfo.framebuffer = framebuffer.getImpl()->handle;
 
             VkClearValue clearColorValue{};
             clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
@@ -45,7 +46,7 @@ namespace platypus
             beginInfo.pClearValues = clearValues;
 
             beginInfo.renderArea.offset = { 0, 0 };
-            Extent2D swapchainExtent = swapchain.getExtent();
+            Extent2D swapchainExtent = { framebuffer.getWidth(), framebuffer.getHeight() };
             beginInfo.renderArea.extent = { swapchainExtent.width, swapchainExtent.height };
 
             vkCmdBeginRenderPass(

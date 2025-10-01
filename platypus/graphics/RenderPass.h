@@ -1,5 +1,7 @@
 #pragma once
 
+#include "platypus/assets/Image.h"
+
 
 namespace platypus
 {
@@ -15,7 +17,12 @@ namespace platypus
         RenderPass();
         ~RenderPass();
 
-        void create(const Swapchain& swapchain);
+        void create(
+            ImageFormat colorFormat,
+            ImageFormat depthFormat,
+            bool offscreenTarget
+        );
+
         void destroy();
 
         inline const RenderPassImpl* getImpl() const { return _pImpl; }

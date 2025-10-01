@@ -1,13 +1,10 @@
 #include "platypus/graphics/RenderPass.h"
-#include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include "DesktopDevice.hpp"
 #include "DesktopRenderPass.h"
-#include "DesktopSwapchain.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vk_enum_string_helper.h>
-#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
@@ -25,35 +22,26 @@ namespace platypus
             delete _pImpl;
     }
 
-    void RenderPass::create(const Swapchain& swapchain)
+    void RenderPass::create(
+        ImageFormat colorFormat,
+        ImageFormat depthFormat,
+        bool offscreenTarget
+    )
     {
-        if (!swapchain._pImpl)
-        {
-            Debug::log(
-                "@RenderPass::create "
-                "Swapchain not initialized!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        VkFormat colorImageFormat = swapchain._pImpl->imageFormat;
-
         VkAttachmentDescription colorAttachmentDescription{};
-        colorAttachmentDescription.format = colorImageFormat;
+        colorAttachmentDescription.format = to_vk_format(colorFormat);
         colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkImageLayout colorImageLayout = offscreenTarget ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachmentDescription.finalLayout = colorImageLayout;
 
 
-        VkFormat depthImageFormat = to_vk_format(swapchain.getDepthImage()->getFormat());
         VkAttachmentDescription depthAttachmentDescription{};
-        depthAttachmentDescription.format = depthImageFormat;
+        depthAttachmentDescription.format = to_vk_format(depthFormat);
         depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -61,6 +49,8 @@ namespace platypus
         depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription, depthAttachmentDescription };
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
@@ -80,14 +70,43 @@ namespace platypus
         subpassDescription.pColorAttachments = &colorAttachmentRef;
         subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
 
-        VkSubpassDependency subPassDependency{};
-        subPassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subPassDependency.dstSubpass = 0;
-        subPassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
-        subPassDependency.srcAccessMask = 0; // no fukin idea what this is..
-        subPassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        subPassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription, depthAttachmentDescription };
+        // TODO: Dumb as fuck.. plz clean up!
+        size_t subpassDependencyCount = offscreenTarget ? 2 : 1;
+        std::vector<VkSubpassDependency> subpassDependencies(subpassDependencyCount);
+        if (!offscreenTarget)
+        {
+            VkSubpassDependency subpassDependency{};
+            subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+            subpassDependency.dstSubpass = 0;
+            subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
+            subpassDependency.srcAccessMask = 0; // no fukin idea what this is..
+            subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            subpassDependencies[0] = subpassDependency;
+        }
+        else
+        {
+            VkSubpassDependency subpassDependency1{};
+            subpassDependency1.srcSubpass = VK_SUBPASS_EXTERNAL;
+		    subpassDependency1.dstSubpass = 0;
+		    subpassDependency1.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		    subpassDependency1.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		    subpassDependency1.srcAccessMask = VK_ACCESS_NONE_KHR;
+		    subpassDependency1.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		    subpassDependency1.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+            VkSubpassDependency subpassDependency2{};
+		    subpassDependency2.srcSubpass = 0;
+		    subpassDependency2.dstSubpass = VK_SUBPASS_EXTERNAL;
+		    subpassDependency2.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		    subpassDependency2.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		    subpassDependency2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		    subpassDependency2.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		    subpassDependency2.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+            subpassDependencies[0] = subpassDependency1;
+            subpassDependencies[1] = subpassDependency2;
+        }
 
         VkRenderPassCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -96,8 +115,8 @@ namespace platypus
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
 
-        createInfo.dependencyCount = 1;
-        createInfo.pDependencies = &subPassDependency;
+        createInfo.dependencyCount = (uint32_t)subpassDependencies.size();
+        createInfo.pDependencies = subpassDependencies.data();
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(

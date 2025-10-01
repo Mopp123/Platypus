@@ -3,6 +3,8 @@
 #include "Swapchain.h"
 #include "platypus/utils/Maths.h"
 #include "CommandBuffer.h"
+#include "RenderPass.h"
+#include "Framebuffer.hpp"
 #include "Pipeline.h"
 #include "Descriptors.h"
 
@@ -18,7 +20,8 @@ namespace platypus
         // of the whole swapchain.
         void begin_render_pass(
             const CommandBuffer& primaryCmdBuf,
-            const Swapchain& swapchain,
+            const RenderPass& renderPass,
+            const Framebuffer& framebuffer,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         );

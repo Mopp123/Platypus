@@ -534,6 +534,12 @@ namespace platypus
         return foundAssets;
     }
 
+    void AssetManager::addExternalPersistentAsset(Asset* pAsset)
+    {
+        _assets[pAsset->getID()] = pAsset;
+        _persistentAssets[pAsset->getID()] = pAsset;
+    }
+
     bool AssetManager::validateAsset(
         const char* callLocation,
         ID_t assetID,

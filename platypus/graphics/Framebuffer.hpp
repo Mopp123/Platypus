@@ -23,6 +23,10 @@ namespace platypus
         );
         ~Framebuffer();
 
+        inline const FramebufferImpl* getImpl() const { return _pImpl; }
         inline FramebufferImpl* getImpl() { return _pImpl; }
+
+        inline uint32_t getWidth() const { return _width; }
+        inline uint32_t getHeight() const { return _height; }
     };
 }
