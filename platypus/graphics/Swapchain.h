@@ -55,7 +55,10 @@ namespace platypus
         inline const RenderPass& getRenderPass() const { return _renderPass; }
         inline const RenderPass* getRenderPassPtr() const { return &_renderPass; }
 
+        inline const std::vector<Image*> getColorImages() const { return _colorImages; }
+        inline const std::vector<Texture*> getColorTextures() const { return _colorTextures; }
         inline const Image* getDepthImage() const { return _pDepthImage; }
+        inline const Texture* getDepthTexture() const { return _pDepthTexture; }
         inline const std::vector<Framebuffer*>& getFramebuffers() const { return _framebuffers; }
 
         inline uint32_t getImageCount() const { return _imageCount; }

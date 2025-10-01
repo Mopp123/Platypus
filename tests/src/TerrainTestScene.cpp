@@ -112,10 +112,6 @@ void TerrainTestScene::init()
         normalTexturePaths
     );
 
-    ID_t zeroTextureID = pAssetManager->getZeroTexture()->getID();
-    ID_t blackTextureID = pAssetManager->getBlackTexture()->getID();
-    ID_t whiteTextureID = pAssetManager->getWhiteTexture()->getID();
-
     Material* pTerrainMaterial = pAssetManager->createMaterial(
         MaterialType::TERRAIN,
         pBlendmapTexture->getID(),
@@ -146,6 +142,35 @@ void TerrainTestScene::init()
         { 1, 1, 1 }
     );
     create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), pTerrainMaterial->getID());
+
+    // For debugging framebuffers
+    TextureSampler framebufferDebugTextureSampler(
+        TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        false,
+        0
+    );
+    _pTestTexture1 = pAssetManager->loadTexture(
+        "assets/textures/DiffuseTest.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        framebufferDebugTextureSampler
+    );
+    _pTestTexture2 = pAssetManager->loadTexture(
+        "assets/textures/Floor.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        framebufferDebugTextureSampler
+    );
+
+    _framebufferDebugEntity = createEntity();
+    create_gui_transform(
+        _framebufferDebugEntity,
+        { 0, 0 },
+        { 400, 256 }
+    );
+    GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
+        _framebufferDebugEntity,
+        _pTestTexture1->getID()
+    );
 }
 
 
@@ -153,6 +178,13 @@ static float s_time = 0.0f;
 void TerrainTestScene::update()
 {
     _camController.update();
+
+    Application* pApp = Application::get_instance();
+    InputManager& inputManager = pApp->getInputManager();
+    GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
+        _framebufferDebugEntity,
+        ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+    );
 
     /*
     float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;

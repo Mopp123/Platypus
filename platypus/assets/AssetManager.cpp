@@ -485,6 +485,17 @@ namespace platypus
         return pFont;
     }
 
+    bool AssetManager::assetExists(ID_t assetID, AssetType type) const
+    {
+        std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
+        if (it != _assets.end())
+        {
+            if (it->second->getType() == type)
+                return true;
+        }
+        return false;
+    }
+
     Asset* AssetManager::getAsset(ID_t assetID, AssetType type) const
     {
         std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);

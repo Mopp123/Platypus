@@ -57,6 +57,7 @@ namespace platypus
         Scene* pInitialScene
     ) :
         _window(name, width, height, resizable, windowMode),
+
         _inputManager(_window)
     {
         if (s_pInstance)
@@ -79,9 +80,11 @@ namespace platypus
         // *MasterRenderer creates only once "common shader resources" in its constructor
         // *MasterRenderer recreates all renderers' and Materials' shader resources on
         // window resize (on swapchain recreation)
-        _pMasterRenderer = new MasterRenderer(_window);
 
+        // NOTE: HUGE ISSUE:
         _pAssetManager = new AssetManager;
+        _pSwapchain = new Swapchain(_window);
+        _pMasterRenderer = new MasterRenderer(*_pSwapchain);
 
         #ifdef PLATYPUS_DEBUG
             Debug::log(
@@ -113,15 +116,19 @@ namespace platypus
         // NOTE: Why the fuck was this commented out earlier!?!?!
         _pMasterRenderer->cleanUp();
         _inputManager.destroyEvents();
-        _pAssetManager->destroyAssets();
 
-        delete _pAssetManager;
         delete _pMasterRenderer;
         // These shouldn't be accessed after this but ur so dumb,
         // that you'll forget -> this to at least see that these
         // are freed...
-        _pAssetManager = nullptr;
         _pMasterRenderer = nullptr;
+
+        delete _pSwapchain;
+
+        _pAssetManager->destroyAssets();
+        delete _pAssetManager;
+        _pAssetManager = nullptr;
+
 
         Device::destroy();
         Context::destroy();

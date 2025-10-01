@@ -75,6 +75,7 @@ namespace platypus
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
+        bool assetExists(ID_t assetID, AssetType type) const;
         Asset* getAsset(ID_t assetID, AssetType type) const;
         std::vector<Asset*> getAssets(AssetType type) const;
 

@@ -61,6 +61,21 @@ namespace platypus
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
+        ID_t textureID,
+        ID_t fontID,
+        Vector4f color,
+        Vector2f textureOffset,
+        uint32_t layer,
+        std::wstring text
+    );
+
+    GUIRenderable* create_gui_renderable(
+        entityID_t target,
         const Vector4f color
+    );
+
+    GUIRenderable* create_gui_renderable(
+        entityID_t target,
+        ID_t textureID
     );
 }

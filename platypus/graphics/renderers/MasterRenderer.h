@@ -26,7 +26,7 @@ namespace platypus
     class MasterRenderer
     {
     private:
-        Swapchain _swapchain;
+        Swapchain& _swapchainRef;
         DescriptorPool _descriptorPool;
         Batcher _batcher;
         std::vector<CommandBuffer> _primaryCommandBuffers;
@@ -44,7 +44,7 @@ namespace platypus
 
     public:
         // NOTE: CommandPool and Device must exist when creating this
-        MasterRenderer(const Window& window);
+        MasterRenderer(Swapchain& swapchain);
         ~MasterRenderer();
         void createPipelines();
 
@@ -53,7 +53,7 @@ namespace platypus
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
 
-        inline const Swapchain& getSwapchain() const { return _swapchain; }
+        inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }

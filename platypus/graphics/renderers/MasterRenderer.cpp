@@ -13,9 +13,9 @@
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(const Window& window) :
-        _swapchain(window),
-        _descriptorPool(_swapchain),
+    MasterRenderer::MasterRenderer(Swapchain& swapchain) :
+        _swapchainRef(swapchain),
+        _descriptorPool(_swapchainRef),
         _batcher(*this, _descriptorPool, 1000, 1000, 9, 50),
 
         _scene3DDataDescriptorSetLayout(
@@ -45,7 +45,7 @@ namespace platypus
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+        allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
         createCommonShaderResources();
     }
 
@@ -196,7 +196,7 @@ namespace platypus
 
     void MasterRenderer::render(const Window& window)
     {
-        SwapchainResult result = _swapchain.acquireImage();
+        SwapchainResult result = _swapchainRef.acquireImage();
         if (result == SwapchainResult::ERROR)
         {
             Debug::log(
@@ -214,13 +214,13 @@ namespace platypus
         {
             const CommandBuffer& cmdBuf = recordCommandBuffer();
             Device::submit_primary_command_buffer(
-                _swapchain,
+                _swapchainRef,
                 cmdBuf,
-                _swapchain.getCurrentFrame()
+                _swapchainRef.getCurrentFrame()
             );
 
             // present may also tell us to recreate swapchain!
-            if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || window.resized())
+            if (_swapchainRef.present() == SwapchainResult::RESIZE_REQUIRED || window.resized())
                 handleWindowResize();
         }
     }
@@ -250,10 +250,10 @@ namespace platypus
 
     void MasterRenderer::createPipelines()
     {
-        const Extent2D swapchainExtent = _swapchain.getExtent();
+        const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
         _pGUIRenderer->createPipeline(
-            _swapchain.getRenderPass(),
+            _swapchainRef.getRenderPass(),
             swapchainExtent.width,
             swapchainExtent.height
         );
@@ -276,7 +276,7 @@ namespace platypus
     {
         // Create common uniform buffers and descriptor sets
         Scene3DData scene3DData;
-        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
+        for (int i = 0; i < _swapchainRef.getMaxFramesInFlight(); ++i)
         {
             Buffer* pScene3DDataUniformBuffer = new Buffer(
                 &scene3DData,
@@ -323,7 +323,7 @@ namespace platypus
 
         CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
 
-        currentCommandBuffer.begin(_swapchain.getRenderPass());
+        currentCommandBuffer.begin(_swapchainRef.getRenderPass());
 
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
@@ -331,7 +331,7 @@ namespace platypus
 
         render::begin_render_pass(
             currentCommandBuffer,
-            _swapchain,
+            _swapchainRef,
             pScene->environmentProperties.clearColor,
             true
         );
@@ -405,14 +405,14 @@ namespace platypus
             0
         );
 
-        const Extent2D swapchainExtent = _swapchain.getExtent();
+        const Extent2D swapchainExtent = _swapchainRef.getExtent();
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!
         _batcher.updateDeviceSideBuffers(_currentFrame);
         secondaryCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
-                _swapchain.getRenderPass(),
+                _swapchainRef.getRenderPass(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
                 _batcher.getBatches()
@@ -424,7 +424,7 @@ namespace platypus
 
         secondaryCommandBuffers.push_back(
             _pGUIRenderer->recordCommandBuffer(
-                _swapchain.getRenderPass(),
+                _swapchainRef.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
                 orthographicProjectionMatrix,
@@ -437,7 +437,7 @@ namespace platypus
         render::end_render_pass(currentCommandBuffer);
         currentCommandBuffer.end();
 
-        size_t maxFramesInFlight = _swapchain.getMaxFramesInFlight();
+        size_t maxFramesInFlight = _swapchainRef.getMaxFramesInFlight();
         _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
 
         return currentCommandBuffer;
@@ -452,8 +452,8 @@ namespace platypus
         if (!window.isMinimized())
         {
             Device::handle_window_resize();
-            _swapchain.recreate(window);
-            if (_swapchain.imageCountChanged())
+            _swapchainRef.recreate(window);
+            if (_swapchainRef.imageCountChanged())
             {
                 Debug::log(
                     "@MasterRenderer::handleWindowResize "
@@ -464,7 +464,7 @@ namespace platypus
                 destroyCommonShaderResources();
                 destroyPipelines();
                 freeCommandBuffers();
-                allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+                allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
                 createPipelines();
                 createCommonShaderResources();
                 // NOTE: Makes window resizing even slower.
@@ -483,7 +483,7 @@ namespace platypus
                 createPipelines();
             }
 
-            _swapchain.resetChangedImageCount();
+            _swapchainRef.resetChangedImageCount();
             window.resetResized();
         }
         else
