@@ -81,6 +81,7 @@ namespace platypus
     }
 
     Pipeline* create_terrain_material_pipeline(
+        const RenderPass& renderPass,
         const VertexBufferLayout& meshVertexBufferLayout,
         Material* pMaterial
     )
@@ -93,10 +94,9 @@ namespace platypus
             pMaterial->getDescriptorSetLayout()
         };
 
-        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
         // NOTE: Currently sending proj mat as push constant
         Pipeline* pPipeline = new Pipeline(
-            swapchain.getRenderPassPtr(),
+            &renderPass,
             { meshVertexBufferLayout },
             useDescriptorSetLayouts,
             pMaterial->getVertexShader(),

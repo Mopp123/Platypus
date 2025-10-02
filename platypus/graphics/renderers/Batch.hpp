@@ -46,6 +46,7 @@ namespace platypus
     {
         BatchType type = BatchType::NONE;
         Pipeline* pPipeline = nullptr;
+        Pipeline* pOffscreenPipeline = nullptr;
         std::vector<std::vector<DescriptorSet>> descriptorSets;
         // NOTE: Currently should only use a single dynamic uniform buffer (Don't know what happens otherwise:D)
         //std::vector<uint32_t> dynamicDescriptorSetRanges;
@@ -81,6 +82,8 @@ namespace platypus
         size_t _maxTerrainBatchLength;
         size_t _maxSkinnedMeshJoints;
 
+        std::unordered_map<ID_t, Pipeline*> _batchOffscreenPipelines;
+
         static DescriptorSetLayout s_jointDescriptorSetLayout;
         static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
@@ -113,7 +116,11 @@ namespace platypus
         // Returns batch identifier, if created successfully
         ID_t createStaticBatch(ID_t meshID, ID_t materialID);
         ID_t createSkinnedBatch(ID_t meshID, ID_t materialID);
-        ID_t createTerrainBatch(ID_t terrainMeshID, ID_t materialID);
+        ID_t createTerrainBatch(
+            ID_t terrainMeshID,
+            ID_t materialID,
+            const RenderPass& offscreenRenderPass
+        );
 
         void addToStaticBatch(
             ID_t identifier,
@@ -145,6 +152,9 @@ namespace platypus
         void freeBatches();
 
         const std::vector<Batch*>& getBatches() const;
+
+        void recreatePipelines();
+        void destroyPipelines();
 
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();

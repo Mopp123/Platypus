@@ -224,7 +224,11 @@ namespace platypus
         );
         _pPipelineData->pVertexShader = pVertexShader;
         _pPipelineData->pFragmentShader = pFragmentShader;
-        Pipeline* pPipeline = create_terrain_material_pipeline(pTerrainMesh->getVertexBufferLayout(), this);
+        Pipeline* pPipeline = create_terrain_material_pipeline(
+            Application::get_instance()->getMasterRenderer()->getSwapchain().getRenderPass(),
+            pTerrainMesh->getVertexBufferLayout(),
+            this
+        );
         _pPipelineData->pPipeline = pPipeline;
         _pPipelineData->pPipeline->create();
     }

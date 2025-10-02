@@ -14,6 +14,7 @@ namespace platypus
     );
 
     Pipeline* create_terrain_material_pipeline(
+        const RenderPass& renderPass,
         const VertexBufferLayout& meshVertexBufferLayout,
         Material* pMaterial
     );

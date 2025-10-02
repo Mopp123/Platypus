@@ -57,7 +57,7 @@ namespace platypus
         // TESTING ------------------------------------------------------------
         uint32_t swapchainWidth = _swapchainRef.getExtent().width;
         uint32_t swapchainHeight = _swapchainRef.getExtent().height;
-        ImageFormat testFramebufferColorFormat = ImageFormat::B8G8R8A8_SRGB;
+        ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
         _pTestFramebufferColorTexture = new Texture(
             TextureUsage::FRAMEBUFFER_COLOR,
             _testFramebufferTextureSampler,
@@ -102,6 +102,7 @@ namespace platypus
     {
         Device::wait_for_operations();
 
+        _batcher.destroyPipelines();
         _batcher.freeBatches();
         _pGUIRenderer->freeBatches();
     }
@@ -217,7 +218,11 @@ namespace platypus
                     "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createTerrainBatch(terrainMeshID, materialID);
+                batchID = _batcher.createTerrainBatch(
+                    terrainMeshID,
+                    materialID,
+                    _testRenderPass
+                );
             }
 
             const TerrainMesh* pTerrainMesh = (const TerrainMesh*)Application::get_instance()->getAssetManager()->getAsset(
@@ -456,17 +461,17 @@ namespace platypus
             true
         );
 
-        //std::vector<CommandBuffer> testSecondaries;
-        //testSecondaries.push_back(
-        //    _pRenderer3D->recordCommandBuffer(
-        //        _testRenderPass,//_swapchainRef.getRenderPass(),
-        //        (float)swapchainExtent.width,
-        //        (float)swapchainExtent.height,
-        //        _batcher.getBatches()
-        //    )
-        //);
+        std::vector<CommandBuffer> testSecondaries;
+        testSecondaries.push_back(
+            _pRenderer3D->recordOffscreenCommandBuffer(
+                _testRenderPass,//_swapchainRef.getRenderPass(),
+                (float)swapchainExtent.width,
+                (float)swapchainExtent.height,
+                _batcher.getBatches()
+            )
+        );
 
-        //render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
+        render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
         render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
 
@@ -496,6 +501,8 @@ namespace platypus
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
         _batcher.resetForNextFrame();
+
+        _pRenderer3D->advanceFrame();
 
         secondaryCommandBuffers.push_back(
             _pGUIRenderer->recordCommandBuffer(
@@ -542,6 +549,7 @@ namespace platypus
                 allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
                 createPipelines();
                 createCommonShaderResources();
+                _batcher.recreatePipelines();
                 // NOTE: Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
@@ -556,6 +564,7 @@ namespace platypus
                 );
                 destroyPipelines();
                 createPipelines();
+                _batcher.recreatePipelines();
             }
 
             _swapchainRef.resetChangedImageCount();

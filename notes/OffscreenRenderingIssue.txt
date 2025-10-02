@@ -18,3 +18,6 @@ Offscreen rendering requires separate Pipeline, because Pipeline depends on Rend
         Just need to have some quick way to test this shit, no matter how bad its performance wise!!!
             -> Make Terrain rendering batch also create an offscreen pipeline for the batch?
                 -> Add offscreen recordCommandBuffers func for Renderer3D which just uses the batch's offscreen pipeline?
+
+
+---

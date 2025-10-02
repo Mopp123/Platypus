@@ -4,6 +4,7 @@
 #include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/Device.hpp"
+#include "platypus/graphics/PipelineFactory.hpp"
 
 
 namespace platypus
@@ -56,6 +57,7 @@ namespace platypus
 
     Batcher::~Batcher()
     {
+        destroyPipelines();
         s_jointDescriptorSetLayout.destroy();
         s_terrainDescriptorSetLayout.destroy();
     }
@@ -139,6 +141,7 @@ namespace platypus
         Batch* pBatch = new Batch{
             BatchType::STATIC_INSTANCED,
             pMaterialPipeline,
+            nullptr,
             useDescriptorSets,
             0, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -228,6 +231,7 @@ namespace platypus
         Batch* pBatch = new Batch{
             BatchType::SKINNED,
             pMaterialSkinnedPipeline,
+            nullptr,
             useDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -248,7 +252,11 @@ namespace platypus
         return identifier;
     }
 
-    ID_t Batcher::createTerrainBatch(ID_t terrainMeshID, ID_t materialID)
+    ID_t Batcher::createTerrainBatch(
+        ID_t terrainMeshID,
+        ID_t materialID,
+        const RenderPass& offscreenRenderPass
+    )
     {
         ID_t identifier = ID::hash(terrainMeshID, materialID);
         if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
@@ -317,9 +325,20 @@ namespace platypus
             useDescriptorSets
         );
 
+        // TESTING
+        Pipeline* pOffscreenPipeline = create_terrain_material_pipeline(
+            offscreenRenderPass,
+            pMesh->getVertexBufferLayout(),
+            pMaterial
+        );
+        pOffscreenPipeline->create();
+        _batchOffscreenPipelines[identifier] = pOffscreenPipeline;
+        // ---
+
         Batch* pBatch = new Batch{
             BatchType::TERRAIN,
             pMaterialPipeline,
+            pOffscreenPipeline,
             useDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -532,6 +551,27 @@ namespace platypus
     const std::vector<Batch*>& Batcher::getBatches() const
     {
         return _batches;
+    }
+
+    void Batcher::recreatePipelines()
+    {
+        std::unordered_map<ID_t, Pipeline*>::iterator it;
+        for (it = _batchOffscreenPipelines.begin(); it != _batchOffscreenPipelines.end(); ++it)
+        {
+            it->second->destroy();
+            it->second->create();
+        }
+    }
+
+    void Batcher::destroyPipelines()
+    {
+        std::unordered_map<ID_t, Pipeline*>::iterator it;
+        for (it = _batchOffscreenPipelines.begin(); it != _batchOffscreenPipelines.end(); ++it)
+        {
+            it->second->destroy();
+            delete it->second;
+        }
+        _batchOffscreenPipelines.clear();
     }
 
     const DescriptorSetLayout& Batcher::get_joint_descriptor_set_layout()
