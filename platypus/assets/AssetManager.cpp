@@ -540,6 +540,14 @@ namespace platypus
         _persistentAssets[pAsset->getID()] = pAsset;
     }
 
+    void AssetManager::destroyExternalPersistentAsset(Asset* pAsset)
+    {
+        ID_t assetID = pAsset->getID();
+        delete _assets[assetID];
+        _assets.erase(assetID);
+        _persistentAssets.erase(assetID);
+    }
+
     bool AssetManager::validateAsset(
         const char* callLocation,
         ID_t assetID,

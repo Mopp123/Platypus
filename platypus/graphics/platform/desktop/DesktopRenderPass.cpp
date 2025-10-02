@@ -70,43 +70,45 @@ namespace platypus
         subpassDescription.pColorAttachments = &colorAttachmentRef;
         subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
 
-        // TODO: Dumb as fuck.. plz clean up!
-        size_t subpassDependencyCount = offscreenTarget ? 2 : 1;
-        std::vector<VkSubpassDependency> subpassDependencies(subpassDependencyCount);
-        if (!offscreenTarget)
-        {
-            VkSubpassDependency subpassDependency{};
-            subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-            subpassDependency.dstSubpass = 0;
-            subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
-            subpassDependency.srcAccessMask = 0; // no fukin idea what this is..
-            subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            subpassDependencies[0] = subpassDependency;
-        }
-        else
-        {
-            VkSubpassDependency subpassDependency1{};
-            subpassDependency1.srcSubpass = VK_SUBPASS_EXTERNAL;
-		    subpassDependency1.dstSubpass = 0;
-		    subpassDependency1.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		    subpassDependency1.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		    subpassDependency1.srcAccessMask = VK_ACCESS_NONE_KHR;
-		    subpassDependency1.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		    subpassDependency1.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        size_t subpassDependencyCount = 1;
+        VkSubpassDependency subpassDependency{};
+        subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        subpassDependency.dstSubpass = 0;
+        subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // here we specify which operations to wait on
+        subpassDependency.srcAccessMask = 0; // no fukin idea what this is..
+        subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        // Not really sure what kind of shit should be specified here:D seems to work...
+        if (offscreenTarget)
+		    subpassDependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-            VkSubpassDependency subpassDependency2{};
-		    subpassDependency2.srcSubpass = 0;
-		    subpassDependency2.dstSubpass = VK_SUBPASS_EXTERNAL;
-		    subpassDependency2.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		    subpassDependency2.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		    subpassDependency2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		    subpassDependency2.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-		    subpassDependency2.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        // NOTE: Did earlier offscreen rendering using below from some stack overflow post.
+        // Realized that I'm not using subpasses at all since I have completely different render pass for that.
+        // TODO: Maybe utilize subpasses in the future to render into multiple attachments within single
+        // renderpass. (Quite useful for deferred rendering?)
+        //if (offscreenTarget)
+        //{
+        //    VkSubpassDependency subpassDependency1{};
+        //    subpassDependency1.srcSubpass = VK_SUBPASS_EXTERNAL;
+		//    subpassDependency1.dstSubpass = 0;
+		//    subpassDependency1.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		//    subpassDependency1.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		//    subpassDependency1.srcAccessMask = VK_ACCESS_NONE_KHR;
+		//    subpassDependency1.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		//    subpassDependency1.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-            subpassDependencies[0] = subpassDependency1;
-            subpassDependencies[1] = subpassDependency2;
-        }
+        //    VkSubpassDependency subpassDependency2{};
+		//    subpassDependency2.srcSubpass = 0;
+		//    subpassDependency2.dstSubpass = VK_SUBPASS_EXTERNAL;
+		//    subpassDependency2.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		//    subpassDependency2.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		//    subpassDependency2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		//    subpassDependency2.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		//    subpassDependency2.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        //    subpassDependencies[0] = subpassDependency1;
+        //    subpassDependencies[1] = subpassDependency2;
+        //}
 
         VkRenderPassCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -115,8 +117,8 @@ namespace platypus
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
 
-        createInfo.dependencyCount = (uint32_t)subpassDependencies.size();
-        createInfo.pDependencies = subpassDependencies.data();
+        createInfo.dependencyCount = 1;
+        createInfo.pDependencies = &subpassDependency;
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkResult createResult = vkCreateRenderPass(

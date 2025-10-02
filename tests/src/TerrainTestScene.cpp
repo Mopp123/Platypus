@@ -183,6 +183,17 @@ void TerrainTestScene::update()
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
 
+    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+    Texture* pFramebufferColorTexture = pMasterRenderer->getTestFramebufferColorTexture();
+    if (pFramebufferColorTexture)
+    {
+        GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
+            _framebufferDebugEntity,
+            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+        );
+        pFramebufferDebugRenderable->textureID = pFramebufferColorTexture->getID();
+    }
+
     /*
     float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;
     Debug::log("___TEST___amount: " + std::to_string(interpolationAmount));

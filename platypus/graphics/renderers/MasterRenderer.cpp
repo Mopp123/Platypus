@@ -55,44 +55,18 @@ namespace platypus
         createCommonShaderResources();
 
         // TESTING ------------------------------------------------------------
-        uint32_t swapchainWidth = _swapchainRef.getExtent().width;
-        uint32_t swapchainHeight = _swapchainRef.getExtent().height;
-        ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
-        _pTestFramebufferColorTexture = new Texture(
-            TextureUsage::FRAMEBUFFER_COLOR,
-            _testFramebufferTextureSampler,
-            testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-            swapchainWidth,
-            swapchainHeight
-        );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
-
-        _pTestFramebufferDepthTexture = new Texture(
-            TextureUsage::FRAMEBUFFER_DEPTH,
-            _testFramebufferTextureSampler,
-            ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
-            swapchainWidth,
-            swapchainHeight
-        );
         _testRenderPass.create(
-            testFramebufferColorFormat,
+            ImageFormat::R8G8B8A8_SRGB,
             ImageFormat::D32_SFLOAT,
             true
         );
-        _pTestFramebuffer = new Framebuffer(
-            _testRenderPass,
-            { _pTestFramebufferColorTexture, _pTestFramebufferDepthTexture },
-            swapchainWidth,
-            swapchainHeight
-        );
+        createOffscreenResourcesTEST();
     }
 
     MasterRenderer::~MasterRenderer()
     {
-        delete _pTestFramebuffer;
+        destroyOffscreenResourcesTEST();
         _testRenderPass.destroy();
-        delete _pTestFramebufferDepthTexture;
-        //delete _pTestFramebufferColorTexture;
 
         destroyCommonShaderResources();
         _scene3DDataDescriptorSetLayout.destroy();
@@ -273,6 +247,46 @@ namespace platypus
         }
     }
 
+    void MasterRenderer::createOffscreenResourcesTEST()
+    {
+        uint32_t swapchainWidth = _swapchainRef.getExtent().width;
+        uint32_t swapchainHeight = _swapchainRef.getExtent().height;
+        ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
+        _pTestFramebufferColorTexture = new Texture(
+            TextureUsage::FRAMEBUFFER_COLOR,
+            _testFramebufferTextureSampler,
+            testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
+            swapchainWidth,
+            swapchainHeight
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
+
+        _pTestFramebufferDepthTexture = new Texture(
+            TextureUsage::FRAMEBUFFER_DEPTH,
+            _testFramebufferTextureSampler,
+            ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
+            swapchainWidth,
+            swapchainHeight
+        );
+        _pTestFramebuffer = new Framebuffer(
+            _testRenderPass,
+            { _pTestFramebufferColorTexture, _pTestFramebufferDepthTexture },
+            swapchainWidth,
+            swapchainHeight
+        );
+    }
+
+    void MasterRenderer::destroyOffscreenResourcesTEST()
+    {
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferColorTexture);
+        delete _pTestFramebufferDepthTexture;
+        delete _pTestFramebuffer;
+
+        _pTestFramebufferColorTexture = nullptr;
+        _pTestFramebufferDepthTexture = nullptr;
+        _pTestFramebuffer = nullptr;
+    }
+
     void MasterRenderer::allocCommandBuffers(uint32_t count)
     {
         _primaryCommandBuffers = Device::get_command_pool()->allocCommandBuffers(
@@ -371,7 +385,7 @@ namespace platypus
 
         CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
 
-        currentCommandBuffer.begin(_swapchainRef.getRenderPass());
+        currentCommandBuffer.begin(nullptr);
 
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
@@ -550,6 +564,8 @@ namespace platypus
                 createPipelines();
                 createCommonShaderResources();
                 _batcher.recreatePipelines();
+                destroyOffscreenResourcesTEST();
+                createOffscreenResourcesTEST();
                 // NOTE: Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
@@ -564,6 +580,8 @@ namespace platypus
                 );
                 destroyPipelines();
                 createPipelines();
+                destroyOffscreenResourcesTEST();
+                createOffscreenResourcesTEST();
                 _batcher.recreatePipelines();
             }
 

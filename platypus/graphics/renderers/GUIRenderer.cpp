@@ -289,9 +289,10 @@ namespace platypus
             }
         #endif
 
-        // The actual rendering stuff...
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
-        currentCommandBuffer.begin(renderPass);
+        currentCommandBuffer.begin(&renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
@@ -308,6 +309,19 @@ namespace platypus
 
                 if (_batches[*layerBatchIt].count == 0)
                 {
+                    unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    continue;
+                }
+                // Just quick hack to delete batch if its texture can no longer be found
+                if (!pAssetManager->assetExists(batchData.textureID, AssetType::ASSET_TYPE_TEXTURE))
+                {
+                    Debug::log(
+                        "@GUIRenderer::recordCommandBuffer "
+                        "Batch's texture asset can no longer be found! "
+                        "Deleting batch and its descriptor sets!",
+                        Debug::MessageType::PLATYPUS_WARNING
+                    );
+                    freeTextureDescriptorSets(batchData.textureID);
                     unusedBatches[layerIt->first].push_back(layerBatchIt);
                     continue;
                 }

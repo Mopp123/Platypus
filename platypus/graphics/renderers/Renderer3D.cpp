@@ -39,7 +39,7 @@ namespace platypus
         #endif
 
         CommandBuffer& currentCommandBuffer = _offscreenCommandBuffers[_currentFrame];
-        currentCommandBuffer.begin(renderPass);
+        currentCommandBuffer.begin(&renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
@@ -141,7 +141,7 @@ namespace platypus
         #endif
 
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
-        currentCommandBuffer.begin(renderPass);
+        currentCommandBuffer.begin(&renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 

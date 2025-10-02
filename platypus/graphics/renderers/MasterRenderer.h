@@ -71,6 +71,9 @@ namespace platypus
         inline size_t getCurrentFrame() const { return _currentFrame; }
 
     private:
+        void createOffscreenResourcesTEST();
+        void destroyOffscreenResourcesTEST();
+
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();
         void destroyPipelines();
