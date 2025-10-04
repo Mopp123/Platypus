@@ -21,3 +21,10 @@ Offscreen rendering requires separate Pipeline, because Pipeline depends on Rend
 
 
 ---
+
+CURRENT BIGGEST ISSUE: Seems, we're not waiting on enough of operations before using the
+depth texture!!!
+
+If there's intention of using framebuffer's depth texture as texture in a shader
+    -> Need to have pipeline barrier to ensure it being usable when ending the render pass.
+        BUT How to detect this?

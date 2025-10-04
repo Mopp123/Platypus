@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platypus/graphics/Framebuffer.hpp"
 #include <vulkan/vulkan.h>
 
 
@@ -9,6 +10,8 @@ namespace platypus
     {
         VkCommandBuffer handle = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+
+        Framebuffer* pBoundFramebuffer = nullptr;
     };
 
     struct CommandPoolImpl

@@ -28,5 +28,7 @@ namespace platypus
 
         inline uint32_t getWidth() const { return _width; }
         inline uint32_t getHeight() const { return _height; }
+
+        inline std::vector<Texture*>& getAttachments() { return _attachments; }
     };
 }

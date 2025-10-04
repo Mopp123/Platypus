@@ -25,7 +25,7 @@ namespace platypus
 
     void Swapchain::create(const Window& window)
     {
-        _renderPass.create(*this);
+        _renderPass.create(ImageFormat::R8G8B8A8_UNORM, ImageFormat::D32_SFLOAT, false);
 
         int width = 0;
         int height = 0;

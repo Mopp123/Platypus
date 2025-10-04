@@ -323,6 +323,7 @@ namespace platypus
                     );
                     freeTextureDescriptorSets(batchData.textureID);
                     unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    PLATYPUS_ASSERT(false);
                     continue;
                 }
 

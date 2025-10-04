@@ -14,18 +14,21 @@ namespace platypus
     // NOTE: Maybe some better namespace for this...
     namespace render
     {
-        // To begin using the swapchain's render pass.
-        // NOTE: Can only be called for the primary command buffer atm!
-        // TODO: Implement Framebuffers and make this take specific framebuffer and render pass instead
-        // of the whole swapchain.
-        void begin_render_pass(
-            const CommandBuffer& primaryCmdBuf,
-            const RenderPass& renderPass,
-            const Framebuffer& framebuffer,
+        void begin_scene_render_pass(
+            CommandBuffer& primaryCmdBuf,
+            const Swapchain& swapchain,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         );
-        void end_render_pass(const CommandBuffer& commandBuffer);
+        void begin_offscreen_render_pass(
+            CommandBuffer& primaryCmdBuf,
+            const RenderPass& renderPass,
+            Framebuffer* pFramebuffer,
+            const Vector4f& clearColor,
+            bool clearDepthBuffer
+        );
+        void end_scene_render_pass(CommandBuffer& commandBuffer);
+        void end_offscreen_render_pass(CommandBuffer& commandBuffer);
 
         void exec_secondary_command_buffers(
             const CommandBuffer& primary,

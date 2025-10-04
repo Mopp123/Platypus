@@ -1,4 +1,5 @@
 #include "MasterRenderer.h"
+#include "platypus/assets/Texture.h"
 #include "platypus/core/Application.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/core/Debug.h"
@@ -37,7 +38,7 @@ namespace platypus
             }
         ),
         _testFramebufferTextureSampler(
-            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             false,
             0
@@ -249,42 +250,57 @@ namespace platypus
 
     void MasterRenderer::createOffscreenResourcesTEST()
     {
+        Debug::log("___TEST___CREATE OFFSCREEN");
+        size_t framesInFlight = _swapchainRef.getMaxFramesInFlight();
         uint32_t swapchainWidth = _swapchainRef.getExtent().width;
         uint32_t swapchainHeight = _swapchainRef.getExtent().height;
         ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
-        _pTestFramebufferColorTexture = new Texture(
-            TextureUsage::FRAMEBUFFER_COLOR,
-            _testFramebufferTextureSampler,
-            testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-            swapchainWidth,
-            swapchainHeight
-        );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
+        for (size_t i = 0; i < framesInFlight; ++i)
+        {
+            Texture* pTestColorTexture = new Texture(
+                TextureType::COLOR_TEXTURE,
+                _testFramebufferTextureSampler,
+                testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
+                swapchainWidth,
+                swapchainHeight
+            );
+            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(pTestColorTexture);
 
-        _pTestFramebufferDepthTexture = new Texture(
-            TextureUsage::FRAMEBUFFER_DEPTH,
-            _testFramebufferTextureSampler,
-            ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
-            swapchainWidth,
-            swapchainHeight
-        );
-        _pTestFramebuffer = new Framebuffer(
-            _testRenderPass,
-            { _pTestFramebufferColorTexture, _pTestFramebufferDepthTexture },
-            swapchainWidth,
-            swapchainHeight
-        );
+            Texture* pTestDepthTexture = new Texture(
+                TextureType::DEPTH_TEXTURE,
+                _testFramebufferTextureSampler,
+                ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
+                swapchainWidth,
+                swapchainHeight
+            );
+            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(pTestDepthTexture);
+
+            Framebuffer* pTestFramebuffer = new Framebuffer(
+                _testRenderPass,
+                { pTestColorTexture, pTestDepthTexture },
+                swapchainWidth,
+                swapchainHeight
+            );
+
+            _testFramebuffers.push_back(pTestFramebuffer);
+            _testFramebufferColorTextures.push_back(pTestColorTexture);
+            _testFramebufferDepthTextures.push_back(pTestDepthTexture);
+        }
     }
 
     void MasterRenderer::destroyOffscreenResourcesTEST()
     {
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferColorTexture);
-        delete _pTestFramebufferDepthTexture;
-        delete _pTestFramebuffer;
+        size_t framesInFlight = _swapchainRef.getMaxFramesInFlight();
+        for (size_t i = 0; i < framesInFlight; ++i)
+        {
+            Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_testFramebufferColorTextures[i]);
+            Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_testFramebufferDepthTextures[i]);
+            delete _testFramebuffers[i];
+        }
 
-        _pTestFramebufferColorTexture = nullptr;
-        _pTestFramebufferDepthTexture = nullptr;
-        _pTestFramebuffer = nullptr;
+        _testFramebufferColorTextures.clear();
+        _testFramebufferDepthTextures.clear();
+        _testFramebuffers.clear();
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
@@ -467,10 +483,10 @@ namespace platypus
 
 
         // TESTING MULTIPLE PASSES -----------------------------------
-        render::begin_render_pass(
+        render::begin_offscreen_render_pass(
             currentCommandBuffer,
             _testRenderPass,
-            *_pTestFramebuffer,
+            _testFramebuffers[_currentFrame],
             { 1, 0, 1, 1 },
             true
         );
@@ -486,17 +502,16 @@ namespace platypus
         );
 
         render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
-        render::end_render_pass(currentCommandBuffer);
+        render::end_offscreen_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
 
 
 
 
 
-        render::begin_render_pass(
+        render::begin_scene_render_pass(
             currentCommandBuffer,
-            _swapchainRef.getRenderPass(),
-            *_swapchainRef.getFramebuffers()[_swapchainRef.getCurrentImageIndex()],
+            _swapchainRef,
             pScene->environmentProperties.clearColor,
             true
         );
@@ -530,7 +545,7 @@ namespace platypus
 
         render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
 
-        render::end_render_pass(currentCommandBuffer);
+        render::end_scene_render_pass(currentCommandBuffer);
         currentCommandBuffer.end();
 
         size_t maxFramesInFlight = _swapchainRef.getMaxFramesInFlight();

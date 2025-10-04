@@ -22,14 +22,11 @@ namespace platypus
         SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
     };
 
-    enum class TextureUsage
+    enum class TextureType
     {
         NONE,
-        TEXTURE2D,
-        SWAPCHAIN_FRAMEBUFFER_COLOR,
-        SWAPCHAIN_FRAMEBUFFER_DEPTH,
-        FRAMEBUFFER_COLOR,
-        FRAMEBUFFER_DEPTH
+        COLOR_TEXTURE,
+        DEPTH_TEXTURE
     };
 
     // NOTE: Atm TextureSampler is supposed to be passed around as const ref!
@@ -74,7 +71,7 @@ namespace platypus
         // This should ONLY create the _pImpl!
         Texture(bool empty);
         Texture(
-            TextureUsage usage,
+            TextureType type,
             const TextureSampler& sampler,
             ImageFormat format,
             uint32_t width,

@@ -42,10 +42,10 @@ namespace platypus
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         RenderPass _testRenderPass;
-        Framebuffer* _pTestFramebuffer = nullptr;
+        std::vector<Framebuffer*> _testFramebuffers;
         TextureSampler _testFramebufferTextureSampler;
-        Texture* _pTestFramebufferColorTexture = nullptr;
-        Texture* _pTestFramebufferDepthTexture = nullptr;
+        std::vector<Texture*> _testFramebufferColorTextures;
+        std::vector<Texture*> _testFramebufferDepthTextures;
 
         size_t _currentFrame = 0;
 
@@ -60,7 +60,8 @@ namespace platypus
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
 
-        inline Texture* getTestFramebufferColorTexture() { return _pTestFramebufferColorTexture; }
+        inline std::vector<Texture*>& getTestFramebufferColorTextures() { return _testFramebufferColorTextures; }
+        inline std::vector<Texture*>& getTestFramebufferDepthTextures() { return _testFramebufferDepthTextures; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }

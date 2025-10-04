@@ -16,26 +16,21 @@
 
 namespace platypus
 {
-    static void transition_image_layout(
-        VkImage imageHandle,
+    void record_transition_image_layout(
+        VkCommandBuffer cmdBufferHandle,
+        TextureImpl* pTextureImpl,
         VkImageLayout oldLayout,
         VkImageLayout newLayout,
         uint32_t mipLevelCount
     )
     {
-        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
-            1,
-            CommandBufferLevel::PRIMARY_COMMAND_BUFFER
-        )[0];
-        commandBuffer.beginSingleUse();
-
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout = oldLayout;
         barrier.newLayout = newLayout;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; //* We arent transitioning between any queues here...
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = imageHandle;
+        barrier.image = pTextureImpl->image;
 
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         barrier.subresourceRange.baseMipLevel = 0;
@@ -73,13 +68,37 @@ namespace platypus
         }
 
         vkCmdPipelineBarrier(
-            commandBuffer.getImpl()->handle,
+            cmdBufferHandle,
             sourceStage,
             destinationStage,
             0,
             0, nullptr,
             0, nullptr,
             1, &barrier
+        );
+
+        pTextureImpl->imageLayout = newLayout;
+    }
+
+    void transition_image_layout_immediate(
+        TextureImpl* pTextureImpl,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout,
+        uint32_t mipLevelCount
+    )
+    {
+        CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
+            1,
+            CommandBufferLevel::PRIMARY_COMMAND_BUFFER
+        )[0];
+        commandBuffer.beginSingleUse();
+
+        record_transition_image_layout(
+            commandBuffer.getImpl()->handle,
+            pTextureImpl,
+            oldLayout,
+            newLayout,
+            mipLevelCount
         );
 
         commandBuffer.finishSingleUse();
@@ -408,7 +427,7 @@ namespace platypus
     }
 
     Texture::Texture(
-        TextureUsage usage,
+        TextureType type,
         const TextureSampler& sampler,
         ImageFormat format,
         uint32_t width,
@@ -417,16 +436,6 @@ namespace platypus
         Asset(AssetType::ASSET_TYPE_TEXTURE),
         _pSamplerImpl(sampler.getImpl())
     {
-        if ((usage != TextureUsage::FRAMEBUFFER_COLOR) && (usage != TextureUsage::FRAMEBUFFER_DEPTH))
-        {
-            Debug::log(
-                "@Texture::Texture "
-                "Texture usage was not FRAMEBUFFER! "
-                "This constructor is currently only for testing framebuffer textures. ",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
         VkFormat vkImageFormat = to_vk_format(format);
         VkImageCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -439,11 +448,12 @@ namespace platypus
 		createInfo.arrayLayers = 1;
 		createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-        if (usage == TextureUsage::FRAMEBUFFER_COLOR)
+        if (type == TextureType::COLOR_TEXTURE)
 		    createInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        else if (usage == TextureUsage::FRAMEBUFFER_DEPTH)
-		    createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        else if (type == TextureType::DEPTH_TEXTURE)
+		    createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; // No idea can VK_IMAGE_USAGE_SAMPLED_BIT be used here!
 
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
@@ -473,7 +483,7 @@ namespace platypus
         }
 
         VkImageAspectFlags imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-        if (usage == TextureUsage::FRAMEBUFFER_DEPTH)
+        if (type == TextureType::DEPTH_TEXTURE)
             imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 
         VkImageView imageView = create_image_views(
@@ -608,8 +618,13 @@ namespace platypus
             return;
         }
 
-        transition_image_layout(
-            imageHandle,
+        _pImpl = new TextureImpl;
+        _pImpl->image = imageHandle;
+        _pImpl->vmaAllocation = vmaAllocation;
+        _pImpl->imageLayout = imageCreateInfo.initialLayout;
+
+        transition_image_layout_immediate(
+            _pImpl,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             mipLevelCount
@@ -634,8 +649,8 @@ namespace platypus
         }
         else
         {
-            transition_image_layout(
-                imageHandle,
+            transition_image_layout_immediate(
+                _pImpl,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 1 // TODO: Mipmapping
@@ -657,12 +672,7 @@ namespace platypus
             mipLevelCount
         )[0];
 
-        _pImpl = new TextureImpl
-        {
-            imageHandle,
-            imageView,
-            vmaAllocation
-        };
+        _pImpl->imageView = imageView;
     }
 
     Texture::~Texture()

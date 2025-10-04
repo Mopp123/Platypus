@@ -9,6 +9,9 @@
 
 namespace platypus
 {
+    VkFormat to_vk_format(ImageFormat format);
+    ImageFormat to_engine_format(VkFormat format);
+
     struct TextureSamplerImpl
     {
         VkSampler handle = VK_NULL_HANDLE;
@@ -22,13 +25,27 @@ namespace platypus
         ~TextureSamplerImpl();
     };
 
-    VkFormat to_vk_format(ImageFormat format);
-    ImageFormat to_engine_format(VkFormat format);
-
     struct TextureImpl
     {
         VkImage image = VK_NULL_HANDLE;
         VkImageView imageView = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
+        VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     };
+
+
+    void record_transition_image_layout(
+        VkCommandBuffer cmdBufferHandle,
+        TextureImpl* pTextureImpl,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout,
+        uint32_t mipLevelCount
+    );
+
+    void transition_image_layout_immediate(
+        TextureImpl* pTextureImpl,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout,
+        uint32_t mipLevelCount
+    );
 }

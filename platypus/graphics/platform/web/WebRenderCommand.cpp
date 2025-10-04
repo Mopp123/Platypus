@@ -4,6 +4,7 @@
 #include "platypus/graphics/CommandBuffer.h"
 #include "WebCommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
+#include "WebFramebuffer.hpp"
 #include "WebBuffers.h"
 #include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/web/WebTexture.h"
@@ -58,7 +59,6 @@ namespace platypus
             }
         }
 
-
         void begin_render_pass(
             const CommandBuffer& primaryCmdBuf,
             const Swapchain& swapchain,
@@ -66,12 +66,27 @@ namespace platypus
             bool clearDepthBuffer
         )
         {
-            GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+            GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
             GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+            GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+        }
+
+        void begin_render_pass(
+            const CommandBuffer& primaryCmdBuf,
+            const RenderPass& renderPass,
+            const Framebuffer& framebuffer,
+            const Vector4f& clearColor,
+            bool clearDepthBuffer
+        )
+        {
+            GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.getImpl()->id));
+            GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+            GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
         }
 
         void end_render_pass(const CommandBuffer& commandBuffer)
         {
+            //GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
         }
 
         void exec_secondary_command_buffers(

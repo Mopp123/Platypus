@@ -37,6 +37,7 @@ TerrainTestScene::~TerrainTestScene()
 
 void TerrainTestScene::init()
 {
+    Debug::log("___TEST___init TerrainTestScene");
     initBase();
 
     AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -66,12 +67,14 @@ void TerrainTestScene::init()
         true,
         0
     );
+    Debug::log("___TEST___creating blendmap texture...");
     ImageFormat texImageFormat = ImageFormat::R8G8B8A8_SRGB;
     Texture* pBlendmapTexture = pAssetManager->loadTexture(
         "assets/textures/terrain/Blendmap.png",
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
+    Debug::log("___TEST___success!");
     std::vector<std::string> diffuseTexturePaths = {
         "assets/textures/terrain/ground_dry2_d.png",
         "assets/textures/terrain/grass_ground_d.png",
@@ -93,6 +96,8 @@ void TerrainTestScene::init()
         "assets/textures/terrain/ground_mud_n.png",
         "assets/textures/terrain/jungle_mntn2_n.png"
     };
+
+    Debug::log("___TEST___creating terrain channel textures...");
     std::vector<ID_t> diffuseTextures = load_textures(
         pAssetManager,
         texImageFormat,
@@ -145,7 +150,7 @@ void TerrainTestScene::init()
 
     // For debugging framebuffers
     TextureSampler framebufferDebugTextureSampler(
-        TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+        TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
         false,
         0
@@ -170,7 +175,7 @@ void TerrainTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getTestFramebufferColorTexture()->getID()
+        pMasterRenderer->getTestFramebufferDepthTextures()[pMasterRenderer->getCurrentFrame()]->getID()
     );
 }
 
@@ -184,14 +189,16 @@ void TerrainTestScene::update()
     InputManager& inputManager = pApp->getInputManager();
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    Texture* pFramebufferColorTexture = pMasterRenderer->getTestFramebufferColorTexture();
-    if (pFramebufferColorTexture)
+    std::vector<Texture*>& framebufferColorTextures = pMasterRenderer->getTestFramebufferColorTextures();
+    std::vector<Texture*>& framebufferDepthTextures = pMasterRenderer->getTestFramebufferDepthTextures();
+    if (!framebufferDepthTextures.empty())
     {
         GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
             _framebufferDebugEntity,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
-        pFramebufferDebugRenderable->textureID = pFramebufferColorTexture->getID();
+        pFramebufferDebugRenderable->textureID = framebufferDepthTextures[pMasterRenderer->getCurrentFrame()]->getID();
+        Debug::log("___TEST___SET RENDERABLE TEXTURE TO: " + std::to_string(pFramebufferDebugRenderable->textureID));
     }
 
     /*
