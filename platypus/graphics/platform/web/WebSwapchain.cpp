@@ -10,7 +10,8 @@ namespace platypus
     };
 
 
-    Swapchain::Swapchain(const Window& window)
+    Swapchain::Swapchain(const Window& window) :
+        _renderPass(false)
     {
         _pImpl = new SwapchainImpl;
         create(window);
@@ -23,9 +24,10 @@ namespace platypus
             delete _pImpl;
     }
 
+    // TODO: Window surface (just a 2D quad)
     void Swapchain::create(const Window& window)
     {
-        _renderPass.create(ImageFormat::R8G8B8A8_UNORM, ImageFormat::D32_SFLOAT, false);
+        _renderPass.create(ImageFormat::R8G8B8A8_UNORM, ImageFormat::D32_SFLOAT);
 
         int width = 0;
         int height = 0;

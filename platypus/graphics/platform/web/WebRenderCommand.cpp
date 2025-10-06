@@ -60,33 +60,29 @@ namespace platypus
         }
 
         void begin_render_pass(
-            const CommandBuffer& primaryCmdBuf,
-            const Swapchain& swapchain,
-            const Vector4f& clearColor,
-            bool clearDepthBuffer
-        )
-        {
-            GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-            GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
-            GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-        }
-
-        void begin_render_pass(
-            const CommandBuffer& primaryCmdBuf,
+            CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            const Framebuffer& framebuffer,
+            const Framebuffer* pFramebuffer,
+            Texture* pDepthAttachment,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         )
         {
-            GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.getImpl()->id));
+            if (renderPass.isOffscreenPass() && pFramebuffer)
+            {
+                GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, pFramebuffer->getImpl()->id));
+            }
+            else
+            {
+                GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+            }
+
             GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
             GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
         }
 
-        void end_render_pass(const CommandBuffer& commandBuffer)
+        void end_render_pass(CommandBuffer& commandBuffer)
         {
-            //GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
         }
 
         void exec_secondary_command_buffers(

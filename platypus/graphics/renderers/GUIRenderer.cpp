@@ -296,8 +296,8 @@ namespace platypus
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
-        std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
-
+        //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
+        std::vector<std::pair<uint32_t, ID_t>> unusedBatches;
         std::map<uint32_t, std::set<size_t>>::iterator layerIt;
         for (layerIt = _toRender.begin(); layerIt != _toRender.end(); ++layerIt)
         {
@@ -309,7 +309,8 @@ namespace platypus
 
                 if (_batches[*layerBatchIt].count == 0)
                 {
-                    unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    //unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    unusedBatches.push_back(std::make_pair(layerIt->first, batchData.textureID));
                     continue;
                 }
                 // Just quick hack to delete batch if its texture can no longer be found
@@ -322,7 +323,8 @@ namespace platypus
                         Debug::MessageType::PLATYPUS_WARNING
                     );
                     freeTextureDescriptorSets(batchData.textureID);
-                    unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    //unusedBatches[layerIt->first].push_back(layerBatchIt);
+                    unusedBatches.push_back(std::make_pair(layerIt->first, batchData.textureID));
                     PLATYPUS_ASSERT(false);
                     continue;
                 }
@@ -398,16 +400,23 @@ namespace platypus
         }
 
         // Erase unused batches
-        std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>>::iterator eraseLayerIt;
-        for (eraseLayerIt = unusedBatches.begin(); eraseLayerIt != unusedBatches.end(); ++eraseLayerIt)
+        //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>>::iterator eraseLayerIt;
+        //for (eraseLayerIt = unusedBatches.begin(); eraseLayerIt != unusedBatches.end(); ++eraseLayerIt)
+        //{
+        //    std::vector<std::set<size_t>::iterator>& layerBatches = eraseLayerIt->second;
+        //    std::vector<std::set<size_t>::iterator>::iterator eraseBatchIt;
+        //    for (eraseBatchIt = layerBatches.begin(); eraseBatchIt != layerBatches.end(); ++eraseBatchIt)
+        //    {
+        //        const BatchData& batchData = _batches[*eraseBatchIt];
+        //        freeBatch(eraseLayerIt->first, batchData.textureID);
+        //        _toRender[eraseLayerIt->first].erase(*eraseBatchIt);
+        //        Debug::log("___TEST___ERASED UNUSED BATCH!");
+        //    }
+        //}
+        for (std::pair<uint32_t, ID_t>& toErase : unusedBatches)
         {
-            std::vector<std::set<size_t>::iterator>& layerBatches = eraseLayerIt->second;
-            std::vector<std::set<size_t>::iterator>::iterator eraseBatchIt;
-            for (eraseBatchIt = layerBatches.begin(); eraseBatchIt != layerBatches.end(); ++eraseBatchIt)
-            {
-                _toRender[eraseLayerIt->first].erase(*eraseBatchIt);
-                Debug::log("___TEST___ERASED UNUSED BATCH!");
-            }
+            freeBatch(toErase.first, toErase.second);
+            Debug::log("___TEST___ERASED UNUSED BATCH!");
         }
 
         currentCommandBuffer.end();
@@ -577,6 +586,50 @@ namespace platypus
         batchData.textureID = textureID;
         batchData.textureAtlasRows = (float)pTexture->getAtlasRowCount();
         _toRender[layer].insert(batchIndex);
+        return true;
+    }
+
+    bool GUIRenderer::freeBatch(
+        uint32_t layer,
+        ID_t textureID
+    )
+    {
+        std::map<uint32_t, std::set<size_t>>::iterator it = _toRender.find(layer);
+        if (it == _toRender.end())
+        {
+            Debug::log(
+                "@GUIRenderer::freeBatch "
+                "Failed to find any batches from layer: " + std::to_string(layer),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return false;
+        }
+        std::set<size_t>& layerBatches = it->second;
+        std::set<size_t>::iterator layerIt = layerBatches.find(textureID);
+        if (layerIt == layerBatches.end())
+        {
+            Debug::log(
+                "@GUIRenderer::freeBatch "
+                "Failed to find batch from layer: " + std::to_string(layer) +" "
+                "using textureID: " + std::to_string(textureID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return false;
+        }
+
+        BatchData& batchData = _batches[*layerIt];
+        batchData.type = BatchType::NONE;
+        batchData.textureID = NULL_ID;
+        batchData.textureAtlasRows = 0;
+        batchData.count = 0;
+
+        _toRender[layer].erase(layerIt);
+        if (_toRender[layer].empty())
+        {
+            _toRender.erase(layer);
+            PLATYPUS_ASSERT(false);
+        }
+
         return true;
     }
 

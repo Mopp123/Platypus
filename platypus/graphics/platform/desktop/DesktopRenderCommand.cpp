@@ -19,64 +19,63 @@ namespace platypus
 {
     namespace render
     {
-        void begin_scene_render_pass(
-            CommandBuffer& primaryCmdBuf,
-            const Swapchain& swapchain,
-            const Vector4f& clearColor,
-            bool clearDepthBuffer
-        )
-        {
-            VkRenderPassBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            beginInfo.renderPass = swapchain.getRenderPass().getImpl()->handle;
-            Framebuffer* pFramebuffer = swapchain.getFramebuffers()[swapchain.getCurrentImageIndex()];
-            primaryCmdBuf.getImpl()->pBoundFramebuffer = pFramebuffer;
-            beginInfo.framebuffer = pFramebuffer->getImpl()->handle;
-
-            VkClearValue clearColorValue{};
-            clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
-            VkClearValue clearDepthStencilValue{};
-            clearDepthStencilValue.depthStencil = { 1.0f, 0 };
-            VkClearValue clearValues[2] = { clearColorValue, clearDepthStencilValue };
-
-            if (clearDepthBuffer)
-                beginInfo.clearValueCount = 2;
-            else
-                beginInfo.clearValueCount = 1;
-
-            beginInfo.pClearValues = clearValues;
-
-            beginInfo.renderArea.offset = { 0, 0 };
-            Extent2D swapchainExtent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
-            beginInfo.renderArea.extent = { swapchainExtent.width, swapchainExtent.height };
-
-            vkCmdBeginRenderPass(
-                primaryCmdBuf.getImpl()->handle,
-                &beginInfo,
-                VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS
-            );
-        }
-
-        void begin_offscreen_render_pass(
-            CommandBuffer& primaryCmdBuf,
+        void begin_render_pass(
+            CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            Framebuffer* pFramebuffer,
+            const Framebuffer* pFramebuffer,
+            Texture* pDepthAttachment,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         )
         {
-            // NOTE: ATM JUST TESTING! THIS IS FUCKED!
-            //CommandBufferImpl* pCmdBufferImpl = primaryCmdBuf.getImpl();
-            //TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pBoundFramebuffer->getAttachments()[1]->getImpl();
-            //if (pDepthTextureImpl->imageLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-            //{
-            //    // Don't actually need to do anything here? RenderPass handles this layout?
-            //}
+            if (!pFramebuffer)
+            {
+                Debug::log(
+                    "@begin_render_pass "
+                    "Framebuffer required for beginning render pass!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
+            if (renderPass.isOffscreenPass() && pDepthAttachment)
+            {
+                TextureImpl* pDepthTextureImpl = pDepthAttachment->getImpl();
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.oldLayout = pDepthTextureImpl->imageLayout;
+                barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = pDepthTextureImpl->image;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+
+                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+                vkCmdPipelineBarrier(
+                    pCmdBufferImpl->handle,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    1, &barrier
+                );
+            }
 
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             beginInfo.renderPass = renderPass.getImpl()->handle;
-            primaryCmdBuf.getImpl()->pBoundFramebuffer = pFramebuffer;
+            CommandBufferImpl* pCommandBufferImpl = commandBuffer.getImpl();
+            pCommandBufferImpl->pDepthAttachment = pDepthAttachment;
             beginInfo.framebuffer = pFramebuffer->getImpl()->handle;
 
             VkClearValue clearColorValue{};
@@ -97,27 +96,21 @@ namespace platypus
             beginInfo.renderArea.extent = { swapchainExtent.width, swapchainExtent.height };
 
             vkCmdBeginRenderPass(
-                primaryCmdBuf.getImpl()->handle,
+                pCommandBufferImpl->handle,
                 &beginInfo,
                 VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS
             );
         }
 
-        void end_scene_render_pass(CommandBuffer& commandBuffer)
+        void end_render_pass(CommandBuffer& commandBuffer)
         {
-            commandBuffer.getImpl()->pBoundFramebuffer = nullptr;
-            vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
-        }
-
-        void end_offscreen_render_pass(CommandBuffer& commandBuffer)
-        {
-            vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
-
-            // NOTE: ATM JUST TESTING! THIS IS FUCKED!
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
-            TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pBoundFramebuffer->getAttachments()[1]->getImpl();
-            if (pDepthTextureImpl->imageLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
+
+            if (pCmdBufferImpl->pDepthAttachment)
             {
+                TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pDepthAttachment->getImpl();
+
                 VkImageMemoryBarrier barrier{};
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
                 barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -144,9 +137,10 @@ namespace platypus
                     0, nullptr,
                     1, &barrier
                 );
+                pDepthTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             }
 
-            commandBuffer.getImpl()->pBoundFramebuffer = nullptr;
+            commandBuffer.getImpl()->pDepthAttachment = nullptr;
         }
 
         void exec_secondary_command_buffers(

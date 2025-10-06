@@ -12,20 +12,20 @@ void BaseScene::SceneWindowResizeEvent::func(int w, int h)
 
     float useHeight = h > 0 ? (float)h : 1.0f;
 
-    pCameraComponent->perspectiveProjectionMatrix = create_orthographic_projection_matrix(
-        0, // left
-        1, // right,
-        -1, // top,
-        1, // bottom,
-        0.1f, // zNear,
-        100.0f // zFar
-    );
-    //pCameraComponent->perspectiveProjectionMatrix = create_perspective_projection_matrix(
-    //    (float)w / useHeight,
-    //    _fov,
-    //    _zNear,
-    //    _zFar
+    //pCameraComponent->perspectiveProjectionMatrix = create_orthographic_projection_matrix(
+    //    0, // left
+    //    1, // right,
+    //    -1, // top,
+    //    1, // bottom,
+    //    0.1f, // zNear,
+    //    100.0f // zFar
     //);
+    pCameraComponent->perspectiveProjectionMatrix = create_perspective_projection_matrix(
+        (float)w / useHeight,
+        _fov,
+        _zNear,
+        _zFar
+    );
 
     pCameraComponent->orthographicProjectionMatrix = create_orthographic_projection_matrix(
         0,
@@ -66,14 +66,14 @@ void BaseScene::initBase()
     if (windowSurfaceHeight > 0)
         aspectRatio = (float)windowSurfaceWidth / (float)windowSurfaceHeight;
 
-    Matrix4f orthographicProjMat = create_orthographic_projection_matrix(
-        -1, // left
-        1, // right,
-        -1, // top,
-        1, // bottom,
-        0.1f, // zNear,
-        100.0f // zFar
-    );
+    //Matrix4f orthographicProjMat = create_orthographic_projection_matrix(
+    //    -1, // left
+    //    1, // right,
+    //    -1, // top,
+    //    1, // bottom,
+    //    0.1f, // zNear,
+    //    100.0f // zFar
+    //);
     Matrix4f perspectiveProjMat = create_perspective_projection_matrix(
         aspectRatio,
         1.3f * 0.75f,
@@ -92,7 +92,7 @@ void BaseScene::initBase()
         0.1f
     );
 
-    Camera* pCamera = create_camera(_cameraEntity, orthographicProjMat, orthoProjMat);
+    Camera* pCamera = create_camera(_cameraEntity, perspectiveProjMat, orthoProjMat);
     /*
     _cameraController.init();
     _cameraController.set(

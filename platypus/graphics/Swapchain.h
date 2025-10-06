@@ -61,6 +61,13 @@ namespace platypus
         inline const Texture* getDepthTexture() const { return _pDepthTexture; }
         inline const std::vector<Framebuffer*>& getFramebuffers() const { return _framebuffers; }
         inline std::vector<Framebuffer*>& getFramebuffers() { return _framebuffers; }
+        inline const Framebuffer* getCurrentFramebuffer() const
+        {
+            if (_framebuffers.empty())
+                return nullptr;
+
+            return _framebuffers[_currentImageIndex];
+        }
 
         inline uint32_t getImageCount() const { return _imageCount; }
         inline uint32_t getPreviousImageCount() const { return _previousImageCount; }

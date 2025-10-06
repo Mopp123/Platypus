@@ -100,10 +100,6 @@ namespace platypus
         uint32_t id = 0;
         GL_FUNC(glGenTextures(1, &id));
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, id));
-        if (type == TextureType::COLOR_TEXTURE)
-            Debug::log("___TEST___creating color texture...");
-        if (type == TextureType::DEPTH_TEXTURE)
-            Debug::log("___TEST___creating depth texture...");
         GL_FUNC(glTexImage2D(
             GL_TEXTURE_2D,
             0,

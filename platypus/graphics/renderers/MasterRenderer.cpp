@@ -37,6 +37,7 @@ namespace platypus
                 }
             }
         ),
+        _testRenderPass(true),
         _testFramebufferTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -58,8 +59,7 @@ namespace platypus
         // TESTING ------------------------------------------------------------
         _testRenderPass.create(
             ImageFormat::R8G8B8A8_SRGB,
-            ImageFormat::D32_SFLOAT,
-            true
+            ImageFormat::D32_SFLOAT
         );
         createOffscreenResourcesTEST();
     }
@@ -250,7 +250,6 @@ namespace platypus
 
     void MasterRenderer::createOffscreenResourcesTEST()
     {
-        Debug::log("___TEST___CREATE OFFSCREEN");
         size_t framesInFlight = _swapchainRef.getMaxFramesInFlight();
         uint32_t swapchainWidth = _swapchainRef.getExtent().width;
         uint32_t swapchainHeight = _swapchainRef.getExtent().height;
@@ -399,10 +398,6 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
-
-        currentCommandBuffer.begin(nullptr);
-
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
@@ -478,15 +473,17 @@ namespace platypus
         //      because when adding to a batch, it only updates the host side!
         _batcher.updateDeviceSideBuffers(_currentFrame);
 
-
+        CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
+        currentCommandBuffer.begin(nullptr);
 
 
 
         // TESTING MULTIPLE PASSES -----------------------------------
-        render::begin_offscreen_render_pass(
+        render::begin_render_pass(
             currentCommandBuffer,
             _testRenderPass,
             _testFramebuffers[_currentFrame],
+            _testFramebuffers[_currentFrame]->getAttachments()[1],
             { 1, 0, 1, 1 },
             true
         );
@@ -502,16 +499,18 @@ namespace platypus
         );
 
         render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
-        render::end_offscreen_render_pass(currentCommandBuffer);
+        render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
 
 
 
 
-
-        render::begin_scene_render_pass(
+        const Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
+        render::begin_render_pass(
             currentCommandBuffer,
-            _swapchainRef,
+            _swapchainRef.getRenderPass(),
+            pCurrentSwapchainFramebuffer,
+            nullptr,
             pScene->environmentProperties.clearColor,
             true
         );
@@ -545,7 +544,7 @@ namespace platypus
 
         render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
 
-        render::end_scene_render_pass(currentCommandBuffer);
+        render::end_render_pass(currentCommandBuffer);
         currentCommandBuffer.end();
 
         size_t maxFramesInFlight = _swapchainRef.getMaxFramesInFlight();

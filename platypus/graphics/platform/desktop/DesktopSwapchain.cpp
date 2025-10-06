@@ -313,7 +313,8 @@ namespace platypus
     }
 
 
-    Swapchain::Swapchain(const Window& window)
+    Swapchain::Swapchain(const Window& window) :
+        _renderPass(false)
     {
         _pImpl = new SwapchainImpl;
         create(window);
@@ -430,7 +431,7 @@ namespace platypus
             &_pDepthTexture
         );
 
-        _renderPass.create(_colorImages[0]->getFormat(), _pDepthImage->getFormat(), false);
+        _renderPass.create(_colorImages[0]->getFormat(), _pDepthImage->getFormat());
 
         create_framebuffers(
             _colorTextures,

@@ -175,7 +175,7 @@ void TerrainTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getTestFramebufferDepthTextures()[pMasterRenderer->getCurrentFrame()]->getID()
+        pMasterRenderer->getTestFramebufferColorTextures()[pMasterRenderer->getCurrentFrame()]->getID()
     );
 }
 
@@ -189,15 +189,14 @@ void TerrainTestScene::update()
     InputManager& inputManager = pApp->getInputManager();
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    std::vector<Texture*>& framebufferColorTextures = pMasterRenderer->getTestFramebufferColorTextures();
-    std::vector<Texture*>& framebufferDepthTextures = pMasterRenderer->getTestFramebufferDepthTextures();
-    if (!framebufferDepthTextures.empty())
+    std::vector<Texture*>& framebufferTextures = pMasterRenderer->getTestFramebufferColorTextures();
+    if (!framebufferTextures.empty())
     {
         GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
             _framebufferDebugEntity,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
-        pFramebufferDebugRenderable->textureID = framebufferDepthTextures[pMasterRenderer->getCurrentFrame()]->getID();
+        pFramebufferDebugRenderable->textureID = framebufferTextures[pMasterRenderer->getCurrentFrame()]->getID();
         Debug::log("___TEST___SET RENDERABLE TEXTURE TO: " + std::to_string(pFramebufferDebugRenderable->textureID));
     }
 

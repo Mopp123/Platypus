@@ -9,7 +9,8 @@
 
 namespace platypus
 {
-    RenderPass::RenderPass()
+    RenderPass::RenderPass(bool offscreen) :
+        _offscreen(offscreen)
     {
         _pImpl = new RenderPassImpl;
     }
@@ -24,8 +25,7 @@ namespace platypus
 
     void RenderPass::create(
         ImageFormat colorFormat,
-        ImageFormat depthFormat,
-        bool offscreenTarget
+        ImageFormat depthFormat
     )
     {
         VkAttachmentDescription colorAttachmentDescription{};
@@ -36,7 +36,7 @@ namespace platypus
         colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        VkImageLayout colorImageLayout = offscreenTarget ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkImageLayout colorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         colorAttachmentDescription.finalLayout = colorImageLayout;
 
 
@@ -44,7 +44,7 @@ namespace platypus
         depthAttachmentDescription.format = to_vk_format(depthFormat);
         depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachmentDescription.storeOp = _offscreen ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -79,7 +79,7 @@ namespace platypus
         subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         // Not really sure what kind of shit should be specified here:D seems to work...
-        if (offscreenTarget)
+        if (_offscreen)
 		    subpassDependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
         // NOTE: Did earlier offscreen rendering using below from some stack overflow post.

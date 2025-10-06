@@ -6,7 +6,8 @@ namespace platypus
     {
     };
 
-    RenderPass::RenderPass()
+    RenderPass::RenderPass(bool offscreen) :
+        _offscreen(offscreen)
     {
     }
 
@@ -16,8 +17,7 @@ namespace platypus
 
     void RenderPass::create(
         ImageFormat colorFormat,
-        ImageFormat depthFormat,
-        bool offscreenTarget
+        ImageFormat depthFormat
     )
     {
     }

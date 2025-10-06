@@ -101,7 +101,7 @@ namespace platypus
             useDescriptorSetLayouts,
             pMaterial->getVertexShader(),
             pMaterial->getFragmentShader(),
-            CullMode::CULL_MODE_NONE,
+            CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

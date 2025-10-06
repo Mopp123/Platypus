@@ -12,19 +12,20 @@ namespace platypus
     {
     private:
         RenderPassImpl* _pImpl = nullptr;
+        bool _offscreen = false;
 
     public:
-        RenderPass();
+        RenderPass(bool offscreen);
         ~RenderPass();
 
         void create(
             ImageFormat colorFormat,
-            ImageFormat depthFormat,
-            bool offscreenTarget
+            ImageFormat depthFormat
         );
 
         void destroy();
 
+        inline bool isOffscreenPass() const { return _offscreen; }
         inline const RenderPassImpl* getImpl() const { return _pImpl; }
     };
 }
