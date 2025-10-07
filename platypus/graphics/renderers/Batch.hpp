@@ -19,6 +19,7 @@ namespace platypus
         MATERIAL
     };
 
+    // TODO: Maybe better name, since it's not just a layout (takes in Texture ptrs!)
     struct ShaderResourceLayout
     {
         ShaderResourceType type;
@@ -55,6 +56,8 @@ namespace platypus
         std::vector<const Buffer*> staticVertexBuffers;
         std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
         const Buffer* pIndexBuffer = nullptr;
+        // NOTE: Push constants don't work with the current system
+        // TODO: How to get the actual data for the push constants??
         size_t pushConstantsSize = 0;
         std::vector<UniformInfo> pushConstantsUniformInfos;
         void* pPushConstantsData = nullptr;
