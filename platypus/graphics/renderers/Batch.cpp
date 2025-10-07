@@ -71,6 +71,20 @@ namespace platypus
         return NULL_ID;
     }
 
+    // JUST TESTING
+    ID_t Batcher::createBatch(ID_t meshID, ID_t materialID)
+    {
+        // *Assuming Material has ability to create its own shader resources by itself
+
+        // 1.Make sure Mesh and Material assets exist?
+        // 2.Trigger the material to create its shader resources if doesn't exist yet
+        // 3.Figure out "unique batch shader resource layout" and create that
+        // 4.Figure out how to combine the used descriptor sets
+        // 5.Create the actual batch
+
+        return NULL_ID;
+    }
+
     // NOTE: Could even create the pipelines dynamically here, so wouldn't require having those inside
     // Material anymore?
     ID_t Batcher::createStaticBatch(ID_t meshID, ID_t materialID)
