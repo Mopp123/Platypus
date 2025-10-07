@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/Platypus.h"
+#include "platypus/utils/Maths.h"
 
 
 class BaseScene : public platypus::Scene
@@ -31,4 +32,17 @@ public:
     virtual ~BaseScene();
     void initBase();
     void updateBase();
+
+    platypus::Material* createMeshMaterial(
+        platypus::AssetManager* pAssetManager,
+        std::string textureFilepath
+    );
+
+    entityID_t createStaticMeshEntity(
+        const platypus::Vector3f& position,
+        const platypus::Quaternion& rotation,
+        const platypus::Vector3f& scale,
+        ID_t meshAssetID,
+        ID_t materialAssetID
+    );
 };

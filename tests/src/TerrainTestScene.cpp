@@ -177,6 +177,19 @@ void TerrainTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getTestFramebufferColorTextures()[pMasterRenderer->getCurrentFrame()]->getID()
     );
+
+    Material* pMeshMaterial = createMeshMaterial(
+        pAssetManager,
+        "assets/textures/DiffuseTest.png"
+    );
+    Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
+    entityID_t boxEntity = createStaticMeshEntity(
+        { 0, 0, 0 },
+        { { 0, 1, 0 }, 0.0f },
+        { 1, 1, 1 },
+        pStaticMesh->getID(),
+        pMeshMaterial->getID()
+    );
 }
 
 

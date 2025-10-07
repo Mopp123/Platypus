@@ -214,10 +214,10 @@ namespace platypus
     {
         for (Texture* pColorTexture : colorTextures)
         {
-            std::vector<Texture*> attachments = { pColorTexture, pDepthTexture };
             Framebuffer* pFramebuffer = new Framebuffer(
                 renderPass,
-                attachments,
+                { pColorTexture },
+                pDepthTexture,
                 surfaceExtent.width,
                 surfaceExtent.height
             );
@@ -314,7 +314,7 @@ namespace platypus
 
 
     Swapchain::Swapchain(const Window& window) :
-        _renderPass(false)
+        _renderPass(RenderPassType::SCENE_PASS, false)
     {
         _pImpl = new SwapchainImpl;
         create(window);

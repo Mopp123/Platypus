@@ -11,7 +11,7 @@ namespace platypus
 
 
     Swapchain::Swapchain(const Window& window) :
-        _renderPass(false)
+        _renderPass(RenderPassType::SCENE_PASS, false)
     {
         _pImpl = new SwapchainImpl;
         create(window);

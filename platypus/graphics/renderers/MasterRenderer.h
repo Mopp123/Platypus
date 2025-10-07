@@ -60,6 +60,20 @@ namespace platypus
         void submit(const Scene* pScene, const Entity& entity);
         void render(const Window& window);
 
+        void solveVertexBufferLayouts(
+            const VertexBufferLayout& meshVertexBufferLayout,
+            bool instanced,
+            bool shadowPipeline,
+            std::vector<VertexBufferLayout>& outVertexBufferLayouts
+        );
+        void solveDescriptorSetLayouts(
+            Material* pMaterial,
+            bool skinned,
+            bool shadowPipeline,
+            std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
+        );
+
+        inline const RenderPass& getTestRenderPass() const { return _testRenderPass; }
         inline std::vector<Texture*>& getTestFramebufferColorTextures() { return _testFramebufferColorTextures; }
         inline std::vector<Texture*>& getTestFramebufferDepthTextures() { return _testFramebufferDepthTextures; }
 

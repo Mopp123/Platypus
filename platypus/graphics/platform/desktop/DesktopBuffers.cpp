@@ -227,6 +227,36 @@ namespace platypus
         _pImpl->bindingDescription.stride = _stride;
     }
 
+    VertexBufferLayout::VertexBufferLayout(
+        VertexBufferElement element,
+        VertexInputRate inputRate,
+        uint32_t binding,
+        int32_t stride
+    ) :
+        _inputRate(inputRate),
+        _stride(stride)
+    {
+        _pImpl = new VertexBufferLayoutImpl;
+        _pImpl->bindingDescription.binding = binding;
+        _pImpl->bindingDescription.inputRate = to_vk_vertex_input_rate(inputRate);
+
+        ShaderDataType elemType = element.getType();
+
+        // We dont want to touch the original element, we just copy its stuff here
+        // and modify the copy's properties, so the original's state stays the same
+        VertexBufferElement cpyElem = element;
+
+        VkVertexInputAttributeDescription& attribDescRef = cpyElem._pImpl->attribDescription;
+        attribDescRef.binding = binding;
+        attribDescRef.location = cpyElem.getLocation();
+        attribDescRef.offset = 0;
+        attribDescRef.format = to_vk_format_from_shader_datatype(elemType);
+
+        _elements.push_back(cpyElem);
+
+        _pImpl->bindingDescription.stride = _stride;
+    }
+
     VertexBufferLayout::VertexBufferLayout(const VertexBufferLayout& other) :
         VertexBufferLayout(
             other._elements,

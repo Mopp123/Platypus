@@ -6,6 +6,7 @@
 #include "TerrainMesh.hpp"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
+#include <unordered_map>
 
 #define PE_MAX_MATERIAL_TEX_CHANNELS 5
 
@@ -24,6 +25,12 @@ namespace platypus
         Shader* pVertexShader;
         Shader* pFragmentShader;
         Pipeline* pPipeline;
+        ~MaterialPipelineData()
+        {
+            delete pVertexShader;
+            delete pFragmentShader;
+            delete pPipeline;
+        }
     };
 
     class Material : public Asset
@@ -42,8 +49,11 @@ namespace platypus
         float _shininess;
         bool _shadeless = false;
 
+        // TODO: Some map or something, containing all different pipelines instead of this mess...
         MaterialPipelineData* _pPipelineData = nullptr;
+        MaterialPipelineData* _pShadowPipelineData = nullptr;
         MaterialPipelineData* _pSkinnedPipelineData = nullptr;
+        MaterialPipelineData* _pSkinnedShadowPipelineData = nullptr;
 
         DescriptorSetLayout _descriptorSetLayout;
 
@@ -64,9 +74,13 @@ namespace platypus
         ~Material();
 
         // TODO: Unfuck this mess plz!
-        void createPipeline(const Mesh* pMesh);
-        void createSkinnedPipeline(const Mesh* pMesh);
-        void createTerrainPipeline(const TerrainMesh* pTerrainMesh);
+        void createPipeline(
+            const RenderPass* pRenderPass,
+            const VertexBufferLayout& meshVertexBufferLayout,
+            bool instanced,
+            bool skinned,
+            bool shadowPipeline
+        );
 
         void recreateExistingPipeline();
         void destroyPipeline();
@@ -77,6 +91,11 @@ namespace platypus
         Texture* getNormalTexture(size_t channel) const;
         std::vector<Texture*> getTextures() const;
 
+        // *Fuckin dumb, I know... just need to differentiate Asset type and Material type atm...
+        inline MaterialType getMaterialType() const { return _type; }
+
+        inline bool hasNormalMap() const { return _normalTextureIDs[0] != NULL_ID; }
+
         inline size_t getTotalTextureCount() const
         {
             return _diffuseTextureCount + _specularTextureCount + _normalTextureCount + (_blendmapTextureID != NULL_ID ? 1 : 0);
@@ -86,7 +105,9 @@ namespace platypus
         inline bool isShadeless() const { return _shadeless; }
 
         inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
+        inline const MaterialPipelineData* getShadowPipelineData() { return _pShadowPipelineData; }
         inline const MaterialPipelineData* getSkinnedPipelineData() { return _pSkinnedPipelineData; }
+        inline const MaterialPipelineData* getSkinnedShadowPipelineData() { return _pSkinnedShadowPipelineData; }
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
 
@@ -103,6 +124,6 @@ namespace platypus
         void createDescriptorSetLayout();
 
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, bool skinned);
+        std::string getShaderFilename(uint32_t shaderStage, bool skinned, bool shadow);
     };
 }

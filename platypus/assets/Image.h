@@ -10,6 +10,8 @@ namespace platypus
 {
     enum class ImageFormat
     {
+        NONE,
+
         R8_SRGB,
         R8G8B8_SRGB,
         R8G8B8A8_SRGB,
@@ -45,7 +47,7 @@ namespace platypus
     std::string image_format_to_string(ImageFormat format);
     size_t get_image_format_channel_count(ImageFormat format);
     ImageFormat channel_count_to_image_format(size_t channelCount, bool sRGB);
-    bool is_image_format_valid(ImageFormat format, int imageColorChannels);
+    bool is_image_format_valid(ImageFormat format, int channels);
 
     struct ImageImpl;
     class Image : public Asset

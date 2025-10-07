@@ -13,21 +13,27 @@ namespace platypus
 {
     Framebuffer::Framebuffer(
         const RenderPass& renderPass,
-        const std::vector<Texture*>& attachments,
+        const std::vector<Texture*>& colorAttachments,
+        Texture* pDepthAttachment,
         uint32_t width,
         uint32_t height
     ) :
         _width(width),
         _height(height),
-        _attachments(attachments)
+        _colorAttachments(colorAttachments),
+        _pDepthAttachment(pDepthAttachment)
     {
         VkFramebufferCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         createInfo.renderPass = renderPass.getImpl()->handle;
 
-        std::vector<VkImageView> vkAttachments(_attachments.size());
-        for (size_t i = 0; i < _attachments.size(); ++i)
-            vkAttachments[i] = _attachments[i]->getImpl()->imageView;
+        // NOTE: If color attachments provided, the depth attachment is always the last one
+        std::vector<VkImageView> vkAttachments;
+        for (Texture* pColorTexture : _colorAttachments)
+            vkAttachments.push_back(pColorTexture->getImpl()->imageView);
+
+        if (_pDepthAttachment)
+            vkAttachments.push_back(_pDepthAttachment->getImpl()->imageView);
 
         createInfo.attachmentCount = (uint32_t)vkAttachments.size();
         createInfo.pAttachments = vkAttachments.data();

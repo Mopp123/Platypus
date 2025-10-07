@@ -6,7 +6,8 @@ namespace platypus
     {
     };
 
-    RenderPass::RenderPass(bool offscreen) :
+    RenderPass::RenderPass(RenderPassType type, bool offscreen) :
+        _type(type),
         _offscreen(offscreen)
     {
     }

@@ -9,7 +9,8 @@
 
 namespace platypus
 {
-    RenderPass::RenderPass(bool offscreen) :
+    RenderPass::RenderPass(RenderPassType type, bool offscreen) :
+        _type(type),
         _offscreen(offscreen)
     {
         _pImpl = new RenderPassImpl;
@@ -28,49 +29,58 @@ namespace platypus
         ImageFormat depthFormat
     )
     {
-        VkAttachmentDescription colorAttachmentDescription{};
-        colorAttachmentDescription.format = to_vk_format(colorFormat);
-        colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        VkImageLayout colorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        colorAttachmentDescription.finalLayout = colorImageLayout;
+        std::vector<VkAttachmentDescription> attachmentDescriptions;
+        std::vector<VkAttachmentReference> colorAttachmentReferences;
+        VkAttachmentReference depthAttachmentReference{};
+        if (colorFormat != ImageFormat::NONE)
+        {
+            VkAttachmentDescription colorAttachmentDescription{};
+            colorAttachmentDescription.format = to_vk_format(colorFormat);
+            colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+            colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            VkImageLayout colorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            colorAttachmentDescription.finalLayout = colorImageLayout;
+            attachmentDescriptions.push_back(colorAttachmentDescription);
+
+            VkAttachmentReference colorAttachmentRef{};
+            colorAttachmentRef.attachment = 0;
+            // NOTE: Previously used VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL here.
+            // Using newer Vulkan version with different driver this gives validation error
+            // that you'd need to use synchronization2 extension for this to work.
+            // Got this fixed by rather using VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
+            colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            colorAttachmentReferences.push_back(colorAttachmentRef);
+        }
 
 
-        VkAttachmentDescription depthAttachmentDescription{};
-        depthAttachmentDescription.format = to_vk_format(depthFormat);
-        depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachmentDescription.storeOp = _offscreen ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        if (depthFormat != ImageFormat::NONE)
+        {
+            VkAttachmentDescription depthAttachmentDescription{};
+            depthAttachmentDescription.format = to_vk_format(depthFormat);
+            depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+            depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            depthAttachmentDescription.storeOp = _offscreen ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachmentDescriptions.push_back(depthAttachmentDescription);
 
-        VkAttachmentDescription renderPassAttachments[] = { colorAttachmentDescription, depthAttachmentDescription };
-
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = 0;
-        // NOTE: Previously used VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL here.
-        // Using newer Vulkan version with different driver this gives validation error
-        // that you'd need to use synchronization2 extension for this to work.
-        // Got this fixed by rather using VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depthAttachmentRef{};
-        depthAttachmentRef.attachment = 1;
-        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            // depth attachment is always the last atm...
+            depthAttachmentReference.attachment = (uint32_t)colorAttachmentReferences.size();
+            depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        }
 
         VkSubpassDescription subpassDescription{};
         subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpassDescription.colorAttachmentCount = 1;
-        subpassDescription.pColorAttachments = &colorAttachmentRef;
-        subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
+        subpassDescription.colorAttachmentCount = (uint32_t)colorAttachmentReferences.size();
+        subpassDescription.pColorAttachments = colorFormat != ImageFormat::NONE ? colorAttachmentReferences.data() : nullptr;
+        subpassDescription.pDepthStencilAttachment = depthFormat != ImageFormat::NONE ? &depthAttachmentReference : nullptr;
 
-        size_t subpassDependencyCount = 1;
         VkSubpassDependency subpassDependency{};
         subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         subpassDependency.dstSubpass = 0;
@@ -112,8 +122,8 @@ namespace platypus
 
         VkRenderPassCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        createInfo.attachmentCount = 2;
-        createInfo.pAttachments = renderPassAttachments;
+        createInfo.attachmentCount = (uint32_t)attachmentDescriptions.size();
+        createInfo.pAttachments = attachmentDescriptions.data();
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
 

@@ -12,12 +12,14 @@ namespace platypus
         FramebufferImpl* _pImpl = nullptr;
         uint32_t _width = 0;
         uint32_t _height = 0;
-        std::vector<Texture*> _attachments;
+        std::vector<Texture*> _colorAttachments;
+        Texture* _pDepthAttachment;
 
     public:
         Framebuffer(
             const RenderPass& renderPass,
-            const std::vector<Texture*>& attachments,
+            const std::vector<Texture*>& colorAttachments,
+            Texture* pDepthAttachment,
             uint32_t width,
             uint32_t height
         );
@@ -29,6 +31,7 @@ namespace platypus
         inline uint32_t getWidth() const { return _width; }
         inline uint32_t getHeight() const { return _height; }
 
-        inline std::vector<Texture*>& getAttachments() { return _attachments; }
+        inline std::vector<Texture*>& getColorAttachments() { return _colorAttachments; }
+        inline Texture* getDepthAttachment() { return _pDepthAttachment; }
     };
 }

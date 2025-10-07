@@ -1,6 +1,5 @@
 #include "Material.h"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/PipelineFactory.hpp"
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
@@ -77,26 +76,49 @@ namespace platypus
         //  -> if shaders destroyed before pipeline, the detaching in
         //  OpenglShaderProgram breaks
         if (_pPipelineData)
-        {
-            delete _pPipelineData->pPipeline;
-            delete _pPipelineData->pVertexShader;
-            delete _pPipelineData->pFragmentShader;
             delete _pPipelineData;
-        }
+        if (_pShadowPipelineData)
+            delete _pShadowPipelineData;
         if (_pSkinnedPipelineData)
-        {
-            delete _pSkinnedPipelineData->pPipeline;
-            delete _pSkinnedPipelineData->pVertexShader;
-            delete _pSkinnedPipelineData->pFragmentShader;
             delete _pSkinnedPipelineData;
-        }
+        if (_pSkinnedShadowPipelineData)
+            delete _pSkinnedShadowPipelineData;
     }
 
+    // NOTE: This is soo stupid...
+    // TODO: Better way of figuring out which pipeline should be created!
     void Material::createPipeline(
-        const Mesh* pMesh
+        const RenderPass* pRenderPass,
+        const VertexBufferLayout& meshVertexBufferLayout,
+        bool instanced,
+        bool skinned,
+        bool shadowPipeline
     )
     {
-        if (_pPipelineData != nullptr)
+        const std::string vertexShaderFilename = getShaderFilename(
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+            skinned,
+            shadowPipeline
+        );
+        const std::string fragmentShaderFilename = getShaderFilename(
+            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+            skinned,
+            shadowPipeline
+        );
+        Debug::log(
+            "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
+        );
+
+        MaterialPipelineData** ppPipelineData = &_pPipelineData;
+        if (shadowPipeline)
+            ppPipelineData = &_pShadowPipelineData;
+
+        if (skinned && !shadowPipeline)
+            ppPipelineData = &_pSkinnedPipelineData;
+        else if (skinned && shadowPipeline)
+            ppPipelineData = &_pSkinnedShadowPipelineData;
+
+        if (*ppPipelineData != nullptr)
         {
             Debug::log(
                 "@Material::createPipeline "
@@ -106,20 +128,8 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        const std::string vertexShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            false
-        );
-        const std::string fragmentShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            false
-        );
-        Debug::log(
-            "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
-        );
-
         // TODO: Unfuck below
-        _pPipelineData = new MaterialPipelineData;
+        *ppPipelineData = new MaterialPipelineData;
         Shader* pVertexShader = new Shader(
             vertexShaderFilename,
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
@@ -128,109 +138,41 @@ namespace platypus
             fragmentShaderFilename,
             ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
         );
-        _pPipelineData->pVertexShader = pVertexShader;
-        _pPipelineData->pFragmentShader = pFragmentShader;
-        Pipeline* pPipeline = create_material_pipeline(
-            pMesh->getVertexBufferLayout(),
-            true, // instanced
-            false, // skinned
-            this
-        );
-        _pPipelineData->pPipeline = pPipeline;
-        _pPipelineData->pPipeline->create();
-    }
+        (*ppPipelineData)->pVertexShader = pVertexShader;
+        (*ppPipelineData)->pFragmentShader = pFragmentShader;
 
-    void Material::createSkinnedPipeline(
-        const Mesh* pMesh
-    )
-    {
-        if (_pSkinnedPipelineData != nullptr)
-        {
-            Debug::log(
-                "@Material::createSkinnedPipeline "
-                "Skinned pipeline data already exists for material with ID: " + std::to_string(getID()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        const std::string vertexShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            true
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        std::vector<VertexBufferLayout> vertexBufferLayouts;
+        pMasterRenderer->solveVertexBufferLayouts(
+            meshVertexBufferLayout,
+            instanced,
+            shadowPipeline,
+            vertexBufferLayouts
         );
-        const std::string fragmentShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            true
-        );
-        Debug::log(
-            "@Material::createSkinnedPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
+        std::vector<DescriptorSetLayout> descriptorSetLayouts;
+        pMasterRenderer->solveDescriptorSetLayouts(
+            this,
+            skinned,
+            shadowPipeline,
+            descriptorSetLayouts
         );
 
-        // TODO: Unfuck below
-        _pSkinnedPipelineData = new MaterialPipelineData;
-        Shader* pVertexShader = new Shader(
-            vertexShaderFilename,
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
+        // NOTE: Currently sending proj mat as push constant
+        (*ppPipelineData)->pPipeline = new Pipeline(
+            pRenderPass,
+            vertexBufferLayouts,
+            descriptorSetLayouts,
+            (*ppPipelineData)->pVertexShader,
+            (*ppPipelineData)->pFragmentShader,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // Enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
+            true, // Enable color blend
+            0, // Push constants size
+            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
         );
-        Shader* pFragmentShader = new Shader(
-            fragmentShaderFilename,
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-        );
-        _pSkinnedPipelineData->pVertexShader = pVertexShader;
-        _pSkinnedPipelineData->pFragmentShader = pFragmentShader;
-        Pipeline* pPipeline = create_material_pipeline(
-            pMesh->getVertexBufferLayout(),
-            false, // instanced
-            true, // skinned
-            this
-        );
-        _pSkinnedPipelineData->pPipeline = pPipeline;
-        _pSkinnedPipelineData->pPipeline->create();
-    }
-
-    void Material::createTerrainPipeline(const TerrainMesh* pTerrainMesh)
-    {
-        if (_pPipelineData != nullptr)
-        {
-            Debug::log(
-                "@Material::createTerrainPipeline "
-                "Pipeline data already exists for material with ID: " + std::to_string(getID()),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        const std::string vertexShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            false
-        );
-        const std::string fragmentShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            false
-        );
-        Debug::log(
-            "@Material::createTerrainPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
-        );
-
-        // TODO: Unfuck below
-        _pPipelineData = new MaterialPipelineData;
-        Shader* pVertexShader = new Shader(
-            vertexShaderFilename,
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
-        );
-        Shader* pFragmentShader = new Shader(
-            fragmentShaderFilename,
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-        );
-        _pPipelineData->pVertexShader = pVertexShader;
-        _pPipelineData->pFragmentShader = pFragmentShader;
-        Pipeline* pPipeline = create_terrain_material_pipeline(
-            Application::get_instance()->getMasterRenderer()->getSwapchain().getRenderPass(),
-            pTerrainMesh->getVertexBufferLayout(),
-            this
-        );
-        _pPipelineData->pPipeline = pPipeline;
-        _pPipelineData->pPipeline->create();
+        (*ppPipelineData)->pPipeline->create();
     }
 
     void Material::recreateExistingPipeline()
@@ -242,10 +184,20 @@ namespace platypus
             _pPipelineData->pPipeline->create();
             created = true;
         }
+        if (_pShadowPipelineData)
+        {
+            _pShadowPipelineData->pPipeline->create();
+            created = true;
+        }
 
         if (_pSkinnedPipelineData)
         {
             _pSkinnedPipelineData->pPipeline->create();
+            created = true;
+        }
+        if (_pSkinnedShadowPipelineData)
+        {
+            _pSkinnedShadowPipelineData->pPipeline->create();
             created = true;
         }
 
@@ -262,12 +214,24 @@ namespace platypus
             destroyed = true;
             Debug::log("@Material::destroyPipeline Static pipeline destroyed");
         }
+        if (_pShadowPipelineData)
+        {
+            _pShadowPipelineData->pPipeline->destroy();
+            destroyed = true;
+            Debug::log("@Material::destroyPipeline Static shadow pipeline destroyed");
+        }
 
         if (_pSkinnedPipelineData)
         {
             _pSkinnedPipelineData->pPipeline->destroy();
             destroyed = true;
             Debug::log("@Material::destroyPipeline Skinned pipeline destroyed");
+        }
+        if (_pSkinnedShadowPipelineData)
+        {
+            _pSkinnedShadowPipelineData->pPipeline->destroy();
+            destroyed = true;
+            Debug::log("@Material::destroyPipeline Skinned shadow pipeline destroyed");
         }
 
         if (!destroyed)
@@ -459,13 +423,19 @@ namespace platypus
         };
     }
 
+    // TODO: This is a convoluted mess -> make cleaner!
     // TODO: Make it impossible to attempt getting skinned shader name for terrain Material
-    std::string Material::getShaderFilename(uint32_t shaderStage, bool skinned)
+    std::string Material::getShaderFilename(uint32_t shaderStage, bool skinned, bool shadow)
     {
         // Example shader names:
         // vertex shader: "StaticVertexShader", "StaticVertexShader_tangent", "SkinnedVertexShader"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
         std::string shaderName = "";
+        if (shadow)
+        {
+            shaderName += "shadows/";
+        }
+
         if (_type == MaterialType::TERRAIN)
         {
             shaderName += "Terrain";
@@ -478,16 +448,22 @@ namespace platypus
         // Using same vertex shader for diffuse and diffuse+specular
         if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
         {
-            shaderName += _normalTextureCount == 0 ? "VertexShader" : "VertexShader_tangent";
+            shaderName += "VertexShader";
+            if (!shadow && _normalTextureCount > 0)
+                shaderName += "_tangent";
         }
         else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
         {
-            // adding d here since all materials needs to have at least one diffuse texture
-            shaderName += "FragmentShader_d";
-            if (_specularTextureCount > 0)
-                shaderName += "s";
-            if (_normalTextureCount > 0)
-                shaderName += "n";
+            shaderName += "FragmentShader";
+            if (!shadow)
+            {
+                // adding d here since all materials needs to have at least one diffuse texture
+                shaderName += "_d";
+                if (_specularTextureCount > 0)
+                    shaderName += "s";
+                if (_normalTextureCount > 0)
+                    shaderName += "n";
+            }
         }
 
         return shaderName;

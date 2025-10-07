@@ -24,3 +24,7 @@ glslc -fshader-stage=vert GUIVertexShader.glsl -o GUIVertexShader.spv
 glslc -fshader-stage=frag GUIFragmentShader.glsl -o GUIFragmentShader.spv
 
 glslc -fshader-stage=frag FontFragmentShader.glsl -o FontFragmentShader.spv
+
+# Shadow shaders
+glslc -fshader-stage=vert shadows/StaticVertexShader.glsl -o shadows/StaticVertexShader.spv
+glslc -fshader-stage=frag shadows/StaticFragmentShader.glsl -o shadows/StaticFragmentShader.spv

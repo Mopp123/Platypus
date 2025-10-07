@@ -14,13 +14,23 @@ namespace platypus
     {
         switch (format)
         {
+            case ImageFormat::NONE: return "NONE";
+
             case ImageFormat::R8_SRGB: return "R8_SRGB";
             case ImageFormat::R8G8B8_SRGB: return "R8G8B8_SRGB";
             case ImageFormat::R8G8B8A8_SRGB: return "R8G8B8A8_SRGB";
 
+            case ImageFormat::B8G8R8_SRGB: return "B8G8R8_SRGB";
+            case ImageFormat::B8G8R8A8_SRGB: return "B8G8R8A8_SRGB";
+
             case ImageFormat::R8_UNORM: return "R8_UNORM";
             case ImageFormat::R8G8B8_UNORM: return "R8G8B8_UNORM";
             case ImageFormat::R8G8B8A8_UNORM: return "R8G8B8A8_UNORM";
+
+            case ImageFormat::B8G8R8_UNORM: return "B8G8R8_UNORM";
+            case ImageFormat::B8G8R8A8_UNORM: return "B8G8R8A8_UNORM";
+
+            case ImageFormat::D32_SFLOAT: return "D32_SFLOAT";
 
             default: return "INVALID FORMAT";
         }
@@ -30,13 +40,23 @@ namespace platypus
     {
         switch (format)
         {
+            case ImageFormat::NONE: return 0;
+
             case ImageFormat::R8_SRGB: return 1;
             case ImageFormat::R8G8B8_SRGB: return 3;
             case ImageFormat::R8G8B8A8_SRGB: return 4;
 
+            case ImageFormat::B8G8R8_SRGB: return 3;
+            case ImageFormat::B8G8R8A8_SRGB: return 4;
+
             case ImageFormat::R8_UNORM: return 1;
             case ImageFormat::R8G8B8_UNORM: return 3;
             case ImageFormat::R8G8B8A8_UNORM: return 4;
+
+            case ImageFormat::B8G8R8_UNORM: return 3;
+            case ImageFormat::B8G8R8A8_UNORM: return 4;
+
+            case ImageFormat::D32_SFLOAT: return 1;
 
             default: return 0;
         }
@@ -70,16 +90,27 @@ namespace platypus
         return ImageFormat::R8_SRGB;
     }
 
-    bool is_image_format_valid(ImageFormat format, int imageColorChannels)
+    bool is_image_format_valid(ImageFormat format, int channels)
     {
-        if ((format == ImageFormat::R8_SRGB || format == ImageFormat::R8_UNORM) && imageColorChannels == 1)
+        if ((format == ImageFormat::R8_SRGB || format == ImageFormat::R8_UNORM || format == ImageFormat::D32_SFLOAT) &&
+            channels == 1)
+        {
             return true;
-        else if ((format == ImageFormat::R8G8B8_SRGB || format == ImageFormat::R8G8B8_UNORM) && imageColorChannels == 3)
+        }
+        else if ((format == ImageFormat::R8G8B8_SRGB || format == ImageFormat::R8G8B8_UNORM || format == ImageFormat::B8G8R8_SRGB || format == ImageFormat::B8G8R8_UNORM) &&
+                channels == 3)
+        {
             return true;
-        else if ((format == ImageFormat::R8G8B8A8_SRGB || format == ImageFormat::R8G8B8A8_UNORM) && imageColorChannels == 4)
+        }
+        else if ((format == ImageFormat::R8G8B8A8_SRGB || format == ImageFormat::R8G8B8A8_UNORM || format == ImageFormat::B8G8R8A8_SRGB || format == ImageFormat::B8G8R8A8_SRGB) &&
+                channels == 4)
+        {
             return true;
+        }
         else
+        {
             return false;
+        }
     }
 
 

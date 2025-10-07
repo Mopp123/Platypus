@@ -3,6 +3,7 @@
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
+#include "platypus/assets/Material.h"
 #include "platypus/graphics/RenderPass.h"
 #include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/Renderable.h"
@@ -82,8 +83,6 @@ namespace platypus
         size_t _maxTerrainBatchLength;
         size_t _maxSkinnedMeshJoints;
 
-        std::unordered_map<ID_t, Pipeline*> _batchOffscreenPipelines;
-
         static DescriptorSetLayout s_jointDescriptorSetLayout;
         static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
@@ -153,9 +152,6 @@ namespace platypus
 
         const std::vector<Batch*>& getBatches() const;
 
-        void recreatePipelines();
-        void destroyPipelines();
-
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
 
@@ -167,21 +163,6 @@ namespace platypus
             size_t framesInFlight,
             std::vector<Buffer*>& outBuffers
         );
-
-        // *Creates a single descriptor set
-        // TODO: Better name (this creates "a part of shader resource")
-        // NOTE: Shouldn't be used anymore! Remove!
-        /*
-        void createBatchShaderResource(
-            ID_t batchID,
-            size_t bufferElementSize,
-            size_t maxBatchLength,
-            const DescriptorSetLayout& descriptorSetLayout,
-            const std::vector<Texture*>& textures,
-            Buffer** pOutUniformBuffer,
-            DescriptorSet& outDescriptorSet
-        );
-        */
 
         // Creates dynamic uniform buffers and descriptor sets for the whole batch
         void createBatchShaderResources(

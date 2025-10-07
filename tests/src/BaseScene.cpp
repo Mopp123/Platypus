@@ -1,4 +1,5 @@
 #include "BaseScene.hpp"
+#include "platypus/ecs/components/Renderable.h"
 
 using namespace platypus;
 
@@ -122,3 +123,53 @@ void BaseScene::initBase()
 
 void BaseScene::updateBase()
 {}
+
+
+Material* BaseScene::createMeshMaterial(
+    AssetManager* pAssetManager,
+    std::string textureFilepath
+)
+{
+    TextureSampler textureSampler(
+        TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        true,
+        0
+    );
+    Texture* pTexture = pAssetManager->loadTexture(
+        textureFilepath,
+        ImageFormat::R8G8B8A8_SRGB,
+        textureSampler
+    );
+    Material* pMaterial = pAssetManager->createMaterial(
+        MaterialType::MESH,
+        NULL_ID,
+        { pTexture->getID() },
+        { pAssetManager->getWhiteTexture()->getID() },
+        { }
+    );
+    return pMaterial;
+}
+
+entityID_t BaseScene::createStaticMeshEntity(
+    const Vector3f& position,
+    const Quaternion& rotation,
+    const Vector3f& scale,
+    ID_t meshAssetID,
+    ID_t materialAssetID
+)
+{
+    entityID_t entity = createEntity();
+    Transform* pTransform = create_transform(
+        entity,
+        position,
+        rotation,
+        scale
+    );
+    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+        entity,
+        meshAssetID,
+        materialAssetID
+    );
+    return entity;
+}

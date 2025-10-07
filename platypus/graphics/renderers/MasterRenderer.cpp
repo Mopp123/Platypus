@@ -37,7 +37,7 @@ namespace platypus
                 }
             }
         ),
-        _testRenderPass(true),
+        _testRenderPass(RenderPassType::SHADOW_PASS, true),
         _testFramebufferTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -77,7 +77,6 @@ namespace platypus
     {
         Device::wait_for_operations();
 
-        _batcher.destroyPipelines();
         _batcher.freeBatches();
         _pGUIRenderer->freeBatches();
     }
@@ -248,6 +247,89 @@ namespace platypus
         }
     }
 
+    void MasterRenderer::solveVertexBufferLayouts(
+        const VertexBufferLayout& meshVertexBufferLayout,
+        bool instanced,
+        bool shadowPipeline,
+        std::vector<VertexBufferLayout>& outVertexBufferLayouts
+    )
+    {
+        if (!shadowPipeline)
+        {
+            outVertexBufferLayouts.push_back(meshVertexBufferLayout);
+        }
+        else
+        {
+            outVertexBufferLayouts.push_back(
+                {
+                    { 0, ShaderDataType::Float3 },
+                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                    0,
+                    meshVertexBufferLayout.getStride()
+                }
+            );
+        }
+
+        if (instanced)
+        {
+            uint32_t meshVBLayoutElements = outVertexBufferLayouts.back().getElements().size();
+            VertexBufferLayout instancedVBLayout = {
+                {
+                    { meshVBLayoutElements, ShaderDataType::Float4 },
+                    { meshVBLayoutElements + 1, ShaderDataType::Float4 },
+                    { meshVBLayoutElements + 2, ShaderDataType::Float4 },
+                    { meshVBLayoutElements + 3, ShaderDataType::Float4 }
+                },
+                VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                1
+            };
+            outVertexBufferLayouts.push_back(instancedVBLayout);
+        }
+    }
+
+    void MasterRenderer::solveDescriptorSetLayouts(
+        Material* pMaterial,
+        bool skinned,
+        bool shadowPipeline,
+        std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
+    )
+    {
+        MaterialType materialType = pMaterial->getMaterialType();
+        if (skinned && materialType == MaterialType::TERRAIN)
+        {
+            Debug::log(
+                "@MasterRenderer::solveDescriptorSetLayouts "
+                "Illegal to solve descriptor set layouts for Terrain Materials with skinning!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (!shadowPipeline)
+        {
+            outDescriptorSetLayouts.push_back(_scene3DDataDescriptorSetLayout);
+        }
+        else
+        {
+            // TODO: Common shadow descriptor set layout (light view and proj matrices, etc)
+            outDescriptorSetLayouts.push_back(_scene3DDataDescriptorSetLayout);
+        }
+
+        if (skinned)
+        {
+            outDescriptorSetLayouts.push_back(Batcher::get_joint_descriptor_set_layout());
+        }
+        else if (materialType == MaterialType::TERRAIN)
+        {
+            outDescriptorSetLayouts.push_back(Batcher::get_terrain_descriptor_set_layout());
+        }
+
+        // checking if shadow pipeline here, since need to add the Material descriptor set layout
+        // last if it's used!
+        if (!shadowPipeline)
+            outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
+    }
+
     void MasterRenderer::createOffscreenResourcesTEST()
     {
         size_t framesInFlight = _swapchainRef.getMaxFramesInFlight();
@@ -276,7 +358,8 @@ namespace platypus
 
             Framebuffer* pTestFramebuffer = new Framebuffer(
                 _testRenderPass,
-                { pTestColorTexture, pTestDepthTexture },
+                { pTestColorTexture },
+                pTestDepthTexture,
                 swapchainWidth,
                 swapchainHeight
             );
@@ -483,7 +566,7 @@ namespace platypus
             currentCommandBuffer,
             _testRenderPass,
             _testFramebuffers[_currentFrame],
-            _testFramebuffers[_currentFrame]->getAttachments()[1],
+            _testFramebuffers[_currentFrame]->getDepthAttachment(),
             { 1, 0, 1, 1 },
             true
         );
@@ -577,7 +660,6 @@ namespace platypus
                 allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
                 createPipelines();
                 createCommonShaderResources();
-                _batcher.recreatePipelines();
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
                 // NOTE: Makes window resizing even slower.
@@ -596,7 +678,6 @@ namespace platypus
                 createPipelines();
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
-                _batcher.recreatePipelines();
             }
 
             _swapchainRef.resetChangedImageCount();

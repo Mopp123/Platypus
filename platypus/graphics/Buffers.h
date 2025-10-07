@@ -109,6 +109,13 @@ namespace platypus
         VertexInputRate _inputRate = VertexInputRate::VERTEX_INPUT_RATE_VERTEX;
         int32_t _stride = 0;
 
+        static VertexBufferLayout s_commonStaticLayout;
+        static VertexBufferLayout s_commonStaticTangentLayout;
+        static VertexBufferLayout s_commonSkinnedLayout;
+        static VertexBufferLayout s_commonSkinnedTangentLayout;
+        static VertexBufferLayout s_commonTerrainLayout;
+        static VertexBufferLayout s_commonTerrainTangentLayout;
+
     public:
         VertexBufferLayout();
         // NOTE: Not sure if copying elems goes correctly here..
@@ -117,10 +124,24 @@ namespace platypus
             VertexInputRate inputRate,
             uint32_t binding
         );
+        // TESTING
+        VertexBufferLayout(
+            VertexBufferElement element,
+            VertexInputRate inputRate,
+            uint32_t binding,
+            int32_t stride
+        );
         VertexBufferLayout(const VertexBufferLayout& other);
         VertexBufferLayout& operator=(VertexBufferLayout&& other);
         VertexBufferLayout& operator=(VertexBufferLayout& other);
         ~VertexBufferLayout();
+
+        static VertexBufferLayout get_common_static_layout();
+        static VertexBufferLayout get_common_static_tangent_layout();
+        static VertexBufferLayout get_common_skinned_layout();
+        static VertexBufferLayout get_common_skinned_tangent_layout();
+        static VertexBufferLayout get_common_terrain_layout();
+        static VertexBufferLayout get_common_terrain_tangent_layout();
 
         inline const std::vector<VertexBufferElement>& getElements() const { return _elements; }
         inline VertexInputRate getInputRate() const { return _inputRate; }

@@ -93,6 +93,18 @@ namespace platypus
             _stride += get_shader_datatype_size(element.getType());
     }
 
+    VertexBufferLayout::VertexBufferLayout(
+        VertexBufferElement element,
+        VertexInputRate inputRate,
+        uint32_t binding,
+        int32_t stride
+    ) :
+        _elements({element}),
+        _inputRate(inputRate),
+        _stride(stride)
+    {
+    }
+
     VertexBufferLayout::VertexBufferLayout(const VertexBufferLayout& other) :
         _elements(other._elements),
         _inputRate(other._inputRate),

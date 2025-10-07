@@ -4,7 +4,6 @@
 #include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/PipelineFactory.hpp"
 
 
 namespace platypus
@@ -57,7 +56,6 @@ namespace platypus
 
     Batcher::~Batcher()
     {
-        destroyPipelines();
         s_jointDescriptorSetLayout.destroy();
         s_terrainDescriptorSetLayout.destroy();
     }
@@ -87,10 +85,31 @@ namespace platypus
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = nullptr;
+        Pipeline* pMaterialShadowPipeline = nullptr;
         if (pMaterial->getPipelineData() == nullptr)
-            pMaterial->createPipeline(pMesh);
+        {
+            pMaterial->createPipeline(
+                _masterRendererRef.getSwapchain().getRenderPassPtr(),
+                pMesh->getVertexBufferLayout(),
+                true, // instanced
+                false, // skinned
+                false // shadow pipeline
+            );
+        }
+
+        if (pMaterial->getShadowPipelineData() == nullptr)
+        {
+            pMaterial->createPipeline(
+                &_masterRendererRef.getTestRenderPass(),
+                pMesh->getVertexBufferLayout(),
+                true, // instanced
+                false, // skinned
+                true // shadow pipeline
+            );
+        }
 
         pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
+        pMaterialShadowPipeline = pMaterial->getShadowPipelineData()->pPipeline;
 
         // Create the instanced transforms buffer
         const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
@@ -141,7 +160,7 @@ namespace platypus
         Batch* pBatch = new Batch{
             BatchType::STATIC_INSTANCED,
             pMaterialPipeline,
-            nullptr,
+            pMaterialShadowPipeline,
             useDescriptorSets,
             0, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -175,7 +194,15 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialSkinnedPipeline = nullptr;
         if (pMaterial->getSkinnedPipelineData() == nullptr)
-            pMaterial->createSkinnedPipeline(pMesh);
+        {
+            pMaterial->createPipeline(
+                _masterRendererRef.getSwapchain().getRenderPassPtr(),
+                pMesh->getVertexBufferLayout(),
+                false, // instanced
+                true, // skinned
+                false // shadow pipeline
+            );
+        }
 
         pMaterialSkinnedPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
 
@@ -268,10 +295,31 @@ namespace platypus
         TerrainMesh* pMesh = (TerrainMesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_TERRAIN_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = nullptr;
+        Pipeline* pMaterialShadowPipeline = nullptr;
         if (pMaterial->getPipelineData() == nullptr)
-            pMaterial->createTerrainPipeline(pMesh);
+        {
+            pMaterial->createPipeline(
+                _masterRendererRef.getSwapchain().getRenderPassPtr(),
+                pMesh->getVertexBufferLayout(),
+                false, // instanced
+                false, // skinned
+                false // shadow pipeline
+            );
+        }
+
+        //if (pMaterial->getShadowPipelineData() == nullptr)
+        //{
+        //    pMaterial->createPipeline(
+        //        &_masterRendererRef.getTestRenderPass(),
+        //        pMesh->getVertexBufferLayout(),
+        //        false, // instanced
+        //        false, // skinned
+        //        true // shadow pipeline
+        //    );
+        //}
 
         pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
+        //pMaterialShadowPipeline = pMaterial->getShadowPipelineData()->pPipeline;
 
         // Create uniform buffers holding transformation matrix, tile size
         // and vertices. Also create descriptor sets for these
@@ -325,20 +373,10 @@ namespace platypus
             useDescriptorSets
         );
 
-        // TESTING
-        Pipeline* pOffscreenPipeline = create_terrain_material_pipeline(
-            offscreenRenderPass,
-            pMesh->getVertexBufferLayout(),
-            pMaterial
-        );
-        pOffscreenPipeline->create();
-        _batchOffscreenPipelines[identifier] = pOffscreenPipeline;
-        // ---
-
         Batch* pBatch = new Batch{
             BatchType::TERRAIN,
             pMaterialPipeline,
-            pOffscreenPipeline,
+            nullptr,//pMaterialShadowPipeline,
             useDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMesh->getVertexBuffer() },
@@ -551,27 +589,6 @@ namespace platypus
     const std::vector<Batch*>& Batcher::getBatches() const
     {
         return _batches;
-    }
-
-    void Batcher::recreatePipelines()
-    {
-        std::unordered_map<ID_t, Pipeline*>::iterator it;
-        for (it = _batchOffscreenPipelines.begin(); it != _batchOffscreenPipelines.end(); ++it)
-        {
-            it->second->destroy();
-            it->second->create();
-        }
-    }
-
-    void Batcher::destroyPipelines()
-    {
-        std::unordered_map<ID_t, Pipeline*>::iterator it;
-        for (it = _batchOffscreenPipelines.begin(); it != _batchOffscreenPipelines.end(); ++it)
-        {
-            it->second->destroy();
-            delete it->second;
-        }
-        _batchOffscreenPipelines.clear();
     }
 
     const DescriptorSetLayout& Batcher::get_joint_descriptor_set_layout()

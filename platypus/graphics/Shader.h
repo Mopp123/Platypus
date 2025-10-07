@@ -22,11 +22,19 @@ namespace platypus
         ESSL1
     };
 
+
     std::string shader_stage_to_string(uint32_t shaderStage);
 
+    std::string get_default_complete_shader_filename(
+        const std::string nameBegin,
+        uint32_t shaderStage,
+        bool hasSpecularMap,
+        bool hasNormalMap,
+        bool skinned,
+        bool shadowPipeline
+    );
 
     class Pipeline;
-
     struct ShaderImpl;
     class Shader
     {

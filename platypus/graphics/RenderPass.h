@@ -5,6 +5,13 @@
 
 namespace platypus
 {
+
+    enum class RenderPassType
+    {
+        SCENE_PASS,
+        SHADOW_PASS
+    };
+
     class Swapchain;
 
     struct RenderPassImpl;
@@ -12,10 +19,11 @@ namespace platypus
     {
     private:
         RenderPassImpl* _pImpl = nullptr;
+        RenderPassType _type;
         bool _offscreen = false;
 
     public:
-        RenderPass(bool offscreen);
+        RenderPass(RenderPassType type, bool offscreen);
         ~RenderPass();
 
         void create(
@@ -25,6 +33,7 @@ namespace platypus
 
         void destroy();
 
+        inline RenderPassType getType() const { return _type; }
         inline bool isOffscreenPass() const { return _offscreen; }
         inline const RenderPassImpl* getImpl() const { return _pImpl; }
     };

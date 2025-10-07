@@ -4,6 +4,7 @@
 #include "platypus/assets/TerrainMesh.hpp"
 #include "renderers/MasterRenderer.h"
 #include "renderers/Batch.hpp"
+#include "platypus/core/Debug.h"
 #include <string>
 
 
