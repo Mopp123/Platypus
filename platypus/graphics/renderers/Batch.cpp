@@ -1,5 +1,4 @@
 #include "Batch.hpp"
-#include "platypus/assets/TerrainMesh.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
@@ -82,7 +81,146 @@ namespace platypus
         // 4.Figure out how to combine the used descriptor sets
         // 5.Create the actual batch
 
-        return NULL_ID;
+        ID_t identifier = ID::hash(meshID, materialID);
+        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
+        {
+            return NULL_ID;
+        }
+
+        const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID);
+        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+        VertexBufferLayout meshVertexBufferLayout = pMesh->getVertexBufferLayout();
+        Buffer* pMeshVertexBuffer = pMesh->getVertexBuffer();
+        const Buffer* pMeshIndexBuffer = pMesh->getIndexBuffer();
+        bool skinnedMesh = pMesh->hasBindPose();
+        // TODO: Do something about this whole terrain material fuckery -> some better way to identify which batch were creating here!!
+        bool instancedMesh = !skinnedMesh && pMaterial->getMaterialType() != MaterialType::TERRAIN;
+
+        std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
+
+        std::vector<ShaderResourceLayout> shaderResourceCreationLayouts;
+
+        size_t dynamicUniformBufferElementSize = 0;
+        // For now all 3D rendering takes scene 3D descriptor sets
+        std::vector<std::vector<DescriptorSet>> usedDescriptorSets = { _masterRendererRef.getScene3DDataDescriptorSets() };
+
+        size_t maxBatchLength = 0;
+        if (instancedMesh)
+        {
+            dynamicVertexBuffers.resize(1);
+            dynamicVertexBuffers[0].resize(framesInFlight);
+            maxBatchLength = _maxStaticBatchLength;
+            createBatchInstancedBuffers(
+                identifier,
+                sizeof(Matrix4f),
+                maxBatchLength, // NOTE: This needs to change if instancing something else than static meshes!
+                framesInFlight,
+                dynamicVertexBuffers[0]
+            );
+        }
+
+        if (skinnedMesh)
+        {
+            maxBatchLength = _maxSkinnedBatchLength;
+            dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
+                sizeof(Matrix4f) * _maxSkinnedMeshJoints
+            );
+            shaderResourceCreationLayouts.push_back({
+                ShaderResourceType::ANY,
+                dynamicUniformBufferElementSize,
+                s_jointDescriptorSetLayout,
+                { }
+            });
+        }
+
+        if (pMaterial->getMaterialType() == MaterialType::TERRAIN)
+        {
+            maxBatchLength = _maxTerrainBatchLength;
+            dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
+                sizeof(Matrix4f) + sizeof(Vector2f)
+            );
+            shaderResourceCreationLayouts.push_back({
+                ShaderResourceType::ANY,
+                dynamicUniformBufferElementSize,
+                s_terrainDescriptorSetLayout,
+                { }
+            });
+        }
+
+        Pipeline* pMaterialPipeline = nullptr;
+        if (!skinnedMesh && pMaterial->getPipelineData() == nullptr)
+        {
+            pMaterial->createPipeline(
+                _masterRendererRef.getSwapchain().getRenderPassPtr(),
+                meshVertexBufferLayout,
+                instancedMesh,
+                skinnedMesh,
+                false // shadow pipeline
+            );
+            pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
+        }
+        else if (skinnedMesh && pMaterial->getSkinnedPipelineData() == nullptr)
+        {
+            pMaterial->createPipeline(
+                _masterRendererRef.getSwapchain().getRenderPassPtr(),
+                meshVertexBufferLayout,
+                instancedMesh,
+                skinnedMesh,
+                false // shadow pipeline
+            );
+            pMaterialPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
+        }
+
+        if (!shaderResourceCreationLayouts.empty())
+        {
+            std::vector<BatchShaderResource> shaderResources(shaderResourceCreationLayouts.size());
+            createBatchShaderResources(
+                framesInFlight,
+                identifier,
+                maxBatchLength,
+                shaderResourceCreationLayouts,
+                shaderResources
+            );
+            for (const BatchShaderResource& createdResource : shaderResources)
+                usedDescriptorSets.push_back(createdResource.descriptorSet);
+        }
+        // For now all 3D batches have material
+        usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
+
+        // TODO: Validate descriptor set counts against frames in flight!
+        std::vector<std::vector<DescriptorSet>> combinedDescriptorSets(framesInFlight);
+        combineUsedDescriptorSets(
+            framesInFlight,
+            usedDescriptorSets,
+            combinedDescriptorSets
+        );
+
+        Batch* pBatch = new Batch{
+            BatchType::TERRAIN,
+            pMaterialPipeline,
+            nullptr,//pMaterialShadowPipeline,
+            combinedDescriptorSets,
+            (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
+            { pMeshVertexBuffer },
+            dynamicVertexBuffers, // dynamic/instanced vertex buffers
+            pMeshIndexBuffer,
+            0, // push constants size
+            { }, // push constant uniform infos
+            nullptr, // push constants data
+            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
+            0, // repeat count
+            0, // instance count,
+            materialID // materialAssetID
+        };
+
+        // TODO: Optimize? Maybe preallocate and don't push?
+        _identifierBatchMapping[identifier] = _batches.size();
+        _batches.push_back(pBatch);
+
+        return identifier;
     }
 
     // NOTE: Could even create the pipelines dynamically here, so wouldn't require having those inside
@@ -136,29 +274,14 @@ namespace platypus
             transformBuffers
         );
 
-        std::vector<BatchShaderResource> shaderResources(1);
-        createBatchShaderResources(
-            framesInFlight,
-            identifier,
-            1,
-            {
-                {
-                    ShaderResourceType::MATERIAL,
-                    sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
-                    pMaterial->getTextures()
-                }
-            },
-            shaderResources
-        );
-
         // TODO: Some better way to deal with this?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
+        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
         validateDescriptorSetCounts(
             PLATYPUS_CURRENT_FUNC_NAME,
             framesInFlight,
             commonDescriptorSets.size(),
-            shaderResources[0].descriptorSet.size()
+            materialDescriptorSets.size()
         );
 
         std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
@@ -166,7 +289,7 @@ namespace platypus
             framesInFlight,
             {
                 commonDescriptorSets,
-                shaderResources[0].descriptorSet
+                materialDescriptorSets
             },
             useDescriptorSets
         );
@@ -226,7 +349,7 @@ namespace platypus
             sizeof(Matrix4f) * _maxSkinnedMeshJoints
         );
 
-        std::vector<BatchShaderResource> shaderResources(2);
+        std::vector<BatchShaderResource> shaderResources(1);
         createBatchShaderResources(
             framesInFlight,
             identifier,
@@ -237,12 +360,6 @@ namespace platypus
                     dynamicUniformBufferElementSize,
                     s_jointDescriptorSetLayout,
                     { }
-                },
-                {
-                    ShaderResourceType::MATERIAL,
-                    sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
-                    pMaterial->getTextures()
                 }
             },
             shaderResources
@@ -250,12 +367,13 @@ namespace platypus
 
         // TODO: Some better way to deal with this?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
+        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
         validateDescriptorSetCounts(
             PLATYPUS_CURRENT_FUNC_NAME,
             framesInFlight,
             commonDescriptorSets.size(),
             shaderResources[0].descriptorSet.size(),
-            shaderResources[1].descriptorSet.size()
+            materialDescriptorSets.size()
         );
 
         std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
@@ -264,7 +382,7 @@ namespace platypus
             {
                 commonDescriptorSets,
                 shaderResources[0].descriptorSet,
-                shaderResources[1].descriptorSet
+                materialDescriptorSets
             },
             useDescriptorSets
         );
@@ -306,7 +424,7 @@ namespace platypus
         }
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        TerrainMesh* pMesh = (TerrainMesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_TERRAIN_MESH);
+        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = nullptr;
         Pipeline* pMaterialShadowPipeline = nullptr;
@@ -344,7 +462,7 @@ namespace platypus
             sizeof(Matrix4f) + sizeof(Vector2f)
         );
 
-        std::vector<BatchShaderResource> shaderResources(2);
+        std::vector<BatchShaderResource> shaderResources(1);
         createBatchShaderResources(
             framesInFlight,
             identifier,
@@ -355,12 +473,6 @@ namespace platypus
                     dynamicUniformBufferElementSize,
                     s_terrainDescriptorSetLayout,
                     { }
-                },
-                {
-                    ShaderResourceType::MATERIAL,
-                    sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
-                    pMaterial->getTextures()
                 }
             },
             shaderResources
@@ -368,12 +480,13 @@ namespace platypus
 
         // TODO: Some better way to deal with these?
         const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
+        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
         validateDescriptorSetCounts(
             PLATYPUS_CURRENT_FUNC_NAME,
             framesInFlight,
             commonDescriptorSets.size(),
             shaderResources[0].descriptorSet.size(),
-            shaderResources[1].descriptorSet.size()
+            materialDescriptorSets.size()
         );
 
         std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
@@ -382,7 +495,7 @@ namespace platypus
             {
                 commonDescriptorSets,
                 shaderResources[0].descriptorSet,
-                shaderResources[1].descriptorSet
+                materialDescriptorSets
             },
             useDescriptorSets
         );
@@ -480,8 +593,6 @@ namespace platypus
     void Batcher::addToTerrainBatch(
         ID_t identifier,
         const Matrix4f& transformationMatrix,
-        float tileSize,
-        uint32_t verticesPerRow,
         size_t currentFrame
     )
     {
@@ -503,8 +614,10 @@ namespace platypus
         const size_t terrainDataSize = sizeof(Matrix4f) + sizeof(Vector2f);
         std::vector<PE_byte> terrainData(terrainDataSize);
         memcpy(terrainData.data(), &transformationMatrix, sizeof(Matrix4f));
+        // TODO: Some better way to deal with the tex coord multiplying
+        const float tileSize = 1.0f;
         memcpy(terrainData.data() + sizeof(Matrix4f), &tileSize, sizeof(float));
-        float fVerticesPerRow = verticesPerRow;
+        const float fVerticesPerRow = 2.0f;
         memcpy(terrainData.data() + sizeof(Matrix4f) + sizeof(float), &fVerticesPerRow, sizeof(float));
 
         Buffer* pTerrainBuffer = getBatchBuffer(identifier, 0, currentFrame);

@@ -86,6 +86,7 @@ namespace platypus
         Vector4f normalize() const;
 
         Vector4f operator+(const Vector4f& other) const;
+        Vector4f operator-(const Vector4f& other) const;
         Vector4f operator*(const Vector4f& other) const;
         Vector4f operator*(float value) const;
 

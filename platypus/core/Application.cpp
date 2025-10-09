@@ -113,6 +113,9 @@ namespace platypus
         #endif
 
         Device::wait_for_operations();
+        // NOTE: Need to destroy assets before destroying MasterRenderer because
+        // some rely on descriptor pool that's living in the MasterRenderer atm!
+        _pAssetManager->destroyAssets();
         // NOTE: Why the fuck was this commented out earlier!?!?!
         _pMasterRenderer->cleanUp();
         _inputManager.destroyEvents();
@@ -125,7 +128,6 @@ namespace platypus
 
         delete _pSwapchain;
 
-        _pAssetManager->destroyAssets();
         delete _pAssetManager;
         _pAssetManager = nullptr;
 

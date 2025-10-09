@@ -3,7 +3,6 @@
 #include "Asset.h"
 #include "Image.h"
 #include "Mesh.h"
-#include "TerrainMesh.hpp"
 #include "Model.h"
 #include "Texture.h"
 #include "Material.h"
@@ -63,7 +62,7 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
-        TerrainMesh* createTerrainMesh(
+        Mesh* createTerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,
             bool dynamic,
@@ -76,6 +75,7 @@ namespace platypus
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
         bool assetExists(ID_t assetID, AssetType type) const;
+        Asset* getAsset(ID_t assetID) const;
         Asset* getAsset(ID_t assetID, AssetType type) const;
         std::vector<Asset*> getAssets(AssetType type) const;
 

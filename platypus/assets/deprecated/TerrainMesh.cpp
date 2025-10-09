@@ -13,7 +13,7 @@ namespace platypus
         bool dynamic,
         bool generateTangents
     ) :
-        Asset(AssetType::ASSET_TYPE_TERRAIN_MESH),
+        Asset(AssetType::ASSET_TYPE_MESH),
         _tileSize(tileSize)
     {
         const float minTileSize = 0.05f;

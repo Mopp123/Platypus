@@ -2,7 +2,6 @@
 #include "platypus/core/Application.h"
 #include "platypus/assets/Material.h"
 #include "platypus/assets/Mesh.h"
-#include "platypus/assets/TerrainMesh.hpp"
 #include "platypus/core/Scene.h"
 #include "platypus/core/Debug.h"
 
@@ -78,7 +77,7 @@ namespace platypus
 
     TerrainMeshRenderable* create_terrain_mesh_renderable(
         entityID_t target,
-        ID_t terrainMeshAssetID,
+        ID_t meshAssetID,
         ID_t materialAssetID
     )
     {
@@ -103,7 +102,7 @@ namespace platypus
         }
         pScene->addToComponentMask(target, componentType);
         TerrainMeshRenderable* pRenderable = (TerrainMeshRenderable*)pComponent;
-        pRenderable->terrainMeshID = terrainMeshAssetID;
+        pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 
         return pRenderable;

@@ -116,7 +116,7 @@ namespace platypus
         ID_t getBatchID(ID_t meshID, ID_t materialID);
 
         // Returns batch identifier, if created successfully
-        ID_t createBatch(ID_t meshID, ID_t materialID); // JUST TESTING
+        ID_t createBatch(ID_t meshID, ID_t materialID);
         ID_t createStaticBatch(ID_t meshID, ID_t materialID);
         ID_t createSkinnedBatch(ID_t meshID, ID_t materialID);
         ID_t createTerrainBatch(
@@ -141,8 +141,6 @@ namespace platypus
         void addToTerrainBatch(
             ID_t identifier,
             const Matrix4f& transformationMatrix,
-            float tileSize,
-            uint32_t verticesPerRow,
             size_t currentFrame
         );
 

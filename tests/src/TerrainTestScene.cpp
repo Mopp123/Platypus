@@ -166,6 +166,7 @@ void TerrainTestScene::init()
         framebufferDebugTextureSampler
     );
 
+    /*
     _framebufferDebugEntity = createEntity();
     create_gui_transform(
         _framebufferDebugEntity,
@@ -177,6 +178,7 @@ void TerrainTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getTestFramebufferColorTextures()[pMasterRenderer->getCurrentFrame()]->getID()
     );
+    */
 
     Material* pMeshMaterial = createMeshMaterial(
         pAssetManager,
@@ -201,6 +203,7 @@ void TerrainTestScene::update()
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
 
+    /*
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     std::vector<Texture*>& framebufferTextures = pMasterRenderer->getTestFramebufferColorTextures();
     if (!framebufferTextures.empty())
@@ -212,6 +215,7 @@ void TerrainTestScene::update()
         pFramebufferDebugRenderable->textureID = framebufferTextures[pMasterRenderer->getCurrentFrame()]->getID();
         Debug::log("___TEST___SET RENDERABLE TEXTURE TO: " + std::to_string(pFramebufferDebugRenderable->textureID));
     }
+    */
 
     /*
     float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;

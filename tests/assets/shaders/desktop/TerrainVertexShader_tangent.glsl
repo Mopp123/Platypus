@@ -2,7 +2,8 @@
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
-layout(location = 2) in vec3 tangent;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in vec4 tangent;
 
 layout(set = 0, binding = 0) uniform SceneData
 {
@@ -42,10 +43,11 @@ void main()
     vec4 transformedPos = instanceData.transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;
 
-    const float tileSize = instanceData.meshProperties.x;
-    const float verticesPerRow = instanceData.meshProperties.y;
-    const float tilesPerRow = verticesPerRow - 1.0;
-    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    //const float tileSize = instanceData.meshProperties.x;
+    //const float verticesPerRow = instanceData.meshProperties.y;
+    //const float tilesPerRow = verticesPerRow - 1.0;
+    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    var_texCoord = texCoord;
 
     var_fragPos = transformedPos.xyz;
 

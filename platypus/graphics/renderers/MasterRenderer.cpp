@@ -9,7 +9,6 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "platypus/assets/TerrainMesh.hpp"
 
 
 namespace platypus
@@ -131,7 +130,7 @@ namespace platypus
                     "No suitable batch found for StaticMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createStaticBatch(meshID, materialID);
+                batchID = _batcher.createBatch(meshID, materialID);
             }
             _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
         }
@@ -154,7 +153,7 @@ namespace platypus
                     "No suitable batch found for SkinnedMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createSkinnedBatch(meshID, materialID);
+                batchID = _batcher.createBatch(meshID, materialID);
             }
 
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
@@ -182,9 +181,9 @@ namespace platypus
         );
         if (pTerrainRenderable)
         {
-            const ID_t terrainMeshID = pTerrainRenderable->terrainMeshID;
+            const ID_t meshID = pTerrainRenderable->meshID;
             const ID_t materialID = pTerrainRenderable->materialID;
-            ID_t batchID = _batcher.getBatchID(terrainMeshID, materialID);
+            ID_t batchID = _batcher.getBatchID(meshID, materialID);
             if (batchID == NULL_ID)
             {
                 Debug::log(
@@ -192,22 +191,19 @@ namespace platypus
                     "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createTerrainBatch(
-                    terrainMeshID,
-                    materialID,
-                    _testRenderPass
+                batchID = _batcher.createBatch(
+                    meshID,
+                    materialID
                 );
             }
 
-            const TerrainMesh* pTerrainMesh = (const TerrainMesh*)Application::get_instance()->getAssetManager()->getAsset(
-                pTerrainRenderable->terrainMeshID,
-                AssetType::ASSET_TYPE_TERRAIN_MESH
+            const Mesh* pTerrainMesh = (const Mesh*)Application::get_instance()->getAssetManager()->getAsset(
+                pTerrainRenderable->meshID,
+                AssetType::ASSET_TYPE_MESH
             );
             _batcher.addToTerrainBatch(
                 batchID,
                 pTransform->globalMatrix,
-                pTerrainMesh->getTileSize(),
-                pTerrainMesh->getVerticesPerRow(),
                 _currentFrame
             );
         }
@@ -254,21 +250,22 @@ namespace platypus
         std::vector<VertexBufferLayout>& outVertexBufferLayouts
     )
     {
-        if (!shadowPipeline)
-        {
-            outVertexBufferLayouts.push_back(meshVertexBufferLayout);
-        }
-        else
-        {
-            outVertexBufferLayouts.push_back(
-                {
-                    { 0, ShaderDataType::Float3 },
-                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-                    0,
-                    meshVertexBufferLayout.getStride()
-                }
-            );
-        }
+        outVertexBufferLayouts.push_back(meshVertexBufferLayout);
+        //if (!shadowPipeline)
+        //{
+        //    outVertexBufferLayouts.push_back(meshVertexBufferLayout);
+        //}
+        //else
+        //{
+        //    outVertexBufferLayouts.push_back(
+        //        {
+        //            { 0, ShaderDataType::Float3 },
+        //            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+        //            0,
+        //            meshVertexBufferLayout.getStride()
+        //        }
+        //    );
+        //}
 
         if (instanced)
         {
@@ -326,7 +323,7 @@ namespace platypus
 
         // checking if shadow pipeline here, since need to add the Material descriptor set layout
         // last if it's used!
-        if (!shadowPipeline)
+        //if (!shadowPipeline)
             outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
     }
 
@@ -430,6 +427,20 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyPipeline();
+    }
+
+    void MasterRenderer::createShaderResources()
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->createShaderResources();
+    }
+
+    void MasterRenderer::destroyShaderResources()
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->destroyShaderResources();
     }
 
     void MasterRenderer::createCommonShaderResources()
@@ -659,6 +670,10 @@ namespace platypus
                 freeCommandBuffers();
                 allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
                 createPipelines();
+
+                destroyShaderResources();
+                createShaderResources();
+
                 createCommonShaderResources();
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();

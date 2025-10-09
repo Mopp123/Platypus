@@ -3,7 +3,6 @@
 #include "Asset.h"
 #include "Texture.h"
 #include "Mesh.h"
-#include "TerrainMesh.hpp"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
 #include <unordered_map>
@@ -56,6 +55,8 @@ namespace platypus
         MaterialPipelineData* _pSkinnedShadowPipelineData = nullptr;
 
         DescriptorSetLayout _descriptorSetLayout;
+        std::vector<Buffer*> _uniformBuffers;
+        std::vector<DescriptorSet> _descriptorSets;
 
     public:
         Material(
@@ -85,6 +86,9 @@ namespace platypus
         void recreateExistingPipeline();
         void destroyPipeline();
 
+        void createShaderResources();
+        void destroyShaderResources();
+
         Texture* getBlendmapTexture() const;
         Texture* getDiffuseTexture(size_t channel) const;
         Texture* getSpecularTexture(size_t channel) const;
@@ -110,6 +114,7 @@ namespace platypus
         inline const MaterialPipelineData* getSkinnedShadowPipelineData() { return _pSkinnedShadowPipelineData; }
 
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
+        inline const std::vector<DescriptorSet> getDescriptorSets() const { return _descriptorSets; }
 
         inline const Shader* getVertexShader() const { return _pPipelineData->pVertexShader; }
         inline const Shader* getFragmentShader() const { return _pPipelineData->pFragmentShader; }

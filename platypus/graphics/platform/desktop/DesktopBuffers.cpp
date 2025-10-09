@@ -173,7 +173,7 @@ namespace platypus
         return *this;
     }
 
-    VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement& other)
+    VertexBufferElement& VertexBufferElement::operator=(const VertexBufferElement& other)
     {
         _location = other._location;
         _type = other._type;
@@ -283,7 +283,7 @@ namespace platypus
         return *this;
     }
 
-    VertexBufferLayout& VertexBufferLayout::operator=(VertexBufferLayout& other)
+    VertexBufferLayout& VertexBufferLayout::operator=(const VertexBufferLayout& other)
     {
         _elements.resize(other._elements.size());
         for (size_t i = 0; i < other._elements.size(); ++i)

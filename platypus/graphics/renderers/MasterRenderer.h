@@ -93,6 +93,8 @@ namespace platypus
         void freeCommandBuffers();
         void destroyPipelines();
 
+        void createShaderResources();
+        void destroyShaderResources();
         // NOTE: Currently creating only once the "common" shader resources
         void createCommonShaderResources();
         void destroyCommonShaderResources();

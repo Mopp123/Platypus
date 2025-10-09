@@ -232,83 +232,6 @@ namespace platypus
         return pMaterial;
     }
 
-    /*
-    TerrainMaterial* AssetManager::createTerrainMaterial(
-        ID_t blendmapTextureID,
-        std::vector<ID_t> diffuseChannelTextures,
-        std::vector<ID_t> specularChannelTextures
-    )
-    {
-        if (diffuseChannelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
-        {
-            Debug::log(
-                "@AssetManager::createTerrainMaterial "
-                "Too many diffuse channel textures provided(" + std::to_string(diffuseChannelTextures.size()) + ") "
-                "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        if (specularChannelTextures.size() > PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS)
-        {
-            Debug::log(
-                "@AssetManager::createTerrainMaterial "
-                "Too many specular channel textures provided(" + std::to_string(specularChannelTextures.size()) + ") "
-                "Maximum texture channels: " + std::to_string(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        ID_t useBlendmapTextureID = blendmapTextureID;
-        if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, blendmapTextureID, AssetType::ASSET_TYPE_TEXTURE))
-            useBlendmapTextureID = _pBlackTexture->getID();
-
-        ID_t defaultTextureID = _pBlackTexture->getID();
-        // Validate diffuse and specular textures. Use default(black texture) if invalid or not given.
-        std::vector<ID_t> useDiffuseChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
-        std::vector<ID_t> useSpecularChannelTextureIDs(PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS);
-        for (size_t textureChannel = 0; textureChannel < PE_MAX_TERRAIN_MATERIAL_TEX_CHANNELS; ++textureChannel)
-        {
-            if (textureChannel >= diffuseChannelTextures.size())
-            {
-                useDiffuseChannelTextureIDs[textureChannel] = defaultTextureID;
-            }
-            else
-            {
-                ID_t diffuseTextureID = diffuseChannelTextures[textureChannel];
-                if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, diffuseTextureID, AssetType::ASSET_TYPE_TEXTURE))
-                    diffuseTextureID = defaultTextureID;
-
-                useDiffuseChannelTextureIDs[textureChannel] = diffuseTextureID;
-            }
-
-            if (textureChannel >= specularChannelTextures.size())
-            {
-                useSpecularChannelTextureIDs[textureChannel] = defaultTextureID;
-            }
-            else
-            {
-                ID_t specularTextureID = specularChannelTextures[textureChannel];
-                if (!validateAsset(PLATYPUS_CURRENT_FUNC_NAME, specularTextureID, AssetType::ASSET_TYPE_TEXTURE))
-                    specularTextureID = defaultTextureID;
-
-                useSpecularChannelTextureIDs[textureChannel] = specularTextureID;
-            }
-        }
-
-        TerrainMaterial* pTerrainMaterial = new TerrainMaterial(
-            useBlendmapTextureID,
-            useDiffuseChannelTextureIDs.data(),
-            useDiffuseChannelTextureIDs.size(),
-            useSpecularChannelTextureIDs.data(),
-            useSpecularChannelTextureIDs.size()
-        );
-        _assets[pTerrainMaterial->getID()] = pTerrainMaterial;
-        return pTerrainMaterial;
-    }
-*/
-
     Mesh* AssetManager::createMesh(
         const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
@@ -444,14 +367,14 @@ namespace platypus
         return pModel;
     }
 
-    TerrainMesh* AssetManager::createTerrainMesh(
+    Mesh* AssetManager::createTerrainMesh(
         float tileSize,
         const std::vector<float>& heightmapData,
         bool dynamic,
         bool generateTangents
     )
     {
-        TerrainMesh* pTerrainMesh = new TerrainMesh(tileSize, heightmapData, dynamic, generateTangents);
+        Mesh* pTerrainMesh = Mesh::generate_terrain(tileSize, heightmapData, dynamic, generateTangents);
         _assets[pTerrainMesh->getID()] = pTerrainMesh;
         return pTerrainMesh;
     }
@@ -494,6 +417,21 @@ namespace platypus
                 return true;
         }
         return false;
+    }
+
+    Asset* AssetManager::getAsset(ID_t assetID) const
+    {
+        std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
+        if (it == _assets.end())
+        {
+            Debug::log(
+                "@AssetManager::getAsset "
+                "Failed to find asset with ID: " + std::to_string(assetID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return nullptr;
+        }
+        return it->second;
     }
 
     Asset* AssetManager::getAsset(ID_t assetID, AssetType type) const

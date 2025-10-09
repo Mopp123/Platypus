@@ -2,6 +2,7 @@
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 texCoord;
 
 layout(set = 0, binding = 0) uniform SceneData
 {
@@ -39,10 +40,11 @@ void main()
     vec4 rotatedNormal = instanceData.transformationMatrix * vec4(normal, 0.0);
     var_normal = rotatedNormal.xyz;
 
-    const float tileSize = instanceData.meshProperties.x;
-    const float verticesPerRow = instanceData.meshProperties.y;
-    const float tilesPerRow = verticesPerRow - 1;
-    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    //const float tileSize = instanceData.meshProperties.x;
+    //const float verticesPerRow = instanceData.meshProperties.y;
+    //const float tilesPerRow = verticesPerRow - 1;
+    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    var_texCoord = texCoord;
 
     var_fragPos = translatedPos.xyz;
     var_cameraPos = sceneData.cameraPosition.xyz;

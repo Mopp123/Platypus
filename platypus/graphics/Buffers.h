@@ -91,7 +91,8 @@ namespace platypus
         VertexBufferElement(uint32_t location, ShaderDataType dataType);
         VertexBufferElement(const VertexBufferElement& other);
         VertexBufferElement& operator=(VertexBufferElement&& other);
-        VertexBufferElement& operator=(VertexBufferElement& other);
+        //VertexBufferElement& operator=(VertexBufferElement& other);
+        VertexBufferElement& operator=(const VertexBufferElement& other);
         ~VertexBufferElement();
 
         inline uint32_t getLocation() const { return _location; }
@@ -133,7 +134,8 @@ namespace platypus
         );
         VertexBufferLayout(const VertexBufferLayout& other);
         VertexBufferLayout& operator=(VertexBufferLayout&& other);
-        VertexBufferLayout& operator=(VertexBufferLayout& other);
+        //VertexBufferLayout& operator=(VertexBufferLayout& other);
+        VertexBufferLayout& operator=(const VertexBufferLayout& other);
         ~VertexBufferLayout();
 
         static VertexBufferLayout get_common_static_layout();

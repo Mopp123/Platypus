@@ -64,10 +64,13 @@ namespace platypus
         #endif
 
         createDescriptorSetLayout();
+        createShaderResources();
     }
 
     Material::~Material()
     {
+        destroyShaderResources();
+
         _descriptorSetLayout.destroy();
         // TODO: Unfuck below
         // NOTE: Important that the pipeline gets destroyed before shaders,
@@ -236,6 +239,79 @@ namespace platypus
 
         if (!destroyed)
             warnUnassigned("@Material::destroyPipeline");
+    }
+
+    void Material::createShaderResources()
+    {
+        if (!_uniformBuffers.empty())
+        {
+            Debug::log(
+                "@Material::createShaderResources "
+                "Uniform buffers already exists for Material with ID: " + std::to_string(getID()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        if (!_descriptorSets.empty())
+        {
+            Debug::log(
+                "@Material::createShaderResources "
+                "Descriptor sets already exists for Material with ID: " + std::to_string(getID()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        // Omg this is soo fucking stupid DO SOMETHING ABOUT THIS!
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
+        size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
+        _uniformBuffers.resize(framesInFlight);
+
+        std::vector<Texture*> allTextures = getTextures();
+        std::vector<DescriptorSetComponent> textureComponents(allTextures.size());
+        for (size_t i = 0; i < allTextures.size(); ++i)
+            textureComponents[i] = { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, allTextures[i] };
+
+        for (size_t i = 0; i < framesInFlight; ++i)
+        {
+            Vector4f materialData(_specularStrength, _shininess, (float)_shadeless, 0);
+            Buffer* pUniformBuffer = new Buffer(
+                &materialData,
+                sizeof(Vector4f),
+                1,
+                BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
+                true
+            );
+            _uniformBuffers[i] = pUniformBuffer;
+
+            std::vector<DescriptorSetComponent> components = textureComponents;
+            components.push_back({ DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pUniformBuffer });
+
+            _descriptorSets.push_back(
+                descriptorPool.createDescriptorSet(
+                    _descriptorSetLayout,
+                    components
+                )
+            );
+        }
+    }
+
+    void Material::destroyShaderResources()
+    {
+        for (Buffer* pBuffer : _uniformBuffers)
+            delete pBuffer;
+
+        _uniformBuffers.clear();
+
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
+        descriptorPool.freeDescriptorSets(_descriptorSets);
+        _descriptorSets.clear();
     }
 
     Texture* Material::getBlendmapTexture() const
@@ -431,6 +507,7 @@ namespace platypus
         // vertex shader: "StaticVertexShader", "StaticVertexShader_tangent", "SkinnedVertexShader"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
         std::string shaderName = "";
+        shadow = false;
         if (shadow)
         {
             shaderName += "shadows/";

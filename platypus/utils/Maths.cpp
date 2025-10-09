@@ -116,6 +116,11 @@ namespace platypus
         return { x + other.x, y + other.y, z + other.z, w + other.w };
     }
 
+    Vector4f Vector4f::operator-(const Vector4f& other) const
+    {
+        return { x - other.x, y - other.y, z - other.z, w - other.w };
+    }
+
     Vector4f Vector4f::operator*(const Vector4f& other) const
     {
         return { x * other.x, y * other.y, z * other.z, w * other.w };
