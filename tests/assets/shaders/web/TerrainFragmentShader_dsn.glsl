@@ -37,18 +37,27 @@ uniform sampler2D normalTextureChannel4;
 // NOTE: Not sure if need to pass that kind of material stuff here just yet
 struct MaterialData
 {
-    vec4 data;
     // x = specular strength
     // y = shininess
     // z = is shadeless
-    // w = dunno...
+    // w = unused
+    vec4 lightingProperties;
+
+    // x,y = texture offset
+    // z,w = texture scale
+    vec4 textureProperties;
 };
 uniform MaterialData materialData;
 
 
 void main()
 {
-    vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
+    // NOTE: Not sure should offset be added to original coord or tiled coord...
+    //  -> would be nice to be able to affect both separately!
+    //vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
+    vec2 tiledCoord = var_texCoord * materialData.textureProperties.zw;
+    tiledCoord = tiledCoord + materialData.textureProperties.xy;
+
     vec4 blendmapColor = texture2D(blendmapTexture, var_texCoord);
     float transparency = 1.0 - blendmapColor.a;
     float blackAmount = max(1.0 - blendmapColor.r - blendmapColor.g - blendmapColor.b - transparency, 0.0);
@@ -76,9 +85,9 @@ void main()
     vec4 totalSpecularColor = specularChannel0Color + specularChannel1Color + specularChannel2Color + specularChannel3Color + specularChannel4Color;
     vec4 totalNormalColor = normalChannel0Color + normalChannel1Color + normalChannel2Color + normalChannel3Color + normalChannel4Color;
 
-    float specularStrength = materialData.data.x;
-    float shininess = materialData.data.y;
-    float isShadeless = materialData.data.z;
+    float specularStrength = materialData.lightingProperties.x;
+    float shininess = materialData.lightingProperties.y;
+    float isShadeless = materialData.lightingProperties.z;
 
     // Make it between -1 and 1
     vec3 normalMapNormal = totalNormalColor.rgb * 2.0 - 1.0;

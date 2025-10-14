@@ -37,11 +37,15 @@ layout(set = 2, binding = 15) uniform sampler2D normalTextureChannel4;
 // NOTE: Not sure if need to pass that kind of material stuff here just yet
 layout(set = 2, binding = 16) uniform MaterialData
 {
-    vec4 data;
     // x = specular strength
     // y = shininess
     // z = is shadeless
-    // w = dunno...
+    // w = unused
+    vec4 lightingProperties;
+
+    // x,y = texture offset
+    // z,w = texture scale
+    vec4 textureProperties;
 } materialData;
 
 
@@ -77,9 +81,9 @@ void main()
     vec4 totalSpecularColor = specularChannel0Color + specularChannel1Color + specularChannel2Color + specularChannel3Color + specularChannel4Color;
     vec4 totalNormalColor = normalChannel0Color + normalChannel1Color + normalChannel2Color + normalChannel3Color + normalChannel4Color;
 
-    float specularStrength = materialData.data.x;
-    float shininess = materialData.data.y;
-    float isShadeless = materialData.data.z;
+    float specularStrength = materialData.lightingProperties.x;
+    float shininess = materialData.lightingProperties.y;
+    float isShadeless = materialData.lightingProperties.z;
 
     // Make it between -1 and 1
     vec3 normalMapNormal = totalNormalColor.rgb * 2.0 - 1.0;

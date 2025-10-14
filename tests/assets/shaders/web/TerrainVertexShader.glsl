@@ -2,6 +2,7 @@ precision mediump float;
 
 attribute vec3 position;
 attribute vec3 normal;
+attribute vec2 texCoord;
 
 struct SceneData
 {
@@ -42,10 +43,11 @@ void main()
     vec4 rotatedNormal = instanceData.transformationMatrix * vec4(normal, 0.0);
     var_normal = rotatedNormal.xyz;
 
-    float tileSize = instanceData.meshProperties.x;
-    float verticesPerRow = instanceData.meshProperties.y;
-    float tilesPerRow = verticesPerRow - 1.0;
-    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    //float tileSize = instanceData.meshProperties.x;
+    //float verticesPerRow = instanceData.meshProperties.y;
+    //float tilesPerRow = verticesPerRow - 1.0;
+    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    var_texCoord = texCoord;
 
     var_fragPos = translatedPos.xyz;
     var_cameraPos = sceneData.cameraPosition.xyz;

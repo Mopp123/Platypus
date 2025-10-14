@@ -12,22 +12,29 @@ uniform sampler2D diffuseTextureSampler;
 uniform sampler2D specularTextureSampler;
 struct MaterialData
 {
-    vec4 data;
     // x = specular strength
     // y = shininess
     // z = is shadeless
-    // w = dunno...
+    // w = unused
+    vec4 lightingProperties;
+
+    // x,y = texture offset
+    // z,w = texture scale
+    vec4 textureProperties;
 };
 uniform MaterialData materialData;
 
-void main() {
+void main()
+{
+    vec2 finalTexCoord = var_texCoord * materialData.textureProperties.zw;
+    finalTexCoord = finalTexCoord + materialData.textureProperties.xy;
 
-    vec4 diffuseTextureColor = texture2D(diffuseTextureSampler, var_texCoord);
-    vec4 specularTextureColor = texture2D(specularTextureSampler, var_texCoord);
+    vec4 diffuseTextureColor = texture2D(diffuseTextureSampler, finalTexCoord);
+    vec4 specularTextureColor = texture2D(specularTextureSampler, finalTexCoord);
 
-    float specularStrength = materialData.data.x;
-    float shininess = materialData.data.y;
-    float isShadeless = materialData.data.z;
+    float specularStrength = materialData.lightingProperties.x;
+    float shininess = materialData.lightingProperties.y;
+    float isShadeless = materialData.lightingProperties.z;
 
     vec3 unitLightDir = normalize(var_lightDir.xyz);
     vec3 toLight = -unitLightDir;

@@ -127,12 +127,17 @@ void BaseScene::updateBase()
 
 Material* BaseScene::createMeshMaterial(
     AssetManager* pAssetManager,
-    std::string textureFilepath
+    std::string textureFilepath,
+    bool repeatTexture
 )
 {
+    TextureSamplerAddressMode addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    if (repeatTexture)
+        addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT;
+
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
-        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        addressMode,
         true,
         0
     );

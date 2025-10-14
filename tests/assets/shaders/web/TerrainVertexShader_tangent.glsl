@@ -2,7 +2,8 @@ precision mediump float;
 
 attribute vec3 position;
 attribute vec3 normal;
-attribute vec3 tangent;
+attribute vec2 texCoord;
+attribute vec4 tangent;
 
 struct SceneData
 {
@@ -57,10 +58,11 @@ void main()
     vec4 transformedPos = instanceData.transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;
 
-    float tileSize = instanceData.meshProperties.x;
-    float verticesPerRow = instanceData.meshProperties.y;
-    float tilesPerRow = verticesPerRow - 1.0;
-    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    //float tileSize = instanceData.meshProperties.x;
+    //float verticesPerRow = instanceData.meshProperties.y;
+    //float tilesPerRow = verticesPerRow - 1.0;
+    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    var_texCoord = texCoord;
 
     var_fragPos = transformedPos.xyz;
 

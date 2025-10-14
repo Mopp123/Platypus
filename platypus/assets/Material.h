@@ -32,6 +32,14 @@ namespace platypus
         }
     };
 
+    struct MaterialUniformBufferData
+    {
+        // x = specular strength, y = shininess, z = is shadeless, w = undefined for now
+        Vector4f lightingProperties;
+        // x,y = texture offset, z,w = texture scale
+        Vector4f textureProperties;
+    };
+
     class Material : public Asset
     {
     private:
@@ -44,15 +52,14 @@ namespace platypus
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
 
-        float _specularStrength;
-        float _shininess;
-        bool _shadeless = false;
-
         // TODO: Some map or something, containing all different pipelines instead of this mess...
         MaterialPipelineData* _pPipelineData = nullptr;
         MaterialPipelineData* _pShadowPipelineData = nullptr;
         MaterialPipelineData* _pSkinnedPipelineData = nullptr;
         MaterialPipelineData* _pSkinnedShadowPipelineData = nullptr;
+
+        // TODO: Material instance
+        MaterialUniformBufferData _uniformBufferData;
 
         DescriptorSetLayout _descriptorSetLayout;
         std::vector<Buffer*> _uniformBuffers;
@@ -95,6 +102,9 @@ namespace platypus
         Texture* getNormalTexture(size_t channel) const;
         std::vector<Texture*> getTextures() const;
 
+        void setLightingProperties(float specularStrength, float shininess, bool shadeless);
+        void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
+
         // *Fuckin dumb, I know... just need to differentiate Asset type and Material type atm...
         inline MaterialType getMaterialType() const { return _type; }
 
@@ -104,9 +114,11 @@ namespace platypus
         {
             return _diffuseTextureCount + _specularTextureCount + _normalTextureCount + (_blendmapTextureID != NULL_ID ? 1 : 0);
         }
-        inline float getSpecularStrength() const { return _specularStrength; }
-        inline float getShininess() const { return _shininess; }
-        inline bool isShadeless() const { return _shadeless; }
+        inline float getSpecularStrength() const { return _uniformBufferData.lightingProperties.x; }
+        inline float getShininess() const { return _uniformBufferData.lightingProperties.y; }
+        inline bool isShadeless() const { return _uniformBufferData.lightingProperties.z; }
+        inline Vector2f getTextureOffset() const { return { _uniformBufferData.textureProperties.x, _uniformBufferData.textureProperties.y }; }
+        inline Vector2f getTextureScale() const { return { _uniformBufferData.textureProperties.z, _uniformBufferData.textureProperties.w };; }
 
         inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
         inline const MaterialPipelineData* getShadowPipelineData() { return _pShadowPipelineData; }
@@ -127,6 +139,9 @@ namespace platypus
     private:
         void validateTextureCounts();
         void createDescriptorSetLayout();
+        // NOTE: This updates all uniform buffers for all possible frames in flight,
+        // not sure should we be doing that here...
+        void updateUniformBuffers();
 
         // Returns compiled shader filename depending on given properties
         std::string getShaderFilename(uint32_t shaderStage, bool skinned, bool shadow);

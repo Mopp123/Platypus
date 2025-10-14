@@ -26,10 +26,7 @@ namespace platypus
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
-        _normalTextureCount(normalTextureCount),
-        _specularStrength(specularStrength),
-        _shininess(shininess),
-        _shadeless(shadeless)
+        _normalTextureCount(normalTextureCount)
     {
         validateTextureCounts();
 
@@ -41,6 +38,14 @@ namespace platypus
         memcpy(_specularTextureIDs, pSpecularTextureIDs, sizeof(ID_t) * _specularTextureCount);
         memcpy(_normalTextureIDs, pNormalTextureIDs, sizeof(ID_t) * _normalTextureCount);
 
+        _uniformBufferData.lightingProperties.x = specularStrength;
+        _uniformBufferData.lightingProperties.y = shininess;
+        _uniformBufferData.lightingProperties.z = shadeless;
+        _uniformBufferData.lightingProperties.w = 0.0f;
+        _uniformBufferData.textureProperties.x = 0.0f;
+        _uniformBufferData.textureProperties.y = 0.0f;
+        _uniformBufferData.textureProperties.z = 1.0f;
+        _uniformBufferData.textureProperties.w = 1.0f;
         // Make sure not to use SRGB textures for normal maps.
         // ...so u don't waste a fuckload of time figuring out why the normals are fucked again:D
         // NOTE: This probably should be checked in "no debug" too?
@@ -278,10 +283,9 @@ namespace platypus
 
         for (size_t i = 0; i < framesInFlight; ++i)
         {
-            Vector4f materialData(_specularStrength, _shininess, (float)_shadeless, 0);
             Buffer* pUniformBuffer = new Buffer(
-                &materialData,
-                sizeof(Vector4f),
+                &_uniformBufferData,
+                sizeof(MaterialUniformBufferData),
                 1,
                 BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
@@ -411,6 +415,23 @@ namespace platypus
         return textures;
     }
 
+    void Material::setLightingProperties(float specularStrength, float shininess, bool shadeless)
+    {
+        _uniformBufferData.lightingProperties.x = specularStrength;
+        _uniformBufferData.lightingProperties.y = shininess;
+        _uniformBufferData.lightingProperties.z = (float)shadeless;
+        updateUniformBuffers();
+    }
+
+    void Material::setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale)
+    {
+        _uniformBufferData.textureProperties.x = textureOffset.x;
+        _uniformBufferData.textureProperties.y = textureOffset.y;
+        _uniformBufferData.textureProperties.z = textureScale.x;
+        _uniformBufferData.textureProperties.w = textureScale.y;
+        updateUniformBuffers();
+    }
+
     void Material::warnUnassigned(const std::string& beginStr)
     {
         Debug::log(
@@ -491,12 +512,34 @@ namespace platypus
                 1,
                 DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                { { ShaderDataType::Float4 } }
+                {
+                    { ShaderDataType::Float4 }, // x = specular strength, y = shininess, z = is shadeless, w = undefined for now
+                    { ShaderDataType::Float4 } // x,y = texture offset, z,w = texture scale
+                }
             }
         );
         _descriptorSetLayout = {
             layoutBindings
         };
+    }
+
+    // NOTE: This updates all uniform buffers for all possible frames in flight,
+    // not sure should we be doing that here...
+    void Material::updateUniformBuffers()
+    {
+        if (_uniformBuffers.empty())
+        {
+            Debug::log(
+                "@Material::updateUniformBuffers "
+                "No uniform buffers exists for Material with ID: " + std::to_string(getID()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        for (Buffer* pBuffer : _uniformBuffers)
+            pBuffer->updateDeviceAndHost(&_uniformBufferData, sizeof(MaterialUniformBufferData), 0);
     }
 
     // TODO: This is a convoluted mess -> make cleaner!

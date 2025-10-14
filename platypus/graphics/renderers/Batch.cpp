@@ -651,6 +651,9 @@ namespace platypus
                     // Update material properties if resource was marked as Material
                     if (shaderResource.type == ShaderResourceType::MATERIAL && pBatch->materialAssetID != NULL_ID)
                     {
+                        // NOTE: Currently shouldn't be using this!
+                        PLATYPUS_ASSERT(false);
+
                         Vector4f materialProperties(0, 0, 0, 0);
                         Material* pMaterial = (Material*)pAssetManager->getAsset(
                             pBatch->materialAssetID,

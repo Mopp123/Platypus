@@ -35,7 +35,8 @@ public:
 
     platypus::Material* createMeshMaterial(
         platypus::AssetManager* pAssetManager,
-        std::string textureFilepath
+        std::string textureFilepath,
+        bool repeatTexture = false
     );
 
     entityID_t createStaticMeshEntity(
