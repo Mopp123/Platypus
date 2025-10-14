@@ -71,12 +71,12 @@ namespace platypus
     }
 
     // JUST TESTING
-    ID_t Batcher::createBatch(ID_t meshID, ID_t materialID)
+    ID_t Batcher::createBatch(ID_t meshID, ID_t materialID, ComponentType renderableType)
     {
         // *Assuming Material has ability to create its own shader resources by itself
 
         // 1.Make sure Mesh and Material assets exist?
-        // 2.Trigger the material to create its shader resources if doesn't exist yet
+        // 2.Create batch specific vertex buffer(s) if needed
         // 3.Figure out "unique batch shader resource layout" and create that
         // 4.Figure out how to combine the used descriptor sets
         // 5.Create the actual batch
@@ -90,25 +90,24 @@ namespace platypus
         const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID);
+        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+        Pipeline* pMaterialPipeline = pMaterial->getPipeline(renderableType);
         VertexBufferLayout meshVertexBufferLayout = pMesh->getVertexBufferLayout();
         Buffer* pMeshVertexBuffer = pMesh->getVertexBuffer();
         const Buffer* pMeshIndexBuffer = pMesh->getIndexBuffer();
-        bool skinnedMesh = pMesh->hasBindPose();
-        // TODO: Do something about this whole terrain material fuckery -> some better way to identify which batch were creating here!!
-        bool instancedMesh = !skinnedMesh && pMaterial->getMaterialType() != MaterialType::TERRAIN;
 
         std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
-
         std::vector<ShaderResourceLayout> shaderResourceCreationLayouts;
 
         size_t dynamicUniformBufferElementSize = 0;
         // For now all 3D rendering takes scene 3D descriptor sets
-        std::vector<std::vector<DescriptorSet>> usedDescriptorSets = { _masterRendererRef.getScene3DDataDescriptorSets() };
+        std::vector<std::vector<DescriptorSet>> usedDescriptorSets = {
+            _masterRendererRef.getScene3DDataDescriptorSets()
+        };
 
         size_t maxBatchLength = 0;
-        if (instancedMesh)
+        if (renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE)
         {
             dynamicVertexBuffers.resize(1);
             dynamicVertexBuffers[0].resize(framesInFlight);
@@ -121,8 +120,7 @@ namespace platypus
                 dynamicVertexBuffers[0]
             );
         }
-
-        if (skinnedMesh)
+        else if (renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE)
         {
             maxBatchLength = _maxSkinnedBatchLength;
             dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
@@ -135,8 +133,7 @@ namespace platypus
                 { }
             });
         }
-
-        if (pMaterial->getMaterialType() == MaterialType::TERRAIN)
+        else if (renderableType == ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE)
         {
             maxBatchLength = _maxTerrainBatchLength;
             dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
@@ -148,30 +145,6 @@ namespace platypus
                 s_terrainDescriptorSetLayout,
                 { }
             });
-        }
-
-        Pipeline* pMaterialPipeline = nullptr;
-        if (!skinnedMesh && pMaterial->getPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline(
-                _masterRendererRef.getSwapchain().getRenderPassPtr(),
-                meshVertexBufferLayout,
-                instancedMesh,
-                skinnedMesh,
-                false // shadow pipeline
-            );
-            pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-        }
-        else if (skinnedMesh && pMaterial->getSkinnedPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline(
-                _masterRendererRef.getSwapchain().getRenderPassPtr(),
-                meshVertexBufferLayout,
-                instancedMesh,
-                skinnedMesh,
-                false // shadow pipeline
-            );
-            pMaterialPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
         }
 
         if (!shaderResourceCreationLayouts.empty())
@@ -220,307 +193,6 @@ namespace platypus
         _identifierBatchMapping[identifier] = _batches.size();
         _batches.push_back(pBatch);
 
-        return identifier;
-    }
-
-    // NOTE: Could even create the pipelines dynamically here, so wouldn't require having those inside
-    // Material anymore?
-    ID_t Batcher::createStaticBatch(ID_t meshID, ID_t materialID)
-    {
-        ID_t identifier = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
-        {
-            return NULL_ID;
-        }
-
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pMaterialPipeline = nullptr;
-        Pipeline* pMaterialShadowPipeline = nullptr;
-        if (pMaterial->getPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline(
-                _masterRendererRef.getSwapchain().getRenderPassPtr(),
-                pMesh->getVertexBufferLayout(),
-                true, // instanced
-                false, // skinned
-                false // shadow pipeline
-            );
-        }
-
-        if (pMaterial->getShadowPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline(
-                &_masterRendererRef.getTestRenderPass(),
-                pMesh->getVertexBufferLayout(),
-                true, // instanced
-                false, // skinned
-                true // shadow pipeline
-            );
-        }
-
-        pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-        pMaterialShadowPipeline = pMaterial->getShadowPipelineData()->pPipeline;
-
-        // Create the instanced transforms buffer
-        const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        std::vector<Buffer*> transformBuffers(framesInFlight);
-        createBatchInstancedBuffers(
-            identifier,
-            sizeof(Matrix4f),
-            _maxStaticBatchLength,
-            framesInFlight,
-            transformBuffers
-        );
-
-        // TODO: Some better way to deal with this?
-        const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
-        validateDescriptorSetCounts(
-            PLATYPUS_CURRENT_FUNC_NAME,
-            framesInFlight,
-            commonDescriptorSets.size(),
-            materialDescriptorSets.size()
-        );
-
-        std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
-            framesInFlight,
-            {
-                commonDescriptorSets,
-                materialDescriptorSets
-            },
-            useDescriptorSets
-        );
-
-        Batch* pBatch = new Batch{
-            BatchType::STATIC_INSTANCED,
-            pMaterialPipeline,
-            pMaterialShadowPipeline,
-            useDescriptorSets,
-            0, // dynamic uniform buffer element size
-            { pMesh->getVertexBuffer() },
-            { transformBuffers },
-            pMesh->getIndexBuffer(),
-            0, // push constants size
-            { }, // push constant uniform infos
-            nullptr, // push constants data
-            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
-            1, // repeat count
-            0, // instance count
-            materialID // materialAssetID
-        };
-
-        // TODO: Optimize? Maybe preallocate and don't push?
-        _identifierBatchMapping[identifier] = _batches.size();
-        _batches.push_back(pBatch);
-        return identifier;
-    }
-
-    ID_t Batcher::createSkinnedBatch(ID_t meshID, ID_t materialID)
-    {
-        ID_t identifier = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
-        {
-            return NULL_ID;
-        }
-
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pMaterialSkinnedPipeline = nullptr;
-        if (pMaterial->getSkinnedPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline(
-                _masterRendererRef.getSwapchain().getRenderPassPtr(),
-                pMesh->getVertexBufferLayout(),
-                false, // instanced
-                true, // skinned
-                false // shadow pipeline
-            );
-        }
-
-        pMaterialSkinnedPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
-
-        // Create joint uniform buffer and descriptor sets
-        size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        size_t dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
-            sizeof(Matrix4f) * _maxSkinnedMeshJoints
-        );
-
-        std::vector<BatchShaderResource> shaderResources(1);
-        createBatchShaderResources(
-            framesInFlight,
-            identifier,
-            _maxSkinnedBatchLength,
-            {
-                {
-                    ShaderResourceType::ANY,
-                    dynamicUniformBufferElementSize,
-                    s_jointDescriptorSetLayout,
-                    { }
-                }
-            },
-            shaderResources
-        );
-
-        // TODO: Some better way to deal with this?
-        const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
-        validateDescriptorSetCounts(
-            PLATYPUS_CURRENT_FUNC_NAME,
-            framesInFlight,
-            commonDescriptorSets.size(),
-            shaderResources[0].descriptorSet.size(),
-            materialDescriptorSets.size()
-        );
-
-        std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
-            framesInFlight,
-            {
-                commonDescriptorSets,
-                shaderResources[0].descriptorSet,
-                materialDescriptorSets
-            },
-            useDescriptorSets
-        );
-
-        Batch* pBatch = new Batch{
-            BatchType::SKINNED,
-            pMaterialSkinnedPipeline,
-            nullptr,
-            useDescriptorSets,
-            (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
-            { pMesh->getVertexBuffer() },
-            { }, // dynamic/instanced vertex buffers
-            pMesh->getIndexBuffer(),
-            0, // push constants size
-            { }, // push constant uniform infos
-            nullptr, // push constants data
-            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
-            0, // repeat count
-            0, // instance count
-            materialID // materialAssetID
-        };
-
-        // TODO: Optimize? Maybe preallocate and don't push?
-        _identifierBatchMapping[identifier] = _batches.size();
-        _batches.push_back(pBatch);
-        return identifier;
-    }
-
-    ID_t Batcher::createTerrainBatch(
-        ID_t terrainMeshID,
-        ID_t materialID,
-        const RenderPass& offscreenRenderPass
-    )
-    {
-        ID_t identifier = ID::hash(terrainMeshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
-        {
-            return NULL_ID;
-        }
-
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_MESH);
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pMaterialPipeline = nullptr;
-        Pipeline* pMaterialShadowPipeline = nullptr;
-        if (pMaterial->getPipelineData() == nullptr)
-        {
-            pMaterial->createPipeline(
-                _masterRendererRef.getSwapchain().getRenderPassPtr(),
-                pMesh->getVertexBufferLayout(),
-                false, // instanced
-                false, // skinned
-                false // shadow pipeline
-            );
-        }
-
-        //if (pMaterial->getShadowPipelineData() == nullptr)
-        //{
-        //    pMaterial->createPipeline(
-        //        &_masterRendererRef.getTestRenderPass(),
-        //        pMesh->getVertexBufferLayout(),
-        //        false, // instanced
-        //        false, // skinned
-        //        true // shadow pipeline
-        //    );
-        //}
-
-        pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-        //pMaterialShadowPipeline = pMaterial->getShadowPipelineData()->pPipeline;
-
-        // Create uniform buffers holding transformation matrix, tile size
-        // and vertices. Also create descriptor sets for these
-        // TODO: Some place to store the element size of the buffer
-        //  -> might become issue when the elem size changes!
-        size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        size_t dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
-            sizeof(Matrix4f) + sizeof(Vector2f)
-        );
-
-        std::vector<BatchShaderResource> shaderResources(1);
-        createBatchShaderResources(
-            framesInFlight,
-            identifier,
-            _maxTerrainBatchLength,
-            {
-                {
-                    ShaderResourceType::ANY,
-                    dynamicUniformBufferElementSize,
-                    s_terrainDescriptorSetLayout,
-                    { }
-                }
-            },
-            shaderResources
-        );
-
-        // TODO: Some better way to deal with these?
-        const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        const std::vector<DescriptorSet>& materialDescriptorSets = pMaterial->getDescriptorSets();
-        validateDescriptorSetCounts(
-            PLATYPUS_CURRENT_FUNC_NAME,
-            framesInFlight,
-            commonDescriptorSets.size(),
-            shaderResources[0].descriptorSet.size(),
-            materialDescriptorSets.size()
-        );
-
-        std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
-            framesInFlight,
-            {
-                commonDescriptorSets,
-                shaderResources[0].descriptorSet,
-                materialDescriptorSets
-            },
-            useDescriptorSets
-        );
-
-        Batch* pBatch = new Batch{
-            BatchType::TERRAIN,
-            pMaterialPipeline,
-            nullptr,//pMaterialShadowPipeline,
-            useDescriptorSets,
-            (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
-            { pMesh->getVertexBuffer() },
-            { }, // dynamic/instanced vertex buffers
-            pMesh->getIndexBuffer(),
-            0, // push constants size
-            { }, // push constant uniform infos
-            nullptr, // push constants data
-            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
-            0, // repeat count
-            0, // instance count,
-            materialID // materialAssetID
-        };
-
-        // TODO: Optimize? Maybe preallocate and don't push?
-        _identifierBatchMapping[identifier] = _batches.size();
-        _batches.push_back(pBatch);
         return identifier;
     }
 

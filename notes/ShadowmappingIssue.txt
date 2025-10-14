@@ -29,3 +29,6 @@ Unique batch creation properties:
     *pipeline creation args
     *"unique batch buffer" creation description (shader resources, assuming that Material already has its shader resources figured out)
     *descriptor set combination "description" (in order to get necessary descriptor sets into a single container, in order to know at cmd buf record time all descriptor sets in order to use)
+
+
+--- TODAY ---

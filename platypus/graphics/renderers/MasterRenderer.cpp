@@ -130,7 +130,11 @@ namespace platypus
                     "No suitable batch found for StaticMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createBatch(meshID, materialID);
+                batchID = _batcher.createBatch(
+                    meshID,
+                    materialID,
+                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
+                );
             }
             _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
         }
@@ -153,7 +157,11 @@ namespace platypus
                     "No suitable batch found for SkinnedMeshRenderable. Creating a new one..."
                 );
                 // TODO: Error handling if creation fails
-                batchID = _batcher.createBatch(meshID, materialID);
+                batchID = _batcher.createBatch(
+                    meshID,
+                    materialID,
+                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
+                );
             }
 
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
@@ -193,7 +201,8 @@ namespace platypus
                 // TODO: Error handling if creation fails
                 batchID = _batcher.createBatch(
                     meshID,
-                    materialID
+                    materialID,
+                    ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE
                 );
             }
 

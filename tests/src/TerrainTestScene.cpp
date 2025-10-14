@@ -122,7 +122,7 @@ void TerrainTestScene::init()
         pBlendmapTexture->getID(),
         diffuseTextures,
         specularTextures,
-        {}, //normalTextures,
+        normalTextures,
         0.625f,
         32.0f
     );

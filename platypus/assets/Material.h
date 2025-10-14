@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
+#include "platypus/ecs/components/Component.h"
 #include <unordered_map>
 
 #define PE_MAX_MATERIAL_TEX_CHANNELS 5
@@ -43,7 +44,7 @@ namespace platypus
     class Material : public Asset
     {
     private:
-        MaterialType _type;
+        MaterialType _materialType;
         ID_t _blendmapTextureID = NULL_ID;
         ID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
         ID_t _specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
@@ -53,6 +54,9 @@ namespace platypus
         size_t _normalTextureCount = 0;
 
         // TODO: Some map or something, containing all different pipelines instead of this mess...
+        const size_t _supportedRenderableCount = 3;
+        std::unordered_map<ComponentType, MaterialPipelineData*> _pipelines;
+
         MaterialPipelineData* _pPipelineData = nullptr;
         MaterialPipelineData* _pShadowPipelineData = nullptr;
         MaterialPipelineData* _pSkinnedPipelineData = nullptr;
@@ -81,6 +85,12 @@ namespace platypus
         );
         ~Material();
 
+
+        void createPipeline(
+            const RenderPass* pRenderPass,
+            ComponentType renderableType,
+            bool shadowPipeline
+        );
         // TODO: Unfuck this mess plz!
         void createPipeline(
             const RenderPass* pRenderPass,
@@ -105,8 +115,10 @@ namespace platypus
         void setLightingProperties(float specularStrength, float shininess, bool shadeless);
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
 
+        Pipeline* getPipeline(ComponentType renderableType);
+
         // *Fuckin dumb, I know... just need to differentiate Asset type and Material type atm...
-        inline MaterialType getMaterialType() const { return _type; }
+        inline MaterialType getMaterialType() const { return _materialType; }
 
         inline bool hasNormalMap() const { return _normalTextureIDs[0] != NULL_ID; }
 
@@ -144,6 +156,7 @@ namespace platypus
         void updateUniformBuffers();
 
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, bool skinned, bool shadow);
+        std::string getShaderFilename(uint32_t shaderStage, bool skinned, bool shadow); // TODO: delete this one?
+        std::string getShaderFilename(uint32_t shaderStage, ComponentType renderableType, bool shadow);
     };
 }

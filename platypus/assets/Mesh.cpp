@@ -71,12 +71,13 @@ namespace platypus
         }
 
         // Quite dumb... fix plz?
-        std::vector<VertexBufferElement> vertexBufferLayoutElements(generateTangents ? 4 : 3);
-        vertexBufferLayoutElements[0] = { 0, ShaderDataType::Float3 };
-        vertexBufferLayoutElements[1] = { 1, ShaderDataType::Float3 };
-        vertexBufferLayoutElements[2] = { 2, ShaderDataType::Float2 };
-        if (generateTangents)
-            vertexBufferLayoutElements[3] = { 3, ShaderDataType::Float4 };
+        // NOTE: This isn't used anymore? -> remove?
+        //std::vector<VertexBufferElement> vertexBufferLayoutElements(generateTangents ? 4 : 3);
+        //vertexBufferLayoutElements[0] = { 0, ShaderDataType::Float3 };
+        //vertexBufferLayoutElements[1] = { 1, ShaderDataType::Float3 };
+        //vertexBufferLayoutElements[2] = { 2, ShaderDataType::Float2 };
+        //if (generateTangents)
+        //    vertexBufferLayoutElements[3] = { 3, ShaderDataType::Float4 };
 
 		size_t verticesPerRow = sqrt(heightmapData.size());
         size_t tilesPerRow = verticesPerRow - 1;

@@ -53,7 +53,12 @@ layout(location = 0) out vec4 fragColor;
 
 void main()
 {
-    vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
+    // NOTE: Not sure should offset be added to original coord or tiled coord...
+    //  -> would be nice to be able to affect both separately!
+    //vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
+    vec2 tiledCoord = var_texCoord * materialData.textureProperties.zw;
+    tiledCoord = tiledCoord + materialData.textureProperties.xy;
+
     vec4 blendmapColor = texture(blendmapTexture, var_texCoord);
     float transparency = 1.0 - blendmapColor.a;
     float blackAmount = max(1.0 - blendmapColor.r - blendmapColor.g - blendmapColor.b - transparency, 0.0);
