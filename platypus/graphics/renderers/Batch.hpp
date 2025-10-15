@@ -67,7 +67,7 @@ namespace platypus
         uint32_t repeatCount = 0;
         // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
         uint32_t instanceCount = 0;
-        ID_t materialAssetID = NULL_ID;
+        ID_t materialAssetID = NULL_ID; // NOTE: This shouldn't be needed anymore by the batch?!
     };
 
     class MasterRenderer;

@@ -186,7 +186,7 @@ namespace platypus
             ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
             0, // repeat count
             0, // instance count,
-            materialID // materialAssetID
+            materialID // materialAssetID NOTE: This shouldn't be needed anymore by the batch?!
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?

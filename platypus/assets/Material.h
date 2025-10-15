@@ -45,6 +45,7 @@ namespace platypus
     {
     private:
         MaterialType _materialType;
+        // NOTE: Do these really need to be like this?
         ID_t _blendmapTextureID = NULL_ID;
         ID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
         ID_t _specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
@@ -53,14 +54,7 @@ namespace platypus
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
 
-        // TODO: Some map or something, containing all different pipelines instead of this mess...
-        const size_t _supportedRenderableCount = 3;
         std::unordered_map<ComponentType, MaterialPipelineData*> _pipelines;
-
-        MaterialPipelineData* _pPipelineData = nullptr;
-        MaterialPipelineData* _pShadowPipelineData = nullptr;
-        MaterialPipelineData* _pSkinnedPipelineData = nullptr;
-        MaterialPipelineData* _pSkinnedShadowPipelineData = nullptr;
 
         // TODO: Material instance
         MaterialUniformBufferData _uniformBufferData;
@@ -84,7 +78,6 @@ namespace platypus
             bool shadeless = false
         );
         ~Material();
-
 
         void createPipeline(
             const RenderPass* pRenderPass,
@@ -132,19 +125,8 @@ namespace platypus
         inline Vector2f getTextureOffset() const { return { _uniformBufferData.textureProperties.x, _uniformBufferData.textureProperties.y }; }
         inline Vector2f getTextureScale() const { return { _uniformBufferData.textureProperties.z, _uniformBufferData.textureProperties.w };; }
 
-        inline const MaterialPipelineData* getPipelineData() { return _pPipelineData; }
-        inline const MaterialPipelineData* getShadowPipelineData() { return _pShadowPipelineData; }
-        inline const MaterialPipelineData* getSkinnedPipelineData() { return _pSkinnedPipelineData; }
-        inline const MaterialPipelineData* getSkinnedShadowPipelineData() { return _pSkinnedShadowPipelineData; }
-
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
         inline const std::vector<DescriptorSet> getDescriptorSets() const { return _descriptorSets; }
-
-        inline const Shader* getVertexShader() const { return _pPipelineData->pVertexShader; }
-        inline const Shader* getFragmentShader() const { return _pPipelineData->pFragmentShader; }
-
-        inline const Shader* getSkinnedVertexShader() const { return _pSkinnedPipelineData->pVertexShader; }
-        inline const Shader* getSkinnedFragmentShader() const { return _pSkinnedPipelineData->pFragmentShader; }
 
         void warnUnassigned(const std::string& beginStr);
 
@@ -156,7 +138,6 @@ namespace platypus
         void updateUniformBuffers();
 
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, bool skinned, bool shadow); // TODO: delete this one?
         std::string getShaderFilename(uint32_t shaderStage, ComponentType renderableType, bool shadow);
     };
 }
