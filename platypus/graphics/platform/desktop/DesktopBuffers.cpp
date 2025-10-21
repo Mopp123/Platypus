@@ -198,13 +198,16 @@ namespace platypus
     VertexBufferLayout::VertexBufferLayout(
         const std::vector<VertexBufferElement>& elements,
         VertexInputRate inputRate,
-        uint32_t binding
+        uint32_t binding,
+        int32_t overrideStride
     ) :
         _inputRate(inputRate)
     {
         _pImpl = new VertexBufferLayoutImpl;
         _pImpl->bindingDescription.binding = binding;
         _pImpl->bindingDescription.inputRate = to_vk_vertex_input_rate(inputRate);
+
+        uint32_t elementOffset = 0;
         for (const VertexBufferElement& element : elements)
         {
             ShaderDataType elemType = element.getType();
@@ -217,16 +220,22 @@ namespace platypus
             VkVertexInputAttributeDescription& attribDescRef = cpyElem._pImpl->attribDescription;
             attribDescRef.binding = binding;
             attribDescRef.location = cpyElem.getLocation();
-            attribDescRef.offset = _stride; // *the "current stride", where we havent yet added this attribute's size.. that IS the offset..
+            attribDescRef.offset = elementOffset;
             attribDescRef.format = to_vk_format_from_shader_datatype(elemType);
 
-            _stride += (uint32_t)elemSize;
+            elementOffset += (uint32_t)elemSize;
 
             _elements.push_back(cpyElem);
         }
+        if (overrideStride != -1)
+            _stride = overrideStride;
+        else
+            _stride = elementOffset; // last elem offset at this point..
+
         _pImpl->bindingDescription.stride = _stride;
     }
 
+    /*
     VertexBufferLayout::VertexBufferLayout(
         VertexBufferElement element,
         VertexInputRate inputRate,
@@ -256,12 +265,14 @@ namespace platypus
 
         _pImpl->bindingDescription.stride = _stride;
     }
+    */
 
     VertexBufferLayout::VertexBufferLayout(const VertexBufferLayout& other) :
         VertexBufferLayout(
             other._elements,
             other._inputRate,
-            other._pImpl->bindingDescription.binding
+            other._pImpl->bindingDescription.binding,
+            other._stride
         )
     {
     }
@@ -279,6 +290,7 @@ namespace platypus
         _pImpl = new VertexBufferLayoutImpl;
         _pImpl->bindingDescription.binding = other._pImpl->bindingDescription.binding;
         _pImpl->bindingDescription.inputRate = other._pImpl->bindingDescription.inputRate;
+        _pImpl->bindingDescription.stride = _stride;
 
         return *this;
     }
@@ -296,6 +308,7 @@ namespace platypus
         _pImpl = new VertexBufferLayoutImpl;
         _pImpl->bindingDescription.binding = other._pImpl->bindingDescription.binding;
         _pImpl->bindingDescription.inputRate = other._pImpl->bindingDescription.inputRate;
+        _pImpl->bindingDescription.stride = _stride;
 
         return *this;
     }

@@ -48,6 +48,18 @@ namespace platypus
             std::vector<ID_t> diffuseTextureIDs,
             std::vector<ID_t> specularTextureIDs,
             std::vector<ID_t> normalTextureIDs,
+            float specularStrength,
+            float shininess,
+            const Vector2f& textureOffset,
+            const Vector2f& textureScale,
+            bool shadeless
+        );
+        Material* createMaterial(
+            MaterialType type,
+            ID_t blendmapTextureID,
+            std::vector<ID_t> diffuseTextureIDs,
+            std::vector<ID_t> specularTextureIDs,
+            std::vector<ID_t> normalTextureIDs,
             float specularStrength = 0.625f,
             float shininess = 16.0f,
             bool shadeless = false

@@ -19,7 +19,9 @@ namespace platypus
         size_t normalTextureCount,
         float specularStrength,
         float shininess,
-        bool shadeless
+        const Vector2f& textureOffset,
+        const Vector2f& textureScale,
+        bool shadeless // NOTE: This doesn't do anything atm!?
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
         _materialType(type),
@@ -42,10 +44,10 @@ namespace platypus
         _uniformBufferData.lightingProperties.y = shininess;
         _uniformBufferData.lightingProperties.z = shadeless;
         _uniformBufferData.lightingProperties.w = 0.0f;
-        _uniformBufferData.textureProperties.x = 0.0f;
-        _uniformBufferData.textureProperties.y = 0.0f;
-        _uniformBufferData.textureProperties.z = 1.0f;
-        _uniformBufferData.textureProperties.w = 1.0f;
+        _uniformBufferData.textureProperties.x = textureOffset.x;
+        _uniformBufferData.textureProperties.y = textureOffset.y;
+        _uniformBufferData.textureProperties.z = textureScale.x;
+        _uniformBufferData.textureProperties.w = textureScale.y;
         // Make sure not to use SRGB textures for normal maps.
         // ...so u don't waste a fuckload of time figuring out why the normals are fucked again:D
         // NOTE: This probably should be checked in "no debug" too?
@@ -102,6 +104,10 @@ namespace platypus
         }
 
         createShaderResources();
+
+        const size_t maxFramesInFlight = Application::get_instance()->getMasterRenderer()->getSwapchain().getMaxFramesInFlight();
+        for (size_t i = 0; i < maxFramesInFlight; ++i)
+            updateUniformBuffers(i);
     }
 
     Material::~Material()
@@ -451,7 +457,8 @@ namespace platypus
         _uniformBufferData.lightingProperties.x = specularStrength;
         _uniformBufferData.lightingProperties.y = shininess;
         _uniformBufferData.lightingProperties.z = (float)shadeless;
-        updateUniformBuffers();
+        const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
+        updateUniformBuffers(currentFrame);
     }
 
     void Material::setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale)
@@ -460,7 +467,8 @@ namespace platypus
         _uniformBufferData.textureProperties.y = textureOffset.y;
         _uniformBufferData.textureProperties.z = textureScale.x;
         _uniformBufferData.textureProperties.w = textureScale.y;
-        updateUniformBuffers();
+        const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
+        updateUniformBuffers(currentFrame);
     }
 
     Pipeline* Material::getPipeline(ComponentType renderableType)
@@ -565,21 +573,27 @@ namespace platypus
 
     // NOTE: This updates all uniform buffers for all possible frames in flight,
     // not sure should we be doing that here...
-    void Material::updateUniformBuffers()
+    void Material::updateUniformBuffers(size_t frame)
     {
-        if (_uniformBuffers.empty())
+        #ifdef PLATYPUS_DEBUG
+        if (frame >= _uniformBuffers.size())
         {
             Debug::log(
                 "@Material::updateUniformBuffers "
-                "No uniform buffers exists for Material with ID: " + std::to_string(getID()),
+                "No uniform buffer exists for frame: " + std::to_string(frame) + " "
+                "Uniform buffer count: " + std::to_string(_uniformBuffers.size()) + " "
+                "Material ID: " + std::to_string(getID()),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
-
-        for (Buffer* pBuffer : _uniformBuffers)
-            pBuffer->updateDeviceAndHost(&_uniformBufferData, sizeof(MaterialUniformBufferData), 0);
+        #endif
+        _uniformBuffers[frame]->updateDeviceAndHost(
+            &_uniformBufferData,
+            sizeof(MaterialUniformBufferData),
+            0
+        );
     }
 
     // TODO: This is a convoluted mess -> make cleaner!

@@ -133,7 +133,8 @@ namespace platypus
                 batchID = _batcher.createBatch(
                     meshID,
                     materialID,
-                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
+                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+                    &_testRenderPass
                 );
             }
             _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
@@ -160,7 +161,8 @@ namespace platypus
                 batchID = _batcher.createBatch(
                     meshID,
                     materialID,
-                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
+                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+                    &_testRenderPass
                 );
             }
 
@@ -202,7 +204,8 @@ namespace platypus
                 batchID = _batcher.createBatch(
                     meshID,
                     materialID,
-                    ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE
+                    ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
+                    &_testRenderPass
                 );
             }
 

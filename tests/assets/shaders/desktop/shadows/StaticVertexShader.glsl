@@ -13,8 +13,7 @@ layout(set = 0, binding = 0) uniform SceneData
     vec4 ambientLightColor;
 } sceneData;
 
-
-void main() {
-    vec4 translatedPos = transformationMatrix * vec4(position, 1.0);
-    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+void main()
+{
+    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformationMatrix * vec4(position, 1.0);
 }

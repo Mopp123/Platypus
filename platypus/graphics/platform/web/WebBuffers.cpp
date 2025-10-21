@@ -84,25 +84,21 @@ namespace platypus
     VertexBufferLayout::VertexBufferLayout(
         const std::vector<VertexBufferElement>& elements,
         VertexInputRate inputRate,
-        uint32_t binding
+        uint32_t binding,
+        int32_t overrideStride
     ) :
         _elements(elements),
         _inputRate(inputRate)
     {
-        for (const VertexBufferElement& element : elements)
-            _stride += get_shader_datatype_size(element.getType());
-    }
-
-    VertexBufferLayout::VertexBufferLayout(
-        VertexBufferElement element,
-        VertexInputRate inputRate,
-        uint32_t binding,
-        int32_t stride
-    ) :
-        _elements({element}),
-        _inputRate(inputRate),
-        _stride(stride)
-    {
+        if (overrideStride != -1)
+        {
+            for (const VertexBufferElement& element : elements)
+                _stride += get_shader_datatype_size(element.getType());
+        }
+        else
+        {
+            _stride = overrideStride;
+        }
     }
 
     VertexBufferLayout::VertexBufferLayout(const VertexBufferLayout& other) :

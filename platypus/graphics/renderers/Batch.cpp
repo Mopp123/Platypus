@@ -55,6 +55,12 @@ namespace platypus
 
     Batcher::~Batcher()
     {
+        std::unordered_map<ID_t, BatchShadowmapPipelineData*>::iterator shadowPipelineIt;
+        for (shadowPipelineIt = _batchShadowmapPipelineData.begin(); shadowPipelineIt != _batchShadowmapPipelineData.end(); ++shadowPipelineIt)
+            delete shadowPipelineIt->second;
+
+        _batchShadowmapPipelineData.clear();
+
         s_jointDescriptorSetLayout.destroy();
         s_terrainDescriptorSetLayout.destroy();
     }
@@ -71,7 +77,12 @@ namespace platypus
     }
 
     // JUST TESTING
-    ID_t Batcher::createBatch(ID_t meshID, ID_t materialID, ComponentType renderableType)
+    ID_t Batcher::createBatch(
+        ID_t meshID,
+        ID_t materialID,
+        ComponentType renderableType,
+        const RenderPass* pShadowPass
+    )
     {
         // *Assuming Material has ability to create its own shader resources by itself
 
@@ -83,9 +94,7 @@ namespace platypus
 
         ID_t identifier = ID::hash(meshID, materialID);
         if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
-        {
             return NULL_ID;
-        }
 
         const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
 
@@ -93,12 +102,12 @@ namespace platypus
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = pMaterial->getPipeline(renderableType);
+        BatchShadowmapPipelineData* pShadowmapPipelineData = nullptr;
         VertexBufferLayout meshVertexBufferLayout = pMesh->getVertexBufferLayout();
         Buffer* pMeshVertexBuffer = pMesh->getVertexBuffer();
         const Buffer* pMeshIndexBuffer = pMesh->getIndexBuffer();
 
         std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
-        std::vector<ShaderResourceLayout> shaderResourceCreationLayouts;
 
         size_t dynamicUniformBufferElementSize = 0;
         // For now all 3D rendering takes scene 3D descriptor sets
@@ -107,8 +116,11 @@ namespace platypus
         };
 
         size_t maxBatchLength = 0;
+        bool TEST_createShadowPipeline = false;
+        // Create batch specific resources
         if (renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE)
         {
+            TEST_createShadowPipeline = true;
             dynamicVertexBuffers.resize(1);
             dynamicVertexBuffers[0].resize(framesInFlight);
             maxBatchLength = _maxStaticBatchLength;
@@ -126,12 +138,25 @@ namespace platypus
             dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
                 sizeof(Matrix4f) * _maxSkinnedMeshJoints
             );
-            shaderResourceCreationLayouts.push_back({
-                ShaderResourceType::ANY,
-                dynamicUniformBufferElementSize,
-                s_jointDescriptorSetLayout,
-                { }
-            });
+            // NOTE: Maybe should have separate funcs for creating resources
+            // explicitly for different batches?
+            std::vector<BatchShaderResource> shaderResources(1);
+            createBatchShaderResources(
+                framesInFlight,
+                identifier,
+                maxBatchLength,
+                {
+                    {
+                        ShaderResourceType::ANY,
+                        dynamicUniformBufferElementSize,
+                        s_jointDescriptorSetLayout,
+                        { }
+                    }
+                },
+                shaderResources
+            );
+            for (const BatchShaderResource& createdResource : shaderResources)
+                usedDescriptorSets.push_back(createdResource.descriptorSet);
         }
         else if (renderableType == ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE)
         {
@@ -139,27 +164,25 @@ namespace platypus
             dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
                 sizeof(Matrix4f) + sizeof(Vector2f)
             );
-            shaderResourceCreationLayouts.push_back({
-                ShaderResourceType::ANY,
-                dynamicUniformBufferElementSize,
-                s_terrainDescriptorSetLayout,
-                { }
-            });
-        }
-
-        if (!shaderResourceCreationLayouts.empty())
-        {
-            std::vector<BatchShaderResource> shaderResources(shaderResourceCreationLayouts.size());
+            std::vector<BatchShaderResource> shaderResources(1);
             createBatchShaderResources(
                 framesInFlight,
                 identifier,
                 maxBatchLength,
-                shaderResourceCreationLayouts,
+                {
+                    {
+                        ShaderResourceType::ANY,
+                        dynamicUniformBufferElementSize,
+                        s_terrainDescriptorSetLayout,
+                        { }
+                    }
+                },
                 shaderResources
             );
             for (const BatchShaderResource& createdResource : shaderResources)
                 usedDescriptorSets.push_back(createdResource.descriptorSet);
         }
+
         // For now all 3D batches have material
         usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
 
@@ -171,10 +194,69 @@ namespace platypus
             combinedDescriptorSets
         );
 
+
+        // TESTING CREATING OFFSCREEN PIPELINE FOR STATIC BATCH
+        if (TEST_createShadowPipeline)
+        {
+            pShadowmapPipelineData = new BatchShadowmapPipelineData;
+            pShadowmapPipelineData->pVertexShader = new Shader(
+                "shadows/StaticVertexShader",
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
+            );
+            pShadowmapPipelineData->pFragmentShader = new Shader(
+                "shadows/StaticFragmentShader",
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
+            );
+            std::vector<VertexBufferLayout> shadowpassVertexBufferLayouts;
+            _masterRendererRef.solveVertexBufferLayouts(
+                meshVertexBufferLayout,
+                true,
+                true,
+                shadowpassVertexBufferLayouts
+            );
+            VertexBufferLayout strippedMeshVertexBufferLayout(
+                {
+                    { 0, ShaderDataType::Float3 },
+                },
+                VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                0,
+                meshVertexBufferLayout.getStride()
+            );
+            pShadowmapPipelineData->pPipeline = new Pipeline(
+                pShadowPass,
+                {
+                    strippedMeshVertexBufferLayout,
+                    {
+                        {
+                            { 1, ShaderDataType::Float4 },
+                            { 2, ShaderDataType::Float4 },
+                            { 3, ShaderDataType::Float4 },
+                            { 4, ShaderDataType::Float4 }
+                        },
+                        VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                        1
+                    }
+                },
+                { _masterRendererRef.getScene3DDataDescriptorSetLayout(), pMaterial->getDescriptorSetLayout() },
+                pShadowmapPipelineData->pVertexShader,
+                pShadowmapPipelineData->pFragmentShader,
+                CullMode::CULL_MODE_BACK,
+                FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+                true, // Enable depth test
+                DepthCompareOperation::COMPARE_OP_LESS,
+                true, // Enable color blend
+                0, // Push constants size
+                ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+            );
+            pShadowmapPipelineData->pPipeline->create();
+            _batchShadowmapPipelineData[identifier] = pShadowmapPipelineData;
+        }
+
+        Pipeline* pShadowmapPipeline = TEST_createShadowPipeline ? pShadowmapPipelineData->pPipeline : nullptr;
         Batch* pBatch = new Batch{
             BatchType::TERRAIN,
             pMaterialPipeline,
-            nullptr,//pMaterialShadowPipeline,
+            pShadowmapPipeline,//pMaterialShadowPipeline,
             combinedDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMeshVertexBuffer },
@@ -185,8 +267,7 @@ namespace platypus
             nullptr, // push constants data
             ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
             0, // repeat count
-            0, // instance count,
-            materialID // materialAssetID NOTE: This shouldn't be needed anymore by the batch?!
+            0 // instance count,
         };
 
         // TODO: Optimize? Maybe preallocate and don't push?
@@ -320,35 +401,11 @@ namespace platypus
                 for (BatchShaderResource& shaderResource : _allocatedShaderResources[resourceIndex])
                 {
                     Buffer* pBuffer = shaderResource.buffer[currentFrame];
-                    // Update material properties if resource was marked as Material
-                    if (shaderResource.type == ShaderResourceType::MATERIAL && pBatch->materialAssetID != NULL_ID)
-                    {
-                        // NOTE: Currently shouldn't be using this!
-                        PLATYPUS_ASSERT(false);
-
-                        Vector4f materialProperties(0, 0, 0, 0);
-                        Material* pMaterial = (Material*)pAssetManager->getAsset(
-                            pBatch->materialAssetID,
-                            AssetType::ASSET_TYPE_MATERIAL
-                        );
-                        materialProperties.x = pMaterial->getSpecularStrength();
-                        materialProperties.y = pMaterial->getShininess();
-                        materialProperties.z = pMaterial->isShadeless();
-
-                        pBuffer->updateDeviceAndHost(
-                            &materialProperties,
-                            sizeof(Vector4f),
-                            0
-                        );
-                    }
-                    else
-                    {
-                        pBuffer->updateDevice(
-                            pBuffer->accessData(),
-                            pBuffer->getTotalSize(),
-                            0
-                        );
-                    }
+                    pBuffer->updateDevice(
+                        pBuffer->accessData(),
+                        pBuffer->getTotalSize(),
+                        0
+                    );
                 }
             }
         }

@@ -67,7 +67,19 @@ namespace platypus
         uint32_t repeatCount = 0;
         // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
         uint32_t instanceCount = 0;
-        ID_t materialAssetID = NULL_ID; // NOTE: This shouldn't be needed anymore by the batch?!
+    };
+
+    struct BatchShadowmapPipelineData
+    {
+        Shader* pVertexShader = nullptr;
+        Shader* pFragmentShader = nullptr;
+        Pipeline* pPipeline = nullptr;
+        ~BatchShadowmapPipelineData()
+        {
+            delete pVertexShader;
+            delete pFragmentShader;
+            delete pPipeline;
+        }
     };
 
     class MasterRenderer;
@@ -80,6 +92,7 @@ namespace platypus
 
         std::vector<Batch*> _batches;
         std::unordered_map<ID_t, size_t> _identifierBatchMapping;
+        std::unordered_map<ID_t, BatchShadowmapPipelineData*> _batchShadowmapPipelineData;
 
         size_t _maxStaticBatchLength;
         size_t _maxSkinnedBatchLength;
@@ -116,7 +129,12 @@ namespace platypus
         ID_t getBatchID(ID_t meshID, ID_t materialID);
 
         // Returns batch identifier, if created successfully
-        ID_t createBatch(ID_t meshID, ID_t materialID, ComponentType renderableType);
+        ID_t createBatch(
+            ID_t meshID,
+            ID_t materialID,
+            ComponentType renderableType,
+            const RenderPass* pShadowPass
+        );
 
         void addToStaticBatch(
             ID_t identifier,

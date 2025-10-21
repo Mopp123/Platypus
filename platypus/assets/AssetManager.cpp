@@ -185,6 +185,8 @@ namespace platypus
         std::vector<ID_t> normalTextureIDs,
         float specularStrength,
         float shininess,
+        const Vector2f& textureOffset,
+        const Vector2f& textureScale,
         bool shadeless
     )
     {
@@ -226,10 +228,37 @@ namespace platypus
             normalTextureIDs.size(),
             specularStrength,
             shininess,
+            textureOffset,
+            textureScale,
             shadeless
         );
         _assets[pMaterial->getID()] = pMaterial;
         return pMaterial;
+    }
+
+    Material* AssetManager::createMaterial(
+        MaterialType type,
+        ID_t blendmapTextureID,
+        std::vector<ID_t> diffuseTextureIDs,
+        std::vector<ID_t> specularTextureIDs,
+        std::vector<ID_t> normalTextureIDs,
+        float specularStrength,
+        float shininess,
+        bool shadeless
+    )
+    {
+        return createMaterial(
+            type,
+            blendmapTextureID,
+            diffuseTextureIDs,
+            specularTextureIDs,
+            normalTextureIDs,
+            specularStrength,
+            shininess,
+            { 0, 0 },
+            { 1, 1 },
+            shadeless
+        );
     }
 
     Mesh* AssetManager::createMesh(

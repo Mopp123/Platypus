@@ -75,7 +75,9 @@ namespace platypus
             size_t normalTextureCount,
             float specularStrength,
             float shininess,
-            bool shadeless = false
+            const Vector2f& textureOffset = { 0, 0 },
+            const Vector2f& textureScale = { 1, 1 },
+            bool shadeless = false // NOTE: This doesn't do anything atm!?
         );
         ~Material();
 
@@ -135,7 +137,7 @@ namespace platypus
         void createDescriptorSetLayout();
         // NOTE: This updates all uniform buffers for all possible frames in flight,
         // not sure should we be doing that here...
-        void updateUniformBuffers();
+        void updateUniformBuffers(size_t frame);
 
         // Returns compiled shader filename depending on given properties
         std::string getShaderFilename(uint32_t shaderStage, ComponentType renderableType, bool shadow);

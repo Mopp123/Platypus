@@ -123,14 +123,8 @@ namespace platypus
         VertexBufferLayout(
             const std::vector<VertexBufferElement>& elements,
             VertexInputRate inputRate,
-            uint32_t binding
-        );
-        // TESTING
-        VertexBufferLayout(
-            VertexBufferElement element,
-            VertexInputRate inputRate,
             uint32_t binding,
-            int32_t stride
+            int32_t overrideStride = -1
         );
         VertexBufferLayout(const VertexBufferLayout& other);
         VertexBufferLayout& operator=(VertexBufferLayout&& other);

@@ -67,14 +67,35 @@ void TerrainTestScene::init()
         true,
         0
     );
-    Debug::log("___TEST___creating blendmap texture...");
+
+    size_t heightmapWidth = 32;
+    size_t tilesPerRow = heightmapWidth - 1;
+    size_t heightmapArea = heightmapWidth * heightmapWidth;
+    _heightmap1.resize(heightmapArea);
+    _heightmap2.resize(heightmapArea);
+    float heightModifier = 0.003f;
+    for (size_t i = 0; i < heightmapArea; ++i)
+    {
+        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+    }
+    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, true, true);
+
+    entityID_t terrainEntity = createEntity();
+    create_transform(
+        terrainEntity,
+        { 0, 0, 0 },
+        { { 0, 1, 0}, 0 },
+        { 1, 1, 1 }
+    );
+
+
     ImageFormat texImageFormat = ImageFormat::R8G8B8A8_SRGB;
     Texture* pBlendmapTexture = pAssetManager->loadTexture(
         "assets/textures/terrain/Blendmap.png",
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
-    Debug::log("___TEST___success!");
     std::vector<std::string> diffuseTexturePaths = {
         "assets/textures/terrain/ground_dry2_d.png",
         "assets/textures/terrain/grass_ground_d.png",
@@ -97,7 +118,6 @@ void TerrainTestScene::init()
         "assets/textures/terrain/jungle_mntn2_n.png"
     };
 
-    Debug::log("___TEST___creating terrain channel textures...");
     std::vector<ID_t> diffuseTextures = load_textures(
         pAssetManager,
         texImageFormat,
@@ -124,32 +144,13 @@ void TerrainTestScene::init()
         specularTextures,
         normalTextures,
         0.625f,
-        32.0f
+        32.0f,
+        { 0, 0 },
+        { (float)tilesPerRow, (float)tilesPerRow },
+        false
     );
 
-    size_t heightmapWidth = 32;
-    size_t tilesPerRow = heightmapWidth - 1;
-    size_t heightmapArea = heightmapWidth * heightmapWidth;
-    _heightmap1.resize(heightmapArea);
-    _heightmap2.resize(heightmapArea);
-    float heightModifier = 0.003f;
-    for (size_t i = 0; i < heightmapArea; ++i)
-    {
-        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-    }
-    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, true, true);
-
-    entityID_t terrainEntity = createEntity();
-    create_transform(
-        terrainEntity,
-        { 0, 0, 0 },
-        { { 0, 1, 0}, 0 },
-        { 1, 1, 1 }
-    );
     create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
-
-    _pTerrainMaterial->setTextureProperties({ 0, 0 }, { (float)tilesPerRow, (float)tilesPerRow });
 
     // For debugging framebuffers
     TextureSampler framebufferDebugTextureSampler(
@@ -169,7 +170,6 @@ void TerrainTestScene::init()
         framebufferDebugTextureSampler
     );
 
-    /*
     _framebufferDebugEntity = createEntity();
     create_gui_transform(
         _framebufferDebugEntity,
@@ -181,7 +181,6 @@ void TerrainTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getTestFramebufferColorTextures()[pMasterRenderer->getCurrentFrame()]->getID()
     );
-    */
 
     _pMeshMaterial = createMeshMaterial(
         pAssetManager,
@@ -207,12 +206,11 @@ void TerrainTestScene::update()
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
 
-    Vector2f newOffset = _pTerrainMaterial->getTextureOffset();
-    newOffset.x += Timing::get_delta_time();
-    newOffset.y += Timing::get_delta_time();
-    _pTerrainMaterial->setTextureProperties(newOffset, _pTerrainMaterial->getTextureScale());
+    //Vector2f newOffset = _pTerrainMaterial->getTextureOffset();
+    //newOffset.x += Timing::get_delta_time();
+    //newOffset.y += Timing::get_delta_time();
+    //_pTerrainMaterial->setTextureProperties(newOffset, _pTerrainMaterial->getTextureScale());
 
-    /*
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     std::vector<Texture*>& framebufferTextures = pMasterRenderer->getTestFramebufferColorTextures();
     if (!framebufferTextures.empty())
@@ -222,9 +220,7 @@ void TerrainTestScene::update()
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
         pFramebufferDebugRenderable->textureID = framebufferTextures[pMasterRenderer->getCurrentFrame()]->getID();
-        Debug::log("___TEST___SET RENDERABLE TEXTURE TO: " + std::to_string(pFramebufferDebugRenderable->textureID));
     }
-    */
 
     //float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;
     //for (size_t i = 0; i < _heightmap1.size(); ++i)
