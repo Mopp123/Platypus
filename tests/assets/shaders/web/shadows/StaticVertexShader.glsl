@@ -7,11 +7,14 @@ struct SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
+    vec4 cameraPosition;
+    vec4 lightDirection;
+    vec4 lightColor;
+    vec4 ambientLightColor;
 };
 uniform SceneData sceneData;
 
-
-void main() {
-    vec4 translatedPos = transformationMatrix * vec4(position, 1.0);
-    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+void main()
+{
+    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformationMatrix * vec4(position, 1.0);
 }

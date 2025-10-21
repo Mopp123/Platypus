@@ -232,7 +232,7 @@ namespace platypus
         else
             _stride = elementOffset; // last elem offset at this point..
 
-        _pImpl->bindingDescription.stride = _stride;
+        _pImpl->bindingDescription.stride = (uint32_t)_stride;
     }
 
     /*

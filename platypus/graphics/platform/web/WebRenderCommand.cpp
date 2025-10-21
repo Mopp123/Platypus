@@ -275,6 +275,7 @@ namespace platypus
                         if (inputRate == VertexInputRate::VERTEX_INPUT_RATE_INSTANCE)
                             pContextImpl->complementaryVbos.insert(bufferID);
 
+                        Debug::log("___TEST___Creating VAO using stride: " + std::to_string(stride));
                         GL_FUNC(glVertexAttribPointer(
                             location,
                             get_shader_datatype_component_count(shaderDataType),

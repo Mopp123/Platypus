@@ -120,7 +120,7 @@ namespace platypus
         // Create batch specific resources
         if (renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE)
         {
-            TEST_createShadowPipeline = true;
+            //TEST_createShadowPipeline = true;
             dynamicVertexBuffers.resize(1);
             dynamicVertexBuffers[0].resize(framesInFlight);
             maxBatchLength = _maxStaticBatchLength;
@@ -214,29 +214,9 @@ namespace platypus
                 true,
                 shadowpassVertexBufferLayouts
             );
-            VertexBufferLayout strippedMeshVertexBufferLayout(
-                {
-                    { 0, ShaderDataType::Float3 },
-                },
-                VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-                0,
-                meshVertexBufferLayout.getStride()
-            );
             pShadowmapPipelineData->pPipeline = new Pipeline(
                 pShadowPass,
-                {
-                    strippedMeshVertexBufferLayout,
-                    {
-                        {
-                            { 1, ShaderDataType::Float4 },
-                            { 2, ShaderDataType::Float4 },
-                            { 3, ShaderDataType::Float4 },
-                            { 4, ShaderDataType::Float4 }
-                        },
-                        VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
-                        1
-                    }
-                },
+                shadowpassVertexBufferLayouts,
                 { _masterRendererRef.getScene3DDataDescriptorSetLayout(), pMaterial->getDescriptorSetLayout() },
                 pShadowmapPipelineData->pVertexShader,
                 pShadowmapPipelineData->pFragmentShader,

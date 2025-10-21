@@ -92,12 +92,12 @@ namespace platypus
     {
         if (overrideStride != -1)
         {
-            for (const VertexBufferElement& element : elements)
-                _stride += get_shader_datatype_size(element.getType());
+            _stride = overrideStride;
         }
         else
         {
-            _stride = overrideStride;
+            for (const VertexBufferElement& element : elements)
+                _stride += get_shader_datatype_size(element.getType());
         }
     }
 

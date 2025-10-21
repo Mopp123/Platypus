@@ -262,22 +262,21 @@ namespace platypus
         std::vector<VertexBufferLayout>& outVertexBufferLayouts
     )
     {
-        outVertexBufferLayouts.push_back(meshVertexBufferLayout);
-        //if (!shadowPipeline)
-        //{
-        //    outVertexBufferLayouts.push_back(meshVertexBufferLayout);
-        //}
-        //else
-        //{
-        //    outVertexBufferLayouts.push_back(
-        //        {
-        //            { 0, ShaderDataType::Float3 },
-        //            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        //            0,
-        //            meshVertexBufferLayout.getStride()
-        //        }
-        //    );
-        //}
+        if (!shadowPipeline)
+        {
+            outVertexBufferLayouts.push_back(meshVertexBufferLayout);
+        }
+        else
+        {
+            outVertexBufferLayouts.push_back(
+                {
+                    {{ 0, ShaderDataType::Float3 }},
+                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                    0,
+                    meshVertexBufferLayout.getStride()
+                }
+            );
+        }
 
         if (instanced)
         {
