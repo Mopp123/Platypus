@@ -44,6 +44,14 @@ namespace platypus
         TERRAIN
     };
 
+    struct BatchPushConstantsData
+    {
+        size_t size = 0;
+        ShaderStageFlagBits shaderStage;
+        std::vector<UniformInfo> uniformInfos;
+        void* pData = nullptr;
+    };
+
     struct Batch
     {
         BatchType type = BatchType::NONE;
@@ -57,13 +65,22 @@ namespace platypus
         std::vector<const Buffer*> staticVertexBuffers;
         std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
         const Buffer* pIndexBuffer = nullptr;
+
         // NOTE: Push constants don't work with the current system
         // TODO: How to get the actual data for the push constants??
-        size_t pushConstantsSize = 0;
-        std::vector<UniformInfo> pushConstantsUniformInfos;
-        void* pPushConstantsData = nullptr;
+        //size_t pushConstantsSize = 0;
+        //std::vector<UniformInfo> pushConstantsUniformInfos;
+        //void* pPushConstantsData = nullptr;
+
+        // NOTE: This is getting out of hand!!!
+        // TODO: Either separate batches using shared resources or encapsulate stuff better
+        // for render pass specific things!
+        BatchPushConstantsData scenePassPushConstantsData;
+        BatchPushConstantsData shadowPassPushConstantsData;
+
         // Atm push constants should ONLY be used in vertex shaders!
-        ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+        //ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+
         // Repeat count should be 1 if instanced
         uint32_t repeatCount = 0;
         // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
@@ -134,7 +151,9 @@ namespace platypus
             ID_t meshID,
             ID_t materialID,
             ComponentType renderableType,
-            const RenderPass* pShadowPass
+            const RenderPass* pShadowPass,
+            size_t shadowPushConstantsSize,
+            void* pShadowPushConstants
         );
 
         BatchShadowPassPipelineData* createShadowPassPipelineData(
@@ -142,6 +161,7 @@ namespace platypus
             const RenderPass* pShadowPass,
             ComponentType renderableType,
             const VertexBufferLayout& meshVertexBufferLayout,
+            const BatchPushConstantsData& pushConstantsData,
             const Material* pMaterial // JUST TESTING HERE: TODO: Remove
         );
 
@@ -206,10 +226,9 @@ namespace platypus
         //      someOtherDescriptorSets(for each frame in flight),
         //      ...
         //  }
-        void combineUsedDescriptorSets(
+        std::vector<std::vector<DescriptorSet>> combineUsedDescriptorSets(
             size_t framesInFlight,
-            const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse,
-            std::vector<std::vector<DescriptorSet>>& outDescriptorSets
+            const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse
         );
 
         Batch* getBatch(ID_t batchID);

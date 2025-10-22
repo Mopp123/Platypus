@@ -104,6 +104,19 @@ namespace platypus
             return;
         }
 
+        // NOTE: ONLY TESTING, DANGEROUS AND INEFFICIENT AS FUCK!
+        // TODO: Better way to get shadow caster proj and view matrices!!!!
+        void* pShadowPassPushConstants = nullptr;
+        size_t shadowPassPushConstantsSize = 0;
+        DirectionalLight* pDirectionalLight = (DirectionalLight*)pScene->getComponent(
+            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        );
+        if (pDirectionalLight)
+        {
+            pShadowPassPushConstants = (void*)pDirectionalLight;
+            shadowPassPushConstantsSize = sizeof(Matrix4f) * 2;
+        }
+
         // NOTE: Below should rather be done by the "batcher" since these are kind of batching related operations?!
         Transform* pTransform = (Transform*)pScene->getComponent(
             entity.id,
@@ -129,12 +142,15 @@ namespace platypus
                     "@MasterRenderer::submit "
                     "No suitable batch found for StaticMeshRenderable. Creating a new one..."
                 );
+
                 // TODO: Error handling if creation fails
                 batchID = _batcher.createBatch(
                     meshID,
                     materialID,
                     ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
-                    &_testRenderPass
+                    &_testRenderPass,
+                    shadowPassPushConstantsSize,
+                    pShadowPassPushConstants
                 );
             }
             _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
@@ -162,7 +178,9 @@ namespace platypus
                     meshID,
                     materialID,
                     ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-                    &_testRenderPass
+                    &_testRenderPass,
+                    shadowPassPushConstantsSize,
+                    pShadowPassPushConstants
                 );
             }
 
@@ -205,7 +223,9 @@ namespace platypus
                     meshID,
                     materialID,
                     ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-                    &_testRenderPass
+                    &_testRenderPass,
+                    0,
+                    nullptr
                 );
             }
 
@@ -332,7 +352,7 @@ namespace platypus
         else
         {
             // TODO: Common shadow descriptor set layout (light view and proj matrices, etc)
-            outDescriptorSetLayouts.push_back(_scene3DDataDescriptorSetLayout);
+            //outDescriptorSetLayouts.push_back(_scene3DDataDescriptorSetLayout);
         }
 
         if (skinned)

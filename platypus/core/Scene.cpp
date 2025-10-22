@@ -251,6 +251,29 @@ namespace platypus
         return _componentPools[type].first();
     }
 
+    const void* Scene::getComponent(ComponentType type, bool enableWarning) const
+    {
+        if (!isValidComponent(type, "getComponent"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        std::unordered_map<ComponentType, ComponentPool>::const_iterator it = _componentPools.find(type);
+        if (it->second.getComponentCount() == 0)
+        {
+            if (enableWarning)
+            {
+                Debug::log(
+                    "Scene::getComponent "
+                    "No components of type: " + component_type_to_string(type) + " found",
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+            }
+            return nullptr;
+        }
+        return it->second.first();
+    }
+
     void* Scene::getComponent(
         entityID_t entityID,
         ComponentType type,

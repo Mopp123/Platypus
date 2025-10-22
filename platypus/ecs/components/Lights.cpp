@@ -9,7 +9,10 @@ namespace platypus
     DirectionalLight* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
-        const Vector3f& color
+        const Vector3f& color,
+        const Matrix4f& shadowProjectionMatrix,
+        const Matrix4f& viewMatrix,
+        bool enableShadows
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -32,8 +35,27 @@ namespace platypus
         }
         pScene->addToComponentMask(target, componentType);
         DirectionalLight* pDirectionalLight = (DirectionalLight*)pComponent;
+        pDirectionalLight->shadowProjectionMatrix = shadowProjectionMatrix;
+        pDirectionalLight->viewMatrix = viewMatrix;
         pDirectionalLight->direction = direction;
         pDirectionalLight->color = color;
+        pDirectionalLight->enableShadows = enableShadows;
         return pDirectionalLight;
+    }
+
+    DirectionalLight* create_directional_light(
+        entityID_t target,
+        const Vector3f& direction,
+        const Vector3f& color
+    )
+    {
+        return create_directional_light(
+            target,
+            direction,
+            color,
+            Matrix4f(1.0f),
+            Matrix4f(1.0f),
+            false
+        );
     }
 }

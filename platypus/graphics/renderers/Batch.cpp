@@ -81,9 +81,25 @@ namespace platypus
         ID_t meshID,
         ID_t materialID,
         ComponentType renderableType,
-        const RenderPass* pShadowPass
+        const RenderPass* pShadowPass,
+        size_t shadowPushConstantsSize,
+        void* pShadowPushConstants
     )
     {
+        // TODO: Some better way to deal with these...
+        const size_t requiredShadowPushConstantsSize = sizeof(Matrix4f) * 2;
+        if (pShadowPushConstants != nullptr && shadowPushConstantsSize != requiredShadowPushConstantsSize)
+        {
+            Debug::log(
+                "@Batcher::createBatch "
+                "Invalid shadow push constants size: " + std::to_string(shadowPushConstantsSize) + " "
+                "required size is " + std::to_string(requiredShadowPushConstantsSize),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return NULL_ID;
+        }
+
         // *Assuming Material has ability to create its own shader resources by itself
 
         // 1.Make sure Mesh and Material assets exist?
@@ -114,6 +130,7 @@ namespace platypus
         std::vector<std::vector<DescriptorSet>> usedDescriptorSets = {
             _masterRendererRef.getScene3DDataDescriptorSets()
         };
+        std::vector<std::vector<DescriptorSet>> usedShadowDescriptorSets;
 
         size_t maxBatchLength = 0;
         bool createShadowPassPipeline = false;
@@ -157,7 +174,10 @@ namespace platypus
                 shaderResources
             );
             for (const BatchShaderResource& createdResource : shaderResources)
+            {
                 usedDescriptorSets.push_back(createdResource.descriptorSet);
+                usedShadowDescriptorSets.push_back(createdResource.descriptorSet);;
+            }
         }
         else if (renderableType == ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE)
         {
@@ -186,26 +206,40 @@ namespace platypus
 
         // ONLY TESTING HERE ATM: Need to have different descriptor sets for shadowpass.. how?
         // -> Here excluding the Material descriptor sets...
-        std::vector<std::vector<DescriptorSet>> combinedShadowPassDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
+        std::vector<std::vector<DescriptorSet>> combinedShadowPassDescriptorSets = combineUsedDescriptorSets(
             framesInFlight,
-            usedDescriptorSets,
-            combinedShadowPassDescriptorSets
+            usedShadowDescriptorSets
         );
 
         // For now all 3D batches have material
         usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
 
         // TODO: Validate descriptor set counts against frames in flight!
-        std::vector<std::vector<DescriptorSet>> combinedDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
+        std::vector<std::vector<DescriptorSet>> combinedDescriptorSets = combineUsedDescriptorSets(
             framesInFlight,
-            usedDescriptorSets,
-            combinedDescriptorSets
+            usedDescriptorSets
         );
 
 
         // TESTING CREATING OFFSCREEN PIPELINE FOR STATIC AND SKINNED BATCHES
+        BatchPushConstantsData shadowPassPushConstantsData{
+            0,
+            ShaderStageFlagBits::SHADER_STAGE_NONE,
+            { },
+            nullptr
+        };
+        if (pShadowPushConstants)
+        {
+            shadowPassPushConstantsData = {
+                shadowPushConstantsSize,
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                {
+                    { ShaderDataType::Mat4 },
+                    { ShaderDataType::Mat4 }
+                },
+                pShadowPushConstants
+            };
+        }
         if (createShadowPassPipeline)
         {
             pShadowPassPipelineData = createShadowPassPipelineData(
@@ -213,11 +247,30 @@ namespace platypus
                 pShadowPass,
                 renderableType,
                 meshVertexBufferLayout,
-                pMaterial // JUST TESTING HERE: TODO: Remove
+                shadowPassPushConstantsData,
+                pMaterial
             );
         }
 
         Pipeline* pShadowmapPipeline = pShadowPassPipelineData ? pShadowPassPipelineData->pPipeline : nullptr;
+
+        Batch* pBatch = new Batch{
+            BatchType::TERRAIN,
+            pMaterialPipeline,
+            pShadowmapPipeline,//pMaterialShadowPipeline,
+            combinedDescriptorSets,
+            combinedShadowPassDescriptorSets,
+            (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
+            { pMeshVertexBuffer },
+            dynamicVertexBuffers, // dynamic/instanced vertex buffers
+            pMeshIndexBuffer,
+            { },
+            shadowPassPushConstantsData,
+            //ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, // push constants shader stage flags
+            0, // repeat count
+            0 // instance count,
+        };
+        /*
         Batch* pBatch = new Batch{
             BatchType::TERRAIN,
             pMaterialPipeline,
@@ -235,6 +288,7 @@ namespace platypus
             0, // repeat count
             0 // instance count,
         };
+        */
 
         // TODO: Optimize? Maybe preallocate and don't push?
         _identifierBatchMapping[identifier] = _batches.size();
@@ -288,6 +342,7 @@ namespace platypus
         const RenderPass* pShadowPass,
         ComponentType renderableType,
         const VertexBufferLayout& meshVertexBufferLayout,
+        const BatchPushConstantsData& pushConstantsData,
         const Material* pMaterial // JUST TESTING HERE: TODO: Remove
     )
     {
@@ -331,8 +386,8 @@ namespace platypus
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
             true, // Enable color blend
-            0, // Push constants size
-            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+            pushConstantsData.size, // Push constants size
+            pushConstantsData.shaderStage // Push constants' stage flags
         );
         pShadowPassPipelineData->pPipeline->create();
         _batchShadowmapPipelineData[identifier] = pShadowPassPipelineData;
@@ -619,19 +674,23 @@ namespace platypus
         addToAllocatedShaderResources(batchID, outResources);
     }
 
-    void Batcher::combineUsedDescriptorSets(
+    std::vector<std::vector<DescriptorSet>> Batcher::combineUsedDescriptorSets(
         size_t framesInFlight,
-        const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse,
-        std::vector<std::vector<DescriptorSet>>& outDescriptorSets
+        const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse
     )
     {
+        if (descriptorSetsToUse.empty())
+            return { };
+
+        std::vector<std::vector<DescriptorSet>> combinedDescriptorSets(framesInFlight);
         for (size_t frame = 0; frame < framesInFlight; ++frame)
         {
             for (size_t descriptorSetIndex = 0; descriptorSetIndex < descriptorSetsToUse.size(); ++descriptorSetIndex)
             {
-                outDescriptorSets[frame].push_back(descriptorSetsToUse[descriptorSetIndex][frame]);
+                combinedDescriptorSets[frame].push_back(descriptorSetsToUse[descriptorSetIndex][frame]);
             }
         }
+        return combinedDescriptorSets;
     }
 
     Batch* Batcher::getBatch(ID_t batchID)

@@ -546,6 +546,15 @@ namespace platypus
         return yawMatrix * pitchMatrix * rollMatrix;
     }
 
+    Matrix4f create_view_matrix(const Vector3f& position, const Quaternion& rotation)
+    {
+        Matrix4f translationMatrix(1.0f);
+        translationMatrix[0 + 3 * 4] = -position.x;
+        translationMatrix[1 + 3 * 4] = -position.y;
+        translationMatrix[2 + 3 * 4] = -position.z;
+        return rotation.toRotationMatrix() * translationMatrix;
+    }
+
 
     // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
     // https://www.kdab.com/projection-matrices-with-vulkan-part-1/

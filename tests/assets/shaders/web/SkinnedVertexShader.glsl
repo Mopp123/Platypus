@@ -18,7 +18,9 @@ struct SceneData
 uniform SceneData sceneData;
 
 const int maxJoints = 50;
-// Below struct thing doesn't work here for some reason...
+// NOTE: To make below working, need to access array indices with for loop in order to
+// index as "constant values" AND need to implement how actual name of array struct member
+// gets parsed in OpenglShader class!
 //struct JointData
 //{
 //    mat4 data[maxJoints];

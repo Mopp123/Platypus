@@ -4,16 +4,12 @@ attribute vec3 position;
 attribute vec4 weights;
 attribute vec4 jointIDs;
 
-struct SceneData
+struct PushConstants
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
-    vec4 cameraPosition;
-    vec4 lightDirection;
-    vec4 lightColor;
-    vec4 ambientLightColor;
 };
-uniform SceneData sceneData;
+uniform PushConstants pushConstants;
 
 const int maxJoints = 50;
 uniform mat4 jointData[maxJoints];
@@ -34,5 +30,5 @@ void main() {
     }
 
     vec4 translatedPos = jointTransform * vec4(position, 1.0);
-    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+    gl_Position = pushConstants.projectionMatrix * pushConstants.viewMatrix * translatedPos;
 }

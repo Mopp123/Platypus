@@ -4,19 +4,14 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec4 weights;
 layout(location = 2) in vec4 jointIDs;
 
-layout(set = 0, binding = 0) uniform SceneData
+layout (push_constant) uniform PushConstants
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
-    vec4 cameraPosition;
-    vec4 lightDirection;
-    vec4 lightColor;
-    vec4 ambientLightColor;
-} sceneData;
-
+} pushConstants;
 
 const int maxJoints = 50;
-layout(set = 1, binding = 0) uniform JointData
+layout(set = 0, binding = 0) uniform JointData
 {
     mat4 data[maxJoints];
 } jointData;
@@ -41,5 +36,5 @@ void main() {
     }
 
     vec4 translatedPos = jointTransform * vec4(position, 1.0);
-    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+    gl_Position = pushConstants.projectionMatrix * pushConstants.viewMatrix * translatedPos;
 }

@@ -17,6 +17,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return "SkeletalAnimation";
             case ComponentType::COMPONENT_TYPE_PARENT: return "Parent";
             case ComponentType::COMPONENT_TYPE_CHILDREN: return "Children";
+            case ComponentType::COMPONENT_TYPE_JOINT: return "Joint";
             default: return "Invalid Type";
         }
     }

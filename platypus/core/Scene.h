@@ -48,6 +48,7 @@ namespace platypus
 
         // TODO: All getComponent things could be optimized?
         void* getComponent(ComponentType type, bool enableWarning=true);
+        const void* getComponent(ComponentType type, bool enableWarning=true) const;
         void* getComponent(
             entityID_t entityID,
             ComponentType type,

@@ -77,34 +77,38 @@ namespace platypus
 
             for (uint32_t repeatIndex = 0; repeatIndex < pBatch->repeatCount; ++repeatIndex)
             {
-                if (pBatch->pushConstantsSize > 0)
+                const BatchPushConstantsData& pushConstantsData = pBatch->shadowPassPushConstantsData;
+                if (pushConstantsData.size > 0)
                 {
                     render::push_constants(
                         currentCommandBuffer,
-                        pBatch->pushConstantsShaderStage,
+                        pushConstantsData.shaderStage,
                         0,
-                        pBatch->pushConstantsSize,
-                        pBatch->pPushConstantsData,
-                        pBatch->pushConstantsUniformInfos
+                        pushConstantsData.size,
+                        pushConstantsData.pData,
+                        pushConstantsData.uniformInfos
                     );
                 }
 
-                if (pBatch->dynamicUniformBufferElementSize == 0)
+                if (pBatch->shadowPassDescriptorSets.size() > 0)
                 {
-                    render::bind_descriptor_sets(
-                        currentCommandBuffer,
-                        pBatch->shadowPassDescriptorSets[_currentFrame],
-                        { }
-                    );
-                }
-                else
-                {
-                    uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
-                    render::bind_descriptor_sets(
-                        currentCommandBuffer,
-                        pBatch->shadowPassDescriptorSets[_currentFrame],
-                        { dynamicUniformBufferOffset }
-                    );
+                    if (pBatch->dynamicUniformBufferElementSize == 0)
+                    {
+                        render::bind_descriptor_sets(
+                            currentCommandBuffer,
+                            pBatch->shadowPassDescriptorSets[_currentFrame],
+                            { }
+                        );
+                    }
+                    else
+                    {
+                        uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
+                        render::bind_descriptor_sets(
+                            currentCommandBuffer,
+                            pBatch->shadowPassDescriptorSets[_currentFrame],
+                            { dynamicUniformBufferOffset }
+                        );
+                    }
                 }
 
                 render::draw_indexed(
@@ -176,15 +180,16 @@ namespace platypus
 
             for (uint32_t repeatIndex = 0; repeatIndex < pBatch->repeatCount; ++repeatIndex)
             {
-                if (pBatch->pushConstantsSize > 0)
+                const BatchPushConstantsData& pushConstantsData = pBatch->scenePassPushConstantsData;
+                if (pushConstantsData.size > 0)
                 {
                     render::push_constants(
                         currentCommandBuffer,
-                        pBatch->pushConstantsShaderStage,
+                        pushConstantsData.shaderStage,
                         0,
-                        pBatch->pushConstantsSize,
-                        pBatch->pPushConstantsData,
-                        pBatch->pushConstantsUniformInfos
+                        pushConstantsData.size,
+                        pushConstantsData.pData,
+                        pushConstantsData.uniformInfos
                     );
                 }
 

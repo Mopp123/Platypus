@@ -64,6 +64,29 @@ namespace platypus
         return (void*)(((PE_byte*)_pStorage) + offset * _componentSize);
     }
 
+    const void* ComponentPool::first() const
+    {
+        if (_componentCount == 0)
+            return nullptr;
+
+        size_t offset = 0;
+        // NOTE: Inefficient search, but atm shouldn't happen too often if user not dumb
+        // TODO: User will be dumb -> Optimize this
+        if (!_freeOffsets.empty())
+        {
+            for (size_t i = 0; i < _totalSize; i += _componentSize)
+            {
+                bool wasFreed = false;
+                for (size_t j = 0; j < _freeOffsets.size(); ++j)
+                {
+                    if (i == _freeOffsets[j])
+                        offset += _componentSize;
+                }
+            }
+        }
+        return (void*)(((PE_byte*)_pStorage) + offset * _componentSize);
+    }
+
     void* ComponentPool::allocComponent(entityID_t entityID)
     {
         if (_occupiedSize + _componentSize > _totalSize)

@@ -13,9 +13,6 @@ private:
     platypus::Mesh* _pTerrainMesh = nullptr;
     platypus::Material* _pTerrainMaterial = nullptr;
 
-    std::vector<float> _heightmap1;
-    std::vector<float> _heightmap2;
-
     entityID_t _framebufferDebugEntity = NULL_ENTITY_ID;
     platypus::Texture* _pTestTexture1 = nullptr;
     platypus::Texture* _pTestTexture2 = nullptr;

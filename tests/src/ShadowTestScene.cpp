@@ -60,6 +60,7 @@ void ShadowTestScene::init()
     );
     pDirLight->direction = { 1.0f, -1.0f, 0.0f };
     pDirLight->direction = pDirLight->direction.normalize();
+    pDirLight->enableShadows = true;
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -71,15 +72,13 @@ void ShadowTestScene::init()
     size_t heightmapWidth = 32;
     size_t tilesPerRow = heightmapWidth - 1;
     size_t heightmapArea = heightmapWidth * heightmapWidth;
-    _heightmap1.resize(heightmapArea);
-    _heightmap2.resize(heightmapArea);
+    std::vector<float> heightmap(heightmapArea);
     float heightModifier = 0.003f;
     for (size_t i = 0; i < heightmapArea; ++i)
     {
-        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
+        heightmap[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
     }
-    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, true, true);
+    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, heightmap, true, true);
 
     entityID_t terrainEntity = createEntity();
     create_transform(
@@ -241,6 +240,26 @@ void ShadowTestScene::update()
 
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
+
+    // Test setting dir light's shadow proj and view matrices to match camera when pressing E
+    if (inputManager.isKeyDown(KeyName::KEY_E))
+    {
+        DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+            _lightEntity,
+            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        );
+        Camera* pCamera = (Camera*)getComponent(
+            _cameraEntity,
+            ComponentType::COMPONENT_TYPE_CAMERA
+        );
+        Transform* pCameraTransform = (Transform*)getComponent(
+            _cameraEntity,
+            ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+        pDirLight->shadowProjectionMatrix = pCamera->perspectiveProjectionMatrix;
+        Matrix4f viewMatrix = pCameraTransform->globalMatrix.inverse();
+        pDirLight->viewMatrix = viewMatrix;
+    }
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     std::vector<Texture*>& framebufferTextures = pMasterRenderer->getTestFramebufferColorTextures();
