@@ -69,12 +69,12 @@ namespace platypus
         uint32_t instanceCount = 0;
     };
 
-    struct BatchShadowmapPipelineData
+    struct BatchShadowPassPipelineData
     {
         Shader* pVertexShader = nullptr;
         Shader* pFragmentShader = nullptr;
         Pipeline* pPipeline = nullptr;
-        ~BatchShadowmapPipelineData()
+        ~BatchShadowPassPipelineData()
         {
             delete pVertexShader;
             delete pFragmentShader;
@@ -92,7 +92,7 @@ namespace platypus
 
         std::vector<Batch*> _batches;
         std::unordered_map<ID_t, size_t> _identifierBatchMapping;
-        std::unordered_map<ID_t, BatchShadowmapPipelineData*> _batchShadowmapPipelineData;
+        std::unordered_map<ID_t, BatchShadowPassPipelineData*> _batchShadowmapPipelineData;
 
         size_t _maxStaticBatchLength;
         size_t _maxSkinnedBatchLength;
@@ -134,6 +134,14 @@ namespace platypus
             ID_t materialID,
             ComponentType renderableType,
             const RenderPass* pShadowPass
+        );
+
+        BatchShadowPassPipelineData* createShadowPassPipelineData(
+            ID_t identifier,
+            const RenderPass* pShadowPass,
+            ComponentType renderableType,
+            const VertexBufferLayout& meshVertexBufferLayout,
+            const Material* pMaterial // JUST TESTING HERE: TODO: Remove
         );
 
         void addToStaticBatch(

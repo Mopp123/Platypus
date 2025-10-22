@@ -55,7 +55,7 @@ namespace platypus
 
     Batcher::~Batcher()
     {
-        std::unordered_map<ID_t, BatchShadowmapPipelineData*>::iterator shadowPipelineIt;
+        std::unordered_map<ID_t, BatchShadowPassPipelineData*>::iterator shadowPipelineIt;
         for (shadowPipelineIt = _batchShadowmapPipelineData.begin(); shadowPipelineIt != _batchShadowmapPipelineData.end(); ++shadowPipelineIt)
             delete shadowPipelineIt->second;
 
@@ -102,7 +102,7 @@ namespace platypus
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         Pipeline* pMaterialPipeline = pMaterial->getPipeline(renderableType);
-        BatchShadowmapPipelineData* pShadowmapPipelineData = nullptr;
+        BatchShadowPassPipelineData* pShadowPassPipelineData = nullptr;
         VertexBufferLayout meshVertexBufferLayout = pMesh->getVertexBufferLayout();
         Buffer* pMeshVertexBuffer = pMesh->getVertexBuffer();
         const Buffer* pMeshIndexBuffer = pMesh->getIndexBuffer();
@@ -116,11 +116,11 @@ namespace platypus
         };
 
         size_t maxBatchLength = 0;
-        bool TEST_createShadowPipeline = false;
+        bool createShadowPassPipeline = false;
         // Create batch specific resources
         if (renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE)
         {
-            TEST_createShadowPipeline = true;
+            createShadowPassPipeline = true;
             dynamicVertexBuffers.resize(1);
             dynamicVertexBuffers[0].resize(framesInFlight);
             maxBatchLength = _maxStaticBatchLength;
@@ -134,6 +134,7 @@ namespace platypus
         }
         else if (renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE)
         {
+            //createShadowPassPipeline = true;
             maxBatchLength = _maxSkinnedBatchLength;
             dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
                 sizeof(Matrix4f) * _maxSkinnedMeshJoints
@@ -195,44 +196,19 @@ namespace platypus
         );
 
 
-        // TESTING CREATING OFFSCREEN PIPELINE FOR STATIC BATCH
-        if (TEST_createShadowPipeline)
+        // TESTING CREATING OFFSCREEN PIPELINE FOR STATIC AND SKINNED BATCHES
+        if (createShadowPassPipeline)
         {
-            pShadowmapPipelineData = new BatchShadowmapPipelineData;
-            pShadowmapPipelineData->pVertexShader = new Shader(
-                "shadows/StaticVertexShader",
-                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
-            );
-            pShadowmapPipelineData->pFragmentShader = new Shader(
-                "shadows/StaticFragmentShader",
-                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-            );
-            std::vector<VertexBufferLayout> shadowpassVertexBufferLayouts;
-            _masterRendererRef.solveVertexBufferLayouts(
-                meshVertexBufferLayout,
-                true,
-                true,
-                shadowpassVertexBufferLayouts
-            );
-            pShadowmapPipelineData->pPipeline = new Pipeline(
+            pShadowPassPipelineData = createShadowPassPipelineData(
+                identifier,
                 pShadowPass,
-                shadowpassVertexBufferLayouts,
-                { _masterRendererRef.getScene3DDataDescriptorSetLayout(), pMaterial->getDescriptorSetLayout() },
-                pShadowmapPipelineData->pVertexShader,
-                pShadowmapPipelineData->pFragmentShader,
-                CullMode::CULL_MODE_BACK,
-                FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-                true, // Enable depth test
-                DepthCompareOperation::COMPARE_OP_LESS,
-                true, // Enable color blend
-                0, // Push constants size
-                ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+                renderableType,
+                meshVertexBufferLayout,
+                pMaterial // JUST TESTING HERE: TODO: Remove
             );
-            pShadowmapPipelineData->pPipeline->create();
-            _batchShadowmapPipelineData[identifier] = pShadowmapPipelineData;
         }
 
-        Pipeline* pShadowmapPipeline = TEST_createShadowPipeline ? pShadowmapPipelineData->pPipeline : nullptr;
+        Pipeline* pShadowmapPipeline = pShadowPassPipelineData ? pShadowPassPipelineData->pPipeline : nullptr;
         Batch* pBatch = new Batch{
             BatchType::TERRAIN,
             pMaterialPipeline,
@@ -255,6 +231,99 @@ namespace platypus
         _batches.push_back(pBatch);
 
         return identifier;
+    }
+
+    static std::string get_shadowpass_shader_name(
+        ShaderStageFlagBits shaderStage,
+        ComponentType renderableType
+    )
+    {
+        std::string shaderName = "shadows/";
+        switch (renderableType)
+        {
+            case ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE: shaderName += "Static"; break;
+            case ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE: shaderName += "Skinned"; break;
+            case ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE: shaderName += "Terrain"; break;
+            default:
+            {
+                Debug::log(
+                    "@(Batcher)get_shadowpass_shader_name "
+                    "Invalid renderable component type: " + component_type_to_string(renderableType),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return "";
+            }
+        }
+        switch (shaderStage)
+        {
+            case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: shaderName += "Vertex"; break;
+            case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: shaderName += "Fragment"; break;
+            default:
+            {
+                Debug::log(
+                    "@(Batcher)get_shadowpass_shader_name "
+                    "Invalid shader stage: " + shader_stage_to_string(shaderStage),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return "";
+            }
+        }
+        return shaderName + "Shader";
+    }
+
+    BatchShadowPassPipelineData* Batcher::createShadowPassPipelineData(
+        ID_t identifier,
+        const RenderPass* pShadowPass,
+        ComponentType renderableType,
+        const VertexBufferLayout& meshVertexBufferLayout,
+        const Material* pMaterial // JUST TESTING HERE: TODO: Remove
+    )
+    {
+        BatchShadowPassPipelineData* pShadowPassPipelineData = new BatchShadowPassPipelineData;
+        pShadowPassPipelineData = new BatchShadowPassPipelineData;
+        pShadowPassPipelineData->pVertexShader = new Shader(
+            get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, renderableType),
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
+        );
+        pShadowPassPipelineData->pFragmentShader = new Shader(
+            get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, renderableType),
+            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
+        );
+        bool instanced = renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
+        std::vector<VertexBufferLayout> vertexBufferLayouts;
+        _masterRendererRef.solveVertexBufferLayouts(
+            meshVertexBufferLayout,
+            instanced,
+            true,
+            vertexBufferLayouts
+        );
+        bool skinned = renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
+        std::vector<DescriptorSetLayout> descriptorSetLayouts;
+        _masterRendererRef.solveDescriptorSetLayouts(
+            pMaterial,
+            skinned,
+            true,
+            descriptorSetLayouts
+        );
+        pShadowPassPipelineData->pPipeline = new Pipeline(
+            pShadowPass,
+            vertexBufferLayouts,
+            descriptorSetLayouts,
+            pShadowPassPipelineData->pVertexShader,
+            pShadowPassPipelineData->pFragmentShader,
+            CullMode::CULL_MODE_BACK,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // Enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
+            true, // Enable color blend
+            0, // Push constants size
+            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+        );
+        pShadowPassPipelineData->pPipeline->create();
+        _batchShadowmapPipelineData[identifier] = pShadowPassPipelineData;
+        return pShadowPassPipelineData;
     }
 
     void Batcher::addToStaticBatch(

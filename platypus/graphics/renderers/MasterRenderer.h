@@ -65,13 +65,13 @@ namespace platypus
             bool instanced,
             bool shadowPipeline,
             std::vector<VertexBufferLayout>& outVertexBufferLayouts
-        );
+        ) const;
         void solveDescriptorSetLayouts(
-            Material* pMaterial,
+            const Material* pMaterial,
             bool skinned,
             bool shadowPipeline,
             std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
-        );
+        ) const;
 
         inline const RenderPass& getTestRenderPass() const { return _testRenderPass; }
         inline std::vector<Texture*>& getTestFramebufferColorTextures() { return _testFramebufferColorTextures; }

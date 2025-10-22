@@ -260,7 +260,7 @@ namespace platypus
         bool instanced,
         bool shadowPipeline,
         std::vector<VertexBufferLayout>& outVertexBufferLayouts
-    )
+    ) const
     {
         if (!shadowPipeline)
         {
@@ -296,11 +296,11 @@ namespace platypus
     }
 
     void MasterRenderer::solveDescriptorSetLayouts(
-        Material* pMaterial,
+        const Material* pMaterial,
         bool skinned,
         bool shadowPipeline,
         std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
-    )
+    ) const
     {
         MaterialType materialType = pMaterial->getMaterialType();
         if (skinned && materialType == MaterialType::TERRAIN)
