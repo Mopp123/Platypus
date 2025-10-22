@@ -102,7 +102,7 @@ void MaterialTestScene::init()
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
-        { pNormalTexture->getID() },
+        { }, //{ pNormalTexture->getID() },
         0.8f,
         16.0f
     );
@@ -120,7 +120,7 @@ void MaterialTestScene::init()
         NULL_ID,
         { pFloorTexture->getID() },
         { pFloorSpecularTexture->getID() },
-        { pFloorNormalTexture->getID() },
+        { },//{ pFloorNormalTexture->getID() },
         0.8f,
         64.0f
     );

@@ -11,7 +11,6 @@
 
 namespace platypus
 {
-    static int s_TEST_frames = 0;
     static std::chrono::time_point<std::chrono::high_resolution_clock> s_lastDisplayDelta;
     static void update()
     {
@@ -22,27 +21,26 @@ namespace platypus
         MasterRenderer* pRenderer = pApp->getMasterRenderer();
 
         pApp->getInputManager().pollEvents();
+
+        std::chrono::time_point<std::chrono::high_resolution_clock> sceneBeginTime = std::chrono::high_resolution_clock::now();
         sceneManager.update();
+        std::chrono::time_point<std::chrono::high_resolution_clock> sceneEndTime = std::chrono::high_resolution_clock::now();
+
+        std::chrono::time_point<std::chrono::high_resolution_clock> renderBeginTime = std::chrono::high_resolution_clock::now();
         if (sceneManager.getCurrentScene())
             pRenderer->render(pApp->getWindow());
+        std::chrono::time_point<std::chrono::high_resolution_clock> renderEndTime = std::chrono::high_resolution_clock::now();
 
         std::chrono::time_point<std::chrono::high_resolution_clock> currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> delta = currentTime - s_lastDisplayDelta;
         if (delta.count() >= 1.0f)
         {
-            Debug::log("DELTA: " + std::to_string(Timing::get_delta_time()));
+            std::chrono::duration<float> sceneTime = sceneEndTime - sceneBeginTime;
+            std::chrono::duration<float> renderTime = renderEndTime - renderBeginTime;
+            Debug::log("DELTA: " + std::to_string(Timing::get_delta_time()) + " | Scene update took: " + std::to_string(sceneTime.count()) + " | Rendering took: " + std::to_string(renderTime.count()));
             s_lastDisplayDelta = std::chrono::high_resolution_clock::now();
         }
 
-        /*
-        if (s_TEST_frames >= 2)
-        {
-            float fps = 1.0f / Timing::get_delta_time();
-            Debug::log("FPS: " + std::to_string(fps));
-            s_TEST_frames = 0;
-        }
-        ++s_TEST_frames;
-        */
         sceneManager.handleSceneSwitching();
     }
 

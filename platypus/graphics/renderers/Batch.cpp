@@ -120,7 +120,7 @@ namespace platypus
         // Create batch specific resources
         if (renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE)
         {
-            //TEST_createShadowPipeline = true;
+            TEST_createShadowPipeline = true;
             dynamicVertexBuffers.resize(1);
             dynamicVertexBuffers[0].resize(framesInFlight);
             maxBatchLength = _maxStaticBatchLength;

@@ -102,6 +102,7 @@ namespace platypus
         {
             if (_pImpl->handle != VK_NULL_HANDLE && _pImpl->layout != VK_NULL_HANDLE)
                 destroy();
+
             delete _pImpl;
         }
     }

@@ -113,14 +113,8 @@ namespace platypus
     Material::~Material()
     {
         destroyShaderResources();
-
         _descriptorSetLayout.destroy();
-        // TODO: Unfuck below
-        // NOTE: Important that the pipeline gets destroyed before shaders,
-        // since the web implementation detaches the shaders from opengl
-        // shader program on pipeline destruction.
-        //  -> if shaders destroyed before pipeline, the detaching in
-        //  OpenglShaderProgram breaks
+
         std::unordered_map<ComponentType, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
@@ -131,7 +125,6 @@ namespace platypus
             delete it->second;
         }
     }
-
 
     void Material::createPipeline(
         const RenderPass* pRenderPass,

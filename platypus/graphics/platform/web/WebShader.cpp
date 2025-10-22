@@ -185,7 +185,7 @@ namespace platypus
         }
     }
 
-    OpenglShaderProgram:: ~OpenglShaderProgram()
+    OpenglShaderProgram::~OpenglShaderProgram()
     {
         glUseProgram(0);
         glDetachShader(_id, _pVertexShader->id);

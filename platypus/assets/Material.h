@@ -27,9 +27,12 @@ namespace platypus
         Pipeline* pPipeline;
         ~MaterialPipelineData()
         {
+            // NOTE: IMPORTANT to destroy pipeline before shaders since
+            // web impl detaches the shaders from the opengl shader program
+            // when destroying the pipeline!
+            delete pPipeline;
             delete pVertexShader;
             delete pFragmentShader;
-            delete pPipeline;
         }
     };
 

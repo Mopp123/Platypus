@@ -211,6 +211,8 @@ namespace platypus
         {
             ContextImpl* pContextImpl = Context::get_impl();
 
+            VAOData newVAOData;
+
             // Not sure if this stuff works here well...
             std::vector<VertexBufferLayout>::const_iterator vbLayoutIt = vertexBufferLayouts.begin();
 
@@ -273,9 +275,11 @@ namespace platypus
                         // be used for per vertex or per instance but never both.
                         // TODO: Figure out should that ever change and what then?
                         if (inputRate == VertexInputRate::VERTEX_INPUT_RATE_INSTANCE)
-                            pContextImpl->complementaryVbos.insert(bufferID);
+                        {
+                            //pContextImpl->complementaryVbos.insert(bufferID);
+                            newVAOData.complementaryBufferIDs.insert(bufferID);
+                        }
 
-                        Debug::log("___TEST___Creating VAO using stride: " + std::to_string(stride));
                         GL_FUNC(glVertexAttribPointer(
                             location,
                             get_shader_datatype_component_count(shaderDataType),
@@ -311,29 +315,33 @@ namespace platypus
                 }
                 vbLayoutIt++;
                 pBuffer->getImpl()->vaos.insert(vaoID);
-                pContextImpl->vaoBufferMapping[vaoID].insert(bufferID);
+                newVAOData.bufferIDs.insert(bufferID);
             }
+            newVAOData.bufferLayouts = vertexBufferLayouts;
+            pContextImpl->vaoDataMapping[vaoID] = newVAOData;
         }
 
 
         // Returns a VAO that includes all the inputted vertex buffers if such VAO exists.
         // Returns 0 if no VAO found.
-        static uint32_t get_common_vao(const std::vector<const Buffer*>& vertexBuffers)
+        // TODO: Rename? It's not common since its per buffers...
+        static uint32_t get_vao(
+            const std::vector<const Buffer*>& vertexBuffers,
+            const std::vector<VertexBufferLayout>& vertexBufferLayouts
+        )
         {
-            std::unordered_map<uint32_t, std::set<uint32_t>>& vaoBufferMapping = Context::get_impl()->vaoBufferMapping;
+            std::set<uint32_t> bufferIDs;
+            for (const Buffer* pBuffer : vertexBuffers)
+                bufferIDs.insert(pBuffer->getImpl()->id);
+
             // Must be one of these...
+            std::unordered_map<uint32_t, VAOData>& vaoDataMapping = Context::get_impl()->vaoDataMapping;
             for (uint32_t vaoID : vertexBuffers[0]->getImpl()->vaos)
             {
-                bool foundAll = true;
-                for (const Buffer* pBuffer : vertexBuffers)
-                {
-                    if (vaoBufferMapping[vaoID].find(pBuffer->getImpl()->id) == vaoBufferMapping[vaoID].end())
-                    {
-                        foundAll = false;
-                        break;
-                    }
-                }
-                if (foundAll)
+                const VAOData& vaoData = vaoDataMapping[vaoID];
+                const std::set<uint32_t>& vaoBuffers = vaoData.bufferIDs;
+                const std::vector<VertexBufferLayout>& vaoBufferLayouts = vaoData.bufferLayouts;
+                if (bufferIDs == vaoBuffers && vaoBufferLayouts == vertexBufferLayouts)
                     return vaoID;
             }
             return 0;
@@ -348,7 +356,7 @@ namespace platypus
             const Pipeline* pPipeline = commandBuffer.getImpl()->pBoundPipeline;
             PipelineImpl* pPipelineImpl = pPipeline->getImpl();
 
-            uint32_t vaoID = get_common_vao(vertexBuffers);
+            uint32_t vaoID = get_vao(vertexBuffers, pPipeline->getVertexBufferLayouts());
             if (vaoID == 0)
             {
                 create_vao(

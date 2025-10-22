@@ -206,11 +206,11 @@ namespace platypus
                 }
                 for (uint32_t vaoID : _pImpl->vaos)
                 {
-                    pContextImpl->vaoBufferMapping[vaoID].erase(vboID);
+                    pContextImpl->vaoDataMapping[vaoID].bufferIDs.erase(vboID);
                     if (vao_deletion_allowed(pContextImpl, vaoID))
                     {
                         GL_FUNC(glDeleteVertexArrays(1, &vaoID));
-                        pContextImpl->vaoBufferMapping.erase(vaoID);
+                        pContextImpl->vaoDataMapping.erase(vaoID);
                     }
                 }
             }
