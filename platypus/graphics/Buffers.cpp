@@ -132,9 +132,9 @@ namespace platypus
 
     VertexBufferLayout VertexBufferLayout::s_commonStaticLayout = {
         {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float2 }
+            { 0, ShaderDataType::Float3 }, // position
+            { 1, ShaderDataType::Float3 }, // normal
+            { 2, ShaderDataType::Float2 }  // tex coord
         },
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
         0
@@ -142,10 +142,10 @@ namespace platypus
 
     VertexBufferLayout VertexBufferLayout::s_commonStaticTangentLayout = {
         {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float2 },
-            { 3, ShaderDataType::Float4 }
+            { 0, ShaderDataType::Float3 }, // position
+            { 1, ShaderDataType::Float3 }, // normal
+            { 2, ShaderDataType::Float2 }, // tex coord
+            { 3, ShaderDataType::Float4 }  // tangent
         },
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
         0
@@ -153,11 +153,11 @@ namespace platypus
 
     VertexBufferLayout VertexBufferLayout::s_commonSkinnedLayout = {
         {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float2 },
-            { 3, ShaderDataType::Float4 },
-            { 4, ShaderDataType::Float4 }
+            { 0, ShaderDataType::Float3 }, // position
+            { 1, ShaderDataType::Float4 }, // weights
+            { 2, ShaderDataType::Float4 }, // jointIDs
+            { 3, ShaderDataType::Float3 }, // normal
+            { 4, ShaderDataType::Float2 }  // tex coord
         },
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
         0
@@ -165,12 +165,12 @@ namespace platypus
 
     VertexBufferLayout VertexBufferLayout::s_commonSkinnedTangentLayout = {
         {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float2 },
-            { 3, ShaderDataType::Float4 },
-            { 4, ShaderDataType::Float4 },
-            { 5, ShaderDataType::Float4 }
+            { 0, ShaderDataType::Float3 }, // position
+            { 1, ShaderDataType::Float4 }, // weights
+            { 2, ShaderDataType::Float4 }, // jointIDs
+            { 3, ShaderDataType::Float3 }, // normal
+            { 4, ShaderDataType::Float2 }, // tex coord
+            { 5, ShaderDataType::Float4 }  // tangent
         },
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
         0

@@ -5,7 +5,7 @@
 #include "platypus/ecs/Entity.h"
 
 
-class TerrainTestScene : public BaseScene
+class ShadowTestScene : public BaseScene
 {
 private:
     platypus::CameraController _camController;
@@ -13,14 +13,17 @@ private:
     platypus::Mesh* _pTerrainMesh = nullptr;
     platypus::Material* _pTerrainMaterial = nullptr;
 
-    platypus::Material* _pMeshMaterial = nullptr;
-
     std::vector<float> _heightmap1;
     std::vector<float> _heightmap2;
 
+    entityID_t _framebufferDebugEntity = NULL_ENTITY_ID;
+    platypus::Texture* _pTestTexture1 = nullptr;
+    platypus::Texture* _pTestTexture2 = nullptr;
+    platypus::Texture* _pFramebufferDebugTexture = NULL_ID;
+
 public:
-    TerrainTestScene();
-    ~TerrainTestScene();
+    ShadowTestScene();
+    ~ShadowTestScene();
 
     virtual void init();
     virtual void update();

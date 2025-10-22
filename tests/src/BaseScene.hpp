@@ -46,4 +46,14 @@ public:
         ID_t meshAssetID,
         ID_t materialAssetID
     );
+
+    entityID_t createSkinnedMeshEntity(
+        const platypus::Vector3f& position,
+        const platypus::Quaternion& rotation,
+        const platypus::Vector3f& scale,
+        platypus::Mesh* pMesh,
+        platypus::SkeletalAnimationData* pAnimationAsset,
+        ID_t materialAssetID,
+        std::vector<entityID_t>& outJointEntities
+    );
 };

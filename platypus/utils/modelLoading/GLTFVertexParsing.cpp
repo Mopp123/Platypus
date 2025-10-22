@@ -34,11 +34,11 @@ namespace platypus
         std::unordered_map<std::string, int> preferredLocations =
         {
             { "POSITION",   0 },
-            { "NORMAL",     1 },
-            { "TEXCOORD_0", 2 },
-            { "TANGENT",    3 },
-            { "WEIGHTS_0",  4 },
-            { "JOINTS_0",   5 },
+            { "WEIGHTS_0",  1 },
+            { "JOINTS_0",   2 },
+            { "NORMAL",     3 },
+            { "TEXCOORD_0", 4 },
+            { "TANGENT",    5 },
             { "none",   666 }
         };
 

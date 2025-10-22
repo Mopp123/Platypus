@@ -1,4 +1,4 @@
-#include "TerrainTestScene.hpp"
+#include "ShadowTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
 #include <cmath>
@@ -27,16 +27,17 @@ static std::vector<ID_t> load_textures(
     return textures;
 }
 
-TerrainTestScene::TerrainTestScene()
+ShadowTestScene::ShadowTestScene()
 {
 }
 
-TerrainTestScene::~TerrainTestScene()
+ShadowTestScene::~ShadowTestScene()
 {
 }
 
-void TerrainTestScene::init()
+void ShadowTestScene::init()
 {
+    Debug::log("___TEST___init ShadowTestScene");
     initBase();
 
     AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -151,50 +152,94 @@ void TerrainTestScene::init()
 
     create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
 
-    _pMeshMaterial = createMeshMaterial(
+    // Test meshes that cast shadows
+    Material* pStaticMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true
     );
+    Material* pSkinnedMeshMaterial = createMeshMaterial(
+        pAssetManager,
+        "assets/textures/characterTest.png",
+        false
+    );
+
     Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
-        { 0, 0, 0 },
+        { 20, 0, 20 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
         pStaticMesh->getID(),
-        _pMeshMaterial->getID()
+        pStaticMeshMaterial->getID()
     );
+
+    std::vector<KeyframeAnimationData> animations;
+    Model* pAnimatedModel = pAssetManager->loadModel(
+        "assets/models/MultiAnimSkeletonTest.glb",
+        animations
+    );
+    Mesh* pSkinnedMesh = pAnimatedModel->getMeshes()[0];
+    SkeletalAnimationData* pAnimationAsset1 = pAssetManager->createSkeletalAnimation(animations[0]);
+
+    std::vector<entityID_t> jointEntities;
+    entityID_t animatedEntity = createSkinnedMeshEntity(
+        { 45, 0, 45 },
+        { { 0, 1,0 }, 0 },
+        { 1, 1, 1 },
+        pSkinnedMesh,
+        pAnimationAsset1,
+        pSkinnedMeshMaterial->getID(),
+        jointEntities
+    );
+
+    // For debugging framebuffers
+    TextureSampler framebufferDebugTextureSampler(
+        TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
+        TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        false,
+        0
+    );
+    _pTestTexture1 = pAssetManager->loadTexture(
+        "assets/textures/DiffuseTest.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        framebufferDebugTextureSampler
+    );
+    _pTestTexture2 = pAssetManager->loadTexture(
+        "assets/textures/Floor.png",
+        ImageFormat::R8G8B8A8_SRGB,
+        framebufferDebugTextureSampler
+    );
+
+    _framebufferDebugEntity = createEntity();
+    create_gui_transform(
+        _framebufferDebugEntity,
+        { 0, 0 },
+        { 400, 256 }
+    );
+    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+    GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
+        _framebufferDebugEntity,
+        pMasterRenderer->getTestFramebufferColorTextures()[pMasterRenderer->getCurrentFrame()]->getID()
+    );
+
 }
 
-
-static float s_time = 0.0f;
-void TerrainTestScene::update()
+void ShadowTestScene::update()
 {
     _camController.update();
 
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
 
-    Vector2f newOffset = _pTerrainMaterial->getTextureOffset();
-    newOffset.x += Timing::get_delta_time();
-    newOffset.y += Timing::get_delta_time();
-    _pTerrainMaterial->setTextureProperties(newOffset, _pTerrainMaterial->getTextureScale());
-
-    float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;
-    for (size_t i = 0; i < _heightmap1.size(); ++i)
+    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+    std::vector<Texture*>& framebufferTextures = pMasterRenderer->getTestFramebufferColorTextures();
+    if (!framebufferTextures.empty())
     {
-        float h1 = _heightmap1[i];
-        float h2 = _heightmap2[i];
-        float interpolatedHeight = h1 + ((h2 - h1) * interpolationAmount);
-        size_t stride = sizeof(Vector3f) * 2 + sizeof(Vector2f) + sizeof(Vector4f);
-
-        Buffer* pVertexBuffer = _pTerrainMesh->getVertexBuffer();
-        pVertexBuffer->updateDevice(
-            &interpolatedHeight,
-            sizeof(float),
-            i * stride + sizeof(float)
+        GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
+            _framebufferDebugEntity,
+            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
+        pFramebufferDebugRenderable->textureID = framebufferTextures[pMasterRenderer->getCurrentFrame()]->getID();
     }
 
-    s_time += 1.0f * Timing::get_delta_time();
 }

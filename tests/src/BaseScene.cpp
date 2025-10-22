@@ -178,3 +178,44 @@ entityID_t BaseScene::createStaticMeshEntity(
     );
     return entity;
 }
+
+
+entityID_t BaseScene::createSkinnedMeshEntity(
+    const platypus::Vector3f& position,
+    const platypus::Quaternion& rotation,
+    const platypus::Vector3f& scale,
+    platypus::Mesh* pMesh,
+    platypus::SkeletalAnimationData* pAnimationAsset,
+    ID_t materialAssetID,
+    std::vector<entityID_t>& outJointEntities
+)
+{
+    // Create entity containing the skeleton
+    //  -> otherwise root joint doesn't get animated at all
+    entityID_t entity = createEntity();
+    create_transform(
+        entity,
+        position,
+        rotation,
+        scale
+    );
+
+    outJointEntities = create_skeleton(
+        pMesh->getBindPose().joints,
+        pMesh->getBindPose().jointChildMapping
+    );
+    entityID_t rootJointEntity = outJointEntities[0];
+    create_skinned_mesh_renderable(
+        rootJointEntity,
+        pMesh->getID(),
+        materialAssetID
+    );
+    create_skeletal_animation(
+        rootJointEntity,
+        pAnimationAsset->getID()
+    );
+
+    add_child(entity, rootJointEntity);
+
+    return entity;
+}

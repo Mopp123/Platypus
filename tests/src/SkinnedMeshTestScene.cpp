@@ -110,9 +110,6 @@ void SkinnedMeshTestScene::init()
     _camController.setOffsetPos({ 0, 0, 0 });
 
     std::vector<KeyframeAnimationData> animations;
-    // NOTE:
-    // File: "assets/models/SkeletonTest3Linear2.glb" works because it
-    // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/MultiAnimSkeletonTest.glb",
         animations
