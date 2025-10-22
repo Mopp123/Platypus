@@ -215,6 +215,20 @@ namespace platypus
         return s_commonSkinnedTangentLayout;
     }
 
+    VertexBufferLayout VertexBufferLayout::get_common_skinned_shadow_layout(int32_t overrideStride)
+    {
+        return {
+            {
+                { 0, ShaderDataType::Float3 }, // position
+                { 1, ShaderDataType::Float4 }, // weights
+                { 2, ShaderDataType::Float4 } // jointIDs
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0,
+            overrideStride
+        };
+    }
+
     VertexBufferLayout VertexBufferLayout::get_common_terrain_layout()
     {
         return s_commonTerrainLayout;

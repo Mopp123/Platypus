@@ -180,6 +180,7 @@ void ShadowTestScene::init()
     );
     Mesh* pSkinnedMesh = pAnimatedModel->getMeshes()[0];
     SkeletalAnimationData* pAnimationAsset1 = pAssetManager->createSkeletalAnimation(animations[0]);
+    SkeletalAnimationData* pAnimationAsset2 = pAssetManager->createSkeletalAnimation(animations[1]);
 
     std::vector<entityID_t> jointEntities;
     entityID_t animatedEntity = createSkinnedMeshEntity(
@@ -190,6 +191,16 @@ void ShadowTestScene::init()
         pAnimationAsset1,
         pSkinnedMeshMaterial->getID(),
         jointEntities
+    );
+    std::vector<entityID_t> jointEntities2;
+    entityID_t animatedEntity2 = createSkinnedMeshEntity(
+        { 35, 0, 30 },
+        { { 0, 1, 0 }, PLATY_MATH_PI * 0.5f },
+        { 1, 1, 1 },
+        pSkinnedMesh,
+        pAnimationAsset2,
+        pSkinnedMeshMaterial->getID(),
+        jointEntities2
     );
 
     // For debugging framebuffers

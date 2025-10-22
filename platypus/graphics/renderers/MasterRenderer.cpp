@@ -258,6 +258,7 @@ namespace platypus
     void MasterRenderer::solveVertexBufferLayouts(
         const VertexBufferLayout& meshVertexBufferLayout,
         bool instanced,
+        bool skinned,
         bool shadowPipeline,
         std::vector<VertexBufferLayout>& outVertexBufferLayouts
     ) const
@@ -268,14 +269,25 @@ namespace platypus
         }
         else
         {
-            outVertexBufferLayouts.push_back(
-                {
-                    {{ 0, ShaderDataType::Float3 }},
-                    VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-                    0,
-                    meshVertexBufferLayout.getStride()
-                }
-            );
+            if (!skinned)
+            {
+                outVertexBufferLayouts.push_back(
+                    {
+                        {{ 0, ShaderDataType::Float3 }},
+                        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                        0,
+                        meshVertexBufferLayout.getStride()
+                    }
+                );
+            }
+            else
+            {
+                outVertexBufferLayouts.push_back(
+                    VertexBufferLayout::get_common_skinned_shadow_layout(
+                        meshVertexBufferLayout.getStride()
+                    )
+                );
+            }
         }
 
         if (instanced)
@@ -332,9 +344,9 @@ namespace platypus
             outDescriptorSetLayouts.push_back(Batcher::get_terrain_descriptor_set_layout());
         }
 
-        // checking if shadow pipeline here, since need to add the Material descriptor set layout
+        // Checking if shadow pipeline here, since need to add the Material descriptor set layout
         // last if it's used!
-        //if (!shadowPipeline)
+        if (!shadowPipeline)
             outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
     }
 

@@ -203,6 +203,7 @@ namespace platypus
         pMasterRenderer->solveVertexBufferLayouts(
             meshVertexBufferLayout,
             instanced,
+            skinned,
             shadowPipeline,
             vertexBufferLayouts
         );

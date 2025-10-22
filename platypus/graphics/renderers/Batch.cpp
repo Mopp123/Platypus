@@ -134,7 +134,7 @@ namespace platypus
         }
         else if (renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE)
         {
-            //createShadowPassPipeline = true;
+            createShadowPassPipeline = true;
             maxBatchLength = _maxSkinnedBatchLength;
             dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
                 sizeof(Matrix4f) * _maxSkinnedMeshJoints
@@ -184,6 +184,15 @@ namespace platypus
                 usedDescriptorSets.push_back(createdResource.descriptorSet);
         }
 
+        // ONLY TESTING HERE ATM: Need to have different descriptor sets for shadowpass.. how?
+        // -> Here excluding the Material descriptor sets...
+        std::vector<std::vector<DescriptorSet>> combinedShadowPassDescriptorSets(framesInFlight);
+        combineUsedDescriptorSets(
+            framesInFlight,
+            usedDescriptorSets,
+            combinedShadowPassDescriptorSets
+        );
+
         // For now all 3D batches have material
         usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
 
@@ -214,6 +223,7 @@ namespace platypus
             pMaterialPipeline,
             pShadowmapPipeline,//pMaterialShadowPipeline,
             combinedDescriptorSets,
+            combinedShadowPassDescriptorSets,
             (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
             { pMeshVertexBuffer },
             dynamicVertexBuffers, // dynamic/instanced vertex buffers
@@ -291,15 +301,18 @@ namespace platypus
             get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, renderableType),
             ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
         );
+
         bool instanced = renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
+        bool skinned = renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
+
         std::vector<VertexBufferLayout> vertexBufferLayouts;
         _masterRendererRef.solveVertexBufferLayouts(
             meshVertexBufferLayout,
             instanced,
+            skinned,
             true,
             vertexBufferLayouts
         );
-        bool skinned = renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
         std::vector<DescriptorSetLayout> descriptorSetLayouts;
         _masterRendererRef.solveDescriptorSetLayouts(
             pMaterial,

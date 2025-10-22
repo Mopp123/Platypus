@@ -125,9 +125,13 @@ namespace platypus
             case ImageFormat::B8G8R8_UNORM: return VK_FORMAT_B8G8R8_UNORM;
 
             case ImageFormat::D32_SFLOAT: return VK_FORMAT_D32_SFLOAT;
+
+            default:
+            {
+                PLATYPUS_ASSERT(false);
+                return VK_FORMAT_UNDEFINED;
+            }
         }
-        PLATYPUS_ASSERT(false);
-        return VK_FORMAT_UNDEFINED;
     }
 
     ImageFormat to_engine_format(VkFormat format)

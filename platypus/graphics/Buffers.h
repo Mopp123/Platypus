@@ -142,6 +142,7 @@ namespace platypus
         static VertexBufferLayout get_common_static_tangent_layout();
         static VertexBufferLayout get_common_skinned_layout();
         static VertexBufferLayout get_common_skinned_tangent_layout();
+        static VertexBufferLayout get_common_skinned_shadow_layout(int32_t overrideStride);
         static VertexBufferLayout get_common_terrain_layout();
         static VertexBufferLayout get_common_terrain_tangent_layout();
 

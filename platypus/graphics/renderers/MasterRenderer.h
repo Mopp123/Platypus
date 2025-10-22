@@ -63,6 +63,7 @@ namespace platypus
         void solveVertexBufferLayouts(
             const VertexBufferLayout& meshVertexBufferLayout,
             bool instanced,
+            bool skinned,
             bool shadowPipeline,
             std::vector<VertexBufferLayout>& outVertexBufferLayouts
         ) const;

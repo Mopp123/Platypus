@@ -93,7 +93,7 @@ namespace platypus
                 {
                     render::bind_descriptor_sets(
                         currentCommandBuffer,
-                        pBatch->descriptorSets[_currentFrame],
+                        pBatch->shadowPassDescriptorSets[_currentFrame],
                         { }
                     );
                 }
@@ -102,7 +102,7 @@ namespace platypus
                     uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
                     render::bind_descriptor_sets(
                         currentCommandBuffer,
-                        pBatch->descriptorSets[_currentFrame],
+                        pBatch->shadowPassDescriptorSets[_currentFrame],
                         { dynamicUniformBufferOffset }
                     );
                 }

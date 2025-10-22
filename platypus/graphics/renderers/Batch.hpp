@@ -50,6 +50,7 @@ namespace platypus
         Pipeline* pPipeline = nullptr;
         Pipeline* pOffscreenPipeline = nullptr;
         std::vector<std::vector<DescriptorSet>> descriptorSets;
+        std::vector<std::vector<DescriptorSet>> shadowPassDescriptorSets;
         // NOTE: Currently should only use a single dynamic uniform buffer (Don't know what happens otherwise:D)
         //std::vector<uint32_t> dynamicDescriptorSetRanges;
         uint32_t dynamicUniformBufferElementSize = 0;

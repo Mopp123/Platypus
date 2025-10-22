@@ -28,3 +28,6 @@ glslc -fshader-stage=frag FontFragmentShader.glsl -o FontFragmentShader.spv
 # Shadow shaders
 glslc -fshader-stage=vert shadows/StaticVertexShader.glsl -o shadows/StaticVertexShader.spv
 glslc -fshader-stage=frag shadows/StaticFragmentShader.glsl -o shadows/StaticFragmentShader.spv
+
+glslc -fshader-stage=vert shadows/SkinnedVertexShader.glsl -o shadows/SkinnedVertexShader.spv
+glslc -fshader-stage=frag shadows/SkinnedFragmentShader.glsl -o shadows/SkinnedFragmentShader.spv
