@@ -16,114 +16,6 @@ namespace platypus
     {
     }
 
-    // NOTE: Just experimenting atm
-    // TODO: Clean this shit up
-    CommandBuffer& Renderer3D::recordOffscreenCommandBuffer(
-        const RenderPass& renderPass,
-        float viewportWidth,
-        float viewportHeight,
-        const std::vector<Batch*>& toRender
-    )
-    {
-        #ifdef PLATYPUS_DEBUG
-            if (_currentFrame >= _offscreenCommandBuffers.size())
-            {
-                Debug::log(
-                    "@Renderer3D::recordOffscreenCommandBuffer "
-                    "Frame index(" + std::to_string(_currentFrame) + ") out of bounds! "
-                    "Allocated command buffer count is " + std::to_string(_offscreenCommandBuffers.size()),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-        #endif
-
-        CommandBuffer& currentCommandBuffer = _offscreenCommandBuffers[_currentFrame];
-        currentCommandBuffer.begin(&renderPass);
-
-        render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-
-        const size_t currentFrame = _masterRendererRef.getCurrentFrame();
-        for (Batch* pBatch : toRender)
-        {
-            if (!pBatch->pOffscreenPipeline)
-                continue;
-
-            // DANGER! Might dereference nullptr!
-            render::bind_pipeline(
-                currentCommandBuffer,
-                *pBatch->pOffscreenPipeline
-            );
-
-            // TODO: Fix this mess!
-            //      * Should have better way of grouping all
-            // TODO: Don't alloc each time here!
-            std::vector<const Buffer*> vertexBuffers;
-            vertexBuffers.reserve(pBatch->staticVertexBuffers.size() + pBatch->dynamicVertexBuffers.size());
-            for (const Buffer* pBuffer : pBatch->staticVertexBuffers)
-                vertexBuffers.emplace_back(pBuffer);
-            for (std::vector<Buffer*>& dynamicVertexBuffers : pBatch->dynamicVertexBuffers)
-            {
-                // ISSUE: DANGER! Make sure not accessing outside bounds!
-                Buffer* pDynamicVertexBuffer = dynamicVertexBuffers[currentFrame];
-                vertexBuffers.emplace_back(pDynamicVertexBuffer);
-            }
-
-            render::bind_vertex_buffers(
-                currentCommandBuffer,
-                vertexBuffers
-            );
-            render::bind_index_buffer(currentCommandBuffer, pBatch->pIndexBuffer);
-
-            for (uint32_t repeatIndex = 0; repeatIndex < pBatch->repeatCount; ++repeatIndex)
-            {
-                const BatchPushConstantsData& pushConstantsData = pBatch->shadowPassPushConstantsData;
-                if (pushConstantsData.size > 0)
-                {
-                    render::push_constants(
-                        currentCommandBuffer,
-                        pushConstantsData.shaderStage,
-                        0,
-                        pushConstantsData.size,
-                        pushConstantsData.pData,
-                        pushConstantsData.uniformInfos
-                    );
-                }
-
-                if (pBatch->shadowPassDescriptorSets.size() > 0)
-                {
-                    if (pBatch->dynamicUniformBufferElementSize == 0)
-                    {
-                        render::bind_descriptor_sets(
-                            currentCommandBuffer,
-                            pBatch->shadowPassDescriptorSets[_currentFrame],
-                            { }
-                        );
-                    }
-                    else
-                    {
-                        uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
-                        render::bind_descriptor_sets(
-                            currentCommandBuffer,
-                            pBatch->shadowPassDescriptorSets[_currentFrame],
-                            { dynamicUniformBufferOffset }
-                        );
-                    }
-                }
-
-                render::draw_indexed(
-                    currentCommandBuffer,
-                    (uint32_t)pBatch->pIndexBuffer->getDataLength(),
-                    pBatch->instanceCount
-                );
-            }
-        }
-
-        currentCommandBuffer.end();
-
-        return currentCommandBuffer;
-    }
-
     CommandBuffer& Renderer3D::recordCommandBuffer(
         const RenderPass& renderPass,
         float viewportWidth,
@@ -131,20 +23,28 @@ namespace platypus
         const std::vector<Batch*>& toRender
     )
     {
-        #ifdef PLATYPUS_DEBUG
-            if (_currentFrame >= _commandBuffers.size())
-            {
-                Debug::log(
-                    "@Renderer3D::recordCommandBuffer "
-                    "Frame index(" + std::to_string(_currentFrame) + ") out of bounds! "
-                    "Allocated command buffer count is " + std::to_string(_commandBuffers.size()),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-        #endif
+        RenderPassType renderPassType = renderPass.getType();
+        if (_commandBuffers.find(renderPassType) == _commandBuffers.end())
+        {
+            Debug::log(
+                "@Renderer3D::recordCommandBuffer "
+                "No allocated command buffers found for render pass type: " + render_pass_type_to_string(renderPassType),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if (_currentFrame >= _commandBuffers[renderPassType].size())
+        {
+            Debug::log(
+                "@Renderer3D::recordCommandBuffer "
+                "Frame index(" + std::to_string(_currentFrame) + ") out of bounds for render pass type: " + render_pass_type_to_string(renderPassType) + " "
+                "Allocated command buffer count is " + std::to_string(_commandBuffers[renderPassType].size()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
 
-        CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
+        CommandBuffer& currentCommandBuffer = _commandBuffers[renderPass.getType()][_currentFrame];
         currentCommandBuffer.begin(&renderPass);
 
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
@@ -180,35 +80,37 @@ namespace platypus
 
             for (uint32_t repeatIndex = 0; repeatIndex < pBatch->repeatCount; ++repeatIndex)
             {
-                const BatchPushConstantsData& pushConstantsData = pBatch->scenePassPushConstantsData;
-                if (pushConstantsData.size > 0)
+                if (pBatch->pushConstantsSize > 0)
                 {
                     render::push_constants(
                         currentCommandBuffer,
-                        pushConstantsData.shaderStage,
+                        pBatch->pushConstantsShaderStage,
                         0,
-                        pushConstantsData.size,
-                        pushConstantsData.pData,
-                        pushConstantsData.uniformInfos
+                        pBatch->pushConstantsSize,
+                        pBatch->pPushConstantsData,
+                        pBatch->pushConstantsUniformInfos
                     );
                 }
 
-                if (pBatch->dynamicUniformBufferElementSize == 0)
+                if (!pBatch->descriptorSets.empty())
                 {
-                    render::bind_descriptor_sets(
-                        currentCommandBuffer,
-                        pBatch->descriptorSets[_currentFrame],
-                        { }
-                    );
-                }
-                else
-                {
-                    uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
-                    render::bind_descriptor_sets(
-                        currentCommandBuffer,
-                        pBatch->descriptorSets[_currentFrame],
-                        { dynamicUniformBufferOffset }
-                    );
+                    if (pBatch->dynamicUniformBufferElementSize == 0)
+                    {
+                        render::bind_descriptor_sets(
+                            currentCommandBuffer,
+                            pBatch->descriptorSets[_currentFrame],
+                            { }
+                        );
+                    }
+                    else
+                    {
+                        uint32_t dynamicUniformBufferOffset = repeatIndex * pBatch->dynamicUniformBufferElementSize;
+                        render::bind_descriptor_sets(
+                            currentCommandBuffer,
+                            pBatch->descriptorSets[_currentFrame],
+                            { dynamicUniformBufferOffset }
+                        );
+                    }
                 }
 
                 render::draw_indexed(
@@ -232,11 +134,11 @@ namespace platypus
 
     void Renderer3D::allocCommandBuffers()
     {
-        _commandBuffers = Device::get_command_pool()->allocCommandBuffers(
+        _commandBuffers[RenderPassType::SCENE_PASS] = Device::get_command_pool()->allocCommandBuffers(
             _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
-        _offscreenCommandBuffers = Device::get_command_pool()->allocCommandBuffers(
+        _commandBuffers[RenderPassType::SHADOW_PASS] = Device::get_command_pool()->allocCommandBuffers(
             _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
@@ -244,13 +146,13 @@ namespace platypus
 
     void Renderer3D::freeCommandBuffers()
     {
-        for (CommandBuffer& commandBuffer : _commandBuffers)
-            commandBuffer.free();
-
-        for (CommandBuffer& commandBuffer : _offscreenCommandBuffers)
-            commandBuffer.free();
+        std::unordered_map<RenderPassType, std::vector<CommandBuffer>>::iterator it;
+        for (it = _commandBuffers.begin(); it != _commandBuffers.end(); ++it)
+        {
+            for (CommandBuffer& commandBuffer : it->second)
+                commandBuffer.free();
+        }
 
         _commandBuffers.clear();
-        _offscreenCommandBuffers.clear();
     }
 }

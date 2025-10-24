@@ -47,7 +47,9 @@ namespace platypus
     }
 
 
-    Shader::Shader(const std::string& filename, ShaderStageFlagBits stage)
+    Shader::Shader(const std::string& filename, ShaderStageFlagBits stage) :
+        _stage(stage),
+        _filename(filename)
     {
         const std::string fullPath = "assets/shaders/web/" + filename + ".glsl";
         std::string source = load_text_file(fullPath);

@@ -10,6 +10,8 @@
 
 #include <unordered_map>
 
+// TODO: Some better way to deal with this...
+#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 2
 
 namespace platypus
 {
@@ -34,31 +36,16 @@ namespace platypus
         // *Per each frame in flight
         std::vector<Buffer*> buffer;
         std::vector<DescriptorSet> descriptorSet;
+        bool requiresDeviceUpdate = false;
     };
 
-    enum class BatchType
-    {
-        NONE,
-        STATIC_INSTANCED,
-        SKINNED,
-        TERRAIN
-    };
-
-    struct BatchPushConstantsData
-    {
-        size_t size = 0;
-        ShaderStageFlagBits shaderStage;
-        std::vector<UniformInfo> uniformInfos;
-        void* pData = nullptr;
-    };
 
     struct Batch
     {
-        BatchType type = BatchType::NONE;
+        size_t maxLength = 0;
+
         Pipeline* pPipeline = nullptr;
-        Pipeline* pOffscreenPipeline = nullptr;
         std::vector<std::vector<DescriptorSet>> descriptorSets;
-        std::vector<std::vector<DescriptorSet>> shadowPassDescriptorSets;
         // NOTE: Currently should only use a single dynamic uniform buffer (Don't know what happens otherwise:D)
         //std::vector<uint32_t> dynamicDescriptorSetRanges;
         uint32_t dynamicUniformBufferElementSize = 0;
@@ -66,20 +53,13 @@ namespace platypus
         std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
         const Buffer* pIndexBuffer = nullptr;
 
-        // NOTE: Push constants don't work with the current system
         // TODO: How to get the actual data for the push constants??
-        //size_t pushConstantsSize = 0;
-        //std::vector<UniformInfo> pushConstantsUniformInfos;
-        //void* pPushConstantsData = nullptr;
-
-        // NOTE: This is getting out of hand!!!
-        // TODO: Either separate batches using shared resources or encapsulate stuff better
-        // for render pass specific things!
-        BatchPushConstantsData scenePassPushConstantsData;
-        BatchPushConstantsData shadowPassPushConstantsData;
+        size_t pushConstantsSize = 0;
+        std::vector<UniformInfo> pushConstantsUniformInfos;
+        void* pPushConstantsData = nullptr;
 
         // Atm push constants should ONLY be used in vertex shaders!
-        //ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+        ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
 
         // Repeat count should be 1 if instanced
         uint32_t repeatCount = 0;
@@ -87,12 +67,12 @@ namespace platypus
         uint32_t instanceCount = 0;
     };
 
-    struct BatchShadowPassPipelineData
+    struct BatchPipelineData
     {
         Shader* pVertexShader = nullptr;
         Shader* pFragmentShader = nullptr;
         Pipeline* pPipeline = nullptr;
-        ~BatchShadowPassPipelineData()
+        ~BatchPipelineData()
         {
             delete pVertexShader;
             delete pFragmentShader;
@@ -108,26 +88,27 @@ namespace platypus
         MasterRenderer& _masterRendererRef;
         DescriptorPool& _descriptorPoolRef;
 
-        std::vector<Batch*> _batches;
-        std::unordered_map<ID_t, size_t> _identifierBatchMapping;
-        std::unordered_map<ID_t, BatchShadowPassPipelineData*> _batchShadowmapPipelineData;
+        std::unordered_map<RenderPassType, std::vector<Batch*>> _batches;
+        std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierBatchMapping;
+
+        // Additional batch pipelines that aren't managed elsewhere
+        // (for example shadow pass pipelines are managed here)
+        std::vector<BatchPipelineData*> _managedPipelineData;
+        // NOTE: The ID here can be anything, not just hash(meshID, materialID)
+        //  -> when accessing these pipelines you need to know how the ID was originally created!
+        //std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierPipelineDataMapping;
 
         size_t _maxStaticBatchLength;
         size_t _maxSkinnedBatchLength;
         size_t _maxTerrainBatchLength;
         size_t _maxSkinnedMeshJoints;
 
+        static RenderPassType s_availableRenderPasses[2];
         static DescriptorSetLayout s_jointDescriptorSetLayout;
         static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
-        //std::vector<std::vector<Buffer*>> _allocatedBuffers;
-        //std::vector<std::vector<DescriptorSet>> _descriptorSets;
         std::vector<std::vector<BatchShaderResource>> _allocatedShaderResources;
-
-        // This is fucking stupid!
-        // Need to pass all vertex buffers as const ptr, so need a way to refer to the s_allocatedBuffers
-        // when modifying it, instead of the Batch struct's member.
         std::unordered_map<ID_t, size_t> _batchShaderResourceMapping;
 
     public:
@@ -141,12 +122,8 @@ namespace platypus
         );
         ~Batcher();
 
-        // Returns batch identifier if found, NULL_ID if not.
-        // NOTE: Entity might have components for multiple different batches!
-        //  -> Need to call for each renderable type separately
-        ID_t getBatchID(ID_t meshID, ID_t materialID);
-
         // Returns batch identifier, if created successfully
+        /*
         ID_t createBatch(
             ID_t meshID,
             ID_t materialID,
@@ -155,16 +132,21 @@ namespace platypus
             size_t shadowPushConstantsSize,
             void* pShadowPushConstants
         );
+        */
 
-        BatchShadowPassPipelineData* createShadowPassPipelineData(
-            ID_t identifier,
-            const RenderPass* pShadowPass,
-            ComponentType renderableType,
-            const VertexBufferLayout& meshVertexBufferLayout,
-            const BatchPushConstantsData& pushConstantsData,
-            const Material* pMaterial // JUST TESTING HERE: TODO: Remove
+        BatchPipelineData* createBatchPipelineData(
+            const RenderPass* pRenderPass,
+            const std::string& vertexShaderFilename,
+            const std::string& fragmentShaderFilename,
+            const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+            const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
+            size_t pushConstantsSize,
+            ShaderStageFlagBits pushConstantsShaderStage
         );
 
+        void addBatch(RenderPassType renderPassType, ID_t identifier, Batch* pBatch);
+
+        /*
         void addToStaticBatch(
             ID_t identifier,
             const Matrix4f& transformationMatrix,
@@ -183,6 +165,7 @@ namespace platypus
             const Matrix4f& transformationMatrix,
             size_t currentFrame
         );
+        */
 
         // This also updates stuff that doesn't need to be done per instance but for whole
         // batch. Material data for example(if some properties have changed).
@@ -192,27 +175,24 @@ namespace platypus
 
         void freeBatches();
 
-        const std::vector<Batch*>& getBatches() const;
+
+        Batch* getBatch(RenderPassType renderPassType, ID_t identifier);
+        // Returns all batches for a render pass
+        const std::vector<Batch*>& getBatches(RenderPassType renderPassType);
+        // Returns batches sharing the same ID for all render passes
+        std::vector<Batch*> getBatches(ID_t identifier);
 
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
 
-    private:
-        void createBatchInstancedBuffers(
-            ID_t batchID,
+        BatchShaderResource* getSharedBatchResource(ID_t batchID, size_t resourceIndex);
+
+        void createSharedBatchInstancedBuffers(
+            ID_t identifier,
             size_t bufferElementSize,
             size_t maxBatchLength,
             size_t framesInFlight,
             std::vector<Buffer*>& outBuffers
-        );
-
-        // Creates dynamic uniform buffers and descriptor sets for the whole batch
-        void createBatchShaderResources(
-            size_t framesInFlight,
-            ID_t batchID,
-            size_t maxBatchLength,
-            const std::vector<ShaderResourceLayout>& resourceLayouts,
-            std::vector<BatchShaderResource>& outResources
         );
 
         // When fetching the descriptor sets from anywhere, they are stored in
@@ -231,26 +211,40 @@ namespace platypus
             const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse
         );
 
-        Batch* getBatch(ID_t batchID);
-        Buffer* getBatchBuffer(ID_t batchID, size_t resourceIndex, size_t frame);
+        // Creates dynamic uniform buffers and descriptor sets for the whole batch
+        void createBatchShaderResources(
+            size_t framesInFlight,
+            ID_t batchID,
+            size_t maxBatchLength,
+            const std::vector<ShaderResourceLayout>& resourceLayouts,
+            std::vector<BatchShaderResource>& outResources
+        );
+
+        Pipeline* getSuitableManagedPipeline(
+            const std::string& vertexShaderFilename,
+            const std::string& fragmentShaderFilename,
+            const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+            const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
+            size_t pushConstantsSize,
+            ShaderStageFlagBits pushConstantsShaderStage
+        );
+
         // ...dumb I know, just want to make sure...
-        bool validateBatchDoesntExist(const char* callLocation, ID_t batchID) const;
-
-        bool validateDescriptorSetCounts(
+        bool validateBatchDoesntExist(
             const char* callLocation,
-            size_t framesInFlight,
-            size_t commonDescriptorSetCount,
-            size_t materialDescriptorSetCount
+            RenderPassType renderPassType,
+            ID_t batchID
         ) const;
 
-        bool validateDescriptorSetCounts(
-            const char* callLocation,
-            size_t framesInFlight,
-            size_t commonDescriptorSetCount,
-            size_t batchDescriptorSetCount,
-            size_t materialDescriptorSetCount
-        ) const;
+        void destroyManagedPipelines();
+        void recreateManagedPipelines();
 
+        inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
+        inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }
+        inline size_t getMaxTerrainBatchLength() const { return _maxTerrainBatchLength; }
+        inline size_t getMaxSkinnedMeshJoints() const { return _maxSkinnedMeshJoints; }
+
+    private:
         void addToAllocatedShaderResources(
             ID_t batchID,
             std::vector<BatchShaderResource>& shaderResources

@@ -165,7 +165,7 @@ void ShadowTestScene::init()
 
     Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
-        { 20, 0, 20 },
+        { 0, 0, 0 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
         pStaticMesh->getID(),
@@ -271,5 +271,4 @@ void ShadowTestScene::update()
         );
         pFramebufferDebugRenderable->textureID = framebufferTextures[pMasterRenderer->getCurrentFrame()]->getID();
     }
-
 }

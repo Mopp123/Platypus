@@ -41,6 +41,11 @@ namespace platypus
         // NOTE: should be using DescriptorSetLayoutBinding's "descriptorCount" instead of "arrayLen"
         // when I was writing this initially, I forgot how Vulkan deals with that kind of stuff...
         int arrayLen = 1;
+
+        bool operator==(const UniformInfo& other) const
+        {
+            return type == other.type && arrayLen == other.arrayLen;
+        }
     };
 
 
@@ -82,6 +87,15 @@ namespace platypus
 
         ~DescriptorSetLayoutBinding() {}
 
+        bool operator==(const DescriptorSetLayoutBinding& other) const
+        {
+            return _binding == other._binding &&
+                _type == other._type &&
+                _shaderStageFlags == other._shaderStageFlags &&
+                _descriptorCount == other._descriptorCount &&
+                _uniformInfo == other._uniformInfo;
+        }
+
         inline uint32_t getBinding() const { return _binding; }
         inline DescriptorType getType() const { return _type; }
         inline uint32_t getShaderStageFlags() const { return _shaderStageFlags; }
@@ -106,6 +120,8 @@ namespace platypus
         ~DescriptorSetLayout();
 
         void destroy();
+
+        bool operator==(const DescriptorSetLayout& other) const { return _bindings == other._bindings; }
 
         inline const std::vector<DescriptorSetLayoutBinding>& getBindings() const { return _bindings; }
         inline const DescriptorSetLayoutImpl* getImpl() const { return _pImpl; }

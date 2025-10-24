@@ -42,6 +42,7 @@ namespace platypus
         friend class Pipeline;
         ShaderImpl* _pImpl = nullptr;
         ShaderStageFlagBits _stage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+        std::string _filename;
 
     public:
         // Give shader's file name only EXCLUDING path and extension.
@@ -51,5 +52,6 @@ namespace platypus
         ~Shader();
 
         inline ShaderStageFlagBits getStage() const { return _stage; }
+        inline const std::string& getFilename() const { return _filename; } // Should rather be string view instead!
     };
 }

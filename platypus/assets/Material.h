@@ -16,6 +16,7 @@ namespace platypus
     // Used to determine which shader to use
     enum class MaterialType
     {
+        NONE,
         MESH,
         TERRAIN
     };

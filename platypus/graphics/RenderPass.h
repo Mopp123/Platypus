@@ -1,16 +1,27 @@
 #pragma once
 
 #include "platypus/assets/Image.h"
+#include <string>
 
 
 namespace platypus
 {
-
     enum class RenderPassType
     {
         SCENE_PASS,
         SHADOW_PASS
     };
+
+    static inline std::string render_pass_type_to_string(RenderPassType type)
+    {
+        switch (type)
+        {
+            case RenderPassType::SCENE_PASS:    return "SCENE_PASS";
+            case RenderPassType::SHADOW_PASS:   return "SHADOW_PASS";
+            default:                            return "<Invalid RenderPassType>";
+        }
+    }
+
 
     class Swapchain;
 

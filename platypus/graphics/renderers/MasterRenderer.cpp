@@ -8,6 +8,7 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
+#include "StaticBatch.hpp"
 #include "platypus/ecs/components/SkeletalAnimation.h"
 
 
@@ -131,10 +132,41 @@ namespace platypus
             false,
             false
         );
+
         if (pStaticRenderable)
         {
             const ID_t meshID = pStaticRenderable->meshID;
             const ID_t materialID = pStaticRenderable->materialID;
+            ID_t batchID = ID::hash(meshID, materialID);
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
+            {
+                create_static_batch(
+                    _batcher,
+                    _batcher.getMaxStaticBatchLength(),
+                    _swapchainRef.getRenderPassPtr(),
+                    meshID,
+                    materialID
+                );
+
+                create_static_shadow_batch(
+                    _batcher,
+                    _batcher.getMaxStaticBatchLength(),
+                    &_testRenderPass,
+                    meshID,
+                    materialID,
+                    pShadowPassPushConstants,
+                    shadowPassPushConstantsSize
+                );
+            }
+            add_to_static_batch(
+                _batcher,
+                batchID,
+                pTransform->globalMatrix,
+                _currentFrame
+            );
+
+            /*
             ID_t batchID = _batcher.getBatchID(meshID, materialID);
             if (batchID == NULL_ID)
             {
@@ -154,8 +186,10 @@ namespace platypus
                 );
             }
             _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
+            */
         }
 
+        /*
         SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
             entity.id,
             ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
@@ -239,6 +273,7 @@ namespace platypus
                 _currentFrame
             );
         }
+        */
 
         if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
             _pGUIRenderer->submit(pScene, entity.id);
@@ -334,15 +369,19 @@ namespace platypus
         std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
     ) const
     {
-        MaterialType materialType = pMaterial->getMaterialType();
-        if (skinned && materialType == MaterialType::TERRAIN)
+        MaterialType materialType = MaterialType::NONE;
+        if (pMaterial)
         {
-            Debug::log(
-                "@MasterRenderer::solveDescriptorSetLayouts "
-                "Illegal to solve descriptor set layouts for Terrain Materials with skinning!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
+            materialType = pMaterial->getMaterialType();
+            if (skinned && materialType == MaterialType::TERRAIN)
+            {
+                Debug::log(
+                    "@MasterRenderer::solveDescriptorSetLayouts "
+                    "Illegal to solve descriptor set layouts for Terrain Materials with skinning!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
         }
 
         if (!shadowPipeline)
@@ -366,7 +405,7 @@ namespace platypus
 
         // Checking if shadow pipeline here, since need to add the Material descriptor set layout
         // last if it's used!
-        if (!shadowPipeline)
+        if (!shadowPipeline && pMaterial)
             outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
     }
 
@@ -624,17 +663,15 @@ namespace platypus
             { 1, 0, 1, 1 },
             true
         );
-
         std::vector<CommandBuffer> testSecondaries;
         testSecondaries.push_back(
-            _pRenderer3D->recordOffscreenCommandBuffer(
-                _testRenderPass,//_swapchainRef.getRenderPass(),
+            _pRenderer3D->recordCommandBuffer(
+                _testRenderPass,
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
-                _batcher.getBatches()
+                _batcher.getBatches(RenderPassType::SHADOW_PASS)
             )
         );
-
         render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
         render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
@@ -660,7 +697,7 @@ namespace platypus
                 _swapchainRef.getRenderPass(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
-                _batcher.getBatches()
+                _batcher.getBatches(RenderPassType::SCENE_PASS)
             )
         );
         // NOTE: Need to reset batches for next frame's submits
@@ -720,7 +757,13 @@ namespace platypus
                 createCommonShaderResources();
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
-                // NOTE: Makes window resizing even slower.
+
+                // NOTE: Freeing batches which causes each batch to be created again when submitting.
+                // For this to work, batcher also needs to destroy all managed pipelines!
+                //      BUT it may be okay to NOT destroy and recreate existing pipelines since the created batches
+                //      will always have same IDs
+                //          -> u might be able to just recreate existing managed pipelines?? -> TEST THIS PLZ!
+                //  -> Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
             }
@@ -736,6 +779,7 @@ namespace platypus
                 createPipelines();
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
+                _batcher.recreateManagedPipelines();
             }
 
             _swapchainRef.resetChangedImageCount();

@@ -2,6 +2,7 @@
 
 #include "platypus/graphics/CommandBuffer.h"
 #include "Batch.hpp"
+#include <unordered_map>
 
 
 namespace platypus
@@ -12,22 +13,12 @@ namespace platypus
     private:
         MasterRenderer& _masterRendererRef;
 
-        std::vector<CommandBuffer> _commandBuffers;
-        std::vector<CommandBuffer> _offscreenCommandBuffers;
+        std::unordered_map<RenderPassType, std::vector<CommandBuffer>> _commandBuffers;
         size_t _currentFrame = 0;
 
     public:
         Renderer3D(MasterRenderer& masterRendererRef);
         ~Renderer3D();
-
-        // NOTE: Just experimenting atm
-        // TODO: Clean this shit up
-        CommandBuffer& recordOffscreenCommandBuffer(
-            const RenderPass& renderPass,
-            float viewportWidth,
-            float viewportHeight,
-            const std::vector<Batch*>& toRender
-        );
 
         CommandBuffer& recordCommandBuffer(
             const RenderPass& renderPass,
