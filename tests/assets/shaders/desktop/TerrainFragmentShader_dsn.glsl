@@ -8,11 +8,8 @@ layout(location = 4) in vec3 var_lightDir; // in tangent space
 layout(location = 5) in vec4 var_lightColor;
 layout(location = 6) in vec4 var_ambientLightColor;
 
-layout(location = 7) in float var_tileSize;
-layout(location = 8) in float var_verticesPerRow;
-
-layout(location = 9) in mat3 var_toTangentSpace; // uses locations 9-11
-layout(location = 12) in vec4 var_tangent;
+layout(location = 7) in mat3 var_toTangentSpace; // uses locations 7-9
+layout(location = 10) in vec4 var_tangent;
 
 layout(set = 2, binding = 0) uniform sampler2D blendmapTexture;
 

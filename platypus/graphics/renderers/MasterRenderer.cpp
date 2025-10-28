@@ -8,8 +8,10 @@
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
-#include "StaticBatch.hpp"
 #include "platypus/ecs/components/SkeletalAnimation.h"
+#include "StaticBatch.hpp"
+#include "SkinnedBatch.hpp"
+#include "TerrainBatch.hpp"
 
 
 namespace platypus
@@ -165,31 +167,8 @@ namespace platypus
                 pTransform->globalMatrix,
                 _currentFrame
             );
-
-            /*
-            ID_t batchID = _batcher.getBatchID(meshID, materialID);
-            if (batchID == NULL_ID)
-            {
-                Debug::log(
-                    "@MasterRenderer::submit "
-                    "No suitable batch found for StaticMeshRenderable. Creating a new one..."
-                );
-
-                // TODO: Error handling if creation fails
-                batchID = _batcher.createBatch(
-                    meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
-                    &_testRenderPass,
-                    shadowPassPushConstantsSize,
-                    pShadowPassPushConstants
-                );
-            }
-            _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
-            */
         }
 
-        /*
         SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
             entity.id,
             ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
@@ -200,24 +179,32 @@ namespace platypus
         {
             const ID_t meshID = pSkinnedRenderable->meshID;
             const ID_t materialID = pSkinnedRenderable->materialID;
-            ID_t batchID = _batcher.getBatchID(meshID, materialID);
-            if (batchID == NULL_ID)
+            ID_t batchID = ID::hash(meshID, materialID);
+            const size_t maxSkinnedBatchLength = _batcher.getMaxSkinnedBatchLength();
+            const size_t maxJoints = _batcher.getMaxSkinnedMeshJoints();
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
             {
-                Debug::log(
-                    "@MasterRenderer::submit "
-                    "No suitable batch found for SkinnedMeshRenderable. Creating a new one..."
+                create_skinned_batch(
+                    _batcher,
+                    maxSkinnedBatchLength,
+                    maxJoints,
+                    _swapchainRef.getRenderPassPtr(),
+                    meshID,
+                    materialID
                 );
-                // TODO: Error handling if creation fails
-                batchID = _batcher.createBatch(
+
+                create_skinned_shadow_batch(
+                    _batcher,
+                    maxSkinnedBatchLength,
+                    maxJoints,
+                    &_testRenderPass,
                     meshID,
                     materialID,
-                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-                    &_testRenderPass,
-                    shadowPassPushConstantsSize,
-                    pShadowPassPushConstants
+                    pShadowPassPushConstants,
+                    shadowPassPushConstantsSize
                 );
             }
-
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
                 entity.id,
                 ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
@@ -227,12 +214,14 @@ namespace platypus
                 AssetType::ASSET_TYPE_MESH
             );
 
-            _batcher.addToSkinnedBatch(
+            add_to_skinned_batch(
+                _batcher,
                 batchID,
                 (void*)pAnimation->jointMatrices,
                 sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
                 _currentFrame
             );
+
         }
 
         TerrainMeshRenderable* pTerrainRenderable = (TerrainMeshRenderable*)pScene->getComponent(
@@ -245,35 +234,25 @@ namespace platypus
         {
             const ID_t meshID = pTerrainRenderable->meshID;
             const ID_t materialID = pTerrainRenderable->materialID;
-            ID_t batchID = _batcher.getBatchID(meshID, materialID);
-            if (batchID == NULL_ID)
+            ID_t batchID = ID::hash(meshID, materialID);
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
             {
-                Debug::log(
-                    "@MasterRenderer::submit "
-                    "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
-                );
-                // TODO: Error handling if creation fails
-                batchID = _batcher.createBatch(
+                create_terrain_batch(
+                    _batcher,
+                    _batcher.getMaxTerrainBatchLength(),
+                    _swapchainRef.getRenderPassPtr(),
                     meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-                    &_testRenderPass,
-                    0,
-                    nullptr
+                    materialID
                 );
             }
-
-            const Mesh* pTerrainMesh = (const Mesh*)Application::get_instance()->getAssetManager()->getAsset(
-                pTerrainRenderable->meshID,
-                AssetType::ASSET_TYPE_MESH
-            );
-            _batcher.addToTerrainBatch(
+            add_to_terrain_batch(
+                _batcher,
                 batchID,
                 pTransform->globalMatrix,
                 _currentFrame
             );
         }
-        */
 
         if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
             _pGUIRenderer->submit(pScene, entity.id);

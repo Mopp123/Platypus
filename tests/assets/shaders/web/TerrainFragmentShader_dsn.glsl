@@ -8,9 +8,6 @@ varying vec3 var_lightDir; // in tangent space
 varying vec4 var_lightColor;
 varying vec4 var_ambientLightColor;
 
-varying float var_tileSize;
-varying float var_verticesPerRow;
-
 varying mat3 var_toTangentSpace; // uses locations 9-11
 varying vec4 var_tangent;
 

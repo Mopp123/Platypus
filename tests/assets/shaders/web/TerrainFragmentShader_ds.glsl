@@ -8,9 +8,6 @@ varying vec3 var_lightDir;
 varying vec4 var_lightColor;
 varying vec4 var_ambientLightColor;
 
-varying float var_tileSize;
-varying float var_verticesPerRow;
-
 uniform sampler2D blendmapTexture;
 uniform sampler2D diffuseTextureChannel0;
 uniform sampler2D diffuseTextureChannel1;

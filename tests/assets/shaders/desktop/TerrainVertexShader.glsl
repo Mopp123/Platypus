@@ -17,9 +17,6 @@ layout(set = 0, binding = 0) uniform SceneData
 layout(set = 1, binding = 0) uniform InstanceData
 {
     mat4 transformationMatrix;
-    vec2 meshProperties;
-    // meshProperties.x = tileSize
-    // meshProperties.y = verticesPerRow
 } instanceData;
 
 layout(location = 0) out vec3 var_normal;
@@ -29,9 +26,6 @@ layout(location = 3) out vec3 var_cameraPos;
 layout(location = 4) out vec3 var_lightDir;
 layout(location = 5) out vec4 var_lightColor;
 layout(location = 6) out vec4 var_ambientLightColor;
-
-layout(location = 7) out float var_tileSize;
-layout(location = 8) out float var_verticesPerRow;
 
 void main()
 {
@@ -52,7 +46,4 @@ void main()
     var_lightDir = sceneData.lightDirection.xyz;
     var_lightColor = sceneData.lightColor;
     var_ambientLightColor = sceneData.ambientLightColor;
-
-    var_tileSize = instanceData.meshProperties.x;
-    var_verticesPerRow = instanceData.meshProperties.y;
 }

@@ -18,9 +18,6 @@ layout(set = 0, binding = 0) uniform SceneData
 layout(set = 1, binding = 0) uniform InstanceData
 {
     mat4 transformationMatrix;
-    vec2 meshProperties;
-    // meshProperties.x = tileSize
-    // meshProperties.y = verticesPerRow
 } instanceData;
 
 layout(location = 0) out vec3 var_normal;
@@ -31,11 +28,8 @@ layout(location = 4) out vec3 var_lightDir; // in tangent space
 layout(location = 5) out vec4 var_lightColor;
 layout(location = 6) out vec4 var_ambientLightColor;
 
-layout(location = 7) out float var_tileSize;
-layout(location = 8) out float var_verticesPerRow;
-
-layout(location = 9) out mat3 var_toTangentSpace; // uses locations 9-11
-layout(location = 12) out vec4 var_tangent;
+layout(location = 7) out mat3 var_toTangentSpace; // uses locations 7-9
+layout(location = 10) out vec4 var_tangent;
 
 void main()
 {
@@ -68,7 +62,4 @@ void main()
     var_normal = (toCameraSpace * vec4(normal, 0.0)).xyz;
 
     var_tangent = vec4(biTangent, 1.0);
-
-    var_tileSize = instanceData.meshProperties.x;
-    var_verticesPerRow = instanceData.meshProperties.y;
 }

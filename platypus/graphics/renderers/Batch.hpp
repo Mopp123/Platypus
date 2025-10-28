@@ -13,6 +13,7 @@
 // TODO: Some better way to deal with this...
 #define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 2
 
+
 namespace platypus
 {
     enum class ShaderResourceType
@@ -122,18 +123,6 @@ namespace platypus
         );
         ~Batcher();
 
-        // Returns batch identifier, if created successfully
-        /*
-        ID_t createBatch(
-            ID_t meshID,
-            ID_t materialID,
-            ComponentType renderableType,
-            const RenderPass* pShadowPass,
-            size_t shadowPushConstantsSize,
-            void* pShadowPushConstants
-        );
-        */
-
         BatchPipelineData* createBatchPipelineData(
             const RenderPass* pRenderPass,
             const std::string& vertexShaderFilename,
@@ -145,27 +134,6 @@ namespace platypus
         );
 
         void addBatch(RenderPassType renderPassType, ID_t identifier, Batch* pBatch);
-
-        /*
-        void addToStaticBatch(
-            ID_t identifier,
-            const Matrix4f& transformationMatrix,
-            size_t currentFrame
-        );
-
-        void addToSkinnedBatch(
-            ID_t identifier,
-            void* pJointData,
-            size_t jointDataSize,
-            size_t currentFrame
-        );
-
-        void addToTerrainBatch(
-            ID_t identifier,
-            const Matrix4f& transformationMatrix,
-            size_t currentFrame
-        );
-        */
 
         // This also updates stuff that doesn't need to be done per instance but for whole
         // batch. Material data for example(if some properties have changed).
@@ -186,6 +154,14 @@ namespace platypus
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
 
         BatchShaderResource* getSharedBatchResource(ID_t batchID, size_t resourceIndex);
+        void updateHostSideSharedResource(
+            ID_t batchID,
+            size_t resourceIndex,
+            void* pData,
+            size_t dataSize,
+            size_t offset,
+            size_t currentFrame
+        );
 
         void createSharedBatchInstancedBuffers(
             ID_t identifier,

@@ -19,9 +19,6 @@ uniform SceneData sceneData;
 struct InstanceData
 {
     mat4 transformationMatrix;
-    vec2 meshProperties;
-    // meshProperties.x = tileSize
-    // meshProperties.y = verticesPerRow
 };
 uniform InstanceData instanceData;
 
@@ -32,9 +29,6 @@ varying vec3 var_toCamera; // in tangent space
 varying vec3 var_lightDir; // in tangent space
 varying vec4 var_lightColor;
 varying vec4 var_ambientLightColor;
-
-varying float var_tileSize;
-varying float var_verticesPerRow;
 
 varying mat3 var_toTangentSpace; // uses locations 9-11
 varying vec4 var_tangent;
@@ -83,7 +77,4 @@ void main()
     var_normal = (toCameraSpace * vec4(normal, 0.0)).xyz;
 
     var_tangent = vec4(biTangent, 1.0);
-
-    var_tileSize = instanceData.meshProperties.x;
-    var_verticesPerRow = instanceData.meshProperties.y;
 }
