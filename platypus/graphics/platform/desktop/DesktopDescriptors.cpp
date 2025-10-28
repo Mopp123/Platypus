@@ -159,6 +159,89 @@ namespace platypus
     }
 
 
+    // NOTE: Might be danger here? Not sure how to associate _components and bindings
+    //  -> I think the components are logically for each binding...
+    void DescriptorSet::update(uint32_t binding, DescriptorSetComponent component)
+    {
+        if (binding >= _components.size())
+        {
+            Debug::log(
+                "@DescriptorSet::update "
+                "Binding(" + std::to_string(binding) + ") out of bounds. "
+                "This DescriptorSet has " + std::to_string(_components.size()) + " components",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        DescriptorType type = component.type;
+
+        VkDescriptorBufferInfo bufferInfo{};
+        VkDescriptorImageInfo imageInfo{};
+
+        bool isTexture = false;
+        if (type == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER || type == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+        {
+            // NOTE: Danger?
+            const Buffer* pBuffer = (const Buffer*)component.pData;
+            bufferInfo.buffer = pBuffer->getImpl()->handle;
+            bufferInfo.offset = 0;
+            // NOTE:
+            // Be careful when using dynamic uniform buffers!
+            //  -> When using dynamic offset in vkCmdBindDescriptorSets the "area of buffer that is used", is the given offset to the offset + this range
+            //  -> And range being the element size should make sense for all cases
+            //  -> YOU JUST NEED TO BE CAREFUL THAT YOU PROVIDE THE CORRECT ELEMENT SIZE!
+            bufferInfo.range = pBuffer->getDataElemSize();
+        }
+        else if (type == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        {
+            isTexture = true;
+            // NOTE: Danger?
+            const Texture* pTexture = (const Texture*)component.pData;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = pTexture->getImpl()->imageView;
+            imageInfo.sampler = pTexture->getSamplerImpl()->handle;
+        }
+        else
+        {
+            Debug::log(
+                "@DescriptorSet::update "
+                "Invalid descriptor type for binding: " + std::to_string(binding),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        // NOTE: No idea is this going to work...
+        // need to write to multiple bindings in some cases...
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.dstSet = _pImpl->handle;
+        descriptorWrite.dstBinding = binding;
+        descriptorWrite.dstArrayElement = 0; // if using array descriptors, this is the first index in the array..
+        descriptorWrite.descriptorType = to_vk_descriptor_type(type);
+
+        if (!isTexture)
+            descriptorWrite.pBufferInfo = &bufferInfo;
+        else
+            descriptorWrite.pImageInfo = &imageInfo;
+
+        descriptorWrite.pTexelBufferView = nullptr; // what this?
+
+        vkUpdateDescriptorSets(
+            Device::get_impl()->device,
+            1,
+            &descriptorWrite,
+            0,
+            nullptr
+        );
+
+        _components[binding] = component;
+    }
+
+
     static VkDescriptorSet alloc_descriptor_set(
         VkDescriptorPool vkDescriptorPool,
         const DescriptorSetLayout& layout

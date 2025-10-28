@@ -1,4 +1,6 @@
 #include "platypus/graphics/Descriptors.h"
+#include "platypus/core/Debug.h"
+
 
 namespace platypus
 {
@@ -73,6 +75,21 @@ namespace platypus
     {
     }
 
+    void DescriptorSet::update(uint32_t binding, DescriptorSetComponent component)
+    {
+        if (binding >= _components.size())
+        {
+            Debug::log(
+                "@DescriptorSet::update "
+                "Binding(" + std::to_string(binding) + ") out of bounds. "
+                "This DescriptorSet has " + std::to_string(_components.size()) + " components",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        _components[binding] = component;
+    }
 
     DescriptorPool::DescriptorPool(const Swapchain& swapchain)
     {

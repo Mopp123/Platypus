@@ -520,6 +520,7 @@ namespace platypus
             const std::vector<uint32_t>& offsets
         )
         {
+            Debug::log("___TEST___BIND DESCRIPTOR SETS");
             const Pipeline* pBoundPipeline = commandBuffer.getImpl()->pBoundPipeline;
             const std::vector<DescriptorSetLayout>& descriptorSetLayouts = pBoundPipeline->getDescriptorSetLayouts();
             PipelineImpl* pPipelineImpl = pBoundPipeline->getImpl();
@@ -736,13 +737,23 @@ namespace platypus
                     }
                     else if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                     {
+                        Debug::log("___TEST___BIND DESCRIPTOR SETS <Image>");
+                        Debug::log("    location index: " + std::to_string(useLocationIndex));
+                        Debug::log("    uniform location count: " + std::to_string(shaderUniformLocations.size()));
+                        Debug::log("    uniform location value: " + std::to_string(shaderUniformLocations[useLocationIndex]));
+                        Debug::log("    binding index: " + std::to_string(bindingIndex));
+                        Debug::log("    descriptor set components: " + std::to_string(descriptorSetComponents.size()));
                         // TODO: some boundary checking..
                         for (const UniformInfo& layoutInfo : uniformInfo)
                         {
                             GL_FUNC(glUniform1i(shaderUniformLocations[useLocationIndex], binding.getBinding()));
                             // well following is quite fucking dumb.. dunno how could do this better
                             GL_FUNC(glActiveTexture(binding_to_gl_texture_unit(binding.getBinding())));
+
                             const Texture* pTexture = (const Texture*)descriptorSetComponents[bindingIndex].pData;
+                            Debug::log("___TEST___binding texture...");
+                            PLATYPUS_ASSERT(pTexture);
+                            PLATYPUS_ASSERT(pTexture->getImpl());
                             GL_FUNC(glBindTexture(
                                 GL_TEXTURE_2D,
                                 pTexture->getImpl()->id
@@ -755,6 +766,7 @@ namespace platypus
                 ++descriptorSetIndex;
             }
             pPipelineImpl->constantsPushed = false;
+            Debug::log("___TEST___BIND DESCRIPTOR SETS -> SUCCESS!");
         }
 
         void draw_indexed(

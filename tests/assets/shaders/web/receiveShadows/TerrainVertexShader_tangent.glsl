@@ -9,7 +9,7 @@ struct PushConstants
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
-} ;
+};
 uniform PushConstants shadowMatrices;
 
 struct SceneData

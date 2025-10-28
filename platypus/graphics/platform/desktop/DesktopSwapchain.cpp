@@ -35,11 +35,11 @@ namespace platypus
             Debug::log("Selected VK_PRESENT_MODE_MAILBOX_KHR for swapchain");
             return VK_PRESENT_MODE_MAILBOX_KHR;
         }
-        else if (std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end())
-        {
-            Debug::log("Selected VK_PRESENT_MODE_IMMEDIATE_KHR for swapchain");
-            return VK_PRESENT_MODE_IMMEDIATE_KHR;
-        }
+        //else if (std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end())
+        //{
+        //    Debug::log("Selected VK_PRESENT_MODE_IMMEDIATE_KHR for swapchain");
+        //    return VK_PRESENT_MODE_IMMEDIATE_KHR;
+        //}
         Debug::log("Selected VK_PRESENT_MODE_FIFO_KHR for swapchain");
         return VK_PRESENT_MODE_FIFO_KHR;
     }

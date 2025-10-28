@@ -439,6 +439,15 @@ namespace platypus
             _shadowmapDescriptorSetLayout,
             { { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _pTestFramebufferDepthTexture } }
         );
+
+        // Update new shadow texture for materials that receive shadows
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        {
+            Material* pMaterial = (Material*)pAsset;
+            if (pMaterial->receivesShadows())
+                pMaterial->updateShadowmapDescriptorSet(_pTestFramebufferDepthTexture);
+        }
     }
 
     void MasterRenderer::destroyOffscreenResourcesTEST()
@@ -773,15 +782,6 @@ namespace platypus
 
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
-
-                // NOTE: After added _receiveShadows into Material, it is required to
-                // always recreate their shader resources since the shadowmap texture
-                // gets recreated!
-                //  -> PRETTY SLOW AND DUMB IF SWAPCHAIN IMG COUNT DOESN'T CHANGE!
-                destroyShaderResources();
-                createShaderResources();
-                // TESTING
-                _batcher.freeBatches();
 
                 _batcher.recreateManagedPipelines();
             }

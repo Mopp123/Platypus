@@ -317,6 +317,9 @@ namespace platypus
         for (size_t i = 0; i < allTextures.size(); ++i)
             textureComponents[i] = { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, allTextures[i] };
 
+        if (_receiveShadows)
+            _shadowmapDescriptorIndex = textureComponents.size() - 1;
+
         for (size_t i = 0; i < framesInFlight; ++i)
         {
             Buffer* pUniformBuffer = new Buffer(
@@ -352,6 +355,29 @@ namespace platypus
         DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
         descriptorPool.freeDescriptorSets(_descriptorSets);
         _descriptorSets.clear();
+    }
+
+    void Material::updateShadowmapDescriptorSet(Texture* pShadowmapTexture)
+    {
+        #ifdef PLATYPUS_DEBUG
+            if (!_receiveShadows)
+            {
+                Debug::log(
+                    "@Material::updateShadowmapDescriptorSet "
+                    "Material not marked to receive shadows!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+        #endif
+        for (DescriptorSet& descriptorSet : _descriptorSets)
+        {
+            descriptorSet.update(
+                _shadowmapDescriptorIndex,
+                { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pShadowmapTexture }
+            );
+        }
     }
 
     Texture* Material::getBlendmapTexture() const

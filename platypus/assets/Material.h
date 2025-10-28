@@ -59,6 +59,7 @@ namespace platypus
         size_t _normalTextureCount = 0;
 
         bool _receiveShadows = false;
+        uint32_t _shadowmapDescriptorIndex = 0;
 
         std::unordered_map<ComponentType, MaterialPipelineData*> _pipelines;
 
@@ -92,20 +93,14 @@ namespace platypus
             const RenderPass* pRenderPass,
             ComponentType renderableType
         );
-        // TODO: Unfuck this mess plz!
-        //void createPipeline(
-        //    const RenderPass* pRenderPass,
-        //    const VertexBufferLayout& meshVertexBufferLayout,
-        //    bool instanced,
-        //    bool skinned,
-        //    bool shadowPipeline
-        //);
 
         void recreateExistingPipeline();
         void destroyPipeline();
 
         void createShaderResources();
         void destroyShaderResources();
+
+        void updateShadowmapDescriptorSet(Texture* pShadowmapTexture);
 
         Texture* getBlendmapTexture() const;
         Texture* getDiffuseTexture(size_t channel) const;

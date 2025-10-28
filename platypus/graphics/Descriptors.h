@@ -167,6 +167,8 @@ namespace platypus
 
         ~DescriptorSet();
 
+        void update(uint32_t binding, DescriptorSetComponent component);
+
         inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
     };
