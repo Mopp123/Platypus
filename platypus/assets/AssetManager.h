@@ -52,6 +52,7 @@ namespace platypus
             float shininess,
             const Vector2f& textureOffset,
             const Vector2f& textureScale,
+            bool receiveShadows,
             bool shadeless
         );
         Material* createMaterial(

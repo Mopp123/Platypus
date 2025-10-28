@@ -187,6 +187,7 @@ namespace platypus
         float shininess,
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
+        bool receiveShadows,
         bool shadeless
     )
     {
@@ -230,6 +231,7 @@ namespace platypus
             shininess,
             textureOffset,
             textureScale,
+            receiveShadows,
             shadeless
         );
         _assets[pMaterial->getID()] = pMaterial;
@@ -257,6 +259,7 @@ namespace platypus
             shininess,
             { 0, 0 },
             { 1, 1 },
+            false,
             shadeless
         );
     }

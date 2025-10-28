@@ -53,7 +53,7 @@ void main() {
 
     vec4 translatedPos = jointTransform * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
-    vec4 rotatedNormal = vec4(normal, 0.0);
+    vec4 rotatedNormal = jointTransform * vec4(normal, 0.0);
 
     var_normal = rotatedNormal.xyz;
     var_texCoord = texCoord;

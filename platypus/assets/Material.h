@@ -58,6 +58,8 @@ namespace platypus
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
 
+        bool _receiveShadows = false;
+
         std::unordered_map<ComponentType, MaterialPipelineData*> _pipelines;
 
         // TODO: Material instance
@@ -81,23 +83,23 @@ namespace platypus
             float shininess,
             const Vector2f& textureOffset = { 0, 0 },
             const Vector2f& textureScale = { 1, 1 },
+            bool receiveShadows = false,
             bool shadeless = false // NOTE: This doesn't do anything atm!?
         );
         ~Material();
 
         void createPipeline(
             const RenderPass* pRenderPass,
-            ComponentType renderableType,
-            bool shadowPipeline
+            ComponentType renderableType
         );
         // TODO: Unfuck this mess plz!
-        void createPipeline(
-            const RenderPass* pRenderPass,
-            const VertexBufferLayout& meshVertexBufferLayout,
-            bool instanced,
-            bool skinned,
-            bool shadowPipeline
-        );
+        //void createPipeline(
+        //    const RenderPass* pRenderPass,
+        //    const VertexBufferLayout& meshVertexBufferLayout,
+        //    bool instanced,
+        //    bool skinned,
+        //    bool shadowPipeline
+        //);
 
         void recreateExistingPipeline();
         void destroyPipeline();
@@ -123,10 +125,15 @@ namespace platypus
 
         inline size_t getTotalTextureCount() const
         {
-            return _diffuseTextureCount + _specularTextureCount + _normalTextureCount + (_blendmapTextureID != NULL_ID ? 1 : 0);
+            return _diffuseTextureCount +
+                _specularTextureCount +
+                _normalTextureCount +
+                (_blendmapTextureID != NULL_ID ? 1 : 0) +
+                (_receiveShadows ? 1 : 0);
         }
         inline float getSpecularStrength() const { return _uniformBufferData.lightingProperties.x; }
         inline float getShininess() const { return _uniformBufferData.lightingProperties.y; }
+        inline bool receivesShadows() const { return _receiveShadows; }
         inline bool isShadeless() const { return _uniformBufferData.lightingProperties.z; }
         inline Vector2f getTextureOffset() const { return { _uniformBufferData.textureProperties.x, _uniformBufferData.textureProperties.y }; }
         inline Vector2f getTextureScale() const { return { _uniformBufferData.textureProperties.z, _uniformBufferData.textureProperties.w };; }
@@ -144,6 +151,6 @@ namespace platypus
         void updateUniformBuffers(size_t frame);
 
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, ComponentType renderableType, bool shadow);
+        std::string getShaderFilename(uint32_t shaderStage, ComponentType renderableType);
     };
 }

@@ -416,7 +416,7 @@ namespace platypus
         for (std::pair<uint32_t, ID_t>& toErase : unusedBatches)
         {
             freeBatch(toErase.first, toErase.second);
-            Debug::log("___TEST___ERASED UNUSED BATCH!");
+            //Debug::log("___TEST___ERASED UNUSED BATCH!");
         }
 
         currentCommandBuffer.end();
@@ -608,12 +608,12 @@ namespace platypus
         std::set<size_t>::iterator layerIt = layerBatches.find(textureID);
         if (layerIt == layerBatches.end())
         {
-            Debug::log(
-                "@GUIRenderer::freeBatch "
-                "Failed to find batch from layer: " + std::to_string(layer) +" "
-                "using textureID: " + std::to_string(textureID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
+            //Debug::log(
+            //    "@GUIRenderer::freeBatch "
+            //    "Failed to find batch from layer: " + std::to_string(layer) +" "
+            //    "using textureID: " + std::to_string(textureID),
+            //    Debug::MessageType::PLATYPUS_ERROR
+            //);
             return false;
         }
 

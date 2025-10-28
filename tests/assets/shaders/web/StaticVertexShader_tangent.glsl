@@ -39,7 +39,8 @@ mat3 transpose(mat3 matrix)
 // OLD BELOW -> seems solved for now..
 // NOTE: ISSUES!
 // It seems with specularity as if the light is coming from the opposite direction
-void main() {
+void main()
+{
     mat4 toCameraSpace = sceneData.viewMatrix * transformationMatrix;
     vec4 transformedPos = transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;

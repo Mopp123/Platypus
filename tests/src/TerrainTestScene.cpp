@@ -146,7 +146,8 @@ void TerrainTestScene::init()
         32.0f,
         { 0, 0 },
         { (float)tilesPerRow, (float)tilesPerRow },
-        false
+        false, // receive shadows
+        false // shadeless
     );
 
     create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());

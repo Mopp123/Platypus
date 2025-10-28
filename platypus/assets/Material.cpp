@@ -21,6 +21,7 @@ namespace platypus
         float shininess,
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
+        bool receiveShadows,
         bool shadeless // NOTE: This doesn't do anything atm!?
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
@@ -28,7 +29,8 @@ namespace platypus
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
-        _normalTextureCount(normalTextureCount)
+        _normalTextureCount(normalTextureCount),
+        _receiveShadows(receiveShadows)
     {
         validateTextureCounts();
 
@@ -85,21 +87,18 @@ namespace platypus
         {
             createPipeline(
                 pSceneRenderPass,
-                ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
-                false
+                ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
             );
             createPipeline(
                 pSceneRenderPass,
-                ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-                false
+                ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
             );
         }
         else if (_materialType == MaterialType::TERRAIN)
         {
             createPipeline(
                 pSceneRenderPass,
-                ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-                false
+                ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE
             );
         }
 
@@ -128,19 +127,16 @@ namespace platypus
 
     void Material::createPipeline(
         const RenderPass* pRenderPass,
-        ComponentType renderableType,
-        bool shadowPipeline
+        ComponentType renderableType
     )
     {
         const std::string vertexShaderFilename = getShaderFilename(
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            renderableType,
-            shadowPipeline
+            renderableType
         );
         const std::string fragmentShaderFilename = getShaderFilename(
             ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            renderableType,
-            shadowPipeline
+            renderableType
         );
         Debug::log(
             "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
@@ -204,7 +200,7 @@ namespace platypus
             meshVertexBufferLayout,
             instanced,
             skinned,
-            shadowPipeline,
+            false,
             vertexBufferLayouts
         );
         // Figure out all used descriptor set layouts in addition to the material's layout
@@ -212,9 +208,18 @@ namespace platypus
         pMasterRenderer->solveDescriptorSetLayouts(
             this,
             skinned,
-            shadowPipeline,
+            false,
             descriptorSetLayouts
         );
+
+        size_t pushConstantsSize = 0;
+        ShaderStageFlagBits pushConstantsStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+        // If receiving shadows, need to provide shadow proj and view matrices as push constants!
+        if (_receiveShadows)
+        {
+            pushConstantsSize = sizeof(Matrix4f) * 2;
+            pushConstantsStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
+        }
 
         pMaterialPipelineData->pPipeline = new Pipeline(
             pRenderPass,
@@ -227,8 +232,8 @@ namespace platypus
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,
             true, // Enable color blend
-            0, // Push constants size
-            ShaderStageFlagBits::SHADER_STAGE_NONE // Push constants' stage flags
+            pushConstantsSize, // Push constants size
+            pushConstantsStage // Push constants' stage flags
         );
         pMaterialPipelineData->pPipeline->create();
     }
@@ -443,6 +448,12 @@ namespace platypus
         for (size_t i = 0; i < _normalTextureCount; ++i)
             textures.push_back(getNormalTexture(i));
 
+        if (_receiveShadows)
+        {
+            MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+            textures.push_back(pMasterRenderer->getTestFramebufferDepthTexture());
+        }
+
         return textures;
     }
 
@@ -592,16 +603,15 @@ namespace platypus
 
     // TODO: This is a convoluted mess -> make cleaner!
     // TODO: Make it impossible to attempt getting skinned shader name for terrain Material
-    std::string Material::getShaderFilename(uint32_t shaderStage, ComponentType renderableType, bool shadow)
+    std::string Material::getShaderFilename(uint32_t shaderStage, ComponentType renderableType)
     {
         // Example shader names:
         // vertex shader: "StaticVertexShader", "StaticVertexShader_tangent", "SkinnedVertexShader"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
         std::string shaderName = "";
-        shadow = false;
-        if (shadow)
+        if (_receiveShadows)
         {
-            shaderName += "shadows/";
+            shaderName += "receiveShadows/";
         }
 
         switch (renderableType)
@@ -625,21 +635,18 @@ namespace platypus
         if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
         {
             shaderName += "VertexShader";
-            if (!shadow && _normalTextureCount > 0)
+            if (_normalTextureCount > 0)
                 shaderName += "_tangent";
         }
         else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
         {
             shaderName += "FragmentShader";
-            if (!shadow)
-            {
-                // adding d here since all materials needs to have at least one diffuse texture
-                shaderName += "_d";
-                if (_specularTextureCount > 0)
-                    shaderName += "s";
-                if (_normalTextureCount > 0)
-                    shaderName += "n";
-            }
+            // adding d here since all materials needs to have at least one diffuse texture
+            shaderName += "_d";
+            if (_specularTextureCount > 0)
+                shaderName += "s";
+            if (_normalTextureCount > 0)
+                shaderName += "n";
         }
 
         return shaderName;

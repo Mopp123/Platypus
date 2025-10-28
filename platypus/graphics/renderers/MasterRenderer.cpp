@@ -45,6 +45,19 @@ namespace platypus
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             false,
             0
+        ),
+        _shadowmapDescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    {
+                        { }
+                    }
+                }
+            }
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
@@ -70,6 +83,7 @@ namespace platypus
     {
         destroyOffscreenResourcesTEST();
         _testRenderPass.destroy();
+        _shadowmapDescriptorSetLayout.destroy();
 
         destroyCommonShaderResources();
         _scene3DDataDescriptorSetLayout.destroy();
@@ -243,7 +257,9 @@ namespace platypus
                     _batcher.getMaxTerrainBatchLength(),
                     _swapchainRef.getRenderPassPtr(),
                     meshID,
-                    materialID
+                    materialID,
+                    pShadowPassPushConstants,
+                    shadowPassPushConstantsSize
                 );
             }
             add_to_terrain_batch(
@@ -390,57 +406,52 @@ namespace platypus
 
     void MasterRenderer::createOffscreenResourcesTEST()
     {
-        size_t framesInFlight = _swapchainRef.getMaxFramesInFlight();
         uint32_t swapchainWidth = _swapchainRef.getExtent().width;
         uint32_t swapchainHeight = _swapchainRef.getExtent().height;
         ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
-        for (size_t i = 0; i < framesInFlight; ++i)
-        {
-            Texture* pTestColorTexture = new Texture(
-                TextureType::COLOR_TEXTURE,
-                _testFramebufferTextureSampler,
-                testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-                swapchainWidth,
-                swapchainHeight
-            );
-            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(pTestColorTexture);
+        _pTestFramebufferColorTexture = new Texture(
+            TextureType::COLOR_TEXTURE,
+            _testFramebufferTextureSampler,
+            testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
+            swapchainWidth,
+            swapchainHeight
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
 
-            Texture* pTestDepthTexture = new Texture(
-                TextureType::DEPTH_TEXTURE,
-                _testFramebufferTextureSampler,
-                ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
-                swapchainWidth,
-                swapchainHeight
-            );
-            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(pTestDepthTexture);
+        _pTestFramebufferDepthTexture = new Texture(
+            TextureType::DEPTH_TEXTURE,
+            _testFramebufferTextureSampler,
+            ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
+            swapchainWidth,
+            swapchainHeight
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferDepthTexture);
 
-            Framebuffer* pTestFramebuffer = new Framebuffer(
-                _testRenderPass,
-                { pTestColorTexture },
-                pTestDepthTexture,
-                swapchainWidth,
-                swapchainHeight
-            );
+        _pTestFramebuffer = new Framebuffer(
+            _testRenderPass,
+            { _pTestFramebufferColorTexture },
+            _pTestFramebufferDepthTexture,
+            swapchainWidth,
+            swapchainHeight
+        );
 
-            _testFramebuffers.push_back(pTestFramebuffer);
-            _testFramebufferColorTextures.push_back(pTestColorTexture);
-            _testFramebufferDepthTextures.push_back(pTestDepthTexture);
-        }
+        _descriptorPool.createDescriptorSet(
+            _shadowmapDescriptorSetLayout,
+            { { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _pTestFramebufferDepthTexture } }
+        );
     }
 
     void MasterRenderer::destroyOffscreenResourcesTEST()
     {
-        size_t framesInFlight = _swapchainRef.getMaxFramesInFlight();
-        for (size_t i = 0; i < framesInFlight; ++i)
-        {
-            Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_testFramebufferColorTextures[i]);
-            Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_testFramebufferDepthTextures[i]);
-            delete _testFramebuffers[i];
-        }
+        _descriptorPool.freeDescriptorSets({ _shadowmapDescriptorSet });
 
-        _testFramebufferColorTextures.clear();
-        _testFramebufferDepthTextures.clear();
-        _testFramebuffers.clear();
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferColorTexture);
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferDepthTexture);
+        delete _pTestFramebuffer;
+
+        _pTestFramebufferColorTexture = nullptr;
+        _pTestFramebufferDepthTexture = nullptr;
+        _pTestFramebuffer = nullptr;
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
@@ -637,8 +648,8 @@ namespace platypus
         render::begin_render_pass(
             currentCommandBuffer,
             _testRenderPass,
-            _testFramebuffers[_currentFrame],
-            _testFramebuffers[_currentFrame]->getDepthAttachment(),
+            _pTestFramebuffer,
+            _pTestFramebuffer->getDepthAttachment(),
             { 1, 0, 1, 1 },
             true
         );
@@ -730,12 +741,15 @@ namespace platypus
                 allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
                 createPipelines();
 
-                destroyShaderResources();
-                createShaderResources();
-
                 createCommonShaderResources();
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
+
+                // NOTE: After added _receiveShadows into Material, it is required to
+                // always recreate their shader resources since the shadowmap texture
+                // gets recreated!
+                destroyShaderResources();
+                createShaderResources();
 
                 // NOTE: Freeing batches which causes each batch to be created again when submitting.
                 // For this to work, batcher also needs to destroy all managed pipelines!
@@ -756,8 +770,19 @@ namespace platypus
                 );
                 destroyPipelines();
                 createPipelines();
+
                 destroyOffscreenResourcesTEST();
                 createOffscreenResourcesTEST();
+
+                // NOTE: After added _receiveShadows into Material, it is required to
+                // always recreate their shader resources since the shadowmap texture
+                // gets recreated!
+                //  -> PRETTY SLOW AND DUMB IF SWAPCHAIN IMG COUNT DOESN'T CHANGE!
+                destroyShaderResources();
+                createShaderResources();
+                // TESTING
+                _batcher.freeBatches();
+
                 _batcher.recreateManagedPipelines();
             }
 

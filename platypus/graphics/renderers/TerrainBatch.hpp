@@ -11,7 +11,9 @@ namespace platypus
         size_t maxLength,
         const RenderPass* pRenderPass,
         ID_t meshID,
-        ID_t materialID
+        ID_t materialID,
+        void* pShadowPushConstants,
+        size_t shadowPushConstantsSize
     );
 
     void add_to_terrain_batch(

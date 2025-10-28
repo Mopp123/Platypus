@@ -59,9 +59,25 @@ namespace platypus
         size_t maxLength,
         const RenderPass* pRenderPass,
         ID_t meshID,
-        ID_t materialID
+        ID_t materialID,
+        void* pShadowPushConstants,
+        size_t shadowPushConstantsSize
     )
     {
+        // TODO: Some better way to deal with these...
+        const size_t requiredShadowPushConstantsSize = sizeof(Matrix4f) * 2;
+        if (pShadowPushConstants != nullptr && shadowPushConstantsSize != requiredShadowPushConstantsSize)
+        {
+            Debug::log(
+                "@create_terrain_batch "
+                "Invalid shadow push constants size: " + std::to_string(shadowPushConstantsSize) + " "
+                "required size is " + std::to_string(requiredShadowPushConstantsSize),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return NULL_ID;
+        }
+
         ID_t identifier = ID::hash(meshID, materialID);
         if (!batcher.validateBatchDoesntExist("create_terrain_batch", pRenderPass->getType(), identifier))
             return nullptr;
@@ -76,6 +92,14 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         pBatch->pPipeline = pMaterial->getPipeline(ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE);
 
+        pBatch->pushConstantsSize = shadowPushConstantsSize;
+        pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
+        pBatch->pushConstantsUniformInfos = {
+            { ShaderDataType::Mat4 },
+            { ShaderDataType::Mat4 }
+        };
+        pBatch->pPushConstantsData = pShadowPushConstants;
+
         const size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
         pBatch->dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f)
@@ -89,12 +113,13 @@ namespace platypus
             framesInFlight
         );
 
+        // JUST TESTING ATM, DUMB AS SHIT...
         pBatch->descriptorSets = batcher.combineUsedDescriptorSets(
             framesInFlight,
             {
                 pMasterRenderer->getScene3DDataDescriptorSets(),
                 shaderResources[0].descriptorSet,
-                pMaterial->getDescriptorSets()
+                pMaterial->getDescriptorSets(),
             }
         );
 

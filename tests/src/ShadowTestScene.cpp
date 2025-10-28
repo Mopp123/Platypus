@@ -146,6 +146,7 @@ void ShadowTestScene::init()
         32.0f,
         { 0, 0 },
         { (float)tilesPerRow, (float)tilesPerRow },
+        true, // receive shadows
         false
     );
 
@@ -229,7 +230,7 @@ void ShadowTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getTestFramebufferColorTextures()[pMasterRenderer->getCurrentFrame()]->getID()
+        pMasterRenderer->getTestFramebufferColorTexture()->getID()
     );
 
 }
@@ -261,14 +262,20 @@ void ShadowTestScene::update()
         pDirLight->viewMatrix = viewMatrix;
     }
 
+
+    GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
+        _framebufferDebugEntity,
+        ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+    );
+
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    std::vector<Texture*>& framebufferTextures = pMasterRenderer->getTestFramebufferColorTextures();
-    if (!framebufferTextures.empty())
+    Texture* framebufferTexture = pMasterRenderer->getTestFramebufferDepthTexture();
+    if (framebufferTexture)
     {
-        GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
-            _framebufferDebugEntity,
-            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-        );
-        pFramebufferDebugRenderable->textureID = framebufferTextures[pMasterRenderer->getCurrentFrame()]->getID();
+        pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
+    }
+    else
+    {
+        pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
     }
 }

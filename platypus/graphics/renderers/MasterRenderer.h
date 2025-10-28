@@ -42,10 +42,16 @@ namespace platypus
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         RenderPass _testRenderPass;
-        std::vector<Framebuffer*> _testFramebuffers;
+        // NOTE: Switched using single framebuffer and textures for testing offscreen rendering..
+        //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
+        //  touch these + the mem barrier in render commands
+        Framebuffer* _pTestFramebuffer;
         TextureSampler _testFramebufferTextureSampler;
-        std::vector<Texture*> _testFramebufferColorTextures;
-        std::vector<Texture*> _testFramebufferDepthTextures;
+        Texture* _pTestFramebufferColorTexture;
+        Texture* _pTestFramebufferDepthTexture;
+
+        DescriptorSetLayout _shadowmapDescriptorSetLayout;
+        DescriptorSet _shadowmapDescriptorSet;
 
         size_t _currentFrame = 0;
 
@@ -75,14 +81,17 @@ namespace platypus
         ) const;
 
         inline const RenderPass& getTestRenderPass() const { return _testRenderPass; }
-        inline std::vector<Texture*>& getTestFramebufferColorTextures() { return _testFramebufferColorTextures; }
-        inline std::vector<Texture*>& getTestFramebufferDepthTextures() { return _testFramebufferDepthTextures; }
+        inline Texture* getTestFramebufferColorTexture() { return _pTestFramebufferColorTexture; }
+        inline Texture* getTestFramebufferDepthTexture() { return _pTestFramebufferDepthTexture; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
+        inline const DescriptorSetLayout& getShadowmapDescriptorSetLayout() const { return _shadowmapDescriptorSetLayout; }
+
         inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
+        inline const DescriptorSet& getShadowmapDescriptorSet() const { return _shadowmapDescriptorSet; }
 
         inline size_t getCurrentFrame() const { return _currentFrame; }
 
