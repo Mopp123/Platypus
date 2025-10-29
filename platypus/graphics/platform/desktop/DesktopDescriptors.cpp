@@ -117,29 +117,17 @@ namespace platypus
 
     DescriptorSet::DescriptorSet()
     {
-        _pImpl = new DescriptorSetImpl;
+        _pImpl = std::make_shared<DescriptorSetImpl>();
     }
 
-    DescriptorSet::DescriptorSet(
-        const std::vector<DescriptorSetComponent>& components
-    ) :
-        _components(components)
+    DescriptorSet::DescriptorSet(const DescriptorSet& other)
     {
-        _pImpl = new DescriptorSetImpl;
-    }
-
-    DescriptorSet::DescriptorSet(const DescriptorSet& other) :
-        _components(other._components)
-    {
-        _pImpl = new DescriptorSetImpl;
-        _pImpl->handle = other._pImpl->handle;
+        _pImpl = other._pImpl;
     }
 
     DescriptorSet& DescriptorSet::operator=(DescriptorSet other)
     {
-        _components = other._components;
-        _pImpl = new DescriptorSetImpl;
-        _pImpl->handle = other._pImpl->handle;
+        _pImpl = other._pImpl;
         return *this;
     }
 
@@ -154,27 +142,17 @@ namespace platypus
 
     DescriptorSet::~DescriptorSet()
     {
-        if (_pImpl)
-            delete _pImpl;
     }
 
 
     // NOTE: Might be danger here? Not sure how to associate _components and bindings
     //  -> I think the components are logically for each binding...
-    void DescriptorSet::update(uint32_t binding, DescriptorSetComponent component)
+    void DescriptorSet::update(
+        DescriptorPool& descriptorPool,
+        uint32_t binding,
+        DescriptorSetComponent component
+    )
     {
-        if (binding >= _components.size())
-        {
-            Debug::log(
-                "@DescriptorSet::update "
-                "Binding(" + std::to_string(binding) + ") out of bounds. "
-                "This DescriptorSet has " + std::to_string(_components.size()) + " components",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
         DescriptorType type = component.type;
 
         VkDescriptorBufferInfo bufferInfo{};
@@ -237,8 +215,6 @@ namespace platypus
             0,
             nullptr
         );
-
-        _components[binding] = component;
     }
 
 
@@ -591,7 +567,7 @@ namespace platypus
             );
         }
 
-        DescriptorSet createdDescriptorSet(components);
+        DescriptorSet createdDescriptorSet;
         createdDescriptorSet._pImpl->handle = vkDescriptorSetHandle;
         return createdDescriptorSet;
     }

@@ -1,15 +1,18 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/graphics/Context.hpp"
-#include "WebContext.hpp"
 #include "platypus/graphics/CommandBuffer.h"
+#include "WebContext.hpp"
 #include "WebCommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
 #include "WebFramebuffer.hpp"
 #include "WebBuffers.h"
+#include "WebDescriptors.hpp"
 #include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/web/WebTexture.h"
 #include "platypus/utils/Maths.h"
 #include "platypus/Common.h"
+#include "platypus/core/Application.h"
+#include "platypus/graphics/renderers/MasterRenderer.h"
 #include <GL/glew.h>
 
 
@@ -520,7 +523,6 @@ namespace platypus
             const std::vector<uint32_t>& offsets
         )
         {
-            Debug::log("___TEST___BIND DESCRIPTOR SETS");
             const Pipeline* pBoundPipeline = commandBuffer.getImpl()->pBoundPipeline;
             const std::vector<DescriptorSetLayout>& descriptorSetLayouts = pBoundPipeline->getDescriptorSetLayouts();
             PipelineImpl* pPipelineImpl = pBoundPipeline->getImpl();
@@ -552,12 +554,18 @@ namespace platypus
             OpenglShaderProgram* pShaderProgram = pPipelineImpl->pShaderProgram;
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
+            // TODO: Make safer!
+            DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
+            DescriptorPoolImpl* pDescriptorPoolImpl = descriptorPool.getImpl();
+
             int descriptorSetIndex = 0;
             int useLocationIndex = pPipelineImpl->firstDescriptorSetLocation;
             for (const DescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
             {
-                const DescriptorSet& descriptorSet = descriptorSets[descriptorSetIndex];
-                const std::vector<DescriptorSetComponent>& descriptorSetComponents = descriptorSet.getComponents();
+                //const DescriptorSet& descriptorSet = descriptorSets[descriptorSetIndex];
+                const ID_t descriptorSetID = descriptorSets[descriptorSetIndex].getImpl()->id;
+                //const DescriptorSet& descriptorSet = get_pool_descriptor_set(pDescriptorPoolImpl, descriptorSetID);
+                //const std::vector<DescriptorSetComponent>& descriptorSetComponents = descriptorSet.getComponents();
 
                 // Not to be confused with binding number.
                 // This just index of the layout's bindings vector
@@ -571,23 +579,23 @@ namespace platypus
                 for (const DescriptorSetLayoutBinding& binding : descriptorSetLayout.getBindings())
                 {
                     const std::vector<UniformInfo>& uniformInfo = binding.getUniformInfo();
+                    DescriptorSetComponent* pDescriptorSetComponent = get_pool_descriptor_set_data(pDescriptorPoolImpl, descriptorSetID, bindingIndex);
 
                     DescriptorType bindingType = binding.getType();
                     #ifdef PLATYPUS_DEBUG
-                        if (descriptorSetComponents[bindingIndex].type != bindingType)
+                        if (pDescriptorSetComponent->type != bindingType)
                         {
                             Debug::log(
                                 "@bind_descriptor_sets "
                                 "Descriptor set: " + std::to_string(descriptorSetIndex) + " "
-                                "(" + std::to_string(descriptorSetComponents.size()) + " components) "
-                                "Invalid descriptor component type: " + std::to_string(descriptorSetComponents[bindingIndex].type) + " "
+                                "Invalid descriptor component type: " + std::to_string(pDescriptorSetComponent->type) + " "
                                 "for binding index: " + std::to_string(bindingIndex) + " "
                                 "binding type: " + std::to_string(bindingType),
                                 Debug::MessageType::PLATYPUS_ERROR
                             );
                             PLATYPUS_ASSERT(false);
                         }
-                        if (!descriptorSetComponents[bindingIndex].pData)
+                        if (!pDescriptorSetComponent->pData)
                         {
                             Debug::log(
                                 "@bind_descriptor_sets "
@@ -602,7 +610,7 @@ namespace platypus
                          bindingType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                     {
                         // TODO: some boundary checking..
-                        const Buffer* pBuf = (const Buffer*)descriptorSetComponents[bindingIndex].pData;
+                        const Buffer* pBuf = (const Buffer*)pDescriptorSetComponent->pData;
                         const PE_byte* pBufData = (const PE_byte*)pBuf->getData();
 
                         size_t addDynamicOffset = 0;
@@ -623,7 +631,6 @@ namespace platypus
                             #endif
                             addDynamicOffset = offsets[bufferBindingIndex];
                         }
-                        size_t uboOffset = 0 + addDynamicOffset;
                         for (const UniformInfo& uboInfo : uniformInfo)
                         {
                             #ifdef PLATYPUS_DEBUG
@@ -639,7 +646,7 @@ namespace platypus
                                 }
                             #endif
                             size_t valSize = 0;
-                            const PE_byte* pCurrentData = pBufData + uboOffset;
+                            const PE_byte* pCurrentData = pBufData + addDynamicOffset;
                             switch (uboInfo.type)
                             {
                                 case ShaderDataType::Int:
@@ -731,27 +738,19 @@ namespace platypus
                                     PLATYPUS_ASSERT(false);
                                     break;
                             }
-                            uboOffset += valSize;
+                            addDynamicOffset += valSize;
                         }
                         ++bufferBindingIndex;
                     }
                     else if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                     {
-                        Debug::log("___TEST___BIND DESCRIPTOR SETS <Image>");
-                        Debug::log("    location index: " + std::to_string(useLocationIndex));
-                        Debug::log("    uniform location count: " + std::to_string(shaderUniformLocations.size()));
-                        Debug::log("    uniform location value: " + std::to_string(shaderUniformLocations[useLocationIndex]));
-                        Debug::log("    binding index: " + std::to_string(bindingIndex));
-                        Debug::log("    descriptor set components: " + std::to_string(descriptorSetComponents.size()));
                         // TODO: some boundary checking..
                         for (const UniformInfo& layoutInfo : uniformInfo)
                         {
                             GL_FUNC(glUniform1i(shaderUniformLocations[useLocationIndex], binding.getBinding()));
                             // well following is quite fucking dumb.. dunno how could do this better
                             GL_FUNC(glActiveTexture(binding_to_gl_texture_unit(binding.getBinding())));
-
-                            const Texture* pTexture = (const Texture*)descriptorSetComponents[bindingIndex].pData;
-                            Debug::log("___TEST___binding texture...");
+                            const Texture* pTexture = (const Texture*)pDescriptorSetComponent->pData;
                             PLATYPUS_ASSERT(pTexture);
                             PLATYPUS_ASSERT(pTexture->getImpl());
                             GL_FUNC(glBindTexture(
@@ -766,7 +765,6 @@ namespace platypus
                 ++descriptorSetIndex;
             }
             pPipelineImpl->constantsPushed = false;
-            Debug::log("___TEST___BIND DESCRIPTOR SETS -> SUCCESS!");
         }
 
         void draw_indexed(

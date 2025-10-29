@@ -3,6 +3,7 @@
 #include "Buffers.h"
 #include "Swapchain.h"
 #include "platypus/assets/Texture.h"
+#include <memory>
 
 
 namespace platypus
@@ -144,15 +145,10 @@ namespace platypus
     {
     private:
         friend class DescriptorPool;
-        DescriptorSetImpl* _pImpl = nullptr;
-        std::vector<DescriptorSetComponent> _components;
+        std::shared_ptr<DescriptorSetImpl> _pImpl = nullptr;
 
     public:
         DescriptorSet();
-
-        DescriptorSet(
-            const std::vector<DescriptorSetComponent>& components
-        );
 
         // NOTE: There has been quite a lot of weird issues when copying descriptor sets!
         // PREVIOUS ISSUE: The way descriptor sets are created using DescriptorPool, had to add
@@ -167,10 +163,14 @@ namespace platypus
 
         ~DescriptorSet();
 
-        void update(uint32_t binding, DescriptorSetComponent component);
+        void update(
+            DescriptorPool& descriptorPool,
+            uint32_t binding,
+            DescriptorSetComponent component
+        );
 
-        inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
-        inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
+        inline const DescriptorSetImpl* getImpl() const { return _pImpl.get(); }
+        inline DescriptorSetImpl* getImpl() { return _pImpl.get(); }
     };
 
 
@@ -190,5 +190,6 @@ namespace platypus
         );
 
         void freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets);
+        inline DescriptorPoolImpl* getImpl() { return _pImpl; }
     };
 }

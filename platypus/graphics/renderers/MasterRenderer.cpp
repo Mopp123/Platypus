@@ -435,11 +435,6 @@ namespace platypus
             swapchainHeight
         );
 
-        _descriptorPool.createDescriptorSet(
-            _shadowmapDescriptorSetLayout,
-            { { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _pTestFramebufferDepthTexture } }
-        );
-
         // Update new shadow texture for materials that receive shadows
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
@@ -452,8 +447,6 @@ namespace platypus
 
     void MasterRenderer::destroyOffscreenResourcesTEST()
     {
-        _descriptorPool.freeDescriptorSets({ _shadowmapDescriptorSet });
-
         Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferColorTexture);
         Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferDepthTexture);
         delete _pTestFramebuffer;

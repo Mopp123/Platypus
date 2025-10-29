@@ -1,5 +1,6 @@
 #include "platypus/graphics/Device.hpp"
 #include "platypus/core/Debug.h"
+#include <GL/glew.h>
 
 
 namespace platypus
@@ -16,6 +17,12 @@ namespace platypus
     void Device::create(Window* pWindow)
     {
         s_pCommandPool = new CommandPool;
+        int32_t maxUniformBlockSize = 0;
+        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize);
+        int32_t maxUniformBlockBindingPoints = 0;
+        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBlockBindingPoints);
+        Debug::log("___TEST___MAX UNIFORM BLOCK SIZE = " + std::to_string(maxUniformBlockSize));
+        Debug::log("___TEST___MAX UNIFORM BLOCK BINDINGS = " + std::to_string(maxUniformBlockBindingPoints));
     }
 
     void Device::destroy()
