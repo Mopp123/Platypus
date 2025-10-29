@@ -14,14 +14,10 @@ namespace platypus
 
     struct DescriptorPoolImpl
     {
-        std::unordered_map<ID_t, DescriptorSet> descriptorSets;
+        std::unordered_map<ID_t, std::vector<DescriptorSetComponent>> descriptorSetData;
     };
 
-    DescriptorSet get_pool_descriptor_set(
-        DescriptorPoolImpl* pDescriptorPoolImpl,
-        ID_t descriptorSetID
-    );
-
+    // TODO: Make safer?
     DescriptorSetComponent* get_pool_descriptor_set_data(
         DescriptorPoolImpl* pDescriptorPoolImpl,
         ID_t descriptorSetID,

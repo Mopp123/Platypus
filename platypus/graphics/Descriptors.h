@@ -146,14 +146,9 @@ namespace platypus
     private:
         friend class DescriptorPool;
         std::shared_ptr<DescriptorSetImpl> _pImpl = nullptr;
-        std::vector<DescriptorSetComponent> _components;
 
     public:
         DescriptorSet();
-
-        DescriptorSet(
-            const std::vector<DescriptorSetComponent>& components
-        );
 
         // NOTE: There has been quite a lot of weird issues when copying descriptor sets!
         // PREVIOUS ISSUE: The way descriptor sets are created using DescriptorPool, had to add
@@ -174,8 +169,6 @@ namespace platypus
             DescriptorSetComponent component
         );
 
-        inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
-        inline std::vector<DescriptorSetComponent>& getComponents() { return _components; }
         inline const DescriptorSetImpl* getImpl() const { return _pImpl.get(); }
         inline DescriptorSetImpl* getImpl() { return _pImpl.get(); }
     };

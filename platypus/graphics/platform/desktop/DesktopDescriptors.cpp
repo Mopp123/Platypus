@@ -117,25 +117,16 @@ namespace platypus
 
     DescriptorSet::DescriptorSet()
     {
-    }
-
-    DescriptorSet::DescriptorSet(
-        const std::vector<DescriptorSetComponent>& components
-    ) :
-        _components(components)
-    {
         _pImpl = std::make_shared<DescriptorSetImpl>();
     }
 
-    DescriptorSet::DescriptorSet(const DescriptorSet& other) :
-        _components(other._components)
+    DescriptorSet::DescriptorSet(const DescriptorSet& other)
     {
         _pImpl = other._pImpl;
     }
 
     DescriptorSet& DescriptorSet::operator=(DescriptorSet other)
     {
-        _components = other._components;
         _pImpl = other._pImpl;
         return *this;
     }
@@ -162,18 +153,6 @@ namespace platypus
         DescriptorSetComponent component
     )
     {
-        if (binding >= _components.size())
-        {
-            Debug::log(
-                "@DescriptorSet::update "
-                "Binding(" + std::to_string(binding) + ") out of bounds. "
-                "This DescriptorSet has " + std::to_string(_components.size()) + " components",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
         DescriptorType type = component.type;
 
         VkDescriptorBufferInfo bufferInfo{};
@@ -236,8 +215,6 @@ namespace platypus
             0,
             nullptr
         );
-
-        _components[binding] = component;
     }
 
 
@@ -590,7 +567,7 @@ namespace platypus
             );
         }
 
-        DescriptorSet createdDescriptorSet(components);
+        DescriptorSet createdDescriptorSet;
         createdDescriptorSet._pImpl->handle = vkDescriptorSetHandle;
         return createdDescriptorSet;
     }
