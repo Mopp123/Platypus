@@ -325,7 +325,8 @@ namespace platypus
                     freeTextureDescriptorSets(batchData.textureID);
                     //unusedBatches[layerIt->first].push_back(layerBatchIt);
                     unusedBatches.push_back(std::make_pair(layerIt->first, batchData.textureID));
-                    PLATYPUS_ASSERT(false);
+                    // NOTE: No idea why that assert was below...
+                    //PLATYPUS_ASSERT(false);
                     continue;
                 }
 

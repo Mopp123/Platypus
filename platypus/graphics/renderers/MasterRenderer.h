@@ -51,7 +51,6 @@ namespace platypus
         Texture* _pTestFramebufferDepthTexture;
 
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
-        DescriptorSet _shadowmapDescriptorSet;
 
         size_t _currentFrame = 0;
 
@@ -91,7 +90,6 @@ namespace platypus
         inline const DescriptorSetLayout& getShadowmapDescriptorSetLayout() const { return _shadowmapDescriptorSetLayout; }
 
         inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
-        inline const DescriptorSet& getShadowmapDescriptorSet() const { return _shadowmapDescriptorSet; }
 
         inline size_t getCurrentFrame() const { return _currentFrame; }
 

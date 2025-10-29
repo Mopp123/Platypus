@@ -3,6 +3,7 @@
 #include "Buffers.h"
 #include "Swapchain.h"
 #include "platypus/assets/Texture.h"
+#include <memory>
 
 
 namespace platypus
@@ -144,7 +145,7 @@ namespace platypus
     {
     private:
         friend class DescriptorPool;
-        DescriptorSetImpl* _pImpl = nullptr;
+        std::shared_ptr<DescriptorSetImpl> _pImpl = nullptr;
         std::vector<DescriptorSetComponent> _components;
 
     public:
@@ -167,10 +168,16 @@ namespace platypus
 
         ~DescriptorSet();
 
-        void update(uint32_t binding, DescriptorSetComponent component);
+        void update(
+            DescriptorPool& descriptorPool,
+            uint32_t binding,
+            DescriptorSetComponent component
+        );
 
         inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
-        inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
+        inline std::vector<DescriptorSetComponent>& getComponents() { return _components; }
+        inline const DescriptorSetImpl* getImpl() const { return _pImpl.get(); }
+        inline DescriptorSetImpl* getImpl() { return _pImpl.get(); }
     };
 
 
@@ -190,5 +197,6 @@ namespace platypus
         );
 
         void freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets);
+        inline DescriptorPoolImpl* getImpl() { return _pImpl; }
     };
 }

@@ -371,9 +371,12 @@ namespace platypus
                 return;
             }
         #endif
+
+        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
         for (DescriptorSet& descriptorSet : _descriptorSets)
         {
             descriptorSet.update(
+                descriptorPool,
                 _shadowmapDescriptorIndex,
                 { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pShadowmapTexture }
             );

@@ -117,7 +117,6 @@ namespace platypus
 
     DescriptorSet::DescriptorSet()
     {
-        _pImpl = new DescriptorSetImpl;
     }
 
     DescriptorSet::DescriptorSet(
@@ -125,21 +124,19 @@ namespace platypus
     ) :
         _components(components)
     {
-        _pImpl = new DescriptorSetImpl;
+        _pImpl = std::make_shared<DescriptorSetImpl>();
     }
 
     DescriptorSet::DescriptorSet(const DescriptorSet& other) :
         _components(other._components)
     {
-        _pImpl = new DescriptorSetImpl;
-        _pImpl->handle = other._pImpl->handle;
+        _pImpl = other._pImpl;
     }
 
     DescriptorSet& DescriptorSet::operator=(DescriptorSet other)
     {
         _components = other._components;
-        _pImpl = new DescriptorSetImpl;
-        _pImpl->handle = other._pImpl->handle;
+        _pImpl = other._pImpl;
         return *this;
     }
 
@@ -154,14 +151,16 @@ namespace platypus
 
     DescriptorSet::~DescriptorSet()
     {
-        if (_pImpl)
-            delete _pImpl;
     }
 
 
     // NOTE: Might be danger here? Not sure how to associate _components and bindings
     //  -> I think the components are logically for each binding...
-    void DescriptorSet::update(uint32_t binding, DescriptorSetComponent component)
+    void DescriptorSet::update(
+        DescriptorPool& descriptorPool,
+        uint32_t binding,
+        DescriptorSetComponent component
+    )
     {
         if (binding >= _components.size())
         {
