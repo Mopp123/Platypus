@@ -58,12 +58,12 @@ void OpenglUpgradeTestScene::init()
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pSpecularTexture->getID() },
-        { pNormalTexture->getID() },
+        { }, // { pNormalTexture->getID() },
         0.8f,
         16.0f
     );
 
-    Model* pModel = pAssetManager->loadModel("assets/TestCubeTangents.glb");
+    Model* pModel = pAssetManager->loadModel("assets/TestCube.glb");
 
     createStaticMeshEntity(
         { 0, 0, 0 },

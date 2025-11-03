@@ -2,7 +2,10 @@
 #include "platypus/graphics/Context.hpp"
 #include "platypus/core/Application.h"
 #include "WebPipeline.h"
+#include "WebContext.hpp"
 #include "platypus/core/Debug.h"
+
+#include <GL/glew.h>
 
 
 namespace platypus
@@ -72,12 +75,32 @@ namespace platypus
         Extent2D swapchainExtent = swapchain.getExtent();
         _pImpl->viewportWidth = swapchainExtent.width;
         _pImpl->viewportHeight = swapchainExtent.height;
-        // NOTE: on web platform we aren't using layout qualifiers
-        _pImpl->pShaderProgram = new OpenglShaderProgram(
+        OpenglShaderProgram* pShaderProgram = new OpenglShaderProgram(
             ShaderVersion::ESSL3,
             (const ShaderImpl*)_pVertexShader->_pImpl,
             (const ShaderImpl*)_pFragmentShader->_pImpl
         );
+        _pImpl->pShaderProgram = pShaderProgram;
+
+        size_t blockBindingPoint = 0;
+        for (const DescriptorSetLayout& layout : _descriptorSetLayouts)
+        {
+            // NOTE: This currently works only because allowing single uniform buffer
+            // per descriptor set!
+            for (const DescriptorSetLayoutBinding& binding : layout.getBindings())
+            {
+                DescriptorType type = binding.getType();
+                if (type == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                    type == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                {
+                    uint32_t shaderBlockIndex = pShaderProgram->getUniformBlockIndex(blockBindingPoint);
+                    GL_FUNC(glUniformBlockBinding(_pImpl->pShaderProgram->getID(), shaderBlockIndex, (uint32_t)blockBindingPoint));
+                    ++blockBindingPoint;
+                    break;
+                }
+            }
+        }
+
     }
 
     void Pipeline::destroy()

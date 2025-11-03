@@ -165,15 +165,15 @@ namespace platypus
                     materialID
                 );
 
-                create_static_shadow_batch(
-                    _batcher,
-                    _batcher.getMaxStaticBatchLength(),
-                    &_testRenderPass,
-                    meshID,
-                    materialID,
-                    pShadowPassPushConstants,
-                    shadowPassPushConstantsSize
-                );
+                //create_static_shadow_batch(
+                //    _batcher,
+                //    _batcher.getMaxStaticBatchLength(),
+                //    &_testRenderPass,
+                //    meshID,
+                //    materialID,
+                //    pShadowPassPushConstants,
+                //    shadowPassPushConstantsSize
+                //);
             }
             add_to_static_batch(
                 _batcher,
@@ -208,16 +208,16 @@ namespace platypus
                     materialID
                 );
 
-                create_skinned_shadow_batch(
-                    _batcher,
-                    maxSkinnedBatchLength,
-                    maxJoints,
-                    &_testRenderPass,
-                    meshID,
-                    materialID,
-                    pShadowPassPushConstants,
-                    shadowPassPushConstantsSize
-                );
+                //create_skinned_shadow_batch(
+                //    _batcher,
+                //    maxSkinnedBatchLength,
+                //    maxJoints,
+                //    &_testRenderPass,
+                //    meshID,
+                //    materialID,
+                //    pShadowPassPushConstants,
+                //    shadowPassPushConstantsSize
+                //);
             }
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
                 entity.id,
@@ -647,25 +647,25 @@ namespace platypus
 
 
         // TESTING MULTIPLE PASSES -----------------------------------
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _testRenderPass,
-            _pTestFramebuffer,
-            _pTestFramebuffer->getDepthAttachment(),
-            { 1, 0, 1, 1 },
-            true
-        );
-        std::vector<CommandBuffer> testSecondaries;
-        testSecondaries.push_back(
-            _pRenderer3D->recordCommandBuffer(
-                _testRenderPass,
-                (float)swapchainExtent.width,
-                (float)swapchainExtent.height,
-                _batcher.getBatches(RenderPassType::SHADOW_PASS)
-            )
-        );
-        render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
-        render::end_render_pass(currentCommandBuffer);
+        //render::begin_render_pass(
+        //    currentCommandBuffer,
+        //    _testRenderPass,
+        //    _pTestFramebuffer,
+        //    _pTestFramebuffer->getDepthAttachment(),
+        //    { 1, 0, 1, 1 },
+        //    true
+        //);
+        //std::vector<CommandBuffer> testSecondaries;
+        //testSecondaries.push_back(
+        //    _pRenderer3D->recordCommandBuffer(
+        //        _testRenderPass,
+        //        (float)swapchainExtent.width,
+        //        (float)swapchainExtent.height,
+        //        _batcher.getBatches(RenderPassType::SHADOW_PASS)
+        //    )
+        //);
+        //render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
+        //render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
 
 
@@ -698,15 +698,15 @@ namespace platypus
 
         _pRenderer3D->advanceFrame();
 
-        secondaryCommandBuffers.push_back(
-            _pGUIRenderer->recordCommandBuffer(
-                _swapchainRef.getRenderPass(),
-                swapchainExtent.width,
-                swapchainExtent.height,
-                orthographicProjectionMatrix,
-                _currentFrame
-            )
-        );
+        //secondaryCommandBuffers.push_back(
+        //    _pGUIRenderer->recordCommandBuffer(
+        //        _swapchainRef.getRenderPass(),
+        //        swapchainExtent.width,
+        //        swapchainExtent.height,
+        //        orthographicProjectionMatrix,
+        //        _currentFrame
+        //    )
+        //);
 
         render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
 

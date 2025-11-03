@@ -6,7 +6,7 @@ layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoord;
 layout(location = 3) in mat4 transformationMatrix;
 
-struct SceneData
+layout( std140 ) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
@@ -14,8 +14,18 @@ struct SceneData
     vec4 lightDirection;
     vec4 lightColor;
     vec4 ambientLightColor;
-};
-uniform SceneData sceneData;
+} sceneData;
+
+// struct SceneData
+// {
+//     mat4 projectionMatrix;
+//     mat4 viewMatrix;
+//     vec4 cameraPosition;
+//     vec4 lightDirection;
+//     vec4 lightColor;
+//     vec4 ambientLightColor;
+// };
+// uniform SceneData sceneData;
 
 out vec3 var_normal;
 out vec2 var_texCoord;
@@ -25,7 +35,8 @@ out vec4 var_lightDir;
 out vec4 var_lightColor;
 out vec4 var_ambientLightColor;
 
-void main() {
+void main()
+{
     vec4 translatedPos = transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
     vec4 rotatedNormal = transformationMatrix * vec4(normal, 0.0);

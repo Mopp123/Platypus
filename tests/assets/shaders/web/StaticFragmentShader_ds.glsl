@@ -11,7 +11,21 @@ in vec4 var_ambientLightColor;
 
 uniform sampler2D diffuseTextureSampler;
 uniform sampler2D specularTextureSampler;
-struct MaterialData
+// struct MaterialData
+// {
+//     // x = specular strength
+//     // y = shininess
+//     // z = is shadeless
+//     // w = unused
+//     vec4 lightingProperties;
+//
+//     // x,y = texture offset
+//     // z,w = texture scale
+//     vec4 textureProperties;
+// };
+// uniform MaterialData materialData;
+
+layout( std140 ) uniform MaterialData
 {
     // x = specular strength
     // y = shininess
@@ -22,8 +36,7 @@ struct MaterialData
     // x,y = texture offset
     // z,w = texture scale
     vec4 textureProperties;
-};
-uniform MaterialData materialData;
+} materialData;
 
 layout(location = 0) out vec4 outColor;
 

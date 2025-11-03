@@ -59,6 +59,7 @@ namespace platypus
         // NOTE: if GLSL Layout Qualifiers available this shouldn't be used!
         std::unordered_map<int32_t, ShaderDataType> _attributes;
         std::vector<int32_t> _uniformLocations;
+        std::vector<uint32_t> _uniformBlockIndices;
 
     public:
         OpenglShaderProgram(
@@ -76,8 +77,10 @@ namespace platypus
         void setUniform1i(int location, int val) const;
 
         ShaderDataType getAttributeType(int32_t location) const;
+        int32_t getUniformBlockIndex(size_t index);
 
         inline const std::vector<int32_t>& getUniformLocations() const { return _uniformLocations; }
+        inline const std::vector<uint32_t>& getUniformBlockIndices() const { return _uniformBlockIndices; }
 
     private:
         bool isConstantVar(const std::vector<std::string>& lineComponents);
@@ -88,6 +91,7 @@ namespace platypus
             const std::vector<std::string>& lineComponents
         );
         bool isUniform(const std::vector<std::string>& lineComponents);
+        bool isUniformBlock(const std::vector<std::string>& lineComponents);
 
         void addAttribute(
             int lineNumber,
@@ -101,6 +105,10 @@ namespace platypus
             const std::unordered_map<std::string, std::string>& constVariables
         );
 
+        void addUniformBlock(
+            int lineNumber,
+            const std::vector<std::string>& lineComponents
+        );
 
         // Finds attrib and/or uniform locations from shader source
         // NOTE: Works only with Opengl ES Shading language v3 (layout qualifiers included)

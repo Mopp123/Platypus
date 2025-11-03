@@ -22,5 +22,7 @@ namespace platypus
         //  firstDescriptorSetLocation gets set to 0 when binding pipeline.
         bool constantsPushed = false;
         int firstDescriptorSetLocation = 0;
+
+        std::set<uint32_t> boundUniformBuffers;
     };
 }

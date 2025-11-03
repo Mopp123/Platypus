@@ -3,6 +3,7 @@
 #include "platypus/core/Debug.h"
 #include "platypus/utils/FileUtils.h"
 
+#include <set>
 #include <sstream>
 #include <GL/glew.h>
 
@@ -25,6 +26,10 @@ namespace platypus
         { "vec4",       ShaderDataType::Float4 },
         { "mat4",       ShaderDataType::Mat4 },
         { "sampler2D",  ShaderDataType::None }
+    };
+
+    static std::set<std::string> s_allowedBlockLayouts = {
+        "std140"
     };
 
 
@@ -175,8 +180,9 @@ namespace platypus
                     findLocationsESSL3(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, _pVertexShader->source);
                     findLocationsESSL3(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, _pFragmentShader->source);
 
-                    Debug::log("___TEST___Shader uniforms:");
-                    printUniforms();
+                    Debug::log("___TEST___block indices:");
+                    for (int32_t i : _uniformBlockIndices)
+                        Debug::log("    " + std::to_string(i));
                 }
             }
         }
@@ -236,6 +242,16 @@ namespace platypus
             return false;
 
         return lineComponents[0] == "uniform";
+    }
+
+    bool OpenglShaderProgram::isUniformBlock(const std::vector<std::string>& lineComponents)
+    {
+        // NOTE: Works only if written as: "layout( layoutType )", etc
+        // TODO: allow formatting "layout(std140)" in any way!
+        if (lineComponents.size() != 5)
+            return false;
+
+        return lineComponents[0] == "layout(" && lineComponents[3] == "uniform";
     }
 
     void OpenglShaderProgram::addAttribute(
@@ -365,6 +381,37 @@ namespace platypus
         }
     }
 
+    void OpenglShaderProgram::addUniformBlock(
+        int lineNumber,
+        const std::vector<std::string>& lineComponents
+    )
+    {
+        const std::string& blockLayoutType = lineComponents[1];
+        std::set<std::string>::iterator layoutTypeIt = s_allowedBlockLayouts.find(blockLayoutType);
+        if (layoutTypeIt == s_allowedBlockLayouts.end())
+        {
+            throw ParseError(
+                lineNumber,
+                lineComponents,
+                "Unsupported block layout: " + blockLayoutType
+            );
+        }
+
+        const std::string& blockName = lineComponents[4];
+        uint32_t blockIndex = glGetUniformBlockIndex(_id, blockName.c_str());
+        if (blockIndex == GL_INVALID_INDEX)
+        {
+            PLATYPUS_ASSERT(false);
+        }
+        GLint blockSize = 0;
+        // TODO: Maybe store these and make sure that the used buffer satisfies this?
+        glGetActiveUniformBlockiv(_id, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
+
+        Debug::log("___TEST___Block index: " + blockName + " = " + std::to_string(blockIndex) + " required size = " + std::to_string(blockSize));
+
+        _uniformBlockIndices.push_back(blockIndex);
+    }
+
     // NOTE: Works only with Opengl ES Shading language v1
     //  * NOT TESTED, MAY NOT WORK!
     //  * Doesn't work properly if source contains /**/ kind of comments!
@@ -446,6 +493,10 @@ namespace platypus
                                 constVariables
                             );
                         }
+                        else if (isUniformBlock(components))
+                        {
+                            addUniformBlock(lineNumber, components);
+                        }
                     }
                 }
                 else
@@ -505,6 +556,23 @@ namespace platypus
             return it->second;
 
         return ShaderDataType::None;
+    }
+
+    int32_t OpenglShaderProgram::getUniformBlockIndex(size_t index)
+    {
+        if (index >= _uniformBlockIndices.size())
+        {
+            Debug::log(
+                "@OpenglShaderProgram::getUniformBlockIndex "
+                "Uniform block index(" + std::to_string(index) + ") "
+                "out of bounds. Shader has " + std::to_string(_uniformBlockIndices.size()) + " "
+                "uniform block indices.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return -1;
+        }
+        return _uniformBlockIndices[index];
     }
 
     void OpenglShaderProgram::printUniforms()

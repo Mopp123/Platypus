@@ -108,6 +108,7 @@ namespace platypus
             // Reset useLocationIndex from "prev round"
             pPipelineImpl->constantsPushed = false;
             pPipelineImpl->firstDescriptorSetLocation = 0;
+            pPipelineImpl->boundUniformBuffers.clear();
 
             GL_FUNC(glFrontFace(pipeline.getFaceWindingOrder() == FrontFace::FRONT_FACE_COUNTER_CLOCKWISE ? GL_CCW : GL_CW));
 
@@ -560,21 +561,10 @@ namespace platypus
 
             int descriptorSetIndex = 0;
             int useLocationIndex = pPipelineImpl->firstDescriptorSetLocation;
+            uint32_t uniformBlockBindingPoint = 0;
             for (const DescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
             {
-                //const DescriptorSet& descriptorSet = descriptorSets[descriptorSetIndex];
                 const ID_t descriptorSetID = descriptorSets[descriptorSetIndex].getImpl()->id;
-                //const DescriptorSet& descriptorSet = get_pool_descriptor_set(pDescriptorPoolImpl, descriptorSetID);
-                //const std::vector<DescriptorSetComponent>& descriptorSetComponents = descriptorSet.getComponents();
-
-                // Not to be confused with binding number.
-                // This just index of the layout's bindings vector
-                //
-                // NOTE: UPDATE! Switched to use DescriptorSetComponents in descriptor sets
-                // instead of buffers and textures -> each component goes one to one with the layout
-                //  -> not sure do we really need the "bufferBindingIndex" thing with dynamic uniform
-                //  buffers anymore...
-                int bufferBindingIndex = 0;
                 int bindingIndex = 0;
                 for (const DescriptorSetLayoutBinding& binding : descriptorSetLayout.getBindings())
                 {
@@ -582,165 +572,23 @@ namespace platypus
                     DescriptorSetComponent* pDescriptorSetComponent = get_pool_descriptor_set_data(pDescriptorPoolImpl, descriptorSetID, bindingIndex);
 
                     DescriptorType bindingType = binding.getType();
-                    #ifdef PLATYPUS_DEBUG
-                        if (pDescriptorSetComponent->type != bindingType)
-                        {
-                            Debug::log(
-                                "@bind_descriptor_sets "
-                                "Descriptor set: " + std::to_string(descriptorSetIndex) + " "
-                                "Invalid descriptor component type: " + std::to_string(pDescriptorSetComponent->type) + " "
-                                "for binding index: " + std::to_string(bindingIndex) + " "
-                                "binding type: " + std::to_string(bindingType),
-                                Debug::MessageType::PLATYPUS_ERROR
-                            );
-                            PLATYPUS_ASSERT(false);
-                        }
-                        if (!pDescriptorSetComponent->pData)
-                        {
-                            Debug::log(
-                                "@bind_descriptor_sets "
-                                "Descriptor set component's data was nullptr!",
-                                Debug::MessageType::PLATYPUS_ERROR
-                            );
-                            PLATYPUS_ASSERT(false);
-                        }
-                    #endif
 
-                    if (bindingType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-                         bindingType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                    if (bindingType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     {
-                        // TODO: some boundary checking..
-                        const Buffer* pBuf = (const Buffer*)pDescriptorSetComponent->pData;
-                        const PE_byte* pBufData = (const PE_byte*)pBuf->getData();
-
-                        size_t addDynamicOffset = 0;
-                        if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                        const Buffer* pUniformBuffer = (const Buffer*)pDescriptorSetComponent->pData;
+                        std::set<uint32_t>& boundUniformBuffers = pPipelineImpl->boundUniformBuffers;
+                        uint32_t uniformBufferID = pUniformBuffer->getImpl()->id;
+                        if (boundUniformBuffers.find(uniformBufferID) == boundUniformBuffers.end())
                         {
-                            #ifdef PLATYPUS_DEBUG
-                                if (bufferBindingIndex >= offsets.size())
-                                {
-                                    Debug::log(
-                                        "@bind_descriptor_sets "
-                                        "Dynamic buffer offset out of bounds! "
-                                        "Dynamic offsets provided: " + std::to_string(offsets.size()) + " "
-                                        "Current bufferBindingIndex: " + std::to_string(bufferBindingIndex),
-                                        Debug::MessageType::PLATYPUS_ERROR
-                                    );
-                                    PLATYPUS_ASSERT(false);
-                                }
-                            #endif
-                            addDynamicOffset = offsets[bufferBindingIndex];
+                            GL_FUNC(glBindBufferBase(GL_UNIFORM_BUFFER, uniformBlockBindingPoint, uniformBufferID));
+                            boundUniformBuffers.insert(uniformBufferID);
+                            ++uniformBlockBindingPoint;
                         }
-                        for (const UniformInfo& uboInfo : uniformInfo)
-                        {
-                            #ifdef PLATYPUS_DEBUG
-                                if (useLocationIndex >= shaderUniformLocations.size())
-                                {
-                                    Debug::log(
-                                        "@bind_descriptor_sets "
-                                        "location index: " + std::to_string(useLocationIndex) + " out of bounds. "
-                                        "Shader has " + std::to_string(shaderUniformLocations.size()) + " uniform locations.",
-                                        Debug::MessageType::PLATYPUS_ERROR
-                                    );
-                                    PLATYPUS_ASSERT(false);
-                                }
-                            #endif
-                            size_t valSize = 0;
-                            const PE_byte* pCurrentData = pBufData + addDynamicOffset;
-                            switch (uboInfo.type)
-                            {
-                                case ShaderDataType::Int:
-                                {
-                                    int val = *(int*)pCurrentData;
-                                    valSize = sizeof(int);
-                                    GL_FUNC(glUniform1i(shaderUniformLocations[useLocationIndex], val));
-                                    ++useLocationIndex;
-                                    break;
-                                }
-                                case ShaderDataType::Float:
-                                {
-                                    float val = *(float*)pCurrentData;
-                                    valSize = sizeof(float);
-                                    GL_FUNC(glUniform1f(shaderUniformLocations[useLocationIndex], val));
-                                    ++useLocationIndex;
-                                    break;
-                                }
-                                case ShaderDataType::Float2:
-                                {
-                                    Vector2f vec;
-                                    valSize = sizeof(Vector2f);
-                                    memcpy((void*)&vec, pCurrentData, valSize);
-
-                                    GL_FUNC(glUniform2f(
-                                        shaderUniformLocations[useLocationIndex],
-                                        vec.x,
-                                        vec.y
-                                    ));
-                                    ++useLocationIndex;
-                                    break;
-                                }
-                                case ShaderDataType::Float3:
-                                {
-                                    Vector3f vec;
-                                    valSize = sizeof(Vector3f);
-                                    memcpy((void*)&vec, pCurrentData, valSize);
-                                    GL_FUNC(glUniform3f(
-                                        shaderUniformLocations[useLocationIndex],
-                                        vec.x,
-                                        vec.y,
-                                        vec.z
-                                    ));
-                                    ++useLocationIndex;
-                                    break;
-                                }
-                                case ShaderDataType::Float4:
-                                {
-                                    Vector4f vec;
-                                    valSize = sizeof(Vector4f);
-                                    memcpy((void*)&vec, pCurrentData, valSize);
-                                    GL_FUNC(glUniform4f(
-                                        shaderUniformLocations[useLocationIndex],
-                                        vec.x,
-                                        vec.y,
-                                        vec.z,
-                                        vec.w
-                                    ));
-                                    ++useLocationIndex;
-                                    break;
-                                }
-                                // NOTE: remembering some issues about this?
-                                case ShaderDataType::Mat4:
-                                {
-                                    valSize = sizeof(Matrix4f) * uboInfo.arrayLen;
-                                    for (int i = 0; i < uboInfo.arrayLen; ++i)
-                                    {
-                                        const PE_byte* pData = pCurrentData + i * sizeof(Matrix4f);
-                                        GL_FUNC(glUniformMatrix4fv(
-                                            shaderUniformLocations[useLocationIndex],
-                                            1,
-                                            GL_FALSE,
-                                            (const float*)pData
-                                        ));
-                                        ++useLocationIndex;
-                                    }
-                                    break;
-                                }
-
-                                default:
-                                    Debug::log(
-                                        "@bind_descriptor_sets "
-                                        "Unsupported ShaderDataType: " + std::to_string(uboInfo.type) + " "
-                                        "using location index: " + std::to_string(useLocationIndex) + " "
-                                        "Currently implemented types are: "
-                                        "Int, Float, Float2, Float3, Float4, Mat4",
-                                        Debug::MessageType::PLATYPUS_ERROR
-                                    );
-                                    PLATYPUS_ASSERT(false);
-                                    break;
-                            }
-                            addDynamicOffset += valSize;
-                        }
-                        ++bufferBindingIndex;
+                        ++useLocationIndex;
+                    }
+                    else if (bindingType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                    {
+                        ++useLocationIndex;
                     }
                     else if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                     {
