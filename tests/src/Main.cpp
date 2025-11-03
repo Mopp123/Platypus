@@ -1,5 +1,5 @@
 #include "platypus/Platypus.h"
-#include "ShadowTestScene.hpp"
+#include "OpenglUpgradeTestScene.hpp"
 #include <iostream>
 
 
@@ -16,7 +16,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new ShadowTestScene
+        new OpenglUpgradeTestScene
     );
     app.run();
     return 0;

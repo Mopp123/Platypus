@@ -2,7 +2,6 @@
 #include "platypus/graphics/Context.hpp"
 #include "platypus/core/Application.h"
 #include "WebPipeline.h"
-#include "WebShader.h"
 #include "platypus/core/Debug.h"
 
 
@@ -75,7 +74,7 @@ namespace platypus
         _pImpl->viewportHeight = swapchainExtent.height;
         // NOTE: on web platform we aren't using layout qualifiers
         _pImpl->pShaderProgram = new OpenglShaderProgram(
-            ShaderVersion::ESSL1,
+            ShaderVersion::ESSL3,
             (const ShaderImpl*)_pVertexShader->_pImpl,
             (const ShaderImpl*)_pFragmentShader->_pImpl
         );

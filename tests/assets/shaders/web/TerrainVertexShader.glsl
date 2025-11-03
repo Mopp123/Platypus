@@ -1,8 +1,9 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 texCoord;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 texCoord;
 
 struct SceneData
 {
@@ -22,13 +23,13 @@ struct InstanceData
 };
 uniform InstanceData instanceData;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos;
-varying vec3 var_cameraPos;
-varying vec3 var_lightDir;
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+out vec3 var_normal;
+out vec2 var_texCoord;
+out vec3 var_fragPos;
+out vec3 var_cameraPos;
+out vec3 var_lightDir;
+out vec4 var_lightColor;
+out vec4 var_ambientLightColor;
 
 void main()
 {

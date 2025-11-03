@@ -1,12 +1,13 @@
+#version 300 es
 precision mediump float;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos;
-varying vec3 var_cameraPos;
-varying vec3 var_lightDir;
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+in vec3 var_normal;
+in vec2 var_texCoord;
+in vec3 var_fragPos;
+in vec3 var_cameraPos;
+in vec3 var_lightDir;
+in vec4 var_lightColor;
+in vec4 var_ambientLightColor;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 uniform sampler2D diffuseTextureSampler;
@@ -25,13 +26,15 @@ struct MaterialData
 };
 uniform MaterialData materialData;
 
+layout(location = 0) out vec4 outColor;
+
 void main()
 {
     vec2 finalTexCoord = var_texCoord * materialData.textureProperties.zw;
     finalTexCoord = finalTexCoord + materialData.textureProperties.xy;
 
-    vec4 diffuseTextureColor = texture2D(diffuseTextureSampler, finalTexCoord);
-    vec4 specularTextureColor = texture2D(specularTextureSampler, finalTexCoord);
+    vec4 diffuseTextureColor = texture(diffuseTextureSampler, finalTexCoord);
+    vec4 specularTextureColor = texture(specularTextureSampler, finalTexCoord);
 
     float specularStrength = materialData.lightingProperties.x;
     float shininess = materialData.lightingProperties.y;
@@ -58,5 +61,5 @@ void main()
     {
         discard;
     }
-    gl_FragColor = finalColor;
+    outColor = finalColor;
 }

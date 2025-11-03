@@ -2,7 +2,7 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
-#include "WebShader.h"
+#include "WebShader.hpp"
 
 
 namespace platypus

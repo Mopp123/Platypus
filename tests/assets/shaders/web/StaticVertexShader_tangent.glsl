@@ -1,10 +1,11 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 texCoord;
-attribute vec4 tangent;
-attribute mat4 transformationMatrix;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in vec4 tangent;
+layout(location = 4) in mat4 transformationMatrix;
 
 struct SceneData
 {
@@ -17,24 +18,11 @@ struct SceneData
 };
 uniform SceneData sceneData;
 
-varying vec2 var_texCoord;
-varying vec3 var_toCamera; // in tangent space
-varying vec3 var_lightDir; // in tangent space
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
-
-mat3 transpose(mat3 matrix)
-{
-    mat3 result;
-    for (int i = 0; i < 3; ++i)
-    {
-        for (int j = 0; j < 3; ++j)
-        {
-            result[i][j] = matrix[j][i];
-        }
-    }
-    return result;
-}
+out vec2 var_texCoord;
+out vec3 var_toCamera; // in tangent space
+out vec3 var_lightDir; // in tangent space
+out vec4 var_lightColor;
+out vec4 var_ambientLightColor;
 
 // OLD BELOW -> seems solved for now..
 // NOTE: ISSUES!

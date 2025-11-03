@@ -1,8 +1,9 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute vec4 weights;
-attribute vec4 jointIDs;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec4 weights;
+layout(location = 2) in vec4 jointIDs;
 
 struct PushConstants
 {
@@ -14,7 +15,8 @@ uniform PushConstants pushConstants;
 const int maxJoints = 50;
 uniform mat4 jointData[maxJoints];
 
-void main() {
+void main()
+{
     float weightSum = weights[0] + weights[1] + weights[2] + weights[3];
     mat4 jointTransform = jointData[0];
     if (weightSum >= 1.0)

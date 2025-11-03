@@ -1,17 +1,18 @@
+#version 300 es
 precision mediump float;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos; // in tangent space
-varying vec3 var_toCamera; // in tangent space
-varying vec3 var_lightDir; // in tangent space
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+in vec3 var_normal;
+in vec2 var_texCoord;
+in vec3 var_fragPos; // in tangent space
+in vec3 var_toCamera; // in tangent space
+in vec3 var_lightDir; // in tangent space
+in vec4 var_lightColor;
+in vec4 var_ambientLightColor;
 
-varying mat3 var_toTangentSpace; // uses locations 7-9
-varying vec4 var_tangent;
+in mat3 var_toTangentSpace; // uses locations 7-9
+in vec4 var_tangent;
 
-varying vec3 var_shadowCoord;
+in vec3 var_shadowCoord;
 
 uniform sampler2D blendmapTexture;
 
@@ -49,6 +50,8 @@ struct MaterialData
 };
 uniform MaterialData materialData;
 
+layout(location = 0) out vec4 outColor;
+
 void main()
 {
     // NOTE: Not sure should offset be added to original coord or tiled coord...
@@ -57,27 +60,27 @@ void main()
     vec2 tiledCoord = var_texCoord * materialData.textureProperties.zw;
     tiledCoord = tiledCoord + materialData.textureProperties.xy;
 
-    vec4 blendmapColor = texture2D(blendmapTexture, var_texCoord);
+    vec4 blendmapColor = texture(blendmapTexture, var_texCoord);
     float transparency = 1.0 - blendmapColor.a;
     float blackAmount = max(1.0 - blendmapColor.r - blendmapColor.g - blendmapColor.b - transparency, 0.0);
 
-    vec4 diffuseChannel0Color = texture2D(diffuseTextureChannel0, tiledCoord) * blackAmount;
-    vec4 diffuseChannel1Color = texture2D(diffuseTextureChannel1, tiledCoord) * blendmapColor.r;
-    vec4 diffuseChannel2Color = texture2D(diffuseTextureChannel2, tiledCoord) * blendmapColor.g;
-    vec4 diffuseChannel3Color = texture2D(diffuseTextureChannel3, tiledCoord) * blendmapColor.b;
-    vec4 diffuseChannel4Color = texture2D(diffuseTextureChannel4, tiledCoord) * transparency;
+    vec4 diffuseChannel0Color = texture(diffuseTextureChannel0, tiledCoord) * blackAmount;
+    vec4 diffuseChannel1Color = texture(diffuseTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 diffuseChannel2Color = texture(diffuseTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 diffuseChannel3Color = texture(diffuseTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 diffuseChannel4Color = texture(diffuseTextureChannel4, tiledCoord) * transparency;
 
-    vec4 specularChannel0Color = texture2D(specularTextureChannel0, tiledCoord) * blackAmount;
-    vec4 specularChannel1Color = texture2D(specularTextureChannel1, tiledCoord) * blendmapColor.r;
-    vec4 specularChannel2Color = texture2D(specularTextureChannel2, tiledCoord) * blendmapColor.g;
-    vec4 specularChannel3Color = texture2D(specularTextureChannel3, tiledCoord) * blendmapColor.b;
-    vec4 specularChannel4Color = texture2D(specularTextureChannel4, tiledCoord) * transparency;
+    vec4 specularChannel0Color = texture(specularTextureChannel0, tiledCoord) * blackAmount;
+    vec4 specularChannel1Color = texture(specularTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 specularChannel2Color = texture(specularTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 specularChannel3Color = texture(specularTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 specularChannel4Color = texture(specularTextureChannel4, tiledCoord) * transparency;
 
-    vec4 normalChannel0Color = texture2D(normalTextureChannel0, tiledCoord) * blackAmount;
-    vec4 normalChannel1Color = texture2D(normalTextureChannel1, tiledCoord) * blendmapColor.r;
-    vec4 normalChannel2Color = texture2D(normalTextureChannel2, tiledCoord) * blendmapColor.g;
-    vec4 normalChannel3Color = texture2D(normalTextureChannel3, tiledCoord) * blendmapColor.b;
-    vec4 normalChannel4Color = texture2D(normalTextureChannel4, tiledCoord) * transparency;
+    vec4 normalChannel0Color = texture(normalTextureChannel0, tiledCoord) * blackAmount;
+    vec4 normalChannel1Color = texture(normalTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 normalChannel2Color = texture(normalTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 normalChannel3Color = texture(normalTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 normalChannel4Color = texture(normalTextureChannel4, tiledCoord) * transparency;
 
     // TODO: Better naming for these
     vec4 totalDiffuseColor = diffuseChannel0Color + diffuseChannel1Color + diffuseChannel2Color + diffuseChannel3Color + diffuseChannel4Color;
@@ -107,8 +110,8 @@ void main()
     vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
 
     // Test shadow...
-    float shadowMapVal = texture2D(shadowmapTexture, var_shadowCoord.xy).r;
+    float shadowMapVal = texture(shadowmapTexture, var_shadowCoord.xy).r;
     float shadow = var_shadowCoord.z > shadowMapVal ? 1.0 : 0.0;
 
-    gl_FragColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
+    outColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
 }

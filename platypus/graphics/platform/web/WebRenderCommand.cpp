@@ -7,6 +7,7 @@
 #include "WebFramebuffer.hpp"
 #include "WebBuffers.h"
 #include "WebDescriptors.hpp"
+#include "WebShader.hpp"
 #include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/web/WebTexture.h"
 #include "platypus/utils/Maths.h"
@@ -251,18 +252,17 @@ namespace platypus
                 // TODO: Some safeguards 'n error handling if this fails
                 size_t stride = vbLayoutIt->getStride();
                 size_t toNext = 0;
-                int32_t lastLocation = 0;
+                int32_t lastLocation = 0; // NOTE: Not used anymore?!?!
                 for (const VertexBufferElement& element : vbLayoutIt->getElements())
                 {
-                    //int32_t location = shaderAttribLocations[element.getLocation()];
-
-                    // NOTE: If can't find this elem from shader, it may have been ment as mat4
-                    //  -> try using last location + i for the matrix' column's indices
-                    // NOTE: May cause issues if mat4 is not the last attribute?
-                    int32_t location = pShaderProgram->getAttribLocation(element.getLocation());
-                    if (location == -1)
-                        location = lastLocation + 1;
-                    lastLocation = location;
+                    // If using Mat4 attribute, it uses 4 attrib locations instead of the single one
+                    // specified in the element!
+                    //  NOTE: May cause issues if mat4 is not the last attribute?
+                    //      -> shouldn't be the case anymore since using the actual attrib locations specified in the glsl
+                    int32_t location = element.getLocation();
+                    //if (pShaderProgram->getAttributeType(location) == ShaderDataType::Mat4)
+                    //    location = lastLocation + 1;
+                    //lastLocation = location;
 
                     ShaderDataType shaderDataType = element.getType();
 
