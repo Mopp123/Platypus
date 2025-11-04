@@ -6,7 +6,7 @@ layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoord;
 layout(location = 3) in mat4 transformationMatrix;
 
-layout( std140 ) uniform SceneData
+layout(std140) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;

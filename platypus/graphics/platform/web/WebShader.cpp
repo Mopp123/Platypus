@@ -2,6 +2,7 @@
 #include "WebShader.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/utils/FileUtils.h"
+#include "platypus/utils/StringUtils.hpp"
 
 #include <set>
 #include <sstream>
@@ -244,14 +245,11 @@ namespace platypus
         return lineComponents[0] == "uniform";
     }
 
-    bool OpenglShaderProgram::isUniformBlock(const std::vector<std::string>& lineComponents)
+    bool OpenglShaderProgram::isUniformBlock(const std::string& line)
     {
-        // NOTE: Works only if written as: "layout( layoutType )", etc
-        // TODO: allow formatting "layout(std140)" in any way!
-        if (lineComponents.size() != 5)
-            return false;
-
-        return lineComponents[0] == "layout(" && lineComponents[3] == "uniform";
+        size_t layoutBegin = line.find("layout");
+        size_t uniformBegin = line.find("uniform");
+        return layoutBegin != line.npos && uniformBegin != line.npos;
     }
 
     void OpenglShaderProgram::addAttribute(
@@ -383,30 +381,35 @@ namespace platypus
 
     void OpenglShaderProgram::addUniformBlock(
         int lineNumber,
-        const std::vector<std::string>& lineComponents
+        const std::string& line
     )
     {
-        const std::string& blockLayoutType = lineComponents[1];
-        std::set<std::string>::iterator layoutTypeIt = s_allowedBlockLayouts.find(blockLayoutType);
-        if (layoutTypeIt == s_allowedBlockLayouts.end())
+        const std::string uniformStr = "uniform";
+        size_t uniformBegin = line.find(uniformStr);
+        std::string blockName = line.substr(uniformBegin + uniformStr.size(), line.back());
+        if (blockName.empty())
         {
             throw ParseError(
                 lineNumber,
-                lineComponents,
-                "Unsupported block layout: " + blockLayoutType
+                line,
+                "Couldn't find uniform block name from the line"
             );
         }
 
-        const std::string& blockName = lineComponents[4];
+        trim_spaces(blockName);
+
         uint32_t blockIndex = glGetUniformBlockIndex(_id, blockName.c_str());
         if (blockIndex == GL_INVALID_INDEX)
         {
-            PLATYPUS_ASSERT(false);
+            throw ParseError(
+                lineNumber,
+                line,
+                "Index for block '" + blockName + "' was GL_INVALID_INDEX"
+            );
         }
         GLint blockSize = 0;
         // TODO: Maybe store these and make sure that the used buffer satisfies this?
         glGetActiveUniformBlockiv(_id, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
-
         Debug::log("___TEST___Block index: " + blockName + " = " + std::to_string(blockIndex) + " required size = " + std::to_string(blockSize));
 
         _uniformBlockIndices.push_back(blockIndex);
@@ -435,6 +438,7 @@ namespace platypus
         {
             while (getline(in, line))
             {
+                std::string fullLine = line;
                 std::vector<std::string> components;
                 size_t nextDelim = 0;
                 // remove ';' completely, we dont need that here for anythin..
@@ -493,9 +497,9 @@ namespace platypus
                                 constVariables
                             );
                         }
-                        else if (isUniformBlock(components))
+                        else if (isUniformBlock(fullLine))
                         {
-                            addUniformBlock(lineNumber, components);
+                            addUniformBlock(lineNumber, fullLine);
                         }
                     }
                 }

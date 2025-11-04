@@ -48,6 +48,15 @@ namespace platypus
 
                 _msg = "Line(" + std::to_string(lineNumber) + "): " + line + " | " + msg;
             }
+
+            ParseError(
+                int lineNumber,
+                const std::string& line,
+                const std::string& msg
+            )
+            {
+                _msg = "Line(" + std::to_string(lineNumber) + "): " + line + " | " + msg;
+            }
             virtual const char* what() const noexcept override { return _msg.c_str(); }
         };
 
@@ -91,7 +100,7 @@ namespace platypus
             const std::vector<std::string>& lineComponents
         );
         bool isUniform(const std::vector<std::string>& lineComponents);
-        bool isUniformBlock(const std::vector<std::string>& lineComponents);
+        bool isUniformBlock(const std::string& line);
 
         void addAttribute(
             int lineNumber,
@@ -107,7 +116,7 @@ namespace platypus
 
         void addUniformBlock(
             int lineNumber,
-            const std::vector<std::string>& lineComponents
+            const std::string& line
         );
 
         // Finds attrib and/or uniform locations from shader source
