@@ -37,8 +37,7 @@ namespace platypus
         // *On vulkan, required to re query swapchain support details to recreate swapchain
         static void handle_window_resize();
 
-        // Required for vulkan's descriptor sets using dynamic offsets of uniform buffers.
-        // For OpenGL this should be always 1
+        // Required for descriptor sets using dynamic offsets of uniform buffers.
         static size_t get_min_uniform_buffer_offset_align();
 
         static CommandPool* get_command_pool();
