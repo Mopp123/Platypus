@@ -19,7 +19,7 @@ namespace platypus
     enum class ShaderVersion
     {
         GLSL3,
-        ESSL1
+        ESSL3
     };
 
 

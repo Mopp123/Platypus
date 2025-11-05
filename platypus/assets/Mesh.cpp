@@ -194,7 +194,6 @@ namespace platypus
             bufferUsageFlags = BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT;
             // NOTE: Not sure, should use DYNAMIC or STREAM in this case...
             updateFrequency = BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC;
-            storeHostSide = true;
         }
 
         Buffer* pVertexBuffer = new Buffer(

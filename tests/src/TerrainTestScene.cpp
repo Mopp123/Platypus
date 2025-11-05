@@ -176,11 +176,14 @@ void TerrainTestScene::update()
     Application* pApp = Application::get_instance();
     InputManager& inputManager = pApp->getInputManager();
 
+    /*
     Vector2f newOffset = _pTerrainMaterial->getTextureOffset();
     newOffset.x += Timing::get_delta_time();
     newOffset.y += Timing::get_delta_time();
     _pTerrainMaterial->setTextureProperties(newOffset, _pTerrainMaterial->getTextureScale());
+    */
 
+    /*
     float interpolationAmount = (std::sin(s_time) + 1.0f) * 0.5f;
     for (size_t i = 0; i < _heightmap1.size(); ++i)
     {
@@ -196,6 +199,7 @@ void TerrainTestScene::update()
             i * stride + sizeof(float)
         );
     }
+    */
 
     s_time += 1.0f * Timing::get_delta_time();
 }

@@ -5,17 +5,10 @@
 #include "WebContext.hpp"
 #include "platypus/Common.h"
 #include <cstdlib>
-#include <GL/glew.h>
 
 
 namespace platypus
 {
-    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
-    {
-        return requestSize;
-    }
-
-
     static GLenum to_opengl_buffer_update_frequency(BufferUpdateFrequency f)
     {
         switch (f)
@@ -33,6 +26,34 @@ namespace platypus
         }
     }
 
+    GLenum to_opengl_buffer_type(uint32_t bufferUsageFlagBits)
+    {
+        if ((bufferUsageFlagBits & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT) != 0)
+        {
+            return GL_ARRAY_BUFFER;
+        }
+        else if ((bufferUsageFlagBits & BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT) != 0)
+        {
+            return GL_ELEMENT_ARRAY_BUFFER;
+        }
+        else if ((bufferUsageFlagBits & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT) != 0)
+        {
+            return GL_UNIFORM_BUFFER;
+        }
+
+        return GL_NONE;
+    }
+
+    std::string opengl_buffer_type_to_string(GLenum type)
+    {
+        switch (type)
+        {
+            case GL_ARRAY_BUFFER: return "GL_ARRAY_BUFFER";
+            case GL_ELEMENT_ARRAY_BUFFER: return "GL_ELEMENT_ARRAY_BUFFER";
+            case GL_UNIFORM_BUFFER: return "GL_UNIFORM_BUFFER";
+            default: return "<Invalid type>";
+        }
+    }
 
     struct VertexBufferElementImpl
     {
@@ -158,28 +179,13 @@ namespace platypus
             memcpy(_pData, pData, getTotalSize());
         }
 
-        // in gl terms its the glBufferData's "usage"
+        GLenum glBufferType = to_opengl_buffer_type(_bufferUsageFlags);
         GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(updateFrequency);
         uint32_t id = 0;
-        if ((usageFlags & BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT)
-        {
-            GL_FUNC(glGenBuffers(1, &id));
-            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, id));
-            GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
-            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, 0));
-        }
-        else if ((usageFlags & BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT) == BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT)
-        {
-            GL_FUNC(glGenBuffers(1, &id));
-            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id));
-            GL_FUNC(glBufferData(GL_ELEMENT_ARRAY_BUFFER, getTotalSize(), pData, GL_STATIC_DRAW));
-            GL_FUNC(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-        }
-        else if (usageFlags & BufferUsageFlagBits::BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-        {
-            _pData = calloc(_dataLength, _dataElemSize);
-            memcpy(_pData, pData, _dataLength * _dataElemSize);
-        }
+        GL_FUNC(glGenBuffers(1, &id));
+        GL_FUNC(glBindBuffer(glBufferType, id));
+        GL_FUNC(glBufferData(glBufferType, getTotalSize(), pData, glBufferUpdateFrequency));
+        GL_FUNC(glBindBuffer(glBufferType, 0));
 
         _pImpl = new BufferImpl { id };
     }
@@ -220,31 +226,28 @@ namespace platypus
 
     void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        // Since we just fake uniform buffers here, the host side buffer used as uniform data should
-        // already be updated at this point, so we don't need to do anything to those here...
-        if ((_bufferUsageFlags & BUFFER_USAGE_UNIFORM_BUFFER_BIT) != BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+        if (!validateUpdate(pData, dataSize, offset))
         {
-            if (!validateUpdate(pData, dataSize, offset))
-            {
-                Debug::log(
-                    "@Buffer::updateDevice "
-                    "Failed to update buffer!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return;
-            }
-
-            GL_FUNC(glBindBuffer(GL_ARRAY_BUFFER, _pImpl->id));
-            GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
-            if (getTotalSize() == dataSize)
-            {
-                GL_FUNC(glBufferData(GL_ARRAY_BUFFER, getTotalSize(), pData, glBufferUpdateFrequency));
-            }
-            else
-            {
-                GL_FUNC(glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)dataSize, pData));
-            }
+            Debug::log(
+                "@Buffer::updateDevice "
+                "Failed to update buffer!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
         }
+
+        GLenum glBufferType = to_opengl_buffer_type(_bufferUsageFlags);
+        GL_FUNC(glBindBuffer(glBufferType, _pImpl->id));
+        GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
+        if (getTotalSize() == dataSize)
+        {
+            GL_FUNC(glBufferData(glBufferType, getTotalSize(), pData, glBufferUpdateFrequency));
+        }
+        else
+        {
+            GL_FUNC(glBufferSubData(glBufferType, (GLintptr)offset, (GLsizeiptr)dataSize, pData));
+        }
+        GL_FUNC(glBindBuffer(glBufferType, 0));
     }
 }

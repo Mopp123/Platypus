@@ -1,11 +1,12 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 texCoord;
-attribute vec4 tangent;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in vec4 tangent;
 
-struct SceneData
+layout(std140) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
@@ -13,38 +14,23 @@ struct SceneData
     vec4 lightDirection;
     vec4 lightColor;
     vec4 ambientLightColor;
-};
-uniform SceneData sceneData;
+} sceneData;
 
-struct InstanceData
+layout(std140) uniform InstanceData
 {
     mat4 transformationMatrix;
-};
-uniform InstanceData instanceData;
+} instanceData;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos; // in tangent space
-varying vec3 var_toCamera; // in tangent space
-varying vec3 var_lightDir; // in tangent space
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+out vec3 var_normal;
+out vec2 var_texCoord;
+out vec3 var_fragPos; // in tangent space
+out vec3 var_toCamera; // in tangent space
+out vec3 var_lightDir; // in tangent space
+out vec4 var_lightColor;
+out vec4 var_ambientLightColor;
 
-varying mat3 var_toTangentSpace; // uses locations 9-11
-varying vec4 var_tangent;
-
-mat3 transpose(mat3 matrix)
-{
-    mat3 result;
-    for (int i = 0; i < 3; ++i)
-    {
-        for (int j = 0; j < 3; ++j)
-        {
-            result[i][j] = matrix[j][i];
-        }
-    }
-    return result;
-}
+out mat3 var_toTangentSpace; // uses locations 9-11
+out vec4 var_tangent;
 
 void main()
 {

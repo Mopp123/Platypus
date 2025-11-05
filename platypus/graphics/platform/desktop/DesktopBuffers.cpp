@@ -120,13 +120,6 @@ namespace platypus
         return vkFlags;
     }
 
-    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
-    {
-        size_t alignRequirement = Device::get_min_uniform_buffer_offset_align();
-        size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
-        return  alignRequirement * (diff + 1);
-    }
-
     VkIndexType to_vk_index_type(size_t bufferElementSize)
     {
         switch (bufferElementSize)

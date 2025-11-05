@@ -1,7 +1,8 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute mat4 transformationMatrix;
+layout(location = 0) in vec3 position;
+layout(location = 1) in mat4 transformationMatrix;
 
 struct PushConstants
 {

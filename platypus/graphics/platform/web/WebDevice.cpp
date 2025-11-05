@@ -11,7 +11,7 @@ namespace platypus
 
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
-    size_t Device::s_minUniformBufferOffsetAlignment = 1;
+    size_t Device::s_minUniformBufferOffsetAlignment = 0;
     CommandPool* Device::s_pCommandPool = nullptr;
 
     void Device::create(Window* pWindow)
@@ -23,6 +23,12 @@ namespace platypus
         glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBlockBindingPoints);
         Debug::log("___TEST___MAX UNIFORM BLOCK SIZE = " + std::to_string(maxUniformBlockSize));
         Debug::log("___TEST___MAX UNIFORM BLOCK BINDINGS = " + std::to_string(maxUniformBlockBindingPoints));
+
+
+        // NOTE: Not sure what the type of this should be
+        GLsizei uboOffsetAlignment = 0;
+        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &uboOffsetAlignment);
+        s_minUniformBufferOffsetAlignment = (size_t)uboOffsetAlignment;
     }
 
     void Device::destroy()
@@ -48,7 +54,7 @@ namespace platypus
 
     size_t Device::get_min_uniform_buffer_offset_align()
     {
-        return 1;
+        return s_minUniformBufferOffsetAlignment;
     }
 
     CommandPool* Device::get_command_pool()

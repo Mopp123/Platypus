@@ -89,10 +89,24 @@ namespace platypus
                 pSceneRenderPass,
                 ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
             );
-            createPipeline(
-                pSceneRenderPass,
-                ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
-            );
+
+            if (_normalTextureCount == 0)
+            {
+                createPipeline(
+                    pSceneRenderPass,
+                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
+                );
+            }
+            else
+            {
+                Debug::log(
+                    "@Material::Material "
+                    "Created material with normal texture! "
+                    "Currently skinned meshes don't support this so "
+                    "make sure you don't use this material for skinned meshes!",
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+            }
         }
         else if (_materialType == MaterialType::TERRAIN)
         {

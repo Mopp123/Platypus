@@ -2,7 +2,7 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
-#include "WebShader.h"
+#include "WebShader.hpp"
 
 
 namespace platypus
@@ -22,5 +22,7 @@ namespace platypus
         //  firstDescriptorSetLocation gets set to 0 when binding pipeline.
         bool constantsPushed = false;
         int firstDescriptorSetLocation = 0;
+
+        std::set<uint32_t> boundUniformBuffers;
     };
 }
