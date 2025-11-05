@@ -36,7 +36,7 @@ uniform sampler2D normalTextureChannel4;
 
 uniform sampler2D shadowmapTexture;
 
-struct MaterialData
+layout(std140) uniform MaterialData
 {
     // x = specular strength
     // y = shininess
@@ -47,8 +47,7 @@ struct MaterialData
     // x,y = texture offset
     // z,w = texture scale
     vec4 textureProperties;
-};
-uniform MaterialData materialData;
+} materialData;
 
 layout(location = 0) out vec4 outColor;
 

@@ -64,20 +64,6 @@ namespace platypus
         size_t shadowPushConstantsSize
     )
     {
-        // TODO: Some better way to deal with these...
-        const size_t requiredShadowPushConstantsSize = sizeof(Matrix4f) * 2;
-        if (pShadowPushConstants != nullptr && shadowPushConstantsSize != requiredShadowPushConstantsSize)
-        {
-            Debug::log(
-                "@create_terrain_batch "
-                "Invalid shadow push constants size: " + std::to_string(shadowPushConstantsSize) + " "
-                "required size is " + std::to_string(requiredShadowPushConstantsSize),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return NULL_ID;
-        }
-
         ID_t identifier = ID::hash(meshID, materialID);
         if (!batcher.validateBatchDoesntExist("create_terrain_batch", pRenderPass->getType(), identifier))
             return nullptr;
@@ -92,13 +78,40 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         pBatch->pPipeline = pMaterial->getPipeline(ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE);
 
-        pBatch->pushConstantsSize = shadowPushConstantsSize;
-        pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
-        pBatch->pushConstantsUniformInfos = {
-            { ShaderDataType::Mat4 },
-            { ShaderDataType::Mat4 }
-        };
-        pBatch->pPushConstantsData = pShadowPushConstants;
+        if (pShadowPushConstants || shadowPushConstantsSize != 0)
+        {
+            // TODO: Some better way to deal with these...
+            const size_t requiredShadowPushConstantsSize = sizeof(Matrix4f) * 2;
+            if (shadowPushConstantsSize != requiredShadowPushConstantsSize)
+            {
+                Debug::log(
+                    "@create_terrain_batch "
+                    "Invalid shadow push constants size: " + std::to_string(shadowPushConstantsSize) + " "
+                    "required size is " + std::to_string(requiredShadowPushConstantsSize),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return NULL_ID;
+            }
+            if (!pShadowPushConstants)
+            {
+                Debug::log(
+                    "@create_terrain_batch "
+                    "pShadowPushConstants was nullptr!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return NULL_ID;
+            }
+
+            pBatch->pushConstantsSize = shadowPushConstantsSize;
+            pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
+            pBatch->pushConstantsUniformInfos = {
+                { ShaderDataType::Mat4 },
+                { ShaderDataType::Mat4 }
+            };
+            pBatch->pPushConstantsData = pShadowPushConstants;
+        }
 
         const size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
         pBatch->dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(

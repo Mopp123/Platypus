@@ -18,19 +18,9 @@ layout(std140) uniform SceneData
 } sceneData;
 
 const int maxJoints = 50;
-// NOTE: To make below working, need to access array indices with for loop in order to
-// index as "constant values" AND need to implement how actual name of array struct member
-// gets parsed in OpenglShader class!
-//struct JointData
-//{
-//    mat4 data[maxJoints];
-//};
-//uniform JointData jointData;
-// uniform mat4 jointData[maxJoints];
-
 layout(std140) uniform JointData
 {
-    mat4 data[52];
+    mat4 data[maxJoints];
 } jointData;
 
 out vec3 var_normal;

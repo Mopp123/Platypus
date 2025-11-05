@@ -558,7 +558,7 @@ namespace platypus
 
             int descriptorSetIndex = 0;
             // Need the actual uniform location index that can be greater than the descriptor set index
-            // if push constants were used
+            // if push constants were used. Used only for "pure uniforms". Block binding points are separate!
             int useLocationIndex = pPipelineImpl->firstDescriptorSetLocation;
             uint32_t uniformBlockBindingPoint = 0;
             for (const DescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
@@ -583,7 +583,6 @@ namespace platypus
                             boundUniformBuffers.insert(uniformBufferID);
                         }
                         ++uniformBlockBindingPoint;
-                        ++useLocationIndex;
                     }
                     else if (bindingType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                     {
@@ -613,7 +612,6 @@ namespace platypus
                         const GLsizeiptr dynamicRange = (GLsizeiptr)pUniformBuffer->getDataElemSize();
                         GL_FUNC(glBindBufferRange(GL_UNIFORM_BUFFER, uniformBlockBindingPoint, uniformBufferID, dynamicOffset, dynamicRange));
                         ++uniformBlockBindingPoint;
-                        ++useLocationIndex;
                     }
                     else if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                     {
@@ -621,7 +619,6 @@ namespace platypus
                         for (const UniformInfo& layoutInfo : uniformInfo)
                         {
                             GL_FUNC(glUniform1i(shaderUniformLocations[useLocationIndex], binding.getBinding()));
-                            // well following is quite fucking dumb.. dunno how could do this better
                             GL_FUNC(glActiveTexture(binding_to_gl_texture_unit(binding.getBinding())));
                             const Texture* pTexture = (const Texture*)pDescriptorSetComponent->pData;
                             PLATYPUS_ASSERT(pTexture);

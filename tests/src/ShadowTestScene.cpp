@@ -232,7 +232,6 @@ void ShadowTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getTestFramebufferColorTexture()->getID()
     );
-
 }
 
 void ShadowTestScene::update()

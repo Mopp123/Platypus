@@ -6,7 +6,7 @@ layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoord;
 layout(location = 3) in vec4 tangent;
 
-struct SceneData
+layout(std140) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
@@ -14,14 +14,12 @@ struct SceneData
     vec4 lightDirection;
     vec4 lightColor;
     vec4 ambientLightColor;
-};
-uniform SceneData sceneData;
+} sceneData;
 
-struct InstanceData
+layout(std140) uniform InstanceData
 {
     mat4 transformationMatrix;
-};
-uniform InstanceData instanceData;
+} instanceData;
 
 out vec3 var_normal;
 out vec2 var_texCoord;

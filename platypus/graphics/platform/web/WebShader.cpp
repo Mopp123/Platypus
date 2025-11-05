@@ -331,7 +331,9 @@ namespace platypus
         if (s_ESSLTypesToEngine.find(type) != s_ESSLTypesToEngine.end() && !isArray)
         {
             // NOTE: Shouldn't we use GL_FUNC macro here?
-            _uniformLocations.push_back(glGetUniformLocation(_id, lineComponents[2].c_str()));
+            int32_t location = glGetUniformLocation(_id, lineComponents[2].c_str());
+            Debug::log("___TEST___Adding uniform: " + lineComponents[2] + " to index: " + std::to_string(_uniformLocations.size()) + " with location: " + std::to_string(location));
+            _uniformLocations.push_back(location);
         }
         else if (isArray)
         {

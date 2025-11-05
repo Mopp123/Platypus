@@ -7,7 +7,7 @@ layout(location = 2) in vec2 texCoord;
 layout(location = 3) in vec4 tangent;
 layout(location = 4) in mat4 transformationMatrix;
 
-struct SceneData
+layout(std140) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
@@ -15,8 +15,7 @@ struct SceneData
     vec4 lightDirection;
     vec4 lightColor;
     vec4 ambientLightColor;
-};
-uniform SceneData sceneData;
+} sceneData;
 
 out vec2 var_texCoord;
 out vec3 var_toCamera; // in tangent space

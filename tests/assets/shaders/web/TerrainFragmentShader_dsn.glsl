@@ -32,8 +32,7 @@ uniform sampler2D normalTextureChannel2;
 uniform sampler2D normalTextureChannel3;
 uniform sampler2D normalTextureChannel4;
 
-// NOTE: Not sure if need to pass that kind of material stuff here just yet
-struct MaterialData
+layout(std140) uniform MaterialData
 {
     // x = specular strength
     // y = shininess
@@ -44,8 +43,7 @@ struct MaterialData
     // x,y = texture offset
     // z,w = texture scale
     vec4 textureProperties;
-};
-uniform MaterialData materialData;
+} materialData;
 
 layout(location = 0) out vec4 outColor;
 

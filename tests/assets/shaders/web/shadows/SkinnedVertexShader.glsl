@@ -13,22 +13,25 @@ struct PushConstants
 uniform PushConstants pushConstants;
 
 const int maxJoints = 50;
-uniform mat4 jointData[maxJoints];
+layout(std140) uniform JointData
+{
+    mat4 data[maxJoints];
+} jointData;
 
 void main()
 {
     float weightSum = weights[0] + weights[1] + weights[2] + weights[3];
-    mat4 jointTransform = jointData[0];
+    mat4 jointTransform = jointData.data[0];
     if (weightSum >= 1.0)
     {
-        jointTransform =  jointData[int(jointIDs[0])] * weights[0];
-	    jointTransform += jointData[int(jointIDs[1])] * weights[1];
-	    jointTransform += jointData[int(jointIDs[2])] * weights[2];
-	    jointTransform += jointData[int(jointIDs[3])] * weights[3];
+        jointTransform =  jointData.data[int(jointIDs[0])] * weights[0];
+	    jointTransform += jointData.data[int(jointIDs[1])] * weights[1];
+	    jointTransform += jointData.data[int(jointIDs[2])] * weights[2];
+	    jointTransform += jointData.data[int(jointIDs[3])] * weights[3];
     }
     else
     {
-        jointTransform = jointData[int(jointIDs[0])];
+        jointTransform = jointData.data[int(jointIDs[0])];
     }
 
     vec4 translatedPos = jointTransform * vec4(position, 1.0);
