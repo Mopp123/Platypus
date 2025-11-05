@@ -1,4 +1,5 @@
 #include "Buffers.h"
+#include "Device.hpp"
 #include "platypus/core/Debug.h"
 #include "platypus/Common.h"
 #include <cstring>
@@ -70,6 +71,25 @@ namespace platypus
         }
     }
 
+    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
+    {
+        size_t alignRequirement = Device::get_min_uniform_buffer_offset_align();
+        #ifdef PLATYPUS_DEBUG
+        if (alignRequirement == 0)
+        {
+            Debug::log(
+                "@get_dynamic_uniform_buffer_element_size "
+                "Minimum uniform buffer offset alignment was 0! "
+                "Make sure you have created the Device before quering this.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        #endif
+        size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
+        return  alignRequirement * (diff + 1);
+    }
 
     void Buffer::updateHost(void* pData, size_t dataSize, size_t offset)
     {

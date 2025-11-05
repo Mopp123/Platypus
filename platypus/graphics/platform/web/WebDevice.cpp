@@ -11,7 +11,7 @@ namespace platypus
 
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
-    size_t Device::s_minUniformBufferOffsetAlignment = 1;
+    size_t Device::s_minUniformBufferOffsetAlignment = 0;
     CommandPool* Device::s_pCommandPool = nullptr;
 
     void Device::create(Window* pWindow)

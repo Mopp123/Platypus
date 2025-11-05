@@ -253,20 +253,17 @@ namespace platypus
                 // TODO: Some safeguards 'n error handling if this fails
                 size_t stride = vbLayoutIt->getStride();
                 size_t toNext = 0;
-                int32_t lastLocation = 0; // NOTE: Not used anymore?!?!
                 for (const VertexBufferElement& element : vbLayoutIt->getElements())
                 {
                     // If using Mat4 attribute, it uses 4 attrib locations instead of the single one
                     // specified in the element!
                     //  NOTE: May cause issues if mat4 is not the last attribute?
-                    //      -> shouldn't be the case anymore since using the actual attrib locations specified in the glsl
+                    //      -> shouldn't be the case anymore since using the actual attrib locations
+                    //      specified in the glsl, instead of attribute names
+                    //
                     int32_t location = element.getLocation();
-                    //if (pShaderProgram->getAttributeType(location) == ShaderDataType::Mat4)
-                    //    location = lastLocation + 1;
-                    //lastLocation = location;
 
                     ShaderDataType shaderDataType = element.getType();
-
                     if (shaderDataType != ShaderDataType::Mat4)
                     {
                         GL_FUNC(glEnableVertexAttribArray(location));
@@ -525,8 +522,8 @@ namespace platypus
         )
         {
             const Pipeline* pBoundPipeline = commandBuffer.getImpl()->pBoundPipeline;
-            const std::vector<DescriptorSetLayout>& descriptorSetLayouts = pBoundPipeline->getDescriptorSetLayouts();
             PipelineImpl* pPipelineImpl = pBoundPipeline->getImpl();
+            const std::vector<DescriptorSetLayout>& descriptorSetLayouts = pBoundPipeline->getDescriptorSetLayouts();
             #ifdef PLATYPUS_DEBUG
                 if ((pBoundPipeline->getPushConstantsSize() > 0) && !pPipelineImpl->constantsPushed)
                 {
@@ -560,6 +557,8 @@ namespace platypus
             DescriptorPoolImpl* pDescriptorPoolImpl = descriptorPool.getImpl();
 
             int descriptorSetIndex = 0;
+            // Need the actual uniform location index that can be greater than the descriptor set index
+            // if push constants were used
             int useLocationIndex = pPipelineImpl->firstDescriptorSetLocation;
             uint32_t uniformBlockBindingPoint = 0;
             for (const DescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
@@ -576,18 +575,44 @@ namespace platypus
                     if (bindingType == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     {
                         const Buffer* pUniformBuffer = (const Buffer*)pDescriptorSetComponent->pData;
-                        std::set<uint32_t>& boundUniformBuffers = pPipelineImpl->boundUniformBuffers;
                         uint32_t uniformBufferID = pUniformBuffer->getImpl()->id;
+                        std::set<uint32_t>& boundUniformBuffers = pPipelineImpl->boundUniformBuffers;
                         if (boundUniformBuffers.find(uniformBufferID) == boundUniformBuffers.end())
                         {
                             GL_FUNC(glBindBufferBase(GL_UNIFORM_BUFFER, uniformBlockBindingPoint, uniformBufferID));
                             boundUniformBuffers.insert(uniformBufferID);
-                            ++uniformBlockBindingPoint;
                         }
+                        ++uniformBlockBindingPoint;
                         ++useLocationIndex;
                     }
                     else if (bindingType == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
                     {
+                        // JUST TESTING ATM
+                        // TODO: Clean up and make safe!
+                        #ifdef PLATYPUS_DEBUG
+                        if (offsets.empty())
+                        {
+                            Debug::log(
+                                "@bind_descriptor_sets "
+                                "Binding dynamic descriptor set but no dynamic offsets were provided! "
+                                "Descriptor set index: " + std::to_string(descriptorSetIndex) + " "
+                                "Uniform block binding point: " + std::to_string(uniformBlockBindingPoint),
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                            return;
+                        }
+                        #endif
+
+                        const Buffer* pUniformBuffer = (const Buffer*)pDescriptorSetComponent->pData;
+                        uint32_t uniformBufferID = pUniformBuffer->getImpl()->id;
+
+                        // NOTE: Not sure if this breaks in some impl, if the GLintptr becomes something else
+                        // than: signed long long int and GLsizeiptr becomes something else than signed long int
+                        const GLintptr dynamicOffset = (GLintptr)offsets[0];
+                        const GLsizeiptr dynamicRange = (GLsizeiptr)pUniformBuffer->getDataElemSize();
+                        GL_FUNC(glBindBufferRange(GL_UNIFORM_BUFFER, uniformBlockBindingPoint, uniformBufferID, dynamicOffset, dynamicRange));
+                        ++uniformBlockBindingPoint;
                         ++useLocationIndex;
                     }
                     else if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)

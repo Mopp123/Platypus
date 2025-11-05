@@ -1,5 +1,6 @@
 #include "SkinnedBatch.hpp"
 #include "platypus/core/Application.h"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/core/Debug.h"
 
 
@@ -76,9 +77,10 @@ namespace platypus
         pBatch->pPipeline = pMaterial->getPipeline(ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE);
 
         // Get or create joint buffer
-        pBatch->dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
+        const size_t dynamicUboElemSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f) * maxJoints
         );
+        pBatch->dynamicUniformBufferElementSize = dynamicUboElemSize;
         const size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
         std::vector<BatchShaderResource> shaderResources = get_or_create_joint_buffer(
             batcher,

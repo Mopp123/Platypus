@@ -92,10 +92,10 @@ namespace platypus
 
             if (_normalTextureCount == 0)
             {
-                //createPipeline(
-                //    pSceneRenderPass,
-                //    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
-                //);
+                createPipeline(
+                    pSceneRenderPass,
+                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
+                );
             }
             else
             {

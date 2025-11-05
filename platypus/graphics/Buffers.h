@@ -71,7 +71,6 @@ namespace platypus
     //       -> This is needed to change uniform buffer multiple times inside the same command buffer
     //       For example: to draw multiple things with different transformation matrices without having
     //       to have different uniform buffer for each rendered object.
-    //  On OpenGL this returns the inputted requestSize
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize);
 
     class Pipeline;

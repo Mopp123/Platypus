@@ -74,7 +74,6 @@ void OpenglUpgradeTestScene::init()
     );
 
 
-    /*
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/characterTest.png",
@@ -99,7 +98,6 @@ void OpenglUpgradeTestScene::init()
         pSkinnedMeshMaterial->getID(),
         jointEntities
     );
-    */
 
     DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
         _lightEntity,

@@ -19,7 +19,7 @@ namespace platypus
     MasterRenderer::MasterRenderer(Swapchain& swapchain) :
         _swapchainRef(swapchain),
         _descriptorPool(_swapchainRef),
-        _batcher(*this, _descriptorPool, 1000, 1000, 9, 50),
+        _batcher(*this, _descriptorPool, 1000, 1000, 9, 52),
 
         _scene3DDataDescriptorSetLayout(
             {

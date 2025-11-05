@@ -1,5 +1,5 @@
 #include "platypus/Platypus.h"
-#include "OpenglUpgradeTestScene.hpp"
+#include "SkinnedMeshTestScene.hpp"
 #include <iostream>
 
 
@@ -16,7 +16,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new OpenglUpgradeTestScene
+        new SkinnedMeshTestScene
     );
     app.run();
     return 0;

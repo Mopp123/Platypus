@@ -9,12 +9,6 @@
 
 namespace platypus
 {
-    size_t get_dynamic_uniform_buffer_element_size(size_t requestSize)
-    {
-        return requestSize;
-    }
-
-
     static GLenum to_opengl_buffer_update_frequency(BufferUpdateFrequency f)
     {
         switch (f)
