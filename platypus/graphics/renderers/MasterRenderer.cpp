@@ -125,8 +125,8 @@ namespace platypus
         // TODO: Better way to get shadow caster proj and view matrices!!!!
         void* pShadowPassPushConstants = nullptr;
         size_t shadowPassPushConstantsSize = 0;
-        DirectionalLight* pDirectionalLight = (DirectionalLight*)pScene->getComponent(
-            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        Light* pDirectionalLight = (Light*)pScene->getComponent(
+            ComponentType::COMPONENT_TYPE_LIGHT
         );
         if (pDirectionalLight)
         {
@@ -595,8 +595,10 @@ namespace platypus
         _scene3DData.cameraPosition = cameraPosition;
         _scene3DData.viewMatrix = viewMatrix;
 
-        const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(
-            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
+        // NOTE: Consider all light data of all scene lights inside a single
+        // descriptor set?
+        const Light* pDirectionalLight = (const Light*)pScene->getComponent(
+            ComponentType::COMPONENT_TYPE_LIGHT,
             false
         );
         if (!pDirectionalLight)

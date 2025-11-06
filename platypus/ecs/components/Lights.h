@@ -6,25 +6,33 @@
 
 namespace platypus
 {
-    struct DirectionalLight
+    enum class LightType
+    {
+        DIRECTIONAL_LIGHT,
+        POINT_LIGHT,
+        SPOT_LIGHT
+    };
+
+    struct Light
     {
         Matrix4f shadowProjectionMatrix;
-        Matrix4f viewMatrix;
+        Matrix4f shadowViewMatrix;
         Vector3f direction;
         Vector3f color;
+        LightType type;
         bool enableShadows;
     };
 
-    DirectionalLight* create_directional_light(
+    Light* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
         const Vector3f& color,
         const Matrix4f& shadowProjectionMatrix,
-        const Matrix4f& viewMatrix,
+        const Matrix4f& shadowViewMatrix,
         bool enableShadows
     );
 
-    DirectionalLight* create_directional_light(
+    Light* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
         const Vector3f& color

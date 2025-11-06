@@ -64,9 +64,9 @@ namespace platypus
             1,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
-            sizeof(DirectionalLight),
+        _componentPools[ComponentType::COMPONENT_TYPE_LIGHT] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_LIGHT,
+            sizeof(Light),
             1,
             true
         );

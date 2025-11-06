@@ -53,9 +53,9 @@ void TerrainTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+    Light* pDirLight = (Light*)getComponent(
         _lightEntity,
-        ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        ComponentType::COMPONENT_TYPE_LIGHT
     );
     pDirLight->direction = { 1.0f, -1.0f, 0.0f };
     pDirLight->direction = pDirLight->direction.normalize();

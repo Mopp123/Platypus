@@ -110,7 +110,7 @@ void BaseScene::initBase()
     _lightEntity = createEntity();
     Vector3f lightDir( 0.4f, -0.6f, -0.6f);
     lightDir = lightDir.normalize();
-    DirectionalLight* pLight = create_directional_light(
+    Light* pLight = create_directional_light(
         _lightEntity,
         lightDir,
         { 1, 1, 1 }

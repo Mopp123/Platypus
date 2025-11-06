@@ -199,9 +199,9 @@ void SkinnedMeshTestScene::init()
         }
     }
 
-    DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+    Light* pDirLight = (Light*)getComponent(
         _lightEntity,
-        ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        ComponentType::COMPONENT_TYPE_LIGHT
     );
     pDirLight->direction = { 0.75f, -1.5f, 1.0f };
 }

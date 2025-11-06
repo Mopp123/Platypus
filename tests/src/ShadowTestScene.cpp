@@ -54,9 +54,9 @@ void ShadowTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+    Light* pDirLight = (Light*)getComponent(
         _lightEntity,
-        ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        ComponentType::COMPONENT_TYPE_LIGHT
     );
     pDirLight->direction = { 1.0f, -1.0f, 0.0f };
     pDirLight->direction = pDirLight->direction.normalize();
@@ -244,9 +244,9 @@ void ShadowTestScene::update()
     // Test setting dir light's shadow proj and view matrices to match camera when pressing E
     if (inputManager.isKeyDown(KeyName::KEY_E))
     {
-        DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+        Light* pDirLight = (Light*)getComponent(
             _lightEntity,
-            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+            ComponentType::COMPONENT_TYPE_LIGHT
         );
         Camera* pCamera = (Camera*)getComponent(
             _cameraEntity,
@@ -258,7 +258,7 @@ void ShadowTestScene::update()
         );
         pDirLight->shadowProjectionMatrix = pCamera->perspectiveProjectionMatrix;
         Matrix4f viewMatrix = pCameraTransform->globalMatrix.inverse();
-        pDirLight->viewMatrix = viewMatrix;
+        pDirLight->shadowViewMatrix = viewMatrix;
     }
 
 
