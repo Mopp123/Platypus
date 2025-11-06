@@ -8,8 +8,11 @@ namespace platypus
 {
     Camera* create_camera(
         entityID_t target,
-        const Matrix4f& perspectiveProjectionMatrix,
-        const Matrix4f& orthographicProjectionMatrix
+        float aspectRatio,
+        float fov,
+        float zNear,
+        float zFar,
+        const Matrix4f& orthographicProjectionMatrix // Used for 2D rendering stuff
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -32,8 +35,17 @@ namespace platypus
         }
         pScene->addToComponentMask(target, componentType);
         Camera* pCamera = (Camera*)pComponent;
-        pCamera->perspectiveProjectionMatrix = perspectiveProjectionMatrix;
+        pCamera->perspectiveProjectionMatrix = create_perspective_projection_matrix(
+            aspectRatio,
+            fov,
+            zNear,
+            zFar
+        );
         pCamera->orthographicProjectionMatrix = orthographicProjectionMatrix;
+        pCamera->aspectRatio = aspectRatio;
+        pCamera->fov = fov;
+        pCamera->zNear = zNear;
+        pCamera->zFar = zFar;
         return pCamera;
     }
 }

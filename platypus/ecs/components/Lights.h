@@ -2,6 +2,7 @@
 
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/Entity.h"
+#include <string>
 
 
 namespace platypus
@@ -12,6 +13,8 @@ namespace platypus
         POINT_LIGHT,
         SPOT_LIGHT
     };
+
+    std::string light_type_to_string(LightType type);
 
     struct Light
     {

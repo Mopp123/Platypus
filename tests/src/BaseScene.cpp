@@ -12,20 +12,12 @@ void BaseScene::SceneWindowResizeEvent::func(int w, int h)
     );
 
     float useHeight = h > 0 ? (float)h : 1.0f;
-
-    //pCameraComponent->perspectiveProjectionMatrix = create_orthographic_projection_matrix(
-    //    0, // left
-    //    1, // right,
-    //    -1, // top,
-    //    1, // bottom,
-    //    0.1f, // zNear,
-    //    100.0f // zFar
-    //);
+    pCameraComponent->aspectRatio = (float)w / useHeight;
     pCameraComponent->perspectiveProjectionMatrix = create_perspective_projection_matrix(
-        (float)w / useHeight,
-        _fov,
-        _zNear,
-        _zFar
+        pCameraComponent->aspectRatio,
+        pCameraComponent->fov,
+        pCameraComponent->zNear,
+        pCameraComponent->zFar
     );
 
     pCameraComponent->orthographicProjectionMatrix = create_orthographic_projection_matrix(
@@ -67,21 +59,6 @@ void BaseScene::initBase()
     if (windowSurfaceHeight > 0)
         aspectRatio = (float)windowSurfaceWidth / (float)windowSurfaceHeight;
 
-    //Matrix4f orthographicProjMat = create_orthographic_projection_matrix(
-    //    -1, // left
-    //    1, // right,
-    //    -1, // top,
-    //    1, // bottom,
-    //    0.1f, // zNear,
-    //    100.0f // zFar
-    //);
-    Matrix4f perspectiveProjMat = create_perspective_projection_matrix(
-        aspectRatio,
-        1.3f * 0.75f,
-        0.1f,
-        1000.0f
-    );
-
     Debug::log("___TEST___window scale: " + std::to_string(windowSurfaceWidth) + ", " + std::to_string(windowSurfaceHeight));
 
     Matrix4f orthoProjMat = create_orthographic_projection_matrix(
@@ -93,7 +70,17 @@ void BaseScene::initBase()
         0.1f
     );
 
-    Camera* pCamera = create_camera(_cameraEntity, perspectiveProjMat, orthoProjMat);
+    const float fov = 1.3f * 0.75f;
+    const float zNear = 0.1f;
+    const float zFar = 1000.0f;
+    Camera* pCamera = create_camera(
+        _cameraEntity,
+        aspectRatio,
+        fov,
+        zNear,
+        zFar,
+        orthoProjMat
+    );
     /*
     _cameraController.init();
     _cameraController.set(

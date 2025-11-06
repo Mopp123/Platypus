@@ -322,11 +322,10 @@ namespace platypus
                         "Deleting batch and its descriptor sets!",
                         Debug::MessageType::PLATYPUS_WARNING
                     );
+                    // In this case destroy the descriptor sets since these won't be found in the future
+                    // unlike in the above case!
                     freeTextureDescriptorSets(batchData.textureID);
-                    //unusedBatches[layerIt->first].push_back(layerBatchIt);
                     unusedBatches.push_back(std::make_pair(layerIt->first, batchData.textureID));
-                    // NOTE: No idea why that assert was below...
-                    //PLATYPUS_ASSERT(false);
                     continue;
                 }
 
@@ -595,41 +594,48 @@ namespace platypus
         ID_t textureID
     )
     {
-        std::map<uint32_t, std::set<size_t>>::iterator it = _toRender.find(layer);
-        if (it == _toRender.end())
+        int batchIndex = findExistingBatchIndex(layer, textureID);
+        if (batchIndex == -1)
         {
             Debug::log(
                 "@GUIRenderer::freeBatch "
-                "Failed to find any batches from layer: " + std::to_string(layer),
+                "Failed to find batch from layer: " + std::to_string(layer) +" "
+                "using textureID: " + std::to_string(textureID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             return false;
         }
-        std::set<size_t>& layerBatches = it->second;
-        std::set<size_t>::iterator layerIt = layerBatches.find(textureID);
-        if (layerIt == layerBatches.end())
+        else if (batchIndex >= _batches.size())
         {
-            //Debug::log(
-            //    "@GUIRenderer::freeBatch "
-            //    "Failed to find batch from layer: " + std::to_string(layer) +" "
-            //    "using textureID: " + std::to_string(textureID),
-            //    Debug::MessageType::PLATYPUS_ERROR
-            //);
+            Debug::log(
+                "@GUIRenderer::freeBatch "
+                "Batch index " + std::to_string(batchIndex) + " out of bounds "
+                "on layer: " + std::to_string(layer) +" "
+                "using textureID: " + std::to_string(textureID),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
             return false;
         }
 
-        BatchData& batchData = _batches[*layerIt];
+        BatchData& batchData = _batches[batchIndex];
         batchData.type = BatchType::NONE;
         batchData.textureID = NULL_ID;
         batchData.textureAtlasRows = 0;
         batchData.count = 0;
 
-        _toRender[layer].erase(layerIt);
+        _toRender[layer].erase(batchIndex);
         if (_toRender[layer].empty())
         {
             _toRender.erase(layer);
             PLATYPUS_ASSERT(false);
         }
+
+        Debug::log(
+            "@GUIRenderer::freeBatch "
+            "Freed batch from layer: " + std::to_string(layer) +" "
+            "using textureID: " + std::to_string(textureID),
+            Debug::MessageType::PLATYPUS_WARNING
+        );
 
         return true;
     }
@@ -676,6 +682,9 @@ namespace platypus
     {
         std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it = _textureDescriptorSets.find(textureID);
         if (it != _textureDescriptorSets.end())
+        {
             _descriptorPoolRef.freeDescriptorSets(it->second);
+            _textureDescriptorSets.erase(it->first);
+        }
     }
 }
