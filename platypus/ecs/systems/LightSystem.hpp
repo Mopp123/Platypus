@@ -15,6 +15,6 @@ namespace platypus
         void update(Scene* pScene);
 
     private:
-        void updateDirectionalLight(Light* pDirectionalLight);
+        void updateDirectionalLight(Scene* pScene, Light* pDirectionalLight);
     };
 }

@@ -22,6 +22,7 @@ namespace platypus
         Matrix4f shadowViewMatrix;
         Vector3f direction;
         Vector3f color;
+        float maxShadowDistance;
         LightType type;
         bool enableShadows;
     };
@@ -32,7 +33,8 @@ namespace platypus
         const Vector3f& color,
         const Matrix4f& shadowProjectionMatrix,
         const Matrix4f& shadowViewMatrix,
-        bool enableShadows
+        bool enableShadows,
+        float maxShadowDistance
     );
 
     Light* create_directional_light(

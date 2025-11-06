@@ -22,7 +22,8 @@ namespace platypus
         const Vector3f& color,
         const Matrix4f& shadowProjectionMatrix,
         const Matrix4f& shadowViewMatrix,
-        bool enableShadows
+        bool enableShadows,
+        float maxShadowDistance
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -49,6 +50,8 @@ namespace platypus
         pDirectionalLight->shadowViewMatrix = shadowViewMatrix;
         pDirectionalLight->direction = direction;
         pDirectionalLight->color = color;
+        pDirectionalLight->maxShadowDistance = maxShadowDistance;
+        pDirectionalLight->type = LightType::DIRECTIONAL_LIGHT;
         pDirectionalLight->enableShadows = enableShadows;
         return pDirectionalLight;
     }
@@ -65,7 +68,8 @@ namespace platypus
             color,
             Matrix4f(1.0f),
             Matrix4f(1.0f),
-            false
+            false,
+            0.0f
         );
     }
 }

@@ -58,9 +58,11 @@ void ShadowTestScene::init()
         _lightEntity,
         ComponentType::COMPONENT_TYPE_LIGHT
     );
+    pDirLight->type = LightType::DIRECTIONAL_LIGHT;
     pDirLight->direction = { 1.0f, -1.0f, 0.0f };
     pDirLight->direction = pDirLight->direction.normalize();
     pDirLight->enableShadows = true;
+    pDirLight->maxShadowDistance = 50.0f;
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -268,7 +270,7 @@ void ShadowTestScene::update()
     );
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    Texture* framebufferTexture = pMasterRenderer->getTestFramebufferDepthTexture();
+    Texture* framebufferTexture = pMasterRenderer->getTestFramebufferColorTexture();
     if (framebufferTexture)
     {
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();

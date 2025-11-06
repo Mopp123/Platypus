@@ -406,15 +406,17 @@ namespace platypus
 
     void MasterRenderer::createOffscreenResourcesTEST()
     {
-        uint32_t swapchainWidth = _swapchainRef.getExtent().width;
-        uint32_t swapchainHeight = _swapchainRef.getExtent().height;
+        //uint32_t swapchainWidth = _swapchainRef.getExtent().width;
+        //uint32_t swapchainHeight = _swapchainRef.getExtent().height;
+        uint32_t textureWidth = 1024;
+        uint32_t textureHeight = 1024;
         ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
         _pTestFramebufferColorTexture = new Texture(
             TextureType::COLOR_TEXTURE,
             _testFramebufferTextureSampler,
             testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-            swapchainWidth,
-            swapchainHeight
+            textureWidth,
+            textureHeight
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
 
@@ -422,8 +424,8 @@ namespace platypus
             TextureType::DEPTH_TEXTURE,
             _testFramebufferTextureSampler,
             ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
-            swapchainWidth,
-            swapchainHeight
+            textureWidth,
+            textureHeight
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferDepthTexture);
 
@@ -431,8 +433,8 @@ namespace platypus
             _testRenderPass,
             { _pTestFramebufferColorTexture },
             _pTestFramebufferDepthTexture,
-            swapchainWidth,
-            swapchainHeight
+            textureWidth,
+            textureHeight
         );
 
         // Update new shadow texture for materials that receive shadows

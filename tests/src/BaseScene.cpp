@@ -72,7 +72,7 @@ void BaseScene::initBase()
 
     const float fov = 1.3f * 0.75f;
     const float zNear = 0.1f;
-    const float zFar = 1000.0f;
+    const float zFar = 100.0f;
     Camera* pCamera = create_camera(
         _cameraEntity,
         aspectRatio,
@@ -81,6 +81,8 @@ void BaseScene::initBase()
         zFar,
         orthoProjMat
     );
+    setActiveCameraEntity(_cameraEntity);
+
     /*
     _cameraController.init();
     _cameraController.set(

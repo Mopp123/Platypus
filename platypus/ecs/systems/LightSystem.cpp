@@ -1,14 +1,18 @@
 #include "LightSystem.hpp"
 #include "platypus/ecs/components/Component.h"
+#include "platypus/ecs/components/Camera.h"
+#include "platypus/utils/Maths.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+
+#include <cmath>
 
 
 namespace platypus
 {
     LightSystem::LightSystem()
     {
-        _requiredComponentMask = ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION;
+        _requiredComponentMask = ComponentType::COMPONENT_TYPE_LIGHT;
     }
 
     LightSystem::~LightSystem()
@@ -28,7 +32,7 @@ namespace platypus
 
             if (pLightComponent->type == LightType::DIRECTIONAL_LIGHT)
             {
-                updateDirectionalLight(pLightComponent);
+                updateDirectionalLight(pScene, pLightComponent);
             }
             else
             {
@@ -81,53 +85,70 @@ namespace platypus
         }
     }
 
-    void LightSystem::updateDirectionalLight(Light* pDirectionalLight)
+    void LightSystem::updateDirectionalLight(Scene* pScene, Light* pDirectionalLight)
     {
-        /*
-        Camera* camera = Camera::get_current_camera();
+        entityID_t cameraEntity = pScene->getActiveCameraEntity();
+        if (cameraEntity == NULL_ENTITY_ID)
+        {
+            Debug::log(
+                "@LightSystem::updateDirectionalLight "
+                "Scene's active camera was NULL_ENTITY_ID",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
 
-        // calc ortho proj matrix to take biggest possible shape on the camera's veiw frustum
-        mml::Vector4 points[4 + 4]; // 4 + 4 : nearplane + far plane vertices
+        Camera* pCameraComponent = (Camera*)pScene->getComponent(
+            cameraEntity,
+            ComponentType::COMPONENT_TYPE_CAMERA
+        );
+        Transform* pCameraTransformComponent = (Transform*)pScene->getComponent(
+            cameraEntity,
+            ComponentType::COMPONENT_TYPE_TRANSFORM
+        );
+        const float maxShadowDistance = pDirectionalLight->maxShadowDistance;
+        // calc ortho proj matrix to take biggest possible shape on the camera's view frustum
+        Vector4f points[4 + 4]; // 4 + 4 : nearplane + far plane vertices
 
-        const float aspectRatio = camera->getAspectRatio();
-        const float fov = camera->getFov();
-        const float zNear = camera->getZNear();
-        const float zFar = camera->getZFar();
+        const float aspectRatio = pCameraComponent->aspectRatio;
+        const float fov = pCameraComponent->fov;
+        const float zNear = pCameraComponent->zNear;
+        const float zFar = pCameraComponent->zFar; // Overridden by maxShadowDistance?
 
-        float nearPlaneWidth = std::tan(fov * 0.5f) * zNear;
+        float nearPlaneWidth = tan(fov * 0.5f) * zNear;
         float nearPlaneHeight = nearPlaneWidth / aspectRatio;
 
-        float farPlaneWidth = std::tan(fov * 0.5f) * _maxShadowDistance;
+        float farPlaneWidth = tan(fov * 0.5f) * maxShadowDistance;
         float farPlaneHeight = farPlaneWidth / aspectRatio;
 
         // near plane:
 
         // top left
-        points[0] = mml::Vector4(-nearPlaneWidth, nearPlaneHeight, -zNear, 1.0f);
+        points[0] = Vector4f(-nearPlaneWidth, nearPlaneHeight, -zNear, 1.0f);
         // topRight
-        points[1] = mml::Vector4(nearPlaneWidth, nearPlaneHeight, -zNear, 1.0f);
+        points[1] = Vector4f(nearPlaneWidth, nearPlaneHeight, -zNear, 1.0f);
         // bottom left
-        points[2] = mml::Vector4(-nearPlaneWidth, -nearPlaneHeight, -zNear, 1.0f);
+        points[2] = Vector4f(-nearPlaneWidth, -nearPlaneHeight, -zNear, 1.0f);
         // bottom right
-        points[3] = mml::Vector4(nearPlaneWidth, -nearPlaneHeight, -zNear, 1.0f);
+        points[3] = Vector4f(nearPlaneWidth, -nearPlaneHeight, -zNear, 1.0f);
 
         // far plane:
 
         // top left
-        points[4] = mml::Vector4(-farPlaneWidth, farPlaneHeight, -_maxShadowDistance, 1.0f);
+        points[4] = Vector4f(-farPlaneWidth, farPlaneHeight, -maxShadowDistance, 1.0f);
         // topRight
-        points[5] = mml::Vector4(farPlaneWidth, farPlaneHeight, -_maxShadowDistance, 1.0f);
+        points[5] = Vector4f(farPlaneWidth, farPlaneHeight, -maxShadowDistance, 1.0f);
         // bottom left
-        points[6] = mml::Vector4(-farPlaneWidth, -farPlaneHeight, -_maxShadowDistance, 1.0f);
+        points[6] = Vector4f(-farPlaneWidth, -farPlaneHeight, -maxShadowDistance, 1.0f);
         // bottom right
-        points[7] = mml::Vector4(farPlaneWidth, -farPlaneHeight, -_maxShadowDistance, 1.0f);
+        points[7] = Vector4f(farPlaneWidth, -farPlaneHeight, -maxShadowDistance, 1.0f);
 
 
         // Determine actual view frustum bounds
 
         // transformation of the camera (just inverse of the viewMat)
-        mml::Matrix4 transformationMatrix = camera->getViewMatrix();
-        transformationMatrix.inverse();
+        const Matrix4f& cameraTransformationMatrix = pCameraTransformComponent->globalMatrix;
 
         float pMinX = INFINITY;
         float pMinY = INFINITY;
@@ -141,12 +162,12 @@ namespace platypus
             pMinX, pMaxX,
             pMinY, pMaxY,
             pMinZ, pMaxZ,
-            transformationMatrix,
+            cameraTransformationMatrix,
             points
         );
 
         // Get the shadow area's center point for the shadow caster's view matrix
-        mml::Vector3 centerPos(
+        Vector3f centerPos(
             (pMinX + pMaxX) * 0.5f,
             (pMinY + pMaxY) * 0.5f,
             (pMinZ + pMaxZ) * 0.5f
@@ -157,12 +178,58 @@ namespace platypus
         float height = (pMaxY - pMinY);
         float length = (pMaxZ - pMinZ);
 
-        // * I have no idea why height has to be multiplied by 2, but if it wasnt multiplied by 2 we may sometimes get
-        // shadows looking way too wrong..
-        mml::create_orthographic_projection_matrix(_projectionMatrix, -width, width, height * 2, -height * 2, -length, length);
+        // * I have no idea why height has to be multiplied by 2, but if it wasnt multiplied by 2 we may
+        // sometimes get shadows looking way too wrong..
+        pDirectionalLight->shadowProjectionMatrix = create_orthographic_projection_matrix(
+            -width,
+            width,
+            height * 2,
+            -height * 2,
+            -length,
+            length
+        );
 
+        const Vector3f lightDirection = pDirectionalLight->direction;
+        const Vector3f globalUp(0, 1, 0);
+
+        Vector3f xaxis = globalUp.cross(lightDirection);
+        xaxis = xaxis.normalize();
+
+        Vector3f yaxis = lightDirection.cross(xaxis);
+        yaxis.normalize();
+
+        Matrix4f rotationMatrix(1.0f);
+        //column1.x = xaxis.x;
+        //column1.y = yaxis.x;
+        //column1.z = direction.x;
+
+        rotationMatrix[0 + 0 * 4] = xaxis.x;
+        rotationMatrix[0 + 1 * 4] = yaxis.x;
+        rotationMatrix[0 + 2 * 4] = lightDirection.x;
+
+        //column2.x = xaxis.y;
+        //column2.y = yaxis.y;
+        //column2.z = direction.y;
+
+        rotationMatrix[1 + 0 * 4] = xaxis.y;
+        rotationMatrix[1 + 1 * 4] = yaxis.y;
+        rotationMatrix[1 + 2 * 4] = lightDirection.y;
+
+        //column3.x = xaxis.z;
+        //column3.y = yaxis.z;
+        //column3.z = direction.z;
+
+        rotationMatrix[2 + 0 * 4] = xaxis.z;
+        rotationMatrix[2 + 1 * 4] = yaxis.z;
+        rotationMatrix[2 + 2 * 4] = lightDirection.z;
+
+        // SOMETHING WRONG WITH THE PROJ MAT!
         // Then finally our shadow caster's view matrix
-        mml::create_view_matrix(_viewMatrix, centerPos, _transform->getRotation());
-        */
+        Quaternion testRotation({ 1, 0, 0 }, PLATY_MATH_PI / 4.0f);
+        //Quaternion testRotation(0.3f, 0, 0, 0.9f);
+        testRotation = testRotation.normalize();
+        pDirectionalLight->shadowViewMatrix = create_view_matrix(centerPos, testRotation.toRotationMatrix());
+
+        Debug::log("___TEST___center pos: " + centerPos.toString());
     }
 }

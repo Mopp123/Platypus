@@ -8,6 +8,7 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/systems/SkeletalAnimationSystem.h"
 #include "platypus/ecs/systems/TransformSystem.h"
+#include "platypus/ecs/systems/LightSystem.hpp"
 
 
 namespace platypus
@@ -91,6 +92,7 @@ namespace platypus
 
         _systems.push_back(new SkeletalAnimationSystem);
         _systems.push_back(new TransformSystem);
+        _systems.push_back(new LightSystem);
     }
 
     Scene::~Scene()
@@ -408,5 +410,24 @@ namespace platypus
             );
         }
         return success;
+    }
+
+    void Scene::setActiveCameraEntity(entityID_t entityID)
+    {
+        PLATYPUS_ASSERT(isValidEntity(entityID, "Scene::setActiveCameraEntity"));
+        const uint64_t requiredComponentMask = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_CAMERA;
+        Entity entity = getEntity(entityID);
+        if ((entity.componentMask & requiredComponentMask) == 0)
+        {
+            Debug::log(
+                "@Scene::setActiveCameraEntity "
+                "Entity: " + std::to_string(entityID) + " had inefficient component mask "
+                "for being active camera!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        _activeCameraEntity = entityID;
     }
 }
