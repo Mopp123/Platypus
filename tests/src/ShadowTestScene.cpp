@@ -62,7 +62,7 @@ void ShadowTestScene::init()
     pDirLight->direction = { 1.0f, -1.0f, 0.0f };
     pDirLight->direction = pDirLight->direction.normalize();
     pDirLight->enableShadows = true;
-    pDirLight->maxShadowDistance = 80.0f;
+    pDirLight->maxShadowDistance = 30.0f;
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,

@@ -52,6 +52,39 @@ layout(set = 2, binding = 17) uniform MaterialData
 
 layout(location = 0) out vec4 fragColor;
 
+// TODO: Make these uniforms!
+const int shadowmapWidth = 2048;
+const int usePCFCount = 2;
+const float shadowStrength = 0.9;
+
+float calcShadow(float bias, int pcfCount)
+{
+    float shadow = 0.0;
+    int shadowmapWidth = shadowmapWidth;
+    int texelsCount_width = (2 * pcfCount + 1);
+    int texelCount =  texelsCount_width * texelsCount_width;
+    vec2 texelSize = 1.0 / vec2(shadowmapWidth, shadowmapWidth);
+
+    for (int x = -pcfCount; x <= pcfCount; x++)
+    {
+        for (int y = -pcfCount; y <= pcfCount; y++)
+        {
+            vec2 sampleCoord = var_shadowCoord.xy + vec2(x, y) * texelSize;
+            if (sampleCoord.x > 1.0 || sampleCoord.x < 0.0 || sampleCoord.y > 1.0 || sampleCoord.y < 0.0)
+                continue;
+
+            float d = texture(shadowmapTexture, sampleCoord).r;
+            shadow += var_shadowCoord.z - bias > d ? 1.0 : 0.0;
+        }
+    }
+    shadow /= texelCount;
+
+    // that weird far plane shadow
+    if (var_shadowCoord.z > 1.0)
+        return 0.0;
+    return shadow;
+}
+
 void main()
 {
     // NOTE: Not sure should offset be added to original coord or tiled coord...
@@ -110,8 +143,11 @@ void main()
     vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
 
     // Test shadow...
-    float shadowMapVal = texture(shadowmapTexture, var_shadowCoord.xy).r;
-    float shadow = var_shadowCoord.z > shadowMapVal ? 1.0 : 0.0;
+    //float shadowMapVal = texture(shadowmapTexture, var_shadowCoord.xy).r;
+    //float shadow = var_shadowCoord.z > shadowMapVal ? 1.0 : 0.0;
+
+	float bias = 0.005;//max(0.025 * (1.0 - dopt_normToLight), 0.005);
+	float shadow = min(calcShadow(bias, usePCFCount), shadowStrength);
 
     fragColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
 }
