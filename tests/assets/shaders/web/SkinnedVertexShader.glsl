@@ -37,9 +37,9 @@ void main() {
     if (weightSum >= 1.0)
     {
         jointTransform =  jointData.data[int(jointIDs[0])] * weights[0];
-	    jointTransform += jointData.data[int(jointIDs[1])] * weights[1];
-	    jointTransform += jointData.data[int(jointIDs[2])] * weights[2];
-	    jointTransform += jointData.data[int(jointIDs[3])] * weights[3];
+        jointTransform += jointData.data[int(jointIDs[1])] * weights[1];
+        jointTransform += jointData.data[int(jointIDs[2])] * weights[2];
+        jointTransform += jointData.data[int(jointIDs[3])] * weights[3];
     }
     else
     {

@@ -116,10 +116,10 @@ namespace platypus
         const float zNear = pCameraComponent->zNear;
         const float zFar = pCameraComponent->zFar; // Overridden by maxShadowDistance?
 
-        float nearPlaneWidth = tan(fov * 0.5f) * zNear;
+        float nearPlaneWidth = tan(fov) * zNear;
         float nearPlaneHeight = nearPlaneWidth / aspectRatio;
 
-        float farPlaneWidth = tan(fov * 0.5f) * maxShadowDistance;
+        float farPlaneWidth = tan(fov) * maxShadowDistance;
         float farPlaneHeight = farPlaneWidth / aspectRatio;
 
         // near plane:
@@ -189,6 +189,7 @@ namespace platypus
             length
         );
 
+        // Create rotation matrix from light direction
         const Vector3f lightDirection = pDirectionalLight->direction;
         const Vector3f globalUp(0, 1, 0);
 
@@ -199,34 +200,19 @@ namespace platypus
         yaxis.normalize();
 
         Matrix4f rotationMatrix(1.0f);
-        //column1.x = xaxis.x;
-        //column1.y = yaxis.x;
-        //column1.z = direction.x;
 
         rotationMatrix[0 + 0 * 4] = xaxis.x;
         rotationMatrix[1 + 0 * 4] = yaxis.x;
         rotationMatrix[2 + 0 * 4] = lightDirection.x;
 
-        //column2.x = xaxis.y;
-        //column2.y = yaxis.y;
-        //column2.z = direction.y;
-
         rotationMatrix[0 + 1 * 4] = xaxis.y;
         rotationMatrix[1 + 1 * 4] = yaxis.y;
         rotationMatrix[2 + 1 * 4] = lightDirection.y;
-
-        //column3.x = xaxis.z;
-        //column3.y = yaxis.z;
-        //column3.z = direction.z;
 
         rotationMatrix[0 + 2 * 4] = xaxis.z;
         rotationMatrix[1 + 2 * 4] = yaxis.z;
         rotationMatrix[2 + 2 * 4] = lightDirection.z;
 
-        // SOMETHING WRONG WITH THE PROJ MAT!
-        // Then finally our shadow caster's view matrix
-        //Quaternion testRotation({ 1, 0, 0 }, PLATY_MATH_PI / 4.0f);
-        //testRotation = testRotation.normalize();
         pDirectionalLight->shadowViewMatrix = create_view_matrix(centerPos, rotationMatrix);
     }
 }

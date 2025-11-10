@@ -294,8 +294,6 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(&renderPass);
 
-        render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-
         //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
         std::vector<std::pair<uint32_t, ID_t>> unusedBatches;
         std::map<uint32_t, std::set<size_t>>::iterator layerIt;
@@ -354,6 +352,8 @@ namespace platypus
                     currentCommandBuffer,
                     batchData.type == BatchType::IMAGE ? _imgPipeline : _fontPipeline
                 );
+                render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
+                render::set_scissor(currentCommandBuffer, { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight });
 
                 float pushConstantsData[20];
                 memcpy(pushConstantsData, orthographicProjectionMatrix.getRawArray(), sizeof(Matrix4f));

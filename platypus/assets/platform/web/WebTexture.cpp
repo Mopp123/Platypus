@@ -9,6 +9,34 @@
 
 namespace platypus
 {
+    GLenum to_gl_internal_format(ImageFormat format)
+    {
+        switch (format)
+        {
+            case ImageFormat::R8_SRGB: return GL_RED;
+            case ImageFormat::R8G8B8_SRGB: return GL_SRGB8;//GL_RGB;
+            case ImageFormat::R8G8B8A8_SRGB: return GL_SRGB8_ALPHA8;//GL_RGBA;
+
+            // NOTE: OpenGL ES 3 doesn't seem to have BGR, etc formats so not sure if
+            // this eventually fucks up something...
+            case ImageFormat::B8G8R8A8_SRGB: return GL_RGBA;
+            case ImageFormat::B8G8R8_SRGB: return GL_RGB;
+
+            case ImageFormat::R8_UNORM: return GL_RED;
+            case ImageFormat::R8G8B8_UNORM: return GL_RGB;
+            case ImageFormat::R8G8B8A8_UNORM: return GL_RGBA;
+
+            // NOTE: OpenGL ES 3 doesn't seem to have BGR, etc formats so not sure if
+            // this eventually fucks up something...
+            case ImageFormat::B8G8R8A8_UNORM: return GL_RGBA;
+            case ImageFormat::B8G8R8_UNORM: return GL_RGB;
+
+            case ImageFormat::D32_SFLOAT: return GL_FLOAT;
+        }
+        PLATYPUS_ASSERT(false);
+        return GL_RED;
+    }
+
     GLenum to_gl_format(ImageFormat format)
     {
         switch (format)
@@ -86,8 +114,8 @@ namespace platypus
 
         if (type == TextureType::COLOR_TEXTURE)
         {
-            glInternalFormat = to_gl_format(format);
-            glFormat = glInternalFormat;
+            glInternalFormat = to_gl_internal_format(format);
+            glFormat = to_gl_format(format);
             glType = GL_UNSIGNED_BYTE;
         }
         else if (type == TextureType::DEPTH_TEXTURE)

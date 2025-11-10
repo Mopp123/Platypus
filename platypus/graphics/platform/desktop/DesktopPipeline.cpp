@@ -262,8 +262,8 @@ namespace platypus
         //--------------
         VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
         dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicStateCreateInfo.dynamicStateCount = 1;
-        VkDynamicState dynamicStates[1] = { VK_DYNAMIC_STATE_VIEWPORT };
+        dynamicStateCreateInfo.dynamicStateCount = 2;
+        VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
         dynamicStateCreateInfo.pDynamicStates = dynamicStates;
 
         // Pipeline layout (push constants and uniforms)

@@ -62,7 +62,7 @@ void ShadowTestScene::init()
     pDirLight->direction = { 1.0f, -1.0f, 0.0f };
     pDirLight->direction = pDirLight->direction.normalize();
     pDirLight->enableShadows = true;
-    pDirLight->maxShadowDistance = 50.0f;
+    pDirLight->maxShadowDistance = 80.0f;
 
     TextureSampler textureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -269,7 +269,7 @@ void ShadowTestScene::update()
         ComponentType::COMPONENT_TYPE_LIGHT
     );
 
-    const float distChangeSpeed = 5.0f;
+    const float distChangeSpeed = 12.0f;
     if (inputManager.isKeyDown(KeyName::KEY_1))
     {
         if (pDirLight->maxShadowDistance > 5)

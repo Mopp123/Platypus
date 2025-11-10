@@ -56,6 +56,7 @@ namespace platypus
                 *pBatch->pPipeline
             );
             render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
+            render::set_scissor(currentCommandBuffer, { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight });
 
             // TODO: Fix this mess!
             //      * Should have better way of grouping all
