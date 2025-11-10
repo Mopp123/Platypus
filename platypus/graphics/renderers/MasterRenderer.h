@@ -49,6 +49,8 @@ namespace platypus
         TextureSampler _testFramebufferTextureSampler;
         Texture* _pTestFramebufferColorTexture;
         Texture* _pTestFramebufferDepthTexture;
+        uint32_t _testShadowmapWidth = 1024;
+        uint32_t _testShadowmapHeight = 1024;
 
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
 

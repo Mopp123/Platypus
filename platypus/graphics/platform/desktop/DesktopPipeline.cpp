@@ -258,9 +258,13 @@ namespace platypus
         colorBlendCreateInfo.attachmentCount = 1;
         colorBlendCreateInfo.pAttachments = &colorBlendAttachment;
 
-        // Dynamic state (DISABLED ATM)
+        // Dynamic state
         //--------------
         VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.dynamicStateCount = 1;
+        VkDynamicState dynamicStates[1] = { VK_DYNAMIC_STATE_VIEWPORT };
+        dynamicStateCreateInfo.pDynamicStates = dynamicStates;
 
         // Pipeline layout (push constants and uniforms)
         //----------------
@@ -332,7 +336,7 @@ namespace platypus
         pipelineCreateInfo.pMultisampleState = &multisampleCreateInfo;
         pipelineCreateInfo.pDepthStencilState = _enableDepthTest ? &depthStencilCreateInfo: nullptr;
         pipelineCreateInfo.pColorBlendState = &colorBlendCreateInfo;
-        pipelineCreateInfo.pDynamicState = nullptr; // not used atm!
+        pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
         pipelineCreateInfo.layout = pipelineLayout;
 
         pipelineCreateInfo.renderPass = _pRenderPass->getImpl()->handle;

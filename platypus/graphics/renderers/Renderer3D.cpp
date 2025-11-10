@@ -47,8 +47,6 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _commandBuffers[renderPass.getType()][_currentFrame];
         currentCommandBuffer.begin(&renderPass);
 
-        render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
-
         const size_t currentFrame = _masterRendererRef.getCurrentFrame();
         for (Batch* pBatch : toRender)
         {
@@ -57,6 +55,7 @@ namespace platypus
                 currentCommandBuffer,
                 *pBatch->pPipeline
             );
+            render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
 
             // TODO: Fix this mess!
             //      * Should have better way of grouping all

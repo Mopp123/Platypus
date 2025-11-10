@@ -92,8 +92,7 @@ namespace platypus
             beginInfo.pClearValues = clearValues;
 
             beginInfo.renderArea.offset = { 0, 0 };
-            Extent2D swapchainExtent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
-            beginInfo.renderArea.extent = { swapchainExtent.width, swapchainExtent.height };
+            beginInfo.renderArea.extent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
 
             vkCmdBeginRenderPass(
                 pCommandBufferImpl->handle,

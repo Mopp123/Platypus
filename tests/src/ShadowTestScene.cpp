@@ -258,11 +258,34 @@ void ShadowTestScene::update()
             _cameraEntity,
             ComponentType::COMPONENT_TYPE_TRANSFORM
         );
-        pDirLight->shadowProjectionMatrix = pCamera->perspectiveProjectionMatrix;
-        Matrix4f viewMatrix = pCameraTransform->globalMatrix.inverse();
-        pDirLight->shadowViewMatrix = viewMatrix;
+        //pDirLight->shadowProjectionMatrix = pCamera->perspectiveProjectionMatrix;
+        //Matrix4f viewMatrix = pCameraTransform->globalMatrix.inverse();
+        //pDirLight->shadowViewMatrix = viewMatrix;
+        pDirLight->direction = get_transform_forward(pCameraTransform);
     }
 
+    Light* pDirLight = (Light*)getComponent(
+        _lightEntity,
+        ComponentType::COMPONENT_TYPE_LIGHT
+    );
+
+    const float distChangeSpeed = 5.0f;
+    if (inputManager.isKeyDown(KeyName::KEY_1))
+    {
+        if (pDirLight->maxShadowDistance > 5)
+        {
+            pDirLight->maxShadowDistance -= distChangeSpeed * Timing::get_delta_time();
+            Debug::log("___TEST___MAX SHADOW DISTANCE = " + std::to_string(pDirLight->maxShadowDistance));
+        }
+    }
+    if (inputManager.isKeyDown(KeyName::KEY_2))
+    {
+        if (pDirLight->maxShadowDistance < 2000)
+        {
+            pDirLight->maxShadowDistance += distChangeSpeed * Timing::get_delta_time();
+            Debug::log("___TEST___MAX SHADOW DISTANCE = " + std::to_string(pDirLight->maxShadowDistance));
+        }
+    }
 
     GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
         _framebufferDebugEntity,
@@ -270,7 +293,7 @@ void ShadowTestScene::update()
     );
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    Texture* framebufferTexture = pMasterRenderer->getTestFramebufferColorTexture();
+    Texture* framebufferTexture = pMasterRenderer->getTestFramebufferDepthTexture();
     if (framebufferTexture)
     {
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();

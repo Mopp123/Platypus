@@ -204,32 +204,29 @@ namespace platypus
         //column1.z = direction.x;
 
         rotationMatrix[0 + 0 * 4] = xaxis.x;
-        rotationMatrix[0 + 1 * 4] = yaxis.x;
-        rotationMatrix[0 + 2 * 4] = lightDirection.x;
+        rotationMatrix[1 + 0 * 4] = yaxis.x;
+        rotationMatrix[2 + 0 * 4] = lightDirection.x;
 
         //column2.x = xaxis.y;
         //column2.y = yaxis.y;
         //column2.z = direction.y;
 
-        rotationMatrix[1 + 0 * 4] = xaxis.y;
+        rotationMatrix[0 + 1 * 4] = xaxis.y;
         rotationMatrix[1 + 1 * 4] = yaxis.y;
-        rotationMatrix[1 + 2 * 4] = lightDirection.y;
+        rotationMatrix[2 + 1 * 4] = lightDirection.y;
 
         //column3.x = xaxis.z;
         //column3.y = yaxis.z;
         //column3.z = direction.z;
 
-        rotationMatrix[2 + 0 * 4] = xaxis.z;
-        rotationMatrix[2 + 1 * 4] = yaxis.z;
+        rotationMatrix[0 + 2 * 4] = xaxis.z;
+        rotationMatrix[1 + 2 * 4] = yaxis.z;
         rotationMatrix[2 + 2 * 4] = lightDirection.z;
 
         // SOMETHING WRONG WITH THE PROJ MAT!
         // Then finally our shadow caster's view matrix
-        Quaternion testRotation({ 1, 0, 0 }, PLATY_MATH_PI / 4.0f);
-        //Quaternion testRotation(0.3f, 0, 0, 0.9f);
-        testRotation = testRotation.normalize();
-        pDirectionalLight->shadowViewMatrix = create_view_matrix(centerPos, testRotation.toRotationMatrix());
-
-        Debug::log("___TEST___center pos: " + centerPos.toString());
+        //Quaternion testRotation({ 1, 0, 0 }, PLATY_MATH_PI / 4.0f);
+        //testRotation = testRotation.normalize();
+        pDirectionalLight->shadowViewMatrix = create_view_matrix(centerPos, rotationMatrix);
     }
 }

@@ -408,15 +408,13 @@ namespace platypus
     {
         //uint32_t swapchainWidth = _swapchainRef.getExtent().width;
         //uint32_t swapchainHeight = _swapchainRef.getExtent().height;
-        uint32_t textureWidth = 1024;
-        uint32_t textureHeight = 1024;
         ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
         _pTestFramebufferColorTexture = new Texture(
             TextureType::COLOR_TEXTURE,
             _testFramebufferTextureSampler,
             testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-            textureWidth,
-            textureHeight
+            _testShadowmapWidth,
+            _testShadowmapHeight
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
 
@@ -424,8 +422,8 @@ namespace platypus
             TextureType::DEPTH_TEXTURE,
             _testFramebufferTextureSampler,
             ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
-            textureWidth,
-            textureHeight
+            _testShadowmapWidth,
+            _testShadowmapHeight
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferDepthTexture);
 
@@ -433,8 +431,8 @@ namespace platypus
             _testRenderPass,
             { _pTestFramebufferColorTexture },
             _pTestFramebufferDepthTexture,
-            textureWidth,
-            textureHeight
+            _testShadowmapWidth,
+            _testShadowmapHeight
         );
 
         // Update new shadow texture for materials that receive shadows
@@ -650,7 +648,7 @@ namespace platypus
 
 
 
-        // TESTING MULTIPLE PASSES -----------------------------------
+        // TESTING SHADOW PASS -----------------------------------
         render::begin_render_pass(
             currentCommandBuffer,
             _testRenderPass,
@@ -663,8 +661,8 @@ namespace platypus
         testSecondaries.push_back(
             _pRenderer3D->recordCommandBuffer(
                 _testRenderPass,
-                (float)swapchainExtent.width,
-                (float)swapchainExtent.height,
+                (float)_testShadowmapWidth,
+                (float)_testShadowmapHeight,
                 _batcher.getBatches(RenderPassType::SHADOW_PASS)
             )
         );
