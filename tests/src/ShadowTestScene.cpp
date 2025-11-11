@@ -168,7 +168,7 @@ void ShadowTestScene::init()
 
     Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
-        { 0, 0, 0 },
+        { 10, 0, 10 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
         pStaticMesh->getID(),
@@ -184,26 +184,26 @@ void ShadowTestScene::init()
     SkeletalAnimationData* pAnimationAsset1 = pAssetManager->createSkeletalAnimation(animations[0]);
     SkeletalAnimationData* pAnimationAsset2 = pAssetManager->createSkeletalAnimation(animations[1]);
 
-    std::vector<entityID_t> jointEntities;
-    entityID_t animatedEntity = createSkinnedMeshEntity(
-        { 45, 0, 45 },
-        { { 0, 1,0 }, 0 },
-        { 1, 1, 1 },
-        pSkinnedMesh,
-        pAnimationAsset1,
-        pSkinnedMeshMaterial->getID(),
-        jointEntities
-    );
-    std::vector<entityID_t> jointEntities2;
-    entityID_t animatedEntity2 = createSkinnedMeshEntity(
-        { 35, 0, 30 },
-        { { 0, 1, 0 }, PLATY_MATH_PI * 0.5f },
-        { 1, 1, 1 },
-        pSkinnedMesh,
-        pAnimationAsset2,
-        pSkinnedMeshMaterial->getID(),
-        jointEntities2
-    );
+    int area = 2;
+    float spacing = 3.0f;
+    float startX = 20.0f;
+    float startZ = 20.0f;
+    for (int z = 0; z < area; ++z)
+    {
+        for (int x = 0; x < area; ++x)
+        {
+            std::vector<entityID_t> jointEntities;
+            entityID_t animatedEntity = createSkinnedMeshEntity(
+                { startX + x * spacing, 0, startZ + z * spacing },
+                { { 0, 1,0 }, 0 },
+                { 1, 1, 1 },
+                pSkinnedMesh,
+                pAnimationAsset1,
+                pSkinnedMeshMaterial->getID(),
+                jointEntities
+            );
+        }
+    }
 
     // For debugging framebuffers
     TextureSampler framebufferDebugTextureSampler(
@@ -232,7 +232,7 @@ void ShadowTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getTestFramebufferColorTexture()->getID()
+        pMasterRenderer->getShadowFramebufferDepthTexture()->getID()
     );
 }
 
@@ -293,7 +293,7 @@ void ShadowTestScene::update()
     );
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    Texture* framebufferTexture = pMasterRenderer->getTestFramebufferDepthTexture();
+    Texture* framebufferTexture = pMasterRenderer->getShadowFramebufferDepthTexture();
     if (framebufferTexture)
     {
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();

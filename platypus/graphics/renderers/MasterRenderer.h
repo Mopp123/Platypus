@@ -19,9 +19,12 @@ namespace platypus
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
         Vector4f cameraPosition = Vector4f(0, 0, 0, 1);
+
+        Vector4f ambientLightColor = Vector4f(0.1f, 0.1f, 0.1f, 1);
         Vector4f lightDirection = Vector4f(0, 0, 0, 0);
         Vector4f lightColor = Vector4f(1, 1, 1, 1);
-        Vector4f ambientLightColor = Vector4f(0.1f, 0.1f, 0.1f, 1);
+        // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
+        Vector4f shadowProperties;
     };
 
     class MasterRenderer
@@ -41,16 +44,15 @@ namespace platypus
         std::unique_ptr<Renderer3D> _pRenderer3D;
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
-        RenderPass _testRenderPass;
+        RenderPass _shadowPass;
         // NOTE: Switched using single framebuffer and textures for testing offscreen rendering..
         //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
         //  touch these + the mem barrier in render commands
-        Framebuffer* _pTestFramebuffer;
-        TextureSampler _testFramebufferTextureSampler;
-        Texture* _pTestFramebufferColorTexture;
-        Texture* _pTestFramebufferDepthTexture;
-        uint32_t _testShadowmapWidth = 2048;
-        uint32_t _testShadowmapHeight = 2048;
+        Framebuffer* _pShadowFramebuffer;
+        TextureSampler _shadowTextureSampler;
+        Texture* _pShadowFramebufferColorTexture;
+        Texture* _pShadowFramebufferDepthTexture;
+        uint32_t _shadowmapWidth = 2048;
 
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
 
@@ -81,9 +83,9 @@ namespace platypus
             std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
         ) const;
 
-        inline const RenderPass& getTestRenderPass() const { return _testRenderPass; }
-        inline Texture* getTestFramebufferColorTexture() { return _pTestFramebufferColorTexture; }
-        inline Texture* getTestFramebufferDepthTexture() { return _pTestFramebufferDepthTexture; }
+        inline const RenderPass& getShadowPass() const { return _shadowPass; }
+        inline Texture* getShadowFramebufferColorTexture() { return _pShadowFramebufferColorTexture; }
+        inline Texture* getShadowFramebufferDepthTexture() { return _pShadowFramebufferDepthTexture; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
@@ -96,8 +98,8 @@ namespace platypus
         inline size_t getCurrentFrame() const { return _currentFrame; }
 
     private:
-        void createOffscreenResourcesTEST();
-        void destroyOffscreenResourcesTEST();
+        void createShadowPassResources();
+        void destroyShadowPassResources();
 
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();

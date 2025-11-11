@@ -13,6 +13,7 @@ in mat3 var_toTangentSpace; // uses locations 7-9
 in vec4 var_tangent;
 
 in vec3 var_shadowCoord;
+in vec4 var_shadowProperties;
 
 uniform sampler2D blendmapTexture;
 
@@ -51,15 +52,11 @@ layout(std140) uniform MaterialData
 
 layout(location = 0) out vec4 outColor;
 
-// TODO: Make these uniforms!
-const int shadowmapWidth = 2048;
-const int usePCFCount = 2;
-const float shadowStrength = 0.9;
 
 float calcShadow(float bias, int pcfCount)
 {
     float shadow = 0.0;
-    int shadowmapWidth = shadowmapWidth;
+    int shadowmapWidth = int(var_shadowProperties.x);
     int texelsCount_width = (2 * pcfCount + 1);
     int texelCount =  texelsCount_width * texelsCount_width;
     vec2 texelSize = 1.0 / vec2(shadowmapWidth, shadowmapWidth);
@@ -145,8 +142,10 @@ void main()
     //float shadowMapVal = texture(shadowmapTexture, var_shadowCoord.xy).r;
     //float shadow = var_shadowCoord.z > shadowMapVal ? 1.0 : 0.0;
 
+    int shadowPCFSampleRadius = int(var_shadowProperties.y);
+    float shadowStrength = var_shadowProperties.z;
 	float bias = 0.005;//max(0.025 * (1.0 - dopt_normToLight), 0.005);
-	float shadow = min(calcShadow(bias, usePCFCount), shadowStrength);
+	float shadow = min(calcShadow(bias, shadowPCFSampleRadius), shadowStrength);
 
     outColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
 }

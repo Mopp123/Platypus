@@ -16,9 +16,12 @@ layout(set = 0, binding = 0) uniform SceneData
     mat4 projectionMatrix;
     mat4 viewMatrix;
     vec4 cameraPosition;
+
+    vec4 ambientLightColor;
     vec4 lightDirection;
     vec4 lightColor;
-    vec4 ambientLightColor;
+    // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
+    vec4 shadowProperties;
 } sceneData;
 
 layout(set = 1, binding = 0) uniform InstanceData
@@ -38,6 +41,7 @@ layout(location = 7) out mat3 var_toTangentSpace; // uses locations 7-9
 layout(location = 10) out vec4 var_tangent;
 
 layout(location = 11) out vec3 var_shadowCoord;
+layout(location = 12) out vec4 var_shadowProperties;
 
 void main()
 {
@@ -76,4 +80,6 @@ void main()
     shadowCoord.y *= -1.0;
     var_shadowCoord = shadowCoord.xyz / shadowCoord.w;
 	var_shadowCoord = 0.5 + 0.5 * var_shadowCoord;
+
+    var_shadowProperties = sceneData.shadowProperties;
 }

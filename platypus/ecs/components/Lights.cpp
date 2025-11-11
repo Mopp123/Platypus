@@ -13,6 +13,7 @@ namespace platypus
             case LightType::DIRECTIONAL_LIGHT: return "DIRECTIONAL_LIGHT";
             case LightType::POINT_LIGHT: return "POINT_LIGHT";
             case LightType::SPOT_LIGHT: return "SPOT_LIGHT";
+            default: return "<Invalid type>";
         }
     }
 

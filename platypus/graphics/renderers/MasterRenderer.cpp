@@ -39,8 +39,8 @@ namespace platypus
                 }
             }
         ),
-        _testRenderPass(RenderPassType::SHADOW_PASS, true),
-        _testFramebufferTextureSampler(
+        _shadowPass(RenderPassType::SHADOW_PASS, true),
+        _shadowTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             false,
@@ -72,17 +72,17 @@ namespace platypus
         createCommonShaderResources();
 
         // TESTING ------------------------------------------------------------
-        _testRenderPass.create(
+        _shadowPass.create(
             ImageFormat::R8G8B8A8_SRGB,
             ImageFormat::D32_SFLOAT
         );
-        createOffscreenResourcesTEST();
+        createShadowPassResources();
     }
 
     MasterRenderer::~MasterRenderer()
     {
-        destroyOffscreenResourcesTEST();
-        _testRenderPass.destroy();
+        destroyShadowPassResources();
+        _shadowPass.destroy();
         _shadowmapDescriptorSetLayout.destroy();
 
         destroyCommonShaderResources();
@@ -168,7 +168,7 @@ namespace platypus
                 create_static_shadow_batch(
                     _batcher,
                     _batcher.getMaxStaticBatchLength(),
-                    &_testRenderPass,
+                    &_shadowPass,
                     meshID,
                     materialID,
                     pShadowPassPushConstants,
@@ -212,7 +212,7 @@ namespace platypus
                     _batcher,
                     maxSkinnedBatchLength,
                     maxJoints,
-                    &_testRenderPass,
+                    &_shadowPass,
                     meshID,
                     materialID,
                     pShadowPassPushConstants,
@@ -404,35 +404,33 @@ namespace platypus
             outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
     }
 
-    void MasterRenderer::createOffscreenResourcesTEST()
+    void MasterRenderer::createShadowPassResources()
     {
-        //uint32_t swapchainWidth = _swapchainRef.getExtent().width;
-        //uint32_t swapchainHeight = _swapchainRef.getExtent().height;
         ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
-        _pTestFramebufferColorTexture = new Texture(
+        _pShadowFramebufferColorTexture = new Texture(
             TextureType::COLOR_TEXTURE,
-            _testFramebufferTextureSampler,
+            _shadowTextureSampler,
             testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-            _testShadowmapWidth,
-            _testShadowmapHeight
+            _shadowmapWidth,
+            _shadowmapWidth
         );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferColorTexture);
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferColorTexture);
 
-        _pTestFramebufferDepthTexture = new Texture(
+        _pShadowFramebufferDepthTexture = new Texture(
             TextureType::DEPTH_TEXTURE,
-            _testFramebufferTextureSampler,
+            _shadowTextureSampler,
             ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
-            _testShadowmapWidth,
-            _testShadowmapHeight
+            _shadowmapWidth,
+            _shadowmapWidth
         );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pTestFramebufferDepthTexture);
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferDepthTexture);
 
-        _pTestFramebuffer = new Framebuffer(
-            _testRenderPass,
-            { _pTestFramebufferColorTexture },
-            _pTestFramebufferDepthTexture,
-            _testShadowmapWidth,
-            _testShadowmapHeight
+        _pShadowFramebuffer = new Framebuffer(
+            _shadowPass,
+            { _pShadowFramebufferColorTexture },
+            _pShadowFramebufferDepthTexture,
+            _shadowmapWidth,
+            _shadowmapWidth
         );
 
         // Update new shadow texture for materials that receive shadows
@@ -441,19 +439,19 @@ namespace platypus
         {
             Material* pMaterial = (Material*)pAsset;
             if (pMaterial->receivesShadows())
-                pMaterial->updateShadowmapDescriptorSet(_pTestFramebufferDepthTexture);
+                pMaterial->updateShadowmapDescriptorSet(_pShadowFramebufferDepthTexture);
         }
     }
 
-    void MasterRenderer::destroyOffscreenResourcesTEST()
+    void MasterRenderer::destroyShadowPassResources()
     {
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferColorTexture);
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pTestFramebufferDepthTexture);
-        delete _pTestFramebuffer;
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferColorTexture);
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
+        delete _pShadowFramebuffer;
 
-        _pTestFramebufferColorTexture = nullptr;
-        _pTestFramebufferDepthTexture = nullptr;
-        _pTestFramebuffer = nullptr;
+        _pShadowFramebufferColorTexture = nullptr;
+        _pShadowFramebufferDepthTexture = nullptr;
+        _pShadowFramebuffer = nullptr;
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
@@ -595,6 +593,14 @@ namespace platypus
         _scene3DData.cameraPosition = cameraPosition;
         _scene3DData.viewMatrix = viewMatrix;
 
+        const Vector3f sceneAmbientLight = pScene->environmentProperties.ambientColor;
+        _scene3DData.ambientLightColor = {
+            sceneAmbientLight.r,
+            sceneAmbientLight.g,
+            sceneAmbientLight.b,
+            1.0f
+        };
+
         // NOTE: Consider all light data of all scene lights inside a single
         // descriptor set?
         const Light* pDirectionalLight = (const Light*)pScene->getComponent(
@@ -622,13 +628,11 @@ namespace platypus
                 1.0f
             };
         }
-
-        const Vector3f sceneAmbientLight = pScene->environmentProperties.ambientColor;
-        _scene3DData.ambientLightColor = {
-            sceneAmbientLight.r,
-            sceneAmbientLight.g,
-            sceneAmbientLight.b,
-            1.0f
+        _scene3DData.shadowProperties = {
+            (float)_shadowmapWidth,
+            2.0f, // pcf sample radius
+            0.9f, // shadow strength
+            0.0f // undetermined
         };
 
         _scene3DDataUniformBuffers[_currentFrame]->updateDeviceAndHost(
@@ -651,18 +655,18 @@ namespace platypus
         // TESTING SHADOW PASS -----------------------------------
         render::begin_render_pass(
             currentCommandBuffer,
-            _testRenderPass,
-            _pTestFramebuffer,
-            _pTestFramebuffer->getDepthAttachment(),
+            _shadowPass,
+            _pShadowFramebuffer,
+            _pShadowFramebuffer->getDepthAttachment(),
             { 1, 0, 1, 1 },
             true
         );
         std::vector<CommandBuffer> testSecondaries;
         testSecondaries.push_back(
             _pRenderer3D->recordCommandBuffer(
-                _testRenderPass,
-                (float)_testShadowmapWidth,
-                (float)_testShadowmapHeight,
+                _shadowPass,
+                (float)_shadowmapWidth,
+                (float)_shadowmapWidth,
                 _batcher.getBatches(RenderPassType::SHADOW_PASS)
             )
         );
@@ -746,8 +750,8 @@ namespace platypus
                 createPipelines();
 
                 createCommonShaderResources();
-                destroyOffscreenResourcesTEST();
-                createOffscreenResourcesTEST();
+                destroyShadowPassResources();
+                createShadowPassResources();
 
                 // NOTE: After added _receiveShadows into Material, it is required to
                 // always recreate their shader resources since the shadowmap texture
@@ -775,8 +779,8 @@ namespace platypus
                 destroyPipelines();
                 createPipelines();
 
-                destroyOffscreenResourcesTEST();
-                createOffscreenResourcesTEST();
+                destroyShadowPassResources();
+                createShadowPassResources();
 
                 _batcher.recreateManagedPipelines();
             }

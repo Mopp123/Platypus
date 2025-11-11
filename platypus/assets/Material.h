@@ -39,7 +39,10 @@ namespace platypus
 
     struct MaterialUniformBufferData
     {
-        // x = specular strength, y = shininess, z = is shadeless, w = undefined for now
+        // x = specular strength,
+        // y = shininess,
+        // z = is shadeless,
+        // w = unused atm
         Vector4f lightingProperties;
         // x,y = texture offset, z,w = texture scale
         Vector4f textureProperties;

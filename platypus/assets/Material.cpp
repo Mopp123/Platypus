@@ -80,7 +80,6 @@ namespace platypus
         // ALSO the pipeline creation func is fucking stupid with those bools... TODO: Make this less annoying!
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
-        const RenderPass* pTestRenderPass = &pMasterRenderer->getTestRenderPass(); // Decide already should this be ref or ptr...
 
         // TODO: Improve this?
         if (_materialType == MaterialType::MESH)
@@ -494,7 +493,7 @@ namespace platypus
         if (_receiveShadows)
         {
             MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-            textures.push_back(pMasterRenderer->getTestFramebufferDepthTexture());
+            textures.push_back(pMasterRenderer->getShadowFramebufferDepthTexture());
         }
 
         return textures;
