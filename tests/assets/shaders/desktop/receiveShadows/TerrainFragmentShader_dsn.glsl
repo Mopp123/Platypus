@@ -50,7 +50,7 @@ layout(set = 2, binding = 17) uniform MaterialData
 } materialData;
 
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out vec4 outColor;
 
 // TODO: Make these uniforms!
 const int shadowmapWidth = 2048;
@@ -149,5 +149,5 @@ void main()
 	float bias = 0.005;//max(0.025 * (1.0 - dopt_normToLight), 0.005);
 	float shadow = min(calcShadow(bias, usePCFCount), shadowStrength);
 
-    fragColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
+    outColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
 }

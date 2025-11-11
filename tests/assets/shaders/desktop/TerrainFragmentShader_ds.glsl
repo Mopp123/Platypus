@@ -38,7 +38,7 @@ layout(set = 2, binding = 11) uniform MaterialData
 } materialData;
 
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out vec4 outColor;
 
 void main()
 {
@@ -86,5 +86,5 @@ void main()
     vec4 finalDiffuseColor = lightColor * diffuseFactor * totalDiffuseColor;
     vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
 
-    fragColor = finalAmbientColor + finalDiffuseColor + finalSpecularColor;
+    outColor = finalAmbientColor + finalDiffuseColor + finalSpecularColor;
 }

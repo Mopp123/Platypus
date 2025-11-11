@@ -27,7 +27,7 @@ layout(set = 1, binding = 3) uniform MaterialData
     vec4 textureProperties;
 } materialData;
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out vec4 outColor;
 
 void main()
 {
@@ -62,5 +62,5 @@ void main()
     {
         discard;
     }
-    fragColor = finalColor;
+    outColor = finalColor;
 }

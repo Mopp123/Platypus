@@ -18,9 +18,9 @@ layout(set = 1, binding = 2) uniform MaterialData
 } materialData;
 
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    fragColor = vec4(1, 0, 0, 1);
+    outColor = vec4(1, 0, 0, 1);
 }
