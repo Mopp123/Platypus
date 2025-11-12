@@ -125,13 +125,15 @@ namespace platypus
             ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
         );
 
+        CullMode cullMode = pRenderPass->getType() == RenderPassType::SCENE_PASS ? CullMode::CULL_MODE_BACK : CullMode::CULL_MODE_FRONT;
+
         pPipelineData->pPipeline = new Pipeline(
             pRenderPass,
             vertexBufferLayouts,
             descriptorSetLayouts,
             pPipelineData->pVertexShader,
             pPipelineData->pFragmentShader,
-            CullMode::CULL_MODE_BACK,
+            cullMode,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

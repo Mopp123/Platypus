@@ -40,7 +40,7 @@ layout(location = 4) out vec3 var_lightDir;
 layout(location = 5) out vec4 var_lightColor;
 layout(location = 6) out vec4 var_ambientLightColor;
 
-layout(location = 7) out vec3 var_shadowCoord;
+layout(location = 7) out vec4 var_fragPosLightSpace;
 layout(location = 8) out vec4 var_shadowProperties;
 
 void main() {
@@ -75,11 +75,6 @@ void main() {
     var_lightColor = sceneData.lightColor;
     var_ambientLightColor = sceneData.ambientLightColor;
 
-    // NOTE: Not sure is this correct AND not sure should perspective division be done rather in fragment shader?!?!
-	vec4 shadowCoord = shadowMatrices.projectionMatrix * shadowMatrices.viewMatrix * transformedPos;
-    shadowCoord.y *= -1.0;
-    var_shadowCoord = shadowCoord.xyz / shadowCoord.w;
-	var_shadowCoord = 0.5 + 0.5 * var_shadowCoord;
-
+	var_fragPosLightSpace = shadowMatrices.projectionMatrix * shadowMatrices.viewMatrix * transformedPos;
     var_shadowProperties = sceneData.shadowProperties;
 }

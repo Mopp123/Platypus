@@ -215,7 +215,7 @@ void ShadowTestScene::init()
                 jointEntities[0],
                 ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
             );
-            pAnim->mode = AnimationMode::ANIMATION_MODE_PLAY_ONCE;
+            //pAnim->mode = AnimationMode::ANIMATION_MODE_PLAY_ONCE;
         }
     }
 
