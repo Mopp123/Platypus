@@ -42,7 +42,7 @@ out vec4 var_ambientLightColor;
 out mat3 var_toTangentSpace; // uses locations 7-9
 out vec4 var_tangent;
 
-out vec3 var_shadowCoord;
+out vec4 var_fragPosLightSpace;
 out vec4 var_shadowProperties;
 
 void main()
@@ -77,10 +77,6 @@ void main()
 
     var_tangent = vec4(biTangent, 1.0);
 
-    // NOTE: Not sure is this correct AND not sure should perspective division be done rather in fragment shader?!?!
-    vec4 shadowCoord = shadowMatrices.projectionMatrix * shadowMatrices.viewMatrix * transformedPos;
-    var_shadowCoord = shadowCoord.xyz / shadowCoord.w;
-    var_shadowCoord = 0.5 + 0.5 * var_shadowCoord;
-
+    var_fragPosLightSpace = shadowMatrices.projectionMatrix * shadowMatrices.viewMatrix * transformedPos;
     var_shadowProperties = sceneData.shadowProperties;
 }

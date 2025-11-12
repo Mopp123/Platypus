@@ -91,7 +91,7 @@ namespace platypus
                 return nullptr;
             }
             // TODO: Better way of handling this
-            pBatch->pushConstantsSize = sizeof(Matrix4f);
+            pBatch->pushConstantsSize = sizeof(Matrix4f) * 2;
             pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
             pBatch->pushConstantsUniformInfos = {
                 { ShaderDataType::Mat4 },

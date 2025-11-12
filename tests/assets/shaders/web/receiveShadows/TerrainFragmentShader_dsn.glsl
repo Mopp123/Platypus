@@ -12,7 +12,7 @@ in vec4 var_ambientLightColor;
 in mat3 var_toTangentSpace; // uses locations 7-9
 in vec4 var_tangent;
 
-in vec3 var_shadowCoord;
+in vec4 var_fragPosLightSpace;
 in vec4 var_shadowProperties;
 
 uniform sampler2D blendmapTexture;
@@ -61,22 +61,25 @@ float calcShadow(float bias, int pcfCount)
     int texelCount =  texelsCount_width * texelsCount_width;
     vec2 texelSize = 1.0 / vec2(shadowmapWidth, shadowmapWidth);
 
+    vec3 shadowmapCoord = var_fragPosLightSpace.xyz / var_fragPosLightSpace.w;
+    shadowmapCoord = 0.5 + 0.5 * shadowmapCoord;
+
     for (int x = -pcfCount; x <= pcfCount; x++)
     {
         for (int y = -pcfCount; y <= pcfCount; y++)
         {
-            vec2 sampleCoord = var_shadowCoord.xy + vec2(x, y) * texelSize;
+            vec2 sampleCoord = shadowmapCoord.xy + vec2(x, y) * texelSize;
             if (sampleCoord.x > 1.0 || sampleCoord.x < 0.0 || sampleCoord.y > 1.0 || sampleCoord.y < 0.0)
                 continue;
 
             float d = texture(shadowmapTexture, sampleCoord).r;
-            shadow += var_shadowCoord.z - bias > d ? 1.0 : 0.0;
+            shadow += shadowmapCoord.z - bias > d ? 1.0 : 0.0;
         }
     }
     shadow /= float(texelCount);
 
     // that weird far plane shadow
-    if (var_shadowCoord.z > 1.0)
+    if (shadowmapCoord.z > 1.0)
         return 0.0;
     return shadow;
 }
@@ -140,8 +143,8 @@ void main()
 
     int shadowPCFSampleRadius = int(var_shadowProperties.y);
     float shadowStrength = var_shadowProperties.z;
-	float bias = 0.005;//max(0.025 * (1.0 - dopt_normToLight), 0.005);
-	float shadow = min(calcShadow(bias, shadowPCFSampleRadius), shadowStrength);
+    float bias = 0.0; //max(min((1.0 - dot(unitNormal, toLight)), maxBias), minBias);
+    float shadow = min(calcShadow(bias, shadowPCFSampleRadius), shadowStrength);
 
     outColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);
 }
