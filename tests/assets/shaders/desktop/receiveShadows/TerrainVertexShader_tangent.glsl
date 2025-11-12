@@ -76,10 +76,10 @@ void main()
     var_tangent = vec4(biTangent, 1.0);
 
     // NOTE: Not sure is this correct AND not sure should perspective division be done rather in fragment shader?!?!
-	vec4 shadowCoord = shadowMatrices.projectionMatrix * shadowMatrices.viewMatrix * transformedPos;
+    vec4 shadowCoord = shadowMatrices.projectionMatrix * shadowMatrices.viewMatrix * transformedPos;
     shadowCoord.y *= -1.0;
     var_shadowCoord = shadowCoord.xyz / shadowCoord.w;
-	var_shadowCoord = 0.5 + 0.5 * var_shadowCoord;
+    var_shadowCoord = 0.5 + 0.5 * var_shadowCoord;
 
     var_shadowProperties = sceneData.shadowProperties;
 }

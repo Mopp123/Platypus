@@ -1,7 +1,6 @@
 #include "ShadowTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
-#include <cmath>
 
 
 using namespace platypus;
@@ -158,19 +157,29 @@ void ShadowTestScene::init()
     Material* pStaticMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/DiffuseTest.png",
+        true,
         true
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/characterTest.png",
-        false
+        false,
+        true
     );
 
     Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
-        { 10, 0, 10 },
+        { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
+        pStaticMesh->getID(),
+        pStaticMeshMaterial->getID()
+    );
+
+    entityID_t boxEntity2 = createStaticMeshEntity(
+        { 10, 0, 10 },
+        { { 0, 2, 0 }, 0.0f },
+        { 2, 2, 2 },
         pStaticMesh->getID(),
         pStaticMeshMaterial->getID()
     );
@@ -202,6 +211,11 @@ void ShadowTestScene::init()
                 pSkinnedMeshMaterial->getID(),
                 jointEntities
             );
+            SkeletalAnimation* pAnim = (SkeletalAnimation*)getComponent(
+                jointEntities[0],
+                ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+            );
+            pAnim->mode = AnimationMode::ANIMATION_MODE_PLAY_ONCE;
         }
     }
 

@@ -183,8 +183,8 @@ namespace platypus
         pDirectionalLight->shadowProjectionMatrix = create_orthographic_projection_matrix(
             -width,
             width,
-            height * 2,
-            -height * 2,
+            height, //* 2,
+            -height, //* 2,
             -length,
             length
         );

@@ -117,7 +117,8 @@ void BaseScene::updateBase()
 Material* BaseScene::createMeshMaterial(
     AssetManager* pAssetManager,
     std::string textureFilepath,
-    bool repeatTexture
+    bool repeatTexture,
+    bool receiveShadows
 )
 {
     TextureSamplerAddressMode addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -140,7 +141,13 @@ Material* BaseScene::createMeshMaterial(
         NULL_ID,
         { pTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
-        { }
+        { },
+        0.625f,
+        16.0f,
+        { 0, 0 },
+        { 1, 1 },
+        receiveShadows,
+        false // is shadeless?
     );
     return pMaterial;
 }

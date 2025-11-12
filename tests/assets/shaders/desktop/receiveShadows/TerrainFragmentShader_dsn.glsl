@@ -134,13 +134,10 @@ void main()
     vec3 halfWay = normalize(toLight + var_toCamera);
     float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
 
+    // NOTE: How we're getting the final color using below feels wrong?!
     vec4 finalAmbientColor = var_ambientLightColor * totalDiffuseColor;
     vec4 finalDiffuseColor = lightColor * diffuseFactor * totalDiffuseColor;
     vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
-
-    // Test shadow...
-    //float shadowMapVal = texture(shadowmapTexture, var_shadowCoord.xy).r;
-    //float shadow = var_shadowCoord.z > shadowMapVal ? 1.0 : 0.0;
 
     int shadowPCFSampleRadius = int(var_shadowProperties.y);
     float shadowStrength = var_shadowProperties.z;

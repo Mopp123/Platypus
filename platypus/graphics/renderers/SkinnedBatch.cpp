@@ -59,7 +59,8 @@ namespace platypus
         size_t maxJoints,
         const RenderPass* pRenderPass,
         ID_t meshID,
-        ID_t materialID
+        ID_t materialID,
+        const Light * const pDirectionalLight
     )
     {
         ID_t identifier = ID::hash(meshID, materialID);
@@ -75,6 +76,29 @@ namespace platypus
 
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         pBatch->pPipeline = pMaterial->getPipeline(ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE);
+
+        if (pMaterial->receivesShadows())
+        {
+            if (!pDirectionalLight)
+            {
+                Debug::log(
+                    "@create_skinned_batch "
+                    "Directional light was nullptr!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                delete pBatch;
+                return nullptr;
+            }
+            // TODO: Better way of handling this
+            pBatch->pushConstantsSize = sizeof(Matrix4f);
+            pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
+            pBatch->pushConstantsUniformInfos = {
+                { ShaderDataType::Mat4 },
+                { ShaderDataType::Mat4 }
+            };
+            pBatch->pPushConstantsData = (void*)pDirectionalLight;
+        }
 
         // Get or create joint buffer
         const size_t dynamicUboElemSize = get_dynamic_uniform_buffer_element_size(

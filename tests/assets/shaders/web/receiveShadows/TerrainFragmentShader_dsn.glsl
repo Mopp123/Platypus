@@ -138,10 +138,6 @@ void main()
     vec4 finalDiffuseColor = lightColor * diffuseFactor * totalDiffuseColor;
     vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
 
-    // Test shadow...
-    //float shadowMapVal = texture(shadowmapTexture, var_shadowCoord.xy).r;
-    //float shadow = var_shadowCoord.z > shadowMapVal ? 1.0 : 0.0;
-
     int shadowPCFSampleRadius = int(var_shadowProperties.y);
     float shadowStrength = var_shadowProperties.z;
 	float bias = 0.005;//max(0.025 * (1.0 - dopt_normToLight), 0.005);

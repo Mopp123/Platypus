@@ -162,7 +162,8 @@ namespace platypus
                     _batcher.getMaxStaticBatchLength(),
                     _swapchainRef.getRenderPassPtr(),
                     meshID,
-                    materialID
+                    materialID,
+                    pDirectionalLight
                 );
 
                 create_static_shadow_batch(
@@ -205,7 +206,8 @@ namespace platypus
                     maxJoints,
                     _swapchainRef.getRenderPassPtr(),
                     meshID,
-                    materialID
+                    materialID,
+                    pDirectionalLight
                 );
 
                 create_skinned_shadow_batch(
@@ -258,8 +260,7 @@ namespace platypus
                     _swapchainRef.getRenderPassPtr(),
                     meshID,
                     materialID,
-                    pShadowPassPushConstants,
-                    shadowPassPushConstantsSize
+                    pDirectionalLight
                 );
             }
             add_to_terrain_batch(

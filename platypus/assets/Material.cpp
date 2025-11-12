@@ -590,6 +590,7 @@ namespace platypus
         uint32_t textureBindingCount = getTotalTextureCount();
         for (uint32_t textureBinding = 0; textureBinding < textureBindingCount; ++textureBinding)
         {
+            Debug::log("___TEST___added texture binding: " + std::to_string(textureBinding));
             layoutBindings.push_back(
                 {
                     textureBinding,

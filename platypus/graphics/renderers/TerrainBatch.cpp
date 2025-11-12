@@ -54,14 +54,14 @@ namespace platypus
         return shaderResources;
     }
 
+    // Taking shadow proj and view matrices as push constants
     Batch* create_terrain_batch(
         Batcher& batcher,
         size_t maxLength,
         const RenderPass* pRenderPass,
         ID_t meshID,
         ID_t materialID,
-        void* pShadowPushConstants,
-        size_t shadowPushConstantsSize
+        const Light * const pDirectionalLight
     )
     {
         ID_t identifier = ID::hash(meshID, materialID);
@@ -78,39 +78,27 @@ namespace platypus
         Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
         pBatch->pPipeline = pMaterial->getPipeline(ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE);
 
-        if (pShadowPushConstants || shadowPushConstantsSize != 0)
+        if (pMaterial->receivesShadows())
         {
-            // TODO: Some better way to deal with these...
-            const size_t requiredShadowPushConstantsSize = sizeof(Matrix4f) * 2;
-            if (shadowPushConstantsSize != requiredShadowPushConstantsSize)
+            if (!pDirectionalLight)
             {
                 Debug::log(
                     "@create_terrain_batch "
-                    "Invalid shadow push constants size: " + std::to_string(shadowPushConstantsSize) + " "
-                    "required size is " + std::to_string(requiredShadowPushConstantsSize),
+                    "Directional light was nullptr!",
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
-                return NULL_ID;
+                delete pBatch;
+                return nullptr;
             }
-            if (!pShadowPushConstants)
-            {
-                Debug::log(
-                    "@create_terrain_batch "
-                    "pShadowPushConstants was nullptr!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return NULL_ID;
-            }
-
-            pBatch->pushConstantsSize = shadowPushConstantsSize;
+            // TODO: Better way of handling this
+            pBatch->pushConstantsSize = sizeof(Matrix4f) * 2;
             pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
             pBatch->pushConstantsUniformInfos = {
                 { ShaderDataType::Mat4 },
                 { ShaderDataType::Mat4 }
             };
-            pBatch->pPushConstantsData = pShadowPushConstants;
+            pBatch->pPushConstantsData = (void*)pDirectionalLight;
         }
 
         const size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();

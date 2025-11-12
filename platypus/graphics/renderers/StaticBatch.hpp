@@ -2,6 +2,7 @@
 
 #include "Batch.hpp"
 #include "platypus/graphics/RenderPass.h"
+#include "platypus/ecs/components/Lights.h"
 
 
 namespace platypus
@@ -11,7 +12,8 @@ namespace platypus
         size_t maxLength,
         const RenderPass* pRenderPass,
         ID_t meshID,
-        ID_t materialID
+        ID_t materialID,
+        const Light * const pDirectionalLight
     );
 
     Batch* create_static_shadow_batch(
