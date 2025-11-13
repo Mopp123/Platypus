@@ -102,6 +102,7 @@ namespace platypus
         {
             if (_pImpl->handle != VK_NULL_HANDLE && _pImpl->layout != VK_NULL_HANDLE)
                 destroy();
+
             delete _pImpl;
         }
     }
@@ -257,9 +258,13 @@ namespace platypus
         colorBlendCreateInfo.attachmentCount = 1;
         colorBlendCreateInfo.pAttachments = &colorBlendAttachment;
 
-        // Dynamic state (DISABLED ATM)
+        // Dynamic state
         //--------------
         VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.dynamicStateCount = 2;
+        VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        dynamicStateCreateInfo.pDynamicStates = dynamicStates;
 
         // Pipeline layout (push constants and uniforms)
         //----------------
@@ -331,7 +336,7 @@ namespace platypus
         pipelineCreateInfo.pMultisampleState = &multisampleCreateInfo;
         pipelineCreateInfo.pDepthStencilState = _enableDepthTest ? &depthStencilCreateInfo: nullptr;
         pipelineCreateInfo.pColorBlendState = &colorBlendCreateInfo;
-        pipelineCreateInfo.pDynamicState = nullptr; // not used atm!
+        pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
         pipelineCreateInfo.layout = pipelineLayout;
 
         pipelineCreateInfo.renderPass = _pRenderPass->getImpl()->handle;

@@ -3,6 +3,7 @@
 #include "Buffers.h"
 #include "Swapchain.h"
 #include "platypus/assets/Texture.h"
+#include <memory>
 
 
 namespace platypus
@@ -41,6 +42,11 @@ namespace platypus
         // NOTE: should be using DescriptorSetLayoutBinding's "descriptorCount" instead of "arrayLen"
         // when I was writing this initially, I forgot how Vulkan deals with that kind of stuff...
         int arrayLen = 1;
+
+        bool operator==(const UniformInfo& other) const
+        {
+            return type == other.type && arrayLen == other.arrayLen;
+        }
     };
 
 
@@ -82,6 +88,15 @@ namespace platypus
 
         ~DescriptorSetLayoutBinding() {}
 
+        bool operator==(const DescriptorSetLayoutBinding& other) const
+        {
+            return _binding == other._binding &&
+                _type == other._type &&
+                _shaderStageFlags == other._shaderStageFlags &&
+                _descriptorCount == other._descriptorCount &&
+                _uniformInfo == other._uniformInfo;
+        }
+
         inline uint32_t getBinding() const { return _binding; }
         inline DescriptorType getType() const { return _type; }
         inline uint32_t getShaderStageFlags() const { return _shaderStageFlags; }
@@ -107,6 +122,8 @@ namespace platypus
 
         void destroy();
 
+        bool operator==(const DescriptorSetLayout& other) const { return _bindings == other._bindings; }
+
         inline const std::vector<DescriptorSetLayoutBinding>& getBindings() const { return _bindings; }
         inline const DescriptorSetLayoutImpl* getImpl() const { return _pImpl; }
     };
@@ -128,15 +145,10 @@ namespace platypus
     {
     private:
         friend class DescriptorPool;
-        DescriptorSetImpl* _pImpl = nullptr;
-        std::vector<DescriptorSetComponent> _components;
+        std::shared_ptr<DescriptorSetImpl> _pImpl = nullptr;
 
     public:
         DescriptorSet();
-
-        DescriptorSet(
-            const std::vector<DescriptorSetComponent>& components
-        );
 
         // NOTE: There has been quite a lot of weird issues when copying descriptor sets!
         // PREVIOUS ISSUE: The way descriptor sets are created using DescriptorPool, had to add
@@ -151,8 +163,14 @@ namespace platypus
 
         ~DescriptorSet();
 
-        inline const std::vector<DescriptorSetComponent>& getComponents() const { return _components; }
-        inline const DescriptorSetImpl* getImpl() const { return _pImpl; }
+        void update(
+            DescriptorPool& descriptorPool,
+            uint32_t binding,
+            DescriptorSetComponent component
+        );
+
+        inline const DescriptorSetImpl* getImpl() const { return _pImpl.get(); }
+        inline DescriptorSetImpl* getImpl() { return _pImpl.get(); }
     };
 
 
@@ -172,5 +190,6 @@ namespace platypus
         );
 
         void freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets);
+        inline DescriptorPoolImpl* getImpl() { return _pImpl; }
     };
 }

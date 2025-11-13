@@ -1,55 +1,39 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec3 tangent;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in vec4 tangent;
 
-struct SceneData
+layout(std140) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
     vec4 cameraPosition;
+
+    vec4 ambientLightColor;
     vec4 lightDirection;
     vec4 lightColor;
-    vec4 ambientLightColor;
-};
-uniform SceneData sceneData;
+    // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
+    vec4 shadowProperties;
+} sceneData;
 
-struct InstanceData
+layout(std140) uniform InstanceData
 {
     mat4 transformationMatrix;
-    vec2 meshProperties;
-    // meshProperties.x = tileSize
-    // meshProperties.y = verticesPerRow
-};
-uniform InstanceData instanceData;
+} instanceData;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos; // in tangent space
-varying vec3 var_toCamera; // in tangent space
-varying vec3 var_lightDir; // in tangent space
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+out vec3 var_normal;
+out vec2 var_texCoord;
+out vec3 var_fragPos; // in tangent space
+out vec3 var_toCamera; // in tangent space
+out vec3 var_lightDir; // in tangent space
+out vec4 var_lightColor;
+out vec4 var_ambientLightColor;
 
-varying float var_tileSize;
-varying float var_verticesPerRow;
-
-varying mat3 var_toTangentSpace; // uses locations 9-11
-varying vec4 var_tangent;
-
-mat3 transpose(mat3 matrix)
-{
-    mat3 result;
-    for (int i = 0; i < 3; ++i)
-    {
-        for (int j = 0; j < 3; ++j)
-        {
-            result[i][j] = matrix[j][i];
-        }
-    }
-    return result;
-}
+out mat3 var_toTangentSpace; // uses locations 9-11
+out vec4 var_tangent;
 
 void main()
 {
@@ -57,10 +41,11 @@ void main()
     vec4 transformedPos = instanceData.transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;
 
-    float tileSize = instanceData.meshProperties.x;
-    float verticesPerRow = instanceData.meshProperties.y;
-    float tilesPerRow = verticesPerRow - 1.0;
-    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    //float tileSize = instanceData.meshProperties.x;
+    //float verticesPerRow = instanceData.meshProperties.y;
+    //float tilesPerRow = verticesPerRow - 1.0;
+    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    var_texCoord = texCoord;
 
     var_fragPos = transformedPos.xyz;
 
@@ -81,7 +66,4 @@ void main()
     var_normal = (toCameraSpace * vec4(normal, 0.0)).xyz;
 
     var_tangent = vec4(biTangent, 1.0);
-
-    var_tileSize = instanceData.meshProperties.x;
-    var_verticesPerRow = instanceData.meshProperties.y;
 }

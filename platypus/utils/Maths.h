@@ -86,6 +86,7 @@ namespace platypus
         Vector4f normalize() const;
 
         Vector4f operator+(const Vector4f& other) const;
+        Vector4f operator-(const Vector4f& other) const;
         Vector4f operator*(const Vector4f& other) const;
         Vector4f operator*(float value) const;
 
@@ -161,6 +162,9 @@ namespace platypus
     );
 
     Matrix4f create_rotation_matrix(float pitch, float yaw, float roll);
+
+    Matrix4f create_view_matrix(const Vector3f& position, const Matrix4f& rotationMatrix);
+    Matrix4f create_view_matrix(const Vector3f& position, const Quaternion& rotation);
 
     // NOTE: Some issues with clipspace z component, differing with OpenGL and Vulkan!
     Matrix4f create_orthographic_projection_matrix(

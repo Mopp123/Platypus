@@ -24,3 +24,20 @@ glslc -fshader-stage=vert GUIVertexShader.glsl -o GUIVertexShader.spv
 glslc -fshader-stage=frag GUIFragmentShader.glsl -o GUIFragmentShader.spv
 
 glslc -fshader-stage=frag FontFragmentShader.glsl -o FontFragmentShader.spv
+
+# Shadow casting shaders
+glslc -fshader-stage=vert shadows/StaticVertexShader.glsl -o shadows/StaticVertexShader.spv
+glslc -fshader-stage=frag shadows/StaticFragmentShader.glsl -o shadows/StaticFragmentShader.spv
+
+glslc -fshader-stage=vert shadows/SkinnedVertexShader.glsl -o shadows/SkinnedVertexShader.spv
+glslc -fshader-stage=frag shadows/SkinnedFragmentShader.glsl -o shadows/SkinnedFragmentShader.spv
+
+# Shadow receiving shaders
+glslc -fshader-stage=vert receiveShadows/SkinnedVertexShader.glsl -o receiveShadows/SkinnedVertexShader.spv
+glslc -fshader-stage=frag receiveShadows/SkinnedFragmentShader_ds.glsl -o receiveShadows/SkinnedFragmentShader_ds.spv
+
+glslc -fshader-stage=vert receiveShadows/StaticVertexShader.glsl -o receiveShadows/StaticVertexShader.spv
+glslc -fshader-stage=frag receiveShadows/StaticFragmentShader_ds.glsl -o receiveShadows/StaticFragmentShader_ds.spv
+
+glslc -fshader-stage=vert receiveShadows/TerrainVertexShader_tangent.glsl -o receiveShadows/TerrainVertexShader_tangent.spv
+glslc -fshader-stage=frag receiveShadows/TerrainFragmentShader_dsn.glsl -o receiveShadows/TerrainFragmentShader_dsn.spv

@@ -2,24 +2,25 @@
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
-layout(location = 2) in vec3 tangent;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in vec4 tangent;
 
 layout(set = 0, binding = 0) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
     vec4 cameraPosition;
+
+    vec4 ambientLightColor;
     vec4 lightDirection;
     vec4 lightColor;
-    vec4 ambientLightColor;
+    // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
+    vec4 shadowProperties;
 } sceneData;
 
 layout(set = 1, binding = 0) uniform InstanceData
 {
     mat4 transformationMatrix;
-    vec2 meshProperties;
-    // meshProperties.x = tileSize
-    // meshProperties.y = verticesPerRow
 } instanceData;
 
 layout(location = 0) out vec3 var_normal;
@@ -30,11 +31,8 @@ layout(location = 4) out vec3 var_lightDir; // in tangent space
 layout(location = 5) out vec4 var_lightColor;
 layout(location = 6) out vec4 var_ambientLightColor;
 
-layout(location = 7) out float var_tileSize;
-layout(location = 8) out float var_verticesPerRow;
-
-layout(location = 9) out mat3 var_toTangentSpace; // uses locations 9-11
-layout(location = 12) out vec4 var_tangent;
+layout(location = 7) out mat3 var_toTangentSpace; // uses locations 7-9
+layout(location = 10) out vec4 var_tangent;
 
 void main()
 {
@@ -42,10 +40,11 @@ void main()
     vec4 transformedPos = instanceData.transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * transformedPos;
 
-    const float tileSize = instanceData.meshProperties.x;
-    const float verticesPerRow = instanceData.meshProperties.y;
-    const float tilesPerRow = verticesPerRow - 1.0;
-    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    //const float tileSize = instanceData.meshProperties.x;
+    //const float verticesPerRow = instanceData.meshProperties.y;
+    //const float tilesPerRow = verticesPerRow - 1.0;
+    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
+    var_texCoord = texCoord;
 
     var_fragPos = transformedPos.xyz;
 
@@ -66,7 +65,4 @@ void main()
     var_normal = (toCameraSpace * vec4(normal, 0.0)).xyz;
 
     var_tangent = vec4(biTangent, 1.0);
-
-    var_tileSize = instanceData.meshProperties.x;
-    var_verticesPerRow = instanceData.meshProperties.y;
 }

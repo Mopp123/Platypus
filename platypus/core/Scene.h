@@ -31,6 +31,8 @@ namespace platypus
         std::vector<entityID_t> _freeEntityIDs;
         std::unordered_map<ComponentType, ComponentPool> _componentPools;
 
+        entityID_t _activeCameraEntity = NULL_ENTITY_ID;
+
     public:
         EnvironmentProperties environmentProperties;
 
@@ -48,6 +50,7 @@ namespace platypus
 
         // TODO: All getComponent things could be optimized?
         void* getComponent(ComponentType type, bool enableWarning=true);
+        const void* getComponent(ComponentType type, bool enableWarning=true) const;
         void* getComponent(
             entityID_t entityID,
             ComponentType type,
@@ -68,5 +71,8 @@ namespace platypus
         // @param errLocation This can be used to tell what func caused this to error
         bool isValidEntity(entityID_t entityID, const std::string& errLocation) const;
         bool isValidComponent(ComponentType, const std::string& errLocation) const;
+
+        void setActiveCameraEntity(entityID_t entityID);
+        inline entityID_t getActiveCameraEntity() const { return _activeCameraEntity; }
     };
 }

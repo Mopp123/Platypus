@@ -3,6 +3,8 @@
 #include "Swapchain.h"
 #include "platypus/utils/Maths.h"
 #include "CommandBuffer.h"
+#include "RenderPass.h"
+#include "Framebuffer.hpp"
 #include "Pipeline.h"
 #include "Descriptors.h"
 
@@ -12,17 +14,21 @@ namespace platypus
     // NOTE: Maybe some better namespace for this...
     namespace render
     {
-        // To begin using the swapchain's render pass.
-        // NOTE: Can only be called for the primary command buffer atm!
-        // TODO: Implement Framebuffers and make this take specific framebuffer and render pass instead
-        // of the whole swapchain.
+        // TODO: Make this replace the other begin renderpass funcs!
+        // NOTE: If renderPass is offscreen pass
+        //  -> desktop impl transitions the depth texture back to VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        //  if it was transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL earlier.
+        //  This should probably be done by the renderPass implicitly, but just to make sure for now...
         void begin_render_pass(
-            const CommandBuffer& primaryCmdBuf,
-            const Swapchain& swapchain,
+            CommandBuffer& commandBuffer,
+            const RenderPass& renderPass,
+            const Framebuffer* pFramebuffer,
+            Texture* pDepthAttachment,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         );
-        void end_render_pass(const CommandBuffer& commandBuffer);
+
+        void end_render_pass(CommandBuffer& commandBuffer);
 
         void exec_secondary_command_buffers(
             const CommandBuffer& primary,

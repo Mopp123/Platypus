@@ -2,33 +2,81 @@
 #include "DesktopSwapchain.h"
 #include "platypus/graphics/RenderPass.h"
 #include "DesktopRenderPass.h"
+#include "DesktopFramebuffer.hpp"
 #include "DesktopCommandBuffer.h"
 #include "DesktopPipeline.h"
 #include "DesktopBuffers.h"
 #include "DesktopShader.h"
 #include "DesktopDescriptors.h"
+#include "platypus/assets/Texture.h"
+#include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include "platypus/core/Debug.h"
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 
 namespace platypus
 {
     namespace render
     {
-        // To begin using the swapchain's render pass.
-        // TODO: Implement Framebuffers and make this take specific framebuffer and render pass instead
-        // of the whole swapchain.
         void begin_render_pass(
-            const CommandBuffer& primaryCmdBuf,
-            const Swapchain& swapchain,
+            CommandBuffer& commandBuffer,
+            const RenderPass& renderPass,
+            const Framebuffer* pFramebuffer,
+            Texture* pDepthAttachment,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         )
         {
+            if (!pFramebuffer)
+            {
+                Debug::log(
+                    "@begin_render_pass "
+                    "Framebuffer required for beginning render pass!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
+            if (renderPass.isOffscreenPass() && pDepthAttachment)
+            {
+                TextureImpl* pDepthTextureImpl = pDepthAttachment->getImpl();
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.oldLayout = pDepthTextureImpl->imageLayout;
+                barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = pDepthTextureImpl->image;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+
+                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+                vkCmdPipelineBarrier(
+                    pCmdBufferImpl->handle,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    1, &barrier
+                );
+            }
+
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            beginInfo.renderPass = swapchain.getRenderPass().getImpl()->handle;
-            beginInfo.framebuffer = swapchain.getImpl()->framebuffers[swapchain.getCurrentImageIndex()];
+            beginInfo.renderPass = renderPass.getImpl()->handle;
+            CommandBufferImpl* pCommandBufferImpl = commandBuffer.getImpl();
+            pCommandBufferImpl->pDepthAttachment = pDepthAttachment;
+            beginInfo.framebuffer = pFramebuffer->getImpl()->handle;
 
             VkClearValue clearColorValue{};
             clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
@@ -44,19 +92,54 @@ namespace platypus
             beginInfo.pClearValues = clearValues;
 
             beginInfo.renderArea.offset = { 0, 0 };
-            Extent2D swapchainExtent = swapchain.getExtent();
-            beginInfo.renderArea.extent = { swapchainExtent.width, swapchainExtent.height };
+            beginInfo.renderArea.extent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
 
             vkCmdBeginRenderPass(
-                primaryCmdBuf.getImpl()->handle,
+                pCommandBufferImpl->handle,
                 &beginInfo,
                 VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS
             );
         }
 
-        void end_render_pass(const CommandBuffer& commandBuffer)
+        void end_render_pass(CommandBuffer& commandBuffer)
         {
+            CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
             vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
+
+            if (pCmdBufferImpl->pDepthAttachment)
+            {
+                TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pDepthAttachment->getImpl();
+
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = pDepthTextureImpl->image;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                // (if stencil is present, you might include the stencil bit if you need to preserve it)
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+
+                barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                vkCmdPipelineBarrier(
+                    pCmdBufferImpl->handle,
+                    VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    1, &barrier
+                );
+                pDepthTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+
+            commandBuffer.getImpl()->pDepthAttachment = nullptr;
         }
 
         void exec_secondary_command_buffers(

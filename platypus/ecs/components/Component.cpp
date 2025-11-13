@@ -13,10 +13,11 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE: return "SkinnedMeshRenderable";
             case ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE: return "TerrainMeshRenderable";
             case ComponentType::COMPONENT_TYPE_CAMERA: return "Camera";
-            case ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT: return "DirectionalLight";
+            case ComponentType::COMPONENT_TYPE_LIGHT: return "Light";
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return "SkeletalAnimation";
             case ComponentType::COMPONENT_TYPE_PARENT: return "Parent";
             case ComponentType::COMPONENT_TYPE_CHILDREN: return "Children";
+            case ComponentType::COMPONENT_TYPE_JOINT: return "Joint";
             default: return "Invalid Type";
         }
     }

@@ -44,7 +44,8 @@ namespace platypus
     }
 
     Shader::Shader(const std::string& filename, ShaderStageFlagBits stage) :
-        _stage(stage)
+        _stage(stage),
+        _filename(filename)
     {
         const std::string fullPath = "assets/shaders/desktop/" + filename + ".spv";
         std::vector<char> source = load_file(fullPath);

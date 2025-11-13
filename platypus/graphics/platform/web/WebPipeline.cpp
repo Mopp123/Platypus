@@ -2,12 +2,41 @@
 #include "platypus/graphics/Context.hpp"
 #include "platypus/core/Application.h"
 #include "WebPipeline.h"
-#include "WebShader.h"
+#include "WebContext.hpp"
 #include "platypus/core/Debug.h"
+
+#include <GL/glew.h>
 
 
 namespace platypus
 {
+    static void validate_single_buffer_per_descriptor_set(
+        const std::vector<DescriptorSetLayoutBinding>& layoutBindings
+    )
+    {
+        int bufferCount = 0;
+        for (const DescriptorSetLayoutBinding& binding : layoutBindings)
+        {
+            DescriptorType type = binding.getType();
+            if (type == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                type == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+            {
+                ++bufferCount;
+            }
+        }
+        if (bufferCount > 1)
+        {
+            Debug::log(
+                "@validate_single_buffer_per_descriptor_set(@WebPipeline) "
+                "Web implementation can currentlyhendle only a single uniform buffer "
+                "per descriptor set. Descriptor set layout had " + std::to_string(bufferCount) + " "
+                "bindings for uniform buffers!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+    }
+
     Pipeline::Pipeline(
         const RenderPass* pRenderPass,
         const std::vector<VertexBufferLayout>& vertexBufferLayouts,
@@ -73,12 +102,39 @@ namespace platypus
         Extent2D swapchainExtent = swapchain.getExtent();
         _pImpl->viewportWidth = swapchainExtent.width;
         _pImpl->viewportHeight = swapchainExtent.height;
-        // NOTE: on web platform we aren't using layout qualifiers
-        _pImpl->pShaderProgram = new OpenglShaderProgram(
-            ShaderVersion::ESSL1,
+        OpenglShaderProgram* pShaderProgram = new OpenglShaderProgram(
+            ShaderVersion::ESSL3,
             (const ShaderImpl*)_pVertexShader->_pImpl,
             (const ShaderImpl*)_pFragmentShader->_pImpl
         );
+        _pImpl->pShaderProgram = pShaderProgram;
+
+        // Specify uniform block binding points
+        // NOTE: This currently works only because allowing single uniform buffer
+        // per descriptor set!
+        //  -> No way of specifying buffers per set AND per binding?
+        //      -> UNLESS: have some naming convention where able to parse glsl
+        //      in a way that it's possible to have per set and binding
+        size_t blockBindingPoint = 0;
+        for (const DescriptorSetLayout& layout : _descriptorSetLayouts)
+        {
+            #ifdef PLATYPUS_DEBUG
+            validate_single_buffer_per_descriptor_set(layout.getBindings());
+            #endif
+            for (const DescriptorSetLayoutBinding& binding : layout.getBindings())
+            {
+                DescriptorType type = binding.getType();
+                if (type == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                    type == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                {
+                    uint32_t shaderBlockIndex = pShaderProgram->getUniformBlockIndex(blockBindingPoint);
+                    GL_FUNC(glUniformBlockBinding(_pImpl->pShaderProgram->getID(), shaderBlockIndex, (uint32_t)blockBindingPoint));
+                    ++blockBindingPoint;
+                    break;
+                }
+            }
+        }
+
     }
 
     void Pipeline::destroy()

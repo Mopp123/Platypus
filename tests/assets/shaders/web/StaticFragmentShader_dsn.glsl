@@ -1,36 +1,46 @@
+#version 300 es
 precision mediump float;
 
-varying vec2 var_texCoord;
-varying vec3 var_toCamera; // in tangent space
-varying vec3 var_lightDir; // in tangent space
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+in vec2 var_texCoord;
+in vec3 var_toCamera; // in tangent space
+in vec3 var_lightDir; // in tangent space
+in vec4 var_lightColor;
+in vec4 var_ambientLightColor;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 uniform sampler2D diffuseTextureSampler;
 uniform sampler2D specularTextureSampler;
 uniform sampler2D normalTextureSampler;
-struct MaterialData
+layout(std140) uniform MaterialData
 {
-    vec4 data;
     // x = specular strength
     // y = shininess
     // z = is shadeless
-    // w = dunno...
-};
-uniform MaterialData materialData;
+    // w = unused
+    vec4 lightingProperties;
 
-void main() {
-    vec4 diffuseTextureColor = texture2D(diffuseTextureSampler, var_texCoord);
-    vec4 specularTextureColor = texture2D(specularTextureSampler, var_texCoord);
-    vec4 normalTextureColor = texture2D(normalTextureSampler, var_texCoord);
+    // x,y = texture offset
+    // z,w = texture scale
+    vec4 textureProperties;
+} materialData;
+
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    vec2 finalTexCoord = var_texCoord * materialData.textureProperties.zw;
+    finalTexCoord = finalTexCoord + materialData.textureProperties.xy;
+
+    vec4 diffuseTextureColor = texture(diffuseTextureSampler, finalTexCoord);
+    vec4 specularTextureColor = texture(specularTextureSampler, finalTexCoord);
+    vec4 normalTextureColor = texture(normalTextureSampler, finalTexCoord);
 
     // Make it between -1 and 1
     vec3 normalMapNormal = normalTextureColor.rgb * 2.0 - 1.0;
 
-    float specularStrength = materialData.data.x;
-    float shininess = materialData.data.y;
-    float isShadeless = materialData.data.z;
+    float specularStrength = materialData.lightingProperties.x;
+    float shininess = materialData.lightingProperties.y;
+    float isShadeless = materialData.lightingProperties.z;
 
     vec3 toLight = normalize(-var_lightDir);
     vec3 unitNormal = normalize(normalMapNormal);
@@ -50,5 +60,5 @@ void main() {
     {
         discard;
     }
-    gl_FragColor = finalColor;
+    outColor = finalColor;
 }

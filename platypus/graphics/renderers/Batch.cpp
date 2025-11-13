@@ -1,13 +1,16 @@
 #include "Batch.hpp"
-#include "platypus/assets/TerrainMesh.hpp"
 #include "platypus/core/Application.h"
 #include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
-#include "platypus/graphics/Device.hpp"
 
 
 namespace platypus
 {
+    RenderPassType Batcher::s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES] = {
+        RenderPassType::SCENE_PASS,
+        RenderPassType::SHADOW_PASS
+    };
+
     DescriptorSetLayout Batcher::s_jointDescriptorSetLayout;
     DescriptorSetLayout Batcher::s_terrainDescriptorSetLayout;
 
@@ -46,8 +49,7 @@ namespace platypus
                     DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
                     ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                     {
-                        { ShaderDataType::Mat4 },
-                        { ShaderDataType::Float2 },
+                        { ShaderDataType::Mat4 }
                     }
                 }
             }
@@ -56,290 +58,101 @@ namespace platypus
 
     Batcher::~Batcher()
     {
+        destroyManagedPipelines();
+
         s_jointDescriptorSetLayout.destroy();
         s_terrainDescriptorSetLayout.destroy();
     }
 
-    ID_t Batcher::getBatchID(ID_t meshID, ID_t materialID)
+    static std::string get_shadowpass_shader_name(
+        ShaderStageFlagBits shaderStage,
+        ComponentType renderableType
+    )
     {
-        ID_t identifier = ID::hash(meshID, materialID);
-
-        std::unordered_map<ID_t, size_t>::const_iterator indexIt = _identifierBatchMapping.find(identifier);
-        if (indexIt != _identifierBatchMapping.end())
-            return indexIt->first;
-
-        return NULL_ID;
-    }
-
-    // NOTE: Could even create the pipelines dynamically here, so wouldn't require having those inside
-    // Material anymore?
-    ID_t Batcher::createStaticBatch(ID_t meshID, ID_t materialID)
-    {
-        ID_t identifier = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
+        std::string shaderName = "shadows/";
+        switch (renderableType)
         {
-            return NULL_ID;
+            case ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE: shaderName += "Static"; break;
+            case ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE: shaderName += "Skinned"; break;
+            case ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE: shaderName += "Terrain"; break;
+            default:
+            {
+                Debug::log(
+                    "@(Batcher)get_shadowpass_shader_name "
+                    "Invalid renderable component type: " + component_type_to_string(renderableType),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return "";
+            }
         }
-
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pMaterialPipeline = nullptr;
-        if (pMaterial->getPipelineData() == nullptr)
-            pMaterial->createPipeline(pMesh);
-
-        pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-
-        // Create the instanced transforms buffer
-        const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        std::vector<Buffer*> transformBuffers(framesInFlight);
-        createBatchInstancedBuffers(
-            identifier,
-            sizeof(Matrix4f),
-            _maxStaticBatchLength,
-            framesInFlight,
-            transformBuffers
-        );
-
-        std::vector<BatchShaderResource> shaderResources(1);
-        createBatchShaderResources(
-            framesInFlight,
-            identifier,
-            1,
-            {
-                {
-                    ShaderResourceType::MATERIAL,
-                    sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
-                    pMaterial->getTextures()
-                }
-            },
-            shaderResources
-        );
-
-        // TODO: Some better way to deal with this?
-        const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        validateDescriptorSetCounts(
-            PLATYPUS_CURRENT_FUNC_NAME,
-            framesInFlight,
-            commonDescriptorSets.size(),
-            shaderResources[0].descriptorSet.size()
-        );
-
-        std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
-            framesInFlight,
-            {
-                commonDescriptorSets,
-                shaderResources[0].descriptorSet
-            },
-            useDescriptorSets
-        );
-
-        Batch* pBatch = new Batch{
-            BatchType::STATIC_INSTANCED,
-            pMaterialPipeline,
-            useDescriptorSets,
-            0, // dynamic uniform buffer element size
-            { pMesh->getVertexBuffer() },
-            { transformBuffers },
-            pMesh->getIndexBuffer(),
-            0, // push constants size
-            { }, // push constant uniform infos
-            nullptr, // push constants data
-            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
-            1, // repeat count
-            0, // instance count
-            materialID // materialAssetID
-        };
-
-        // TODO: Optimize? Maybe preallocate and don't push?
-        _identifierBatchMapping[identifier] = _batches.size();
-        _batches.push_back(pBatch);
-        return identifier;
-    }
-
-    ID_t Batcher::createSkinnedBatch(ID_t meshID, ID_t materialID)
-    {
-        ID_t identifier = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
+        switch (shaderStage)
         {
-            return NULL_ID;
+            case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: shaderName += "Vertex"; break;
+            case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: shaderName += "Fragment"; break;
+            default:
+            {
+                Debug::log(
+                    "@(Batcher)get_shadowpass_shader_name "
+                    "Invalid shader stage: " + shader_stage_to_string(shaderStage),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return "";
+            }
         }
-
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pMaterialSkinnedPipeline = nullptr;
-        if (pMaterial->getSkinnedPipelineData() == nullptr)
-            pMaterial->createSkinnedPipeline(pMesh);
-
-        pMaterialSkinnedPipeline = pMaterial->getSkinnedPipelineData()->pPipeline;
-
-        // Create joint uniform buffer and descriptor sets
-        size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        size_t dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
-            sizeof(Matrix4f) * _maxSkinnedMeshJoints
-        );
-
-        std::vector<BatchShaderResource> shaderResources(2);
-        createBatchShaderResources(
-            framesInFlight,
-            identifier,
-            _maxSkinnedBatchLength,
-            {
-                {
-                    ShaderResourceType::ANY,
-                    dynamicUniformBufferElementSize,
-                    s_jointDescriptorSetLayout,
-                    { }
-                },
-                {
-                    ShaderResourceType::MATERIAL,
-                    sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
-                    pMaterial->getTextures()
-                }
-            },
-            shaderResources
-        );
-
-        // TODO: Some better way to deal with this?
-        const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        validateDescriptorSetCounts(
-            PLATYPUS_CURRENT_FUNC_NAME,
-            framesInFlight,
-            commonDescriptorSets.size(),
-            shaderResources[0].descriptorSet.size(),
-            shaderResources[1].descriptorSet.size()
-        );
-
-        std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
-            framesInFlight,
-            {
-                commonDescriptorSets,
-                shaderResources[0].descriptorSet,
-                shaderResources[1].descriptorSet
-            },
-            useDescriptorSets
-        );
-
-        Batch* pBatch = new Batch{
-            BatchType::SKINNED,
-            pMaterialSkinnedPipeline,
-            useDescriptorSets,
-            (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
-            { pMesh->getVertexBuffer() },
-            { }, // dynamic/instanced vertex buffers
-            pMesh->getIndexBuffer(),
-            0, // push constants size
-            { }, // push constant uniform infos
-            nullptr, // push constants data
-            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
-            0, // repeat count
-            0, // instance count
-            materialID // materialAssetID
-        };
-
-        // TODO: Optimize? Maybe preallocate and don't push?
-        _identifierBatchMapping[identifier] = _batches.size();
-        _batches.push_back(pBatch);
-        return identifier;
+        return shaderName + "Shader";
     }
 
-    ID_t Batcher::createTerrainBatch(ID_t terrainMeshID, ID_t materialID)
+    BatchPipelineData* Batcher::createBatchPipelineData(
+        const RenderPass* pRenderPass,
+        const std::string& vertexShaderFilename,
+        const std::string& fragmentShaderFilename,
+        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+        const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
+        size_t pushConstantsSize,
+        ShaderStageFlagBits pushConstantsShaderStage
+    )
     {
-        ID_t identifier = ID::hash(terrainMeshID, materialID);
-        if (!validateBatchDoesntExist(PLATYPUS_CURRENT_FUNC_NAME, identifier))
-        {
-            return NULL_ID;
-        }
-
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        TerrainMesh* pMesh = (TerrainMesh*)pAssetManager->getAsset(terrainMeshID, AssetType::ASSET_TYPE_TERRAIN_MESH);
-        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-        Pipeline* pMaterialPipeline = nullptr;
-        if (pMaterial->getPipelineData() == nullptr)
-            pMaterial->createTerrainPipeline(pMesh);
-
-        pMaterialPipeline = pMaterial->getPipelineData()->pPipeline;
-
-        // Create uniform buffers holding transformation matrix, tile size
-        // and vertices. Also create descriptor sets for these
-        // TODO: Some place to store the element size of the buffer
-        //  -> might become issue when the elem size changes!
-        size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
-        size_t dynamicUniformBufferElementSize = get_dynamic_uniform_buffer_element_size(
-            sizeof(Matrix4f) + sizeof(Vector2f)
+        BatchPipelineData* pPipelineData = new BatchPipelineData;
+        pPipelineData = new BatchPipelineData;
+        pPipelineData->pVertexShader = new Shader(
+            vertexShaderFilename,
+            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
+        );
+        pPipelineData->pFragmentShader = new Shader(
+            fragmentShaderFilename,
+            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
         );
 
-        std::vector<BatchShaderResource> shaderResources(2);
-        createBatchShaderResources(
-            framesInFlight,
-            identifier,
-            _maxTerrainBatchLength,
-            {
-                {
-                    ShaderResourceType::ANY,
-                    dynamicUniformBufferElementSize,
-                    s_terrainDescriptorSetLayout,
-                    { }
-                },
-                {
-                    ShaderResourceType::MATERIAL,
-                    sizeof(Vector4f),
-                    pMaterial->getDescriptorSetLayout(),
-                    pMaterial->getTextures()
-                }
-            },
-            shaderResources
+        CullMode cullMode = pRenderPass->getType() == RenderPassType::SCENE_PASS ? CullMode::CULL_MODE_BACK : CullMode::CULL_MODE_FRONT;
+
+        pPipelineData->pPipeline = new Pipeline(
+            pRenderPass,
+            vertexBufferLayouts,
+            descriptorSetLayouts,
+            pPipelineData->pVertexShader,
+            pPipelineData->pFragmentShader,
+            cullMode,
+            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+            true, // Enable depth test
+            DepthCompareOperation::COMPARE_OP_LESS,
+            true, // Enable color blend
+            pushConstantsSize, // Push constants size
+            pushConstantsShaderStage // Push constants' stage flags
         );
-
-        // TODO: Some better way to deal with these?
-        const std::vector<DescriptorSet>& commonDescriptorSets = _masterRendererRef.getScene3DDataDescriptorSets();
-        validateDescriptorSetCounts(
-            PLATYPUS_CURRENT_FUNC_NAME,
-            framesInFlight,
-            commonDescriptorSets.size(),
-            shaderResources[0].descriptorSet.size(),
-            shaderResources[1].descriptorSet.size()
-        );
-
-        std::vector<std::vector<DescriptorSet>> useDescriptorSets(framesInFlight);
-        combineUsedDescriptorSets(
-            framesInFlight,
-            {
-                commonDescriptorSets,
-                shaderResources[0].descriptorSet,
-                shaderResources[1].descriptorSet
-            },
-            useDescriptorSets
-        );
-
-        Batch* pBatch = new Batch{
-            BatchType::TERRAIN,
-            pMaterialPipeline,
-            useDescriptorSets,
-            (uint32_t)dynamicUniformBufferElementSize, // dynamic uniform buffer element size
-            { pMesh->getVertexBuffer() },
-            { }, // dynamic/instanced vertex buffers
-            pMesh->getIndexBuffer(),
-            0, // push constants size
-            { }, // push constant uniform infos
-            nullptr, // push constants data
-            ShaderStageFlagBits::SHADER_STAGE_NONE, // push constants shader stage flags
-            0, // repeat count
-            0, // instance count,
-            materialID // materialAssetID
-        };
-
-        // TODO: Optimize? Maybe preallocate and don't push?
-        _identifierBatchMapping[identifier] = _batches.size();
-        _batches.push_back(pBatch);
-        return identifier;
+        pPipelineData->pPipeline->create();
+        _managedPipelineData.push_back(pPipelineData);
+        return pPipelineData;
     }
 
+    void Batcher::addBatch(RenderPassType renderPassType, ID_t identifier, Batch* pBatch)
+    {
+        _identifierBatchMapping[renderPassType][identifier] = _batches[renderPassType].size();
+        _batches[renderPassType].push_back(pBatch);
+    }
+
+    /*
     void Batcher::addToStaticBatch(
         ID_t identifier,
         const Matrix4f& transformationMatrix,
@@ -409,8 +222,6 @@ namespace platypus
     void Batcher::addToTerrainBatch(
         ID_t identifier,
         const Matrix4f& transformationMatrix,
-        float tileSize,
-        uint32_t verticesPerRow,
         size_t currentFrame
     )
     {
@@ -432,8 +243,10 @@ namespace platypus
         const size_t terrainDataSize = sizeof(Matrix4f) + sizeof(Vector2f);
         std::vector<PE_byte> terrainData(terrainDataSize);
         memcpy(terrainData.data(), &transformationMatrix, sizeof(Matrix4f));
+        // TODO: Some better way to deal with the tex coord multiplying
+        const float tileSize = 1.0f;
         memcpy(terrainData.data() + sizeof(Matrix4f), &tileSize, sizeof(float));
-        float fVerticesPerRow = verticesPerRow;
+        const float fVerticesPerRow = 2.0f;
         memcpy(terrainData.data() + sizeof(Matrix4f) + sizeof(float), &fVerticesPerRow, sizeof(float));
 
         Buffer* pTerrainBuffer = getBatchBuffer(identifier, 0, currentFrame);
@@ -447,68 +260,47 @@ namespace platypus
         pBatch->instanceCount = 1;
         ++pBatch->repeatCount;
     }
+    */
 
     void Batcher::updateDeviceSideBuffers(size_t currentFrame)
     {
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        std::unordered_map<ID_t, size_t>::const_iterator it;
-        for (it = _batchShaderResourceMapping.begin(); it != _batchShaderResourceMapping.end(); ++it)
+        for (std::vector<BatchShaderResource>& batchResources : _allocatedShaderResources)
         {
-            // TODO: Make safer!
-            const ID_t batchID = it->first;
-            const Batch* pBatch = _batches[_identifierBatchMapping[batchID]];
-            if (pBatch->instanceCount > 0 || pBatch->repeatCount > 0)
+            for (BatchShaderResource& resource : batchResources)
             {
-                // TODO: Make safer!
-                const size_t resourceIndex = _batchShaderResourceMapping[batchID];
-                for (BatchShaderResource& shaderResource : _allocatedShaderResources[resourceIndex])
-                {
-                    Buffer* pBuffer = shaderResource.buffer[currentFrame];
-                    // Update material properties if resource was marked as Material
-                    if (shaderResource.type == ShaderResourceType::MATERIAL && pBatch->materialAssetID != NULL_ID)
-                    {
-                        Vector4f materialProperties(0, 0, 0, 0);
-                        Material* pMaterial = (Material*)pAssetManager->getAsset(
-                            pBatch->materialAssetID,
-                            AssetType::ASSET_TYPE_MATERIAL
-                        );
-                        materialProperties.x = pMaterial->getSpecularStrength();
-                        materialProperties.y = pMaterial->getShininess();
-                        materialProperties.z = pMaterial->isShadeless();
-
-                        pBuffer->updateDeviceAndHost(
-                            &materialProperties,
-                            sizeof(Vector4f),
-                            0
-                        );
-                    }
-                    else
-                    {
-                        pBuffer->updateDevice(
-                            pBuffer->accessData(),
-                            pBuffer->getTotalSize(),
-                            0
-                        );
-                    }
-                }
+                // NOTE: Do we need to really update the whole buffer if it's not used entirely?
+                Buffer* pBuffer = resource.buffer[currentFrame];
+                pBuffer->updateDevice(
+                    pBuffer->accessData(),
+                    pBuffer->getTotalSize(),
+                    0
+                );
             }
         }
     }
 
     void Batcher::resetForNextFrame()
     {
-        for (Batch* pBatch : _batches)
+        std::unordered_map<RenderPassType, std::vector<Batch*>>::iterator batchIt;
+        for (batchIt = _batches.begin(); batchIt != _batches.end(); ++batchIt)
         {
-            pBatch->repeatCount = 0;
-            pBatch->instanceCount = 0;
+            for (Batch* pBatch : batchIt->second)
+            {
+                pBatch->instanceCount = 0;
+                pBatch->repeatCount = 0;
+            }
         }
     }
 
     void Batcher::freeBatches()
     {
         // Free batches themselves
-        for (Batch* pBatch : _batches)
-            delete pBatch;
+        std::unordered_map<RenderPassType, std::vector<Batch*>>::iterator batchIt;
+        for (batchIt = _batches.begin(); batchIt != _batches.end(); ++batchIt)
+        {
+            for (Batch* pBatch : batchIt->second)
+                delete pBatch;
+        }
 
         _batches.clear();
         _identifierBatchMapping.clear();
@@ -529,11 +321,6 @@ namespace platypus
         _batchShaderResourceMapping.clear();
     }
 
-    const std::vector<Batch*>& Batcher::getBatches() const
-    {
-        return _batches;
-    }
-
     const DescriptorSetLayout& Batcher::get_joint_descriptor_set_layout()
     {
         return s_jointDescriptorSetLayout;
@@ -544,8 +331,8 @@ namespace platypus
         return s_terrainDescriptorSetLayout;
     }
 
-    void Batcher::createBatchInstancedBuffers(
-        ID_t batchID,
+    void Batcher::createSharedBatchInstancedBuffers(
+        ID_t identifier,
         size_t bufferElementSize,
         size_t maxBatchLength,
         size_t framesInFlight,
@@ -564,7 +351,7 @@ namespace platypus
                 true
             );
         }
-        addToAllocatedShaderResources(batchID, outBuffers, {});
+        addToAllocatedShaderResources(identifier, outBuffers, {});
     }
 
     void Batcher::createBatchShaderResources(
@@ -641,121 +428,207 @@ namespace platypus
         addToAllocatedShaderResources(batchID, outResources);
     }
 
-    void Batcher::combineUsedDescriptorSets(
+    std::vector<std::vector<DescriptorSet>> Batcher::combineUsedDescriptorSets(
         size_t framesInFlight,
-        const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse,
-        std::vector<std::vector<DescriptorSet>>& outDescriptorSets
+        const std::vector<std::vector<DescriptorSet>>& descriptorSetsToUse
     )
     {
+        if (descriptorSetsToUse.empty())
+            return { };
+
+        std::vector<std::vector<DescriptorSet>> combinedDescriptorSets(framesInFlight);
         for (size_t frame = 0; frame < framesInFlight; ++frame)
         {
             for (size_t descriptorSetIndex = 0; descriptorSetIndex < descriptorSetsToUse.size(); ++descriptorSetIndex)
             {
-                outDescriptorSets[frame].push_back(descriptorSetsToUse[descriptorSetIndex][frame]);
+                combinedDescriptorSets[frame].push_back(descriptorSetsToUse[descriptorSetIndex][frame]);
             }
         }
+        return combinedDescriptorSets;
     }
 
-    Batch* Batcher::getBatch(ID_t batchID)
+    Batch* Batcher::getBatch(RenderPassType renderPassType, ID_t identifier)
     {
-        std::unordered_map<ID_t, size_t>::iterator it = _identifierBatchMapping.find(batchID);
-        if (it == _identifierBatchMapping.end())
-        {
-            Debug::log(
-                "@Batcher::getBatch "
-                "Failed to find batch using identifier: " + std::to_string(batchID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
+        if (_batches.find(renderPassType) == _batches.end())
             return nullptr;
+
+        std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>>::iterator passBatchIndexIt = _identifierBatchMapping.find(renderPassType);
+        if (passBatchIndexIt != _identifierBatchMapping.end())
+        {
+            std::unordered_map<ID_t, size_t>& passBatchIndices = passBatchIndexIt->second;
+            std::unordered_map<ID_t, size_t>::iterator passBatchIt = passBatchIndices.find(identifier);
+            if (passBatchIt != passBatchIndices.end())
+            {
+                size_t batchIndex = passBatchIt->second;
+                return _batches[renderPassType][batchIndex];
+            }
         }
-        return _batches[it->second];
+        return nullptr;
     }
 
-    Buffer* Batcher::getBatchBuffer(ID_t batchID, size_t resourceIndex, size_t frame)
+    // Returns all batches for a render pass
+    const std::vector<Batch*>& Batcher::getBatches(RenderPassType renderPassType)
+    {
+        // NOTE: Not sure is this really okay??
+        // ...Should be fine to just add the key here if it doesn't exist since the vector
+        // remains empty if there was nothing?
+        return _batches[renderPassType];
+    }
+
+    // TODO: Optimize!
+    // Returns batches sharing the same ID for all render passes
+    std::vector<Batch*> Batcher::getBatches(ID_t identifier)
+    {
+        std::vector<Batch*> batches;
+        for (size_t i = 0; i < PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES; ++i)
+        {
+            Batch* pPassBatch = getBatch(s_availableRenderPasses[i], identifier);
+            if (pPassBatch)
+                batches.push_back(pPassBatch);
+        }
+        return batches;
+    }
+
+    BatchShaderResource* Batcher::getSharedBatchResource(ID_t batchID, size_t resourceIndex)
     {
         std::unordered_map<ID_t, size_t>::const_iterator it = _batchShaderResourceMapping.find(batchID);
+        if (it != _batchShaderResourceMapping.end())
+        {
+            // TODO: Make safer!!!!
+            std::vector<BatchShaderResource>& resources = _allocatedShaderResources[it->second];
+            if (resourceIndex < resources.size())
+                return &resources[resourceIndex];
+        }
+        return nullptr;
+    }
+
+    void Batcher::updateHostSideSharedResource(
+        ID_t batchID,
+        size_t resourceIndex,
+        void* pData,
+        size_t dataSize,
+        size_t offset,
+        size_t currentFrame
+    )
+    {
+        std::unordered_map<ID_t, size_t>::iterator it = _batchShaderResourceMapping.find(batchID);
         if (it == _batchShaderResourceMapping.end())
         {
             Debug::log(
-                "@Batcher::getBatchBuffer "
-                "Failed to find batch shader resource using identifier: " + std::to_string(batchID) + " "
-                "resourceIndex = " + std::to_string(resourceIndex),
+                "@Batcher::updateHostSideSharedResource "
+                "No shared shader resource found for batchID: " + std::to_string(batchID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
-            return nullptr;
+            return;
         }
-        // TODO: Make safer?
-        return _allocatedShaderResources[it->second][resourceIndex].buffer[frame];
+        std::vector<BatchShaderResource>& resources = _allocatedShaderResources[it->second];
+        if (resourceIndex >= resources.size())
+        {
+            Debug::log(
+                "@Batcher::updateHostSideSharedResource "
+                "resourceIndex(" + std::to_string(resourceIndex) + ") out of bounds! "
+                "Batch(ID: " + std::to_string(batchID) + ") has " + std::to_string(resources.size()) + " resources.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        BatchShaderResource& resource = resources[resourceIndex];
+        if (currentFrame >= resource.buffer.size())
+        {
+            Debug::log(
+                "@Batcher::updateHostSideSharedResource "
+                "No buffer exists for currentFrame(" + std::to_string(currentFrame) + ") "
+                "Batch(ID: " + std::to_string(batchID) + ") has " + std::to_string(resource.buffer.size()) + " buffers "
+                "for resource index " + std::to_string(resourceIndex),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        resource.buffer[currentFrame]->updateHost(
+            pData,
+            dataSize,
+            offset
+        );
+        resource.requiresDeviceUpdate = true;
     }
 
-    bool Batcher::validateBatchDoesntExist(const char* callLocation, ID_t batchID) const
+    Pipeline* Batcher::getSuitableManagedPipeline(
+        const std::string& vertexShaderFilename,
+        const std::string& fragmentShaderFilename,
+        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
+        const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
+        size_t pushConstantsSize,
+        ShaderStageFlagBits pushConstantsShaderStage
+    )
+    {
+        for (BatchPipelineData* pPipelineData : _managedPipelineData)
+        {
+            Pipeline* pPipeline = pPipelineData->pPipeline;
+            const std::vector<VertexBufferLayout>& pipelineVertexBufferLayouts = pPipeline->getVertexBufferLayouts();
+            const std::vector<DescriptorSetLayout>& pipelineDescriptorSetLayouts = pPipeline->getDescriptorSetLayouts();
+            // NOTE: Not sure if this comparison works properly atm!
+            if (pPipeline->getVertexShader()->getFilename() == vertexShaderFilename &&
+                pPipeline->getFragmentShader()->getFilename() == fragmentShaderFilename &&
+                pipelineVertexBufferLayouts == vertexBufferLayouts &&
+                pipelineDescriptorSetLayouts == descriptorSetLayouts &&
+                pPipeline->getPushConstantsSize() == pushConstantsSize &&
+                pPipeline->getPushConstantsStageFlags() == pushConstantsShaderStage
+            )
+            {
+                return pPipeline;
+            }
+        }
+
+        return nullptr;
+    }
+
+    bool Batcher::validateBatchDoesntExist(
+        const char* callLocation,
+        RenderPassType renderPassType,
+        ID_t batchID
+    ) const
     {
         const std::string locationStr(callLocation);
-        if (_identifierBatchMapping.find(batchID) != _identifierBatchMapping.end())
+        std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>>::const_iterator passIt = _identifierBatchMapping.find(renderPassType);
+        if (passIt != _identifierBatchMapping.end())
         {
-            Debug::log(
-                "@Batcher::" + locationStr +" "
-                "Batch already exists for identifier: " + std::to_string(batchID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return false;
+            const std::unordered_map<ID_t, size_t>& passBatches = passIt->second;
+            std::unordered_map<ID_t, size_t>::const_iterator passBatchIt = passBatches.find(batchID);
+            if (passBatchIt != passBatches.end())
+            {
+                Debug::log(
+                    "@Batcher::" + locationStr + " "
+                    "Batch with identifier: " + std::to_string(batchID) + " already exists "
+                    "for render pass: " + render_pass_type_to_string(renderPassType),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return false;
+            }
         }
         return true;
     }
 
-    bool Batcher::validateDescriptorSetCounts(
-        const char* callLocation,
-        size_t framesInFlight,
-        size_t commonDescriptorSetCount,
-        size_t materialDescriptorSetCount
-    ) const
+    void Batcher::destroyManagedPipelines()
     {
-        if ((commonDescriptorSetCount != framesInFlight) ||
-             (commonDescriptorSetCount != materialDescriptorSetCount))
-        {
-            std::string locationStr(callLocation);
-            Debug::log(
-                "@Batcher::" + locationStr + "(validateDescriptorSetCounts) "
-                "Mismatch in descriptor set counts for " + std::to_string(framesInFlight) + " frames in flight! "
-                "Common descriptor set count: " + std::to_string(commonDescriptorSetCount) + " "
-                "Material descriptor set count: " + std::to_string(materialDescriptorSetCount),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return false;
-        }
-        return true;
+        for (BatchPipelineData* pPipelineData : _managedPipelineData)
+            delete pPipelineData;
+
+        _managedPipelineData.clear();
     }
 
-    bool Batcher::validateDescriptorSetCounts(
-        const char* callLocation,
-        size_t framesInFlight,
-        size_t commonDescriptorSetCount,
-        size_t batchDescriptorSetCount,
-        size_t materialDescriptorSetCount
-    ) const
+    void Batcher::recreateManagedPipelines()
     {
-        if ((commonDescriptorSetCount != framesInFlight) ||
-             (commonDescriptorSetCount != batchDescriptorSetCount) ||
-             (commonDescriptorSetCount != materialDescriptorSetCount) ||
-             (materialDescriptorSetCount != batchDescriptorSetCount))
+        for (BatchPipelineData* pPipelineData : _managedPipelineData)
         {
-            std::string locationStr(callLocation);
-            Debug::log(
-                "@Batcher::" + locationStr + "(validateDescriptorSetCounts) "
-                "Mismatch in descriptor set counts for " + std::to_string(framesInFlight) + " frames in flight! "
-                "Common descriptor set count: " + std::to_string(commonDescriptorSetCount) + " "
-                "Batch descriptor set count: " + std::to_string(batchDescriptorSetCount) + " "
-                "Material descriptor set count: " + std::to_string(materialDescriptorSetCount),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return false;
+            pPipelineData->pPipeline->destroy();
+            pPipelineData->pPipeline->create();
         }
-        return true;
     }
 
     void Batcher::addToAllocatedShaderResources(

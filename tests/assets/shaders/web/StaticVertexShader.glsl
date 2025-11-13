@@ -1,30 +1,45 @@
+#version 300 es
 precision mediump float;
 
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 texCoord;
-attribute mat4 transformationMatrix;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in mat4 transformationMatrix;
 
-struct SceneData
+layout(std140) uniform SceneData
 {
     mat4 projectionMatrix;
     mat4 viewMatrix;
     vec4 cameraPosition;
+
+    vec4 ambientLightColor;
     vec4 lightDirection;
     vec4 lightColor;
-    vec4 ambientLightColor;
-};
-uniform SceneData sceneData;
+    // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
+    vec4 shadowProperties;
+} sceneData;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos;
-varying vec3 var_cameraPos;
-varying vec4 var_lightDir;
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+// struct SceneData
+// {
+//     mat4 projectionMatrix;
+//     mat4 viewMatrix;
+//     vec4 cameraPosition;
+//     vec4 lightDirection;
+//     vec4 lightColor;
+//     vec4 ambientLightColor;
+// };
+// uniform SceneData sceneData;
 
-void main() {
+out vec3 var_normal;
+out vec2 var_texCoord;
+out vec3 var_fragPos;
+out vec3 var_cameraPos;
+out vec4 var_lightDir;
+out vec4 var_lightColor;
+out vec4 var_ambientLightColor;
+
+void main()
+{
     vec4 translatedPos = transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
     vec4 rotatedNormal = transformationMatrix * vec4(normal, 0.0);

@@ -4,6 +4,7 @@
 #include "platypus/assets/TerrainMesh.hpp"
 #include "renderers/MasterRenderer.h"
 #include "renderers/Batch.hpp"
+#include "platypus/core/Debug.h"
 #include <string>
 
 
@@ -81,6 +82,7 @@ namespace platypus
     }
 
     Pipeline* create_terrain_material_pipeline(
+        const RenderPass& renderPass,
         const VertexBufferLayout& meshVertexBufferLayout,
         Material* pMaterial
     )
@@ -93,15 +95,14 @@ namespace platypus
             pMaterial->getDescriptorSetLayout()
         };
 
-        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
         // NOTE: Currently sending proj mat as push constant
         Pipeline* pPipeline = new Pipeline(
-            swapchain.getRenderPassPtr(),
+            &renderPass,
             { meshVertexBufferLayout },
             useDescriptorSetLayouts,
             pMaterial->getVertexShader(),
             pMaterial->getFragmentShader(),
-            CullMode::CULL_MODE_NONE,
+            CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
             DepthCompareOperation::COMPARE_OP_LESS,

@@ -3,7 +3,6 @@
 #include "Asset.h"
 #include "Image.h"
 #include "Mesh.h"
-#include "TerrainMesh.hpp"
 #include "Model.h"
 #include "Texture.h"
 #include "Material.h"
@@ -30,19 +29,31 @@ namespace platypus
         ~AssetManager();
         void destroyAssets();
 
-        Image* createImage(PE_ubyte* pData, int width, int height, int channels);
-        Image* loadImage(const std::string& filepath);
+        Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
+        Image* loadImage(const std::string& filepath, ImageFormat format);
         Texture* createTexture(
             ID_t imageID,
-            ImageFormat targetFormat,
             const TextureSampler& sampler,
             uint32_t textureAtlasRows = 1
         );
         Texture* loadTexture(
             const std::string& filepath,
-            ImageFormat targetFormat,
+            ImageFormat format,
             const TextureSampler& sampler,
             uint32_t textureAtlasRows = 1
+        );
+        Material* createMaterial(
+            MaterialType type,
+            ID_t blendmapTextureID,
+            std::vector<ID_t> diffuseTextureIDs,
+            std::vector<ID_t> specularTextureIDs,
+            std::vector<ID_t> normalTextureIDs,
+            float specularStrength,
+            float shininess,
+            const Vector2f& textureOffset,
+            const Vector2f& textureScale,
+            bool receiveShadows,
+            bool shadeless
         );
         Material* createMaterial(
             MaterialType type,
@@ -64,7 +75,7 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
-        TerrainMesh* createTerrainMesh(
+        Mesh* createTerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,
             bool dynamic,
@@ -76,8 +87,13 @@ namespace platypus
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
+        bool assetExists(ID_t assetID, AssetType type) const;
+        Asset* getAsset(ID_t assetID) const;
         Asset* getAsset(ID_t assetID, AssetType type) const;
         std::vector<Asset*> getAssets(AssetType type) const;
+
+        void addExternalPersistentAsset(Asset* pAsset);
+        void destroyExternalPersistentAsset(Asset* pAsset);
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }

@@ -75,16 +75,9 @@ namespace platypus
 
     bool vao_deletion_allowed(ContextImpl* pContextImpl, uint32_t vaoID)
     {
-        if (pContextImpl->vaoBufferMapping[vaoID].empty())
+        if (pContextImpl->vaoDataMapping[vaoID].bufferIDs.empty())
             return true;
 
-        // If vaoBufferMapping contains only "complementary" buffer ids for the vao
-        // it can also be deleted
-        for (uint32_t bufferID : pContextImpl->vaoBufferMapping[vaoID])
-        {
-            if (pContextImpl->complementaryVbos.find(bufferID) == pContextImpl->complementaryVbos.end())
-                return false;
-        }
         return true;
     }
 

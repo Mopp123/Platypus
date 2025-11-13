@@ -10,9 +10,12 @@ layout(set = 0, binding = 0) uniform SceneData
     mat4 projectionMatrix;
     mat4 viewMatrix;
     vec4 cameraPosition;
+
+    vec4 ambientLightColor;
     vec4 lightDirection;
     vec4 lightColor;
-    vec4 ambientLightColor;
+    // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
+    vec4 shadowProperties;
 } sceneData;
 
 layout(location = 0) out vec3 var_normal;

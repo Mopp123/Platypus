@@ -19,14 +19,22 @@ namespace platypus
     enum class ShaderVersion
     {
         GLSL3,
-        ESSL1
+        ESSL3
     };
+
 
     std::string shader_stage_to_string(uint32_t shaderStage);
 
+    std::string get_default_complete_shader_filename(
+        const std::string nameBegin,
+        uint32_t shaderStage,
+        bool hasSpecularMap,
+        bool hasNormalMap,
+        bool skinned,
+        bool shadowPipeline
+    );
 
     class Pipeline;
-
     struct ShaderImpl;
     class Shader
     {
@@ -34,6 +42,7 @@ namespace platypus
         friend class Pipeline;
         ShaderImpl* _pImpl = nullptr;
         ShaderStageFlagBits _stage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+        std::string _filename;
 
     public:
         // Give shader's file name only EXCLUDING path and extension.
@@ -43,5 +52,6 @@ namespace platypus
         ~Shader();
 
         inline ShaderStageFlagBits getStage() const { return _stage; }
+        inline const std::string& getFilename() const { return _filename; } // Should rather be string view instead!
     };
 }

@@ -30,7 +30,7 @@ namespace platypus
     {
     }
 
-    void CommandBuffer::begin(const RenderPass& renderPass)
+    void CommandBuffer::begin(const RenderPass* renderPass)
     {
     }
 

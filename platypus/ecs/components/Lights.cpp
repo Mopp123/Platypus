@@ -6,10 +6,25 @@
 
 namespace platypus
 {
-    DirectionalLight* create_directional_light(
+    std::string light_type_to_string(LightType type)
+    {
+        switch (type)
+        {
+            case LightType::DIRECTIONAL_LIGHT: return "DIRECTIONAL_LIGHT";
+            case LightType::POINT_LIGHT: return "POINT_LIGHT";
+            case LightType::SPOT_LIGHT: return "SPOT_LIGHT";
+            default: return "<Invalid type>";
+        }
+    }
+
+    Light* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
-        const Vector3f& color
+        const Vector3f& color,
+        const Matrix4f& shadowProjectionMatrix,
+        const Matrix4f& shadowViewMatrix,
+        bool enableShadows,
+        float maxShadowDistance
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -18,7 +33,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT;
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_LIGHT;
         void* pComponent = pScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
@@ -31,9 +46,31 @@ namespace platypus
             return nullptr;
         }
         pScene->addToComponentMask(target, componentType);
-        DirectionalLight* pDirectionalLight = (DirectionalLight*)pComponent;
+        Light* pDirectionalLight = (Light*)pComponent;
+        pDirectionalLight->shadowProjectionMatrix = shadowProjectionMatrix;
+        pDirectionalLight->shadowViewMatrix = shadowViewMatrix;
         pDirectionalLight->direction = direction;
         pDirectionalLight->color = color;
+        pDirectionalLight->maxShadowDistance = maxShadowDistance;
+        pDirectionalLight->type = LightType::DIRECTIONAL_LIGHT;
+        pDirectionalLight->enableShadows = enableShadows;
         return pDirectionalLight;
+    }
+
+    Light* create_directional_light(
+        entityID_t target,
+        const Vector3f& direction,
+        const Vector3f& color
+    )
+    {
+        return create_directional_light(
+            target,
+            direction,
+            color,
+            Matrix4f(1.0f),
+            Matrix4f(1.0f),
+            false,
+            0.0f
+        );
     }
 }

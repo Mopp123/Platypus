@@ -8,6 +8,7 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/systems/SkeletalAnimationSystem.h"
 #include "platypus/ecs/systems/TransformSystem.h"
+#include "platypus/ecs/systems/LightSystem.hpp"
 
 
 namespace platypus
@@ -64,9 +65,9 @@ namespace platypus
             1,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
-            sizeof(DirectionalLight),
+        _componentPools[ComponentType::COMPONENT_TYPE_LIGHT] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_LIGHT,
+            sizeof(Light),
             1,
             true
         );
@@ -91,6 +92,7 @@ namespace platypus
 
         _systems.push_back(new SkeletalAnimationSystem);
         _systems.push_back(new TransformSystem);
+        _systems.push_back(new LightSystem);
     }
 
     Scene::~Scene()
@@ -251,6 +253,29 @@ namespace platypus
         return _componentPools[type].first();
     }
 
+    const void* Scene::getComponent(ComponentType type, bool enableWarning) const
+    {
+        if (!isValidComponent(type, "getComponent"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        std::unordered_map<ComponentType, ComponentPool>::const_iterator it = _componentPools.find(type);
+        if (it->second.getComponentCount() == 0)
+        {
+            if (enableWarning)
+            {
+                Debug::log(
+                    "Scene::getComponent "
+                    "No components of type: " + component_type_to_string(type) + " found",
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+            }
+            return nullptr;
+        }
+        return it->second.first();
+    }
+
     void* Scene::getComponent(
         entityID_t entityID,
         ComponentType type,
@@ -385,5 +410,24 @@ namespace platypus
             );
         }
         return success;
+    }
+
+    void Scene::setActiveCameraEntity(entityID_t entityID)
+    {
+        PLATYPUS_ASSERT(isValidEntity(entityID, "Scene::setActiveCameraEntity"));
+        const uint64_t requiredComponentMask = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_CAMERA;
+        Entity entity = getEntity(entityID);
+        if ((entity.componentMask & requiredComponentMask) == 0)
+        {
+            Debug::log(
+                "@Scene::setActiveCameraEntity "
+                "Entity: " + std::to_string(entityID) + " had inefficient component mask "
+                "for being active camera!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        _activeCameraEntity = entityID;
     }
 }

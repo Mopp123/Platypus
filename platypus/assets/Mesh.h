@@ -40,6 +40,13 @@ namespace platypus
 
         ~Mesh();
 
+        static Mesh* generate_terrain(
+            float tileSize,
+            const std::vector<float>& heightmapData,
+            bool dynamic,
+            bool generateTangents
+        );
+
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline Buffer* getVertexBuffer() { return _pVertexBuffer; }

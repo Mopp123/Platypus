@@ -138,6 +138,10 @@ namespace platypus
             uint32_t layer,
             ID_t textureID
         );
+        bool freeBatch(
+            uint32_t layer,
+            ID_t textureID
+        );
 
         bool hasDescriptorSets(ID_t textureID) const;
         void createTextureDescriptorSets(ID_t textureID);

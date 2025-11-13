@@ -159,6 +159,29 @@ namespace platypus
         };
     }
 
+    Matrix4f get_global_rotation_matrix(const Transform* pTransform)
+    {
+        const Matrix4f& transformationMatrix = pTransform->globalMatrix;
+        // NOTE: Not sure if rotationMatrix[3 + 3 * 4] should be 0 instead of 1 here?
+        Matrix4f rotationMatrix(1.0f);
+	    rotationMatrix[1 + 1 * 4] = transformationMatrix[1 + 1 * 4];
+	    rotationMatrix[1 + 2 * 4] = transformationMatrix[1 + 2 * 4];
+	    rotationMatrix[2 + 1 * 4] = transformationMatrix[2 + 1 * 4];
+	    rotationMatrix[2 + 2 * 4] = transformationMatrix[2 + 2 * 4];
+
+	    rotationMatrix[0 + 0 * 4] = transformationMatrix[0 + 0 * 4];
+	    rotationMatrix[0 + 2 * 4] = transformationMatrix[0 + 2 * 4];
+	    rotationMatrix[2 + 0 * 4] = transformationMatrix[2 + 0 * 4];
+	    rotationMatrix[2 + 2 * 4] = transformationMatrix[2 + 2 * 4];
+
+	    rotationMatrix[0 + 0 * 4] = transformationMatrix[0 + 0 * 4];
+	    rotationMatrix[0 + 1 * 4] = transformationMatrix[0 + 1 * 4];
+	    rotationMatrix[1 + 0 * 4] = transformationMatrix[1 + 0 * 4];
+	    rotationMatrix[1 + 1 * 4] = transformationMatrix[1 + 1 * 4];
+
+        return rotationMatrix;
+    }
+
     static entityID_t create_transform_entity_hierarchy(
         const std::vector<Joint>& joints,
         const std::vector<std::vector<uint32_t>>& jointChildMapping,

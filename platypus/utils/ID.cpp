@@ -58,6 +58,17 @@ namespace platypus
         uint32_t A = (uint32_t)(a >= 0 ? 2 * (int32_t)a : -2 * (int32_t)a - 1);
         uint32_t B = (uint32_t)(b >= 0 ? 2 * (int32_t)b : -2 * (int32_t)b - 1);
         uint32_t C = (int32_t)((A >= B ? A * A + A + B : A + B * B) / 2);
-        return (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
+        ID_t id = (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
+        if (s_usedIDs.find(id) != s_usedIDs.end())
+        {
+            Debug::log(
+                "@ID::hash "
+                "ID: " + std::to_string(id) + " already exists!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return NULL_ID;
+        }
+        return id;
     }
 }

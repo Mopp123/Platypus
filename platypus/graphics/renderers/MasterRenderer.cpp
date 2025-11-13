@@ -1,4 +1,5 @@
 #include "MasterRenderer.h"
+#include "platypus/assets/Texture.h"
 #include "platypus/core/Application.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/core/Debug.h"
@@ -8,14 +9,16 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "platypus/assets/TerrainMesh.hpp"
+#include "StaticBatch.hpp"
+#include "SkinnedBatch.hpp"
+#include "TerrainBatch.hpp"
 
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(const Window& window) :
-        _swapchain(window),
-        _descriptorPool(_swapchain),
+    MasterRenderer::MasterRenderer(Swapchain& swapchain) :
+        _swapchainRef(swapchain),
+        _descriptorPool(_swapchainRef),
         _batcher(*this, _descriptorPool, 1000, 1000, 9, 50),
 
         _scene3DDataDescriptorSetLayout(
@@ -35,6 +38,26 @@ namespace platypus
                     }
                 }
             }
+        ),
+        _shadowPass(RenderPassType::SHADOW_PASS, true),
+        _shadowTextureSampler(
+            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
+            TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            false,
+            0
+        ),
+        _shadowmapDescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    {
+                        { }
+                    }
+                }
+            }
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
@@ -45,12 +68,28 @@ namespace platypus
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
-        allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+        allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
         createCommonShaderResources();
+
+        // Not sure if this fallback is enough...
+        if (Device::is_depth_format_supported(ImageFormat::D32_SFLOAT))
+            _shadowDepthImageFormat = ImageFormat::D32_SFLOAT;
+        else
+            _shadowDepthImageFormat = Device::get_first_supported_depth_format();
+
+        _shadowPass.create(
+            ImageFormat::NONE,
+            _shadowDepthImageFormat
+        );
+        createShadowPassResources();
     }
 
     MasterRenderer::~MasterRenderer()
     {
+        destroyShadowPassResources();
+        _shadowPass.destroy();
+        _shadowmapDescriptorSetLayout.destroy();
+
         destroyCommonShaderResources();
         _scene3DDataDescriptorSetLayout.destroy();
     }
@@ -87,6 +126,19 @@ namespace platypus
             return;
         }
 
+        // NOTE: ONLY TESTING, DANGEROUS AND INEFFICIENT AS FUCK!
+        // TODO: Better way to get shadow caster proj and view matrices!!!!
+        void* pShadowPassPushConstants = nullptr;
+        size_t shadowPassPushConstantsSize = 0;
+        Light* pDirectionalLight = (Light*)pScene->getComponent(
+            ComponentType::COMPONENT_TYPE_LIGHT
+        );
+        if (pDirectionalLight)
+        {
+            pShadowPassPushConstants = (void*)pDirectionalLight;
+            shadowPassPushConstantsSize = sizeof(Matrix4f) * 2;
+        }
+
         // NOTE: Below should rather be done by the "batcher" since these are kind of batching related operations?!
         Transform* pTransform = (Transform*)pScene->getComponent(
             entity.id,
@@ -101,21 +153,40 @@ namespace platypus
             false,
             false
         );
+
         if (pStaticRenderable)
         {
             const ID_t meshID = pStaticRenderable->meshID;
             const ID_t materialID = pStaticRenderable->materialID;
-            ID_t batchID = _batcher.getBatchID(meshID, materialID);
-            if (batchID == NULL_ID)
+            ID_t batchID = ID::hash(meshID, materialID);
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
             {
-                Debug::log(
-                    "@MasterRenderer::submit "
-                    "No suitable batch found for StaticMeshRenderable. Creating a new one..."
+                create_static_batch(
+                    _batcher,
+                    _batcher.getMaxStaticBatchLength(),
+                    _swapchainRef.getRenderPassPtr(),
+                    meshID,
+                    materialID,
+                    pDirectionalLight
                 );
-                // TODO: Error handling if creation fails
-                batchID = _batcher.createStaticBatch(meshID, materialID);
+
+                create_static_shadow_batch(
+                    _batcher,
+                    _batcher.getMaxStaticBatchLength(),
+                    &_shadowPass,
+                    meshID,
+                    materialID,
+                    pShadowPassPushConstants,
+                    shadowPassPushConstantsSize
+                );
             }
-            _batcher.addToStaticBatch(batchID, pTransform->globalMatrix, _currentFrame);
+            add_to_static_batch(
+                _batcher,
+                batchID,
+                pTransform->globalMatrix,
+                _currentFrame
+            );
         }
 
         SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
@@ -128,17 +199,33 @@ namespace platypus
         {
             const ID_t meshID = pSkinnedRenderable->meshID;
             const ID_t materialID = pSkinnedRenderable->materialID;
-            ID_t batchID = _batcher.getBatchID(meshID, materialID);
-            if (batchID == NULL_ID)
+            ID_t batchID = ID::hash(meshID, materialID);
+            const size_t maxSkinnedBatchLength = _batcher.getMaxSkinnedBatchLength();
+            const size_t maxJoints = _batcher.getMaxSkinnedMeshJoints();
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
             {
-                Debug::log(
-                    "@MasterRenderer::submit "
-                    "No suitable batch found for SkinnedMeshRenderable. Creating a new one..."
+                create_skinned_batch(
+                    _batcher,
+                    maxSkinnedBatchLength,
+                    maxJoints,
+                    _swapchainRef.getRenderPassPtr(),
+                    meshID,
+                    materialID,
+                    pDirectionalLight
                 );
-                // TODO: Error handling if creation fails
-                batchID = _batcher.createSkinnedBatch(meshID, materialID);
-            }
 
+                create_skinned_shadow_batch(
+                    _batcher,
+                    maxSkinnedBatchLength,
+                    maxJoints,
+                    &_shadowPass,
+                    meshID,
+                    materialID,
+                    pShadowPassPushConstants,
+                    shadowPassPushConstantsSize
+                );
+            }
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
                 entity.id,
                 ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
@@ -148,12 +235,14 @@ namespace platypus
                 AssetType::ASSET_TYPE_MESH
             );
 
-            _batcher.addToSkinnedBatch(
+            add_to_skinned_batch(
+                _batcher,
                 batchID,
                 (void*)pAnimation->jointMatrices,
                 sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
                 _currentFrame
             );
+
         }
 
         TerrainMeshRenderable* pTerrainRenderable = (TerrainMeshRenderable*)pScene->getComponent(
@@ -164,28 +253,25 @@ namespace platypus
         );
         if (pTerrainRenderable)
         {
-            const ID_t terrainMeshID = pTerrainRenderable->terrainMeshID;
+            const ID_t meshID = pTerrainRenderable->meshID;
             const ID_t materialID = pTerrainRenderable->materialID;
-            ID_t batchID = _batcher.getBatchID(terrainMeshID, materialID);
-            if (batchID == NULL_ID)
+            ID_t batchID = ID::hash(meshID, materialID);
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
             {
-                Debug::log(
-                    "@MasterRenderer::submit "
-                    "No suitable batch found for TerrainMeshRenderable. Creating a new one..."
+                create_terrain_batch(
+                    _batcher,
+                    _batcher.getMaxTerrainBatchLength(),
+                    _swapchainRef.getRenderPassPtr(),
+                    meshID,
+                    materialID,
+                    pDirectionalLight
                 );
-                // TODO: Error handling if creation fails
-                batchID = _batcher.createTerrainBatch(terrainMeshID, materialID);
             }
-
-            const TerrainMesh* pTerrainMesh = (const TerrainMesh*)Application::get_instance()->getAssetManager()->getAsset(
-                pTerrainRenderable->terrainMeshID,
-                AssetType::ASSET_TYPE_TERRAIN_MESH
-            );
-            _batcher.addToTerrainBatch(
+            add_to_terrain_batch(
+                _batcher,
                 batchID,
                 pTransform->globalMatrix,
-                pTerrainMesh->getTileSize(),
-                pTerrainMesh->getVerticesPerRow(),
                 _currentFrame
             );
         }
@@ -196,7 +282,7 @@ namespace platypus
 
     void MasterRenderer::render(const Window& window)
     {
-        SwapchainResult result = _swapchain.acquireImage();
+        SwapchainResult result = _swapchainRef.acquireImage();
         if (result == SwapchainResult::ERROR)
         {
             Debug::log(
@@ -214,15 +300,152 @@ namespace platypus
         {
             const CommandBuffer& cmdBuf = recordCommandBuffer();
             Device::submit_primary_command_buffer(
-                _swapchain,
+                _swapchainRef,
                 cmdBuf,
-                _swapchain.getCurrentFrame()
+                _swapchainRef.getCurrentFrame()
             );
 
             // present may also tell us to recreate swapchain!
-            if (_swapchain.present() == SwapchainResult::RESIZE_REQUIRED || window.resized())
+            if (_swapchainRef.present() == SwapchainResult::RESIZE_REQUIRED || window.resized())
                 handleWindowResize();
         }
+    }
+
+    void MasterRenderer::solveVertexBufferLayouts(
+        const VertexBufferLayout& meshVertexBufferLayout,
+        bool instanced,
+        bool skinned,
+        bool shadowPipeline,
+        std::vector<VertexBufferLayout>& outVertexBufferLayouts
+    ) const
+    {
+        if (!shadowPipeline)
+        {
+            outVertexBufferLayouts.push_back(meshVertexBufferLayout);
+        }
+        else
+        {
+            if (!skinned)
+            {
+                outVertexBufferLayouts.push_back(
+                    {
+                        {{ 0, ShaderDataType::Float3 }},
+                        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+                        0,
+                        meshVertexBufferLayout.getStride()
+                    }
+                );
+            }
+            else
+            {
+                outVertexBufferLayouts.push_back(
+                    VertexBufferLayout::get_common_skinned_shadow_layout(
+                        meshVertexBufferLayout.getStride()
+                    )
+                );
+            }
+        }
+
+        if (instanced)
+        {
+            uint32_t meshVBLayoutElements = outVertexBufferLayouts.back().getElements().size();
+            VertexBufferLayout instancedVBLayout = {
+                {
+                    { meshVBLayoutElements, ShaderDataType::Float4 },
+                    { meshVBLayoutElements + 1, ShaderDataType::Float4 },
+                    { meshVBLayoutElements + 2, ShaderDataType::Float4 },
+                    { meshVBLayoutElements + 3, ShaderDataType::Float4 }
+                },
+                VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+                1
+            };
+            outVertexBufferLayouts.push_back(instancedVBLayout);
+        }
+    }
+
+    void MasterRenderer::solveDescriptorSetLayouts(
+        const Material* pMaterial,
+        bool skinned,
+        bool shadowPipeline,
+        std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
+    ) const
+    {
+        MaterialType materialType = MaterialType::NONE;
+        if (pMaterial)
+        {
+            materialType = pMaterial->getMaterialType();
+            if (skinned && materialType == MaterialType::TERRAIN)
+            {
+                Debug::log(
+                    "@MasterRenderer::solveDescriptorSetLayouts "
+                    "Illegal to solve descriptor set layouts for Terrain Materials with skinning!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+
+        if (!shadowPipeline)
+        {
+            outDescriptorSetLayouts.push_back(_scene3DDataDescriptorSetLayout);
+        }
+        else
+        {
+            // TODO: Common shadow descriptor set layout (light view and proj matrices, etc)
+            //outDescriptorSetLayouts.push_back(_scene3DDataDescriptorSetLayout);
+        }
+
+        if (skinned)
+        {
+            outDescriptorSetLayouts.push_back(Batcher::get_joint_descriptor_set_layout());
+        }
+        else if (materialType == MaterialType::TERRAIN)
+        {
+            outDescriptorSetLayouts.push_back(Batcher::get_terrain_descriptor_set_layout());
+        }
+
+        // Checking if shadow pipeline here, since need to add the Material descriptor set layout
+        // last if it's used!
+        if (!shadowPipeline && pMaterial)
+            outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
+    }
+
+    void MasterRenderer::createShadowPassResources()
+    {
+        _pShadowFramebufferDepthTexture = new Texture(
+            TextureType::DEPTH_TEXTURE,
+            _shadowTextureSampler,
+            _shadowDepthImageFormat,
+            _shadowmapWidth,
+            _shadowmapWidth
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferDepthTexture);
+
+        _pShadowFramebuffer = new Framebuffer(
+            _shadowPass,
+            { },
+            _pShadowFramebufferDepthTexture,
+            _shadowmapWidth,
+            _shadowmapWidth
+        );
+
+        // Update new shadow texture for materials that receive shadows
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+        {
+            Material* pMaterial = (Material*)pAsset;
+            if (pMaterial->receivesShadows())
+                pMaterial->updateShadowmapDescriptorSet(_pShadowFramebufferDepthTexture);
+        }
+    }
+
+    void MasterRenderer::destroyShadowPassResources()
+    {
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
+        delete _pShadowFramebuffer;
+
+        _pShadowFramebufferDepthTexture = nullptr;
+        _pShadowFramebuffer = nullptr;
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
@@ -250,10 +473,10 @@ namespace platypus
 
     void MasterRenderer::createPipelines()
     {
-        const Extent2D swapchainExtent = _swapchain.getExtent();
+        const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
         _pGUIRenderer->createPipeline(
-            _swapchain.getRenderPass(),
+            _swapchainRef.getRenderPass(),
             swapchainExtent.width,
             swapchainExtent.height
         );
@@ -272,11 +495,25 @@ namespace platypus
             ((Material*)pAsset)->destroyPipeline();
     }
 
+    void MasterRenderer::createShaderResources()
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->createShaderResources();
+    }
+
+    void MasterRenderer::destroyShaderResources()
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
+            ((Material*)pAsset)->destroyShaderResources();
+    }
+
     void MasterRenderer::createCommonShaderResources()
     {
         // Create common uniform buffers and descriptor sets
         Scene3DData scene3DData;
-        for (int i = 0; i < _swapchain.getMaxFramesInFlight(); ++i)
+        for (int i = 0; i < _swapchainRef.getMaxFramesInFlight(); ++i)
         {
             Buffer* pScene3DDataUniformBuffer = new Buffer(
                 &scene3DData,
@@ -321,24 +558,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
-
-        currentCommandBuffer.begin(_swapchain.getRenderPass());
-
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
-
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _swapchain,
-            pScene->environmentProperties.clearColor,
-            true
-        );
-
-        // NOTE: We create new copies of secondary command buffers here
-        // TODO: Figure out some nice way to optimize this!
-        std::vector<CommandBuffer> secondaryCommandBuffers;
 
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
@@ -365,8 +587,18 @@ namespace platypus
         _scene3DData.cameraPosition = cameraPosition;
         _scene3DData.viewMatrix = viewMatrix;
 
-        const DirectionalLight* pDirectionalLight = (const DirectionalLight*)pScene->getComponent(
-            ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT,
+        const Vector3f sceneAmbientLight = pScene->environmentProperties.ambientColor;
+        _scene3DData.ambientLightColor = {
+            sceneAmbientLight.r,
+            sceneAmbientLight.g,
+            sceneAmbientLight.b,
+            1.0f
+        };
+
+        // NOTE: Consider all light data of all scene lights inside a single
+        // descriptor set?
+        const Light* pDirectionalLight = (const Light*)pScene->getComponent(
+            ComponentType::COMPONENT_TYPE_LIGHT,
             false
         );
         if (!pDirectionalLight)
@@ -390,13 +622,11 @@ namespace platypus
                 1.0f
             };
         }
-
-        const Vector3f sceneAmbientLight = pScene->environmentProperties.ambientColor;
-        _scene3DData.ambientLightColor = {
-            sceneAmbientLight.r,
-            sceneAmbientLight.g,
-            sceneAmbientLight.b,
-            1.0f
+        _scene3DData.shadowProperties = {
+            (float)_shadowmapWidth,
+            2.0f, // pcf sample radius
+            0.9f, // shadow strength
+            0.0f // undetermined
         };
 
         _scene3DDataUniformBuffers[_currentFrame]->updateDeviceAndHost(
@@ -404,27 +634,73 @@ namespace platypus
             sizeof(Scene3DData),
             0
         );
+        const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
-        const Extent2D swapchainExtent = _swapchain.getExtent();
         // NOTE:
         //      *Before sending the complete batch to Renderer3D, need to update device side buffers,
         //      because when adding to a batch, it only updates the host side!
         _batcher.updateDeviceSideBuffers(_currentFrame);
+
+        CommandBuffer& currentCommandBuffer = _primaryCommandBuffers[_currentFrame];
+        currentCommandBuffer.begin(nullptr);
+
+
+
+        // TESTING SHADOW PASS -----------------------------------
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _shadowPass,
+            _pShadowFramebuffer,
+            _pShadowFramebuffer->getDepthAttachment(),
+            { 1, 0, 1, 1 },
+            true
+        );
+        std::vector<CommandBuffer> testSecondaries;
+        testSecondaries.push_back(
+            _pRenderer3D->recordCommandBuffer(
+                _shadowPass,
+                (float)_shadowmapWidth,
+                (float)_shadowmapWidth,
+                _batcher.getBatches(RenderPassType::SHADOW_PASS)
+            )
+        );
+        render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
+        render::end_render_pass(currentCommandBuffer);
+        // TESTING END ^^^ -------------------------------------------
+
+
+
+
+        const Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _swapchainRef.getRenderPass(),
+            pCurrentSwapchainFramebuffer,
+            nullptr,
+            pScene->environmentProperties.clearColor,
+            true
+        );
+
+        // NOTE: We create new copies of secondary command buffers here
+        // TODO: Figure out some nice way to optimize this!
+        std::vector<CommandBuffer> secondaryCommandBuffers;
         secondaryCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
-                _swapchain.getRenderPass(),
+                _swapchainRef.getRenderPass(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
-                _batcher.getBatches()
+                _batcher.getBatches(RenderPassType::SCENE_PASS)
             )
         );
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
         _batcher.resetForNextFrame();
 
+        _pRenderer3D->advanceFrame();
+
         secondaryCommandBuffers.push_back(
             _pGUIRenderer->recordCommandBuffer(
-                _swapchain.getRenderPass(),
+                _swapchainRef.getRenderPass(),
                 swapchainExtent.width,
                 swapchainExtent.height,
                 orthographicProjectionMatrix,
@@ -437,7 +713,7 @@ namespace platypus
         render::end_render_pass(currentCommandBuffer);
         currentCommandBuffer.end();
 
-        size_t maxFramesInFlight = _swapchain.getMaxFramesInFlight();
+        size_t maxFramesInFlight = _swapchainRef.getMaxFramesInFlight();
         _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
 
         return currentCommandBuffer;
@@ -452,8 +728,8 @@ namespace platypus
         if (!window.isMinimized())
         {
             Device::handle_window_resize();
-            _swapchain.recreate(window);
-            if (_swapchain.imageCountChanged())
+            _swapchainRef.recreate(window);
+            if (_swapchainRef.imageCountChanged())
             {
                 Debug::log(
                     "@MasterRenderer::handleWindowResize "
@@ -464,10 +740,25 @@ namespace platypus
                 destroyCommonShaderResources();
                 destroyPipelines();
                 freeCommandBuffers();
-                allocCommandBuffers(_swapchain.getMaxFramesInFlight());
+                allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
                 createPipelines();
+
                 createCommonShaderResources();
-                // NOTE: Makes window resizing even slower.
+                destroyShadowPassResources();
+                createShadowPassResources();
+
+                // NOTE: After added _receiveShadows into Material, it is required to
+                // always recreate their shader resources since the shadowmap texture
+                // gets recreated!
+                destroyShaderResources();
+                createShaderResources();
+
+                // NOTE: Freeing batches which causes each batch to be created again when submitting.
+                // For this to work, batcher also needs to destroy all managed pipelines!
+                //      BUT it may be okay to NOT destroy and recreate existing pipelines since the created batches
+                //      will always have same IDs
+                //          -> u might be able to just recreate existing managed pipelines?? -> TEST THIS PLZ!
+                //  -> Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
             }
@@ -481,9 +772,14 @@ namespace platypus
                 );
                 destroyPipelines();
                 createPipelines();
+
+                destroyShadowPassResources();
+                createShadowPassResources();
+
+                _batcher.recreateManagedPipelines();
             }
 
-            _swapchain.resetChangedImageCount();
+            _swapchainRef.resetChangedImageCount();
             window.resetResized();
         }
         else

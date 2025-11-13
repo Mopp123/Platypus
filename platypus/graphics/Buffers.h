@@ -71,7 +71,6 @@ namespace platypus
     //       -> This is needed to change uniform buffer multiple times inside the same command buffer
     //       For example: to draw multiple things with different transformation matrices without having
     //       to have different uniform buffer for each rendered object.
-    //  On OpenGL this returns the inputted requestSize
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize);
 
     class Pipeline;
@@ -91,8 +90,12 @@ namespace platypus
         VertexBufferElement(uint32_t location, ShaderDataType dataType);
         VertexBufferElement(const VertexBufferElement& other);
         VertexBufferElement& operator=(VertexBufferElement&& other);
-        VertexBufferElement& operator=(VertexBufferElement& other);
+        //VertexBufferElement& operator=(VertexBufferElement& other);
+        VertexBufferElement& operator=(const VertexBufferElement& other);
         ~VertexBufferElement();
+
+        // NOTE: This has platform independent definition in Buffers.cpp
+        bool operator==(const VertexBufferElement& other) const;
 
         inline uint32_t getLocation() const { return _location; }
         inline ShaderDataType getType() const { return _type; }
@@ -109,18 +112,38 @@ namespace platypus
         VertexInputRate _inputRate = VertexInputRate::VERTEX_INPUT_RATE_VERTEX;
         int32_t _stride = 0;
 
+        static VertexBufferLayout s_commonStaticLayout;
+        static VertexBufferLayout s_commonStaticTangentLayout;
+        static VertexBufferLayout s_commonSkinnedLayout;
+        static VertexBufferLayout s_commonSkinnedTangentLayout;
+        static VertexBufferLayout s_commonTerrainLayout;
+        static VertexBufferLayout s_commonTerrainTangentLayout;
+
     public:
         VertexBufferLayout();
         // NOTE: Not sure if copying elems goes correctly here..
         VertexBufferLayout(
             const std::vector<VertexBufferElement>& elements,
             VertexInputRate inputRate,
-            uint32_t binding
+            uint32_t binding,
+            int32_t overrideStride = -1
         );
         VertexBufferLayout(const VertexBufferLayout& other);
         VertexBufferLayout& operator=(VertexBufferLayout&& other);
-        VertexBufferLayout& operator=(VertexBufferLayout& other);
+        //VertexBufferLayout& operator=(VertexBufferLayout& other);
+        VertexBufferLayout& operator=(const VertexBufferLayout& other);
         ~VertexBufferLayout();
+
+        // NOTE: This has platform independent definition in Buffers.cpp
+        bool operator==(const VertexBufferLayout& other) const;
+
+        static VertexBufferLayout get_common_static_layout();
+        static VertexBufferLayout get_common_static_tangent_layout();
+        static VertexBufferLayout get_common_skinned_layout();
+        static VertexBufferLayout get_common_skinned_tangent_layout();
+        static VertexBufferLayout get_common_skinned_shadow_layout(int32_t overrideStride);
+        static VertexBufferLayout get_common_terrain_layout();
+        static VertexBufferLayout get_common_terrain_tangent_layout();
 
         inline const std::vector<VertexBufferElement>& getElements() const { return _elements; }
         inline VertexInputRate getInputRate() const { return _inputRate; }

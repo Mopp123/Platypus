@@ -1,6 +1,6 @@
-#include "MaterialTestScene.h"
-#include "UITestScene.h"
-#include "SkinnedMeshTestScene.h"
+#include "MaterialTestScene.hpp"
+#include "UITestScene.hpp"
+#include "SkinnedMeshTestScene.hpp"
 
 using namespace platypus;
 
@@ -102,7 +102,7 @@ void MaterialTestScene::init()
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
-        { pNormalTexture->getID() },
+        { }, //{ pNormalTexture->getID() },
         0.8f,
         16.0f
     );
@@ -120,7 +120,7 @@ void MaterialTestScene::init()
         NULL_ID,
         { pFloorTexture->getID() },
         { pFloorSpecularTexture->getID() },
-        { pFloorNormalTexture->getID() },
+        { },//{ pFloorNormalTexture->getID() },
         0.8f,
         64.0f
     );
@@ -171,9 +171,9 @@ void MaterialTestScene::init()
     );
 
 
-    DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+    Light* pDirLight = (Light*)getComponent(
         _lightEntity,
-        ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        ComponentType::COMPONENT_TYPE_LIGHT
     );
     pDirLight->direction = { 0.75f, -1.5f, -1.0f };
 

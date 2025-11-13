@@ -6,7 +6,9 @@ namespace platypus
     {
     };
 
-    RenderPass::RenderPass()
+    RenderPass::RenderPass(RenderPassType type, bool offscreen) :
+        _type(type),
+        _offscreen(offscreen)
     {
     }
 
@@ -14,7 +16,10 @@ namespace platypus
     {
     }
 
-    void RenderPass::create(const Swapchain& swapchain)
+    void RenderPass::create(
+        ImageFormat colorFormat,
+        ImageFormat depthFormat
+    )
     {
     }
 

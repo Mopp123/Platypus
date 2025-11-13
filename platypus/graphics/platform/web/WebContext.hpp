@@ -29,25 +29,36 @@ namespace platypus
     unsigned int to_gl_datatype(ShaderDataType shaderDataType);
     std::string gl_error_to_string(unsigned int error);
 
+    struct VAOData
+    {
+        // NOTE: WARNING! bufferIDs and complementaryBufferIDs should rather be std::vectors
+        // since the order should matter when attempting to find suitable VAO!
+        std::set<uint32_t> bufferIDs;
+        // Sometimes "complementary buffers" like per instance buffers are required
+        // which aren't part of any actual mesh, so need to have these here separately.A
+        // (These buffers may have longer lifetime than mesh vertex buffers, so these won't
+        // affect the VAO's lifetime)
+        std::set<uint32_t> complementaryBufferIDs;
+        std::vector<VertexBufferLayout> bufferLayouts;
+    };
+
     struct ContextImpl
     {
         EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webglContext;
 
-        // key = vaoID, value = bufferIDs of that vao
+        // key = vaoID
         //
         // EXPLANATION:
-        //      When binding vertex buffers a VAO is searched that includes all the vertex buffers.
+        //      When binding vertex buffers VAO is searched that includes all the
+        //      vertex buffers and layouts.
         //          -> If VAO is found, this gets bound.
         //          -> If VAO not found, a new one gets created
-        //      When vertex buffer gets deleted, it gets removed from the VAO mapping. When all the VAO's
-        //      vertex buffers gets deleted, the VAO is deleted (through Buffer's destructor).
-        //      NOTE: Possible issue, if trying to use the VAO after a single vbo gets deleted -> the VAO becomes invalid!
-        std::unordered_map<uint32_t, std::set<uint32_t>> vaoBufferMapping;
-
-        // Some renderer's have their own "complementary buffers" like per instance buffers
-        // which aren't part of any actual mesh, so need to detect these in order to
-        // destroy VAOs correctly!
-        std::set<uint32_t> complementaryVbos;
+        //      When vertex buffer gets deleted, it gets removed from the VAOData.
+        //      When all the VAO's vertex buffers are deleted, the VAO is deleted
+        //      (through Buffer's destructor).
+        //      NOTE: WARNING! Possible issue, if trying to use the VAO after a single
+        //      vbo gets deleted -> the VAO becomes invalid!
+        std::unordered_map<uint32_t, VAOData> vaoDataMapping;
     };
 
     bool vao_deletion_allowed(ContextImpl* pContextImpl, uint32_t vaoID);

@@ -16,28 +16,35 @@ layout(set = 1, binding = 1) uniform sampler2D specularTextureSampler;
 layout(set = 1, binding = 2) uniform sampler2D normalTextureSampler;
 layout(set = 1, binding = 3) uniform MaterialData
 {
-    vec4 data;
     // x = specular strength
     // y = shininess
     // z = is shadeless
-    // w = dunno...
+    // w = unused
+    vec4 lightingProperties;
+
+    // x,y = texture offset
+    // z,w = texture scale
+    vec4 textureProperties;
 } materialData;
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out vec4 outColor;
 
-void main() {
+void main()
+{
+    vec2 finalTexCoord = var_texCoord * materialData.textureProperties.zw;
+    finalTexCoord = finalTexCoord + materialData.textureProperties.xy;
 
-    vec4 diffuseTextureColor = texture(diffuseTextureSampler, var_texCoord);
-    vec4 specularTextureColor = texture(specularTextureSampler, var_texCoord);
-    vec4 normalTextureColor = texture(normalTextureSampler, var_texCoord);
+    vec4 diffuseTextureColor = texture(diffuseTextureSampler, finalTexCoord);
+    vec4 specularTextureColor = texture(specularTextureSampler, finalTexCoord);
+    vec4 normalTextureColor = texture(normalTextureSampler, finalTexCoord);
 
     // Make it between -1 and 1
     vec3 normalMapNormal = normalTextureColor.rgb * 2.0 - 1.0;
     vec3 unitNormal = normalize(normalMapNormal);
 
-    float specularStrength = materialData.data.x;
-    float shininess = materialData.data.y;
-    float isShadeless = materialData.data.z;
+    float specularStrength = materialData.lightingProperties.x;
+    float shininess = materialData.lightingProperties.y;
+    float isShadeless = materialData.lightingProperties.z;
 
     vec3 toLight = normalize(-var_lightDir);
 
@@ -55,5 +62,5 @@ void main() {
     {
         discard;
     }
-    fragColor = finalColor;
+    outColor = finalColor;
 }

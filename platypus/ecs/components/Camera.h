@@ -10,11 +10,18 @@ namespace platypus
     {
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
+        float aspectRatio;
+        float fov;
+        float zNear;
+        float zFar;
     };
 
     Camera* create_camera(
         entityID_t target,
-        const Matrix4f& perspectiveProjectionMatrix,
-        const Matrix4f& orthographicProjectionMatrix
+        float aspectRatio,
+        float fov,
+        float zNear,
+        float zFar,
+        const Matrix4f& orthographicProjectionMatrix // Used for 2D rendering stuff
     );
 }

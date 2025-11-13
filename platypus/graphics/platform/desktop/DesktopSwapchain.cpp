@@ -3,13 +3,11 @@
 #include "platypus/graphics/Device.hpp"
 #include "DesktopDevice.hpp"
 #include "DesktopContext.hpp"
-#include "DesktopRenderPass.h"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/core/Debug.h"
-#include "platypus/core/Application.h"
+#include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <algorithm>
 #include <vulkan/vk_enum_string_helper.h>
-#include <map>
 
 
 namespace platypus
@@ -34,11 +32,11 @@ namespace platypus
             Debug::log("Selected VK_PRESENT_MODE_MAILBOX_KHR for swapchain");
             return VK_PRESENT_MODE_MAILBOX_KHR;
         }
-        else if (std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end())
-        {
-            Debug::log("Selected VK_PRESENT_MODE_IMMEDIATE_KHR for swapchain");
-            return VK_PRESENT_MODE_IMMEDIATE_KHR;
-        }
+        //else if (std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end())
+        //{
+        //    Debug::log("Selected VK_PRESENT_MODE_IMMEDIATE_KHR for swapchain");
+        //    return VK_PRESENT_MODE_IMMEDIATE_KHR;
+        //}
         Debug::log("Selected VK_PRESENT_MODE_FIFO_KHR for swapchain");
         return VK_PRESENT_MODE_FIFO_KHR;
     }
@@ -63,11 +61,13 @@ namespace platypus
 
     static VkFormat get_supported_depth_image_format(VkPhysicalDevice physicalDevice)
     {
-        std::vector<VkFormat> desiredFormats =
-        {
+        // In order which we prefer the most
+        const std::vector<VkFormat> desiredFormats = {
             VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D16_UNORM,
             VK_FORMAT_D32_SFLOAT_S8_UINT,
-            VK_FORMAT_D24_UNORM_S8_UINT
+            VK_FORMAT_D24_UNORM_S8_UINT,
+            VK_FORMAT_D16_UNORM_S8_UINT
         };
         VkFormatFeatureFlags featureFlags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
         for (VkFormat format : desiredFormats)
@@ -89,19 +89,56 @@ namespace platypus
         return desiredFormats[0];
     }
 
+
+    static void create_color_images(
+        ImageFormat format,
+        uint32_t width,
+        uint32_t height,
+        const std::vector<VkImage>& swapchainImages,
+        std::vector<Image*>& outImages
+    )
+    {
+        for (size_t i = 0; i < swapchainImages.size(); ++i)
+        {
+            size_t channels = get_image_format_channel_count(format);
+            Image* pImage = new Image(nullptr, width, height, channels, format);
+            outImages.push_back(pImage);
+        }
+    }
+
+    static void create_color_textures(
+        VkDevice device,
+        ImageFormat format,
+        const std::vector<VkImage>& swapchainImages,
+        std::vector<Texture*>& outTextures
+    )
+    {
+        for (size_t i = 0; i < swapchainImages.size(); ++i)
+        {
+            VkImageView imageView = create_image_views(
+                device,
+                { swapchainImages[i] },
+                to_vk_format(format),
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                1
+            )[0];
+            Texture* pTexture = new Texture(true);
+            pTexture->getImpl()->image = swapchainImages[i];
+            pTexture->getImpl()->imageView = imageView;
+            outTextures.push_back(pTexture);
+        }
+    }
+
     static void create_depth_texture(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkExtent2D surfaceExtent,
         VmaAllocator allocator,
-        VkFormat* outImageFormat,
-        VkImage* outImage,
-        VkImageView* outImageView,
-        VmaAllocation* outAllocation
+        Image** pOutImage,
+        Texture** pOutTexture
     )
     {
         VkFormat format = get_supported_depth_image_format(physicalDevice);
-        *outImageFormat = format;
 
         VkImageCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -123,80 +160,68 @@ namespace platypus
         allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         allocCreateInfo.priority = 1.0f;
 
+        VkImage vkImage = VK_NULL_HANDLE;
+        VmaAllocation imageAllocation = VK_NULL_HANDLE;
         VkResult createImageResult = vmaCreateImage(
             allocator,
             &createInfo,
             &allocCreateInfo,
-            outImage,
-            outAllocation,
+            &vkImage,
+            &imageAllocation,
             nullptr
         );
         if (createImageResult != VK_SUCCESS)
         {
             const std::string resultStr(string_VkResult(createImageResult));
             Debug::log(
-                "@create_depth_textures "
+                "@create_depth_image "
                 "Failed to create depth image for swapchain! VkResult: " + resultStr,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
+        ImageFormat engineImageFormat = to_engine_format(format);
+        size_t channelCount = get_image_format_channel_count(engineImageFormat);
+        *pOutImage = new Image(
+            nullptr,
+            surfaceExtent.width,
+            surfaceExtent.height,
+            channelCount,
+            engineImageFormat
+        );
 
-        std::vector<VkImageView> imageViews = create_image_views(
+        *pOutTexture = new Texture(true);
+        (*pOutTexture)->getImpl()->image = vkImage;
+        (*pOutTexture)->getImpl()->vmaAllocation = imageAllocation;
+        (*pOutTexture)->getImpl()->imageView = create_image_views(
             device,
-            { *outImage },
+            { vkImage },
             format,
             VK_IMAGE_ASPECT_DEPTH_BIT,
             1
-        );
-        *outImageView = imageViews[0];
+        )[0];
     }
 
-    static std::vector<VkFramebuffer> create_framebuffers(
-        VkDevice device,
-        const std::vector<VkImageView>& imageViews,
-        VkImageView depthImageView,
-        VkRenderPass renderPass,
-        VkExtent2D surfaceExtent
+    static void create_framebuffers(
+        const std::vector<Texture*>& colorTextures,
+        Texture* pDepthTexture,
+        const RenderPass& renderPass,
+        VkExtent2D surfaceExtent,
+        std::vector<Framebuffer*>& outFramebuffers
     )
     {
-        std::vector<VkFramebuffer> framebuffers(imageViews.size());
-        for (size_t i = 0; i < framebuffers.size(); ++i)
+        for (Texture* pColorTexture : colorTextures)
         {
-            VkImageView attachments[] =
-            {
-                imageViews[i],
-                depthImageView
-            };
-
-            VkFramebufferCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            createInfo.renderPass = renderPass;
-            createInfo.attachmentCount = 2;
-            createInfo.pAttachments = attachments;
-            createInfo.width = surfaceExtent.width;
-            createInfo.height = surfaceExtent.height;
-            createInfo.layers = 1;
-
-            VkResult createResult = vkCreateFramebuffer(
-                device,
-                &createInfo,
-                nullptr,
-                &framebuffers[i]
+            Framebuffer* pFramebuffer = new Framebuffer(
+                renderPass,
+                { pColorTexture },
+                pDepthTexture,
+                surfaceExtent.width,
+                surfaceExtent.height
             );
-            if (createResult != VK_SUCCESS)
-            {
-                const std::string errStr(string_VkResult(createResult));
-                Debug::log(
-                    "@create_framebuffers "
-                    "Failed to create framebuffers for Swapchain! VkResult: " + errStr,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
+            outFramebuffers.push_back(pFramebuffer);
         }
-        return framebuffers;
     }
 
 
@@ -287,7 +312,8 @@ namespace platypus
     }
 
 
-    Swapchain::Swapchain(const Window& window)
+    Swapchain::Swapchain(const Window& window) :
+        _renderPass(RenderPassType::SCENE_PASS, false)
     {
         _pImpl = new SwapchainImpl;
         create(window);
@@ -373,39 +399,45 @@ namespace platypus
         _pImpl->handle = swapchain;
         _pImpl->extent = selectedExtent;
         _pImpl->imageFormat = selectedFormat.format;
-        _pImpl->images = createdImages;
-        _pImpl->imageViews = create_image_views(
-            device,
-            createdImages,
-            selectedFormat.format,
-            VK_IMAGE_ASPECT_COLOR_BIT,
-            1
-        );
         // NOTE: Not sure should this be handle this way...
         if (_imageCount > 1)
             _pImpl->maxFramesInFlight = _imageCount - 1;
         else
             _pImpl->maxFramesInFlight = 1;
 
+        ImageFormat engineImageFormat = to_engine_format(selectedFormat.format);
+        create_color_images(
+            engineImageFormat,
+            selectedExtent.width,
+            selectedExtent.height,
+            createdImages,
+            _colorImages
+        );
+
+        create_color_textures(
+            device,
+            engineImageFormat,
+            createdImages,
+            _colorTextures
+        );
+
         create_depth_texture(
             device,
             pDeviceImpl->physicalDevice,
             selectedExtent,
             pDeviceImpl->vmaAllocator,
-            &_pImpl->depthImageFormat,
-            &_pImpl->depthImage,
-            &_pImpl->depthImageView,
-            &_pImpl->depthImageAllocation
+            &_pDepthImage,
+            &_pDepthTexture
         );
 
-        _renderPass.create(*this);
+        _renderPass.create(_colorImages[0]->getFormat(), _pDepthImage->getFormat());
 
-        _pImpl->framebuffers = create_framebuffers(
-            device,
-            _pImpl->imageViews,
-            _pImpl->depthImageView,
-            _renderPass.getImpl()->handle,
-            selectedExtent
+        create_framebuffers(
+            _colorTextures,
+            _pDepthTexture,
+            _renderPass,
+            selectedExtent,
+            _framebuffers
         );
 
         create_sync_objects(
@@ -414,7 +446,7 @@ namespace platypus
             _pImpl->renderFinishedSemaphores,
             _pImpl->inFlightFences,
             _pImpl->inFlightImages,
-            _pImpl->images.size(),
+            createdImages.size(),
             _pImpl->maxFramesInFlight
         );
 
@@ -440,21 +472,24 @@ namespace platypus
         _pImpl->inFlightFences.clear();
         _pImpl->inFlightImages.clear();
 
-        vkDestroyImageView(device, _pImpl->depthImageView, nullptr);
-        vmaDestroyImage(
-            pDeviceImpl->vmaAllocator,
-            _pImpl->depthImage,
-            _pImpl->depthImageAllocation
-        );
+        for (Texture* pColorTexture : _colorTextures)
+            delete pColorTexture;
+
+        for (Image* pColorImage : _colorImages)
+            delete pColorImage;
+
+        delete _pDepthTexture;
+        delete _pDepthImage;
+
+        _colorTextures.clear();
+        _colorImages.clear();
+
+        for (Framebuffer* pFramebuffer : _framebuffers)
+            delete pFramebuffer;
+
+        _framebuffers.clear();
 
         _renderPass.destroy();
-        for (VkFramebuffer framebuffer : _pImpl->framebuffers)
-            vkDestroyFramebuffer(device, framebuffer, nullptr);
-        _pImpl->framebuffers.clear();
-
-        for (VkImageView imageView : _pImpl->imageViews)
-            vkDestroyImageView(device, imageView, nullptr);
-        _pImpl->imageViews.clear();
 
         _previousImageCount = _imageCount;
         _imageCount = 0;

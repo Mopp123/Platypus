@@ -202,13 +202,13 @@ namespace platypus
             combinedGlyphBitmap,
             combinedGlyphBitmapWidth,
             combinedGlyphBitmapWidth,
-            1
+            1,
+            ImageFormat::R8_UNORM
         );
         _imageID = pFontImgData->getID();
 
         Texture* pTexture = pAssetManager->createTexture(
             _imageID,
-            ImageFormat::R8_UNORM,
             TextureSampler(
                 TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
                 TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,

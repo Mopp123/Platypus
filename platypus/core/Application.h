@@ -3,6 +3,7 @@
 #include "Window.hpp"
 #include "InputManager.h"
 #include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/renderers/MasterRenderer.h"
 #include "SceneManager.h"
 #include "platypus/assets/AssetManager.h"
@@ -18,7 +19,8 @@ namespace platypus
         // Order of these is important for proper construction and destruction!
         Window _window;
         InputManager _inputManager;
-        // TODO: Fix these -> not supposed to be heap allocated
+        // TODO: Fix these -> not supposed to be heap allocated?
+        Swapchain* _pSwapchain = nullptr;
         MasterRenderer* _pMasterRenderer = nullptr;
         AssetManager* _pAssetManager = nullptr;
 

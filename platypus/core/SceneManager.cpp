@@ -57,6 +57,8 @@ namespace platypus
             delete _pNextScene;
     }
 
+    // NOTE: This does a bit more than just updates the current scene
+    // -> This should rather be Application's job?!
     void SceneManager::update()
     {
         if (!_pCurrentScene)

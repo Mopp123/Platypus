@@ -96,15 +96,17 @@ namespace platypus
         void create();
         void destroy();
 
-        const std::vector<VertexBufferLayout>& getVertexBufferLayouts() const { return _vertexBufferLayouts; }
-        const std::vector<DescriptorSetLayout>& getDescriptorSetLayouts() const { return _descriptorSetLayouts; }
-        CullMode getCullMode() const { return _cullMode; }
-        FrontFace getFaceWindingOrder() const { return _frontFace; }
-        bool isDepthTestEnabled() const { return _enableDepthTest; }
-        DepthCompareOperation getDepthCompareOperation() const { return _depthCmpOp; }
-        bool isColorBlendEnabled() const { return _enableColorBlending; }
-        uint32_t getPushConstantsSize() const { return _pushConstantSize; }
-        uint32_t getPushConstantsStageFlags() { return _pushConstantStageFlags; }
+        inline const std::vector<VertexBufferLayout>& getVertexBufferLayouts() const { return _vertexBufferLayouts; }
+        inline const std::vector<DescriptorSetLayout>& getDescriptorSetLayouts() const { return _descriptorSetLayouts; }
+        inline const Shader* getVertexShader() const { return _pVertexShader; }
+        inline const Shader* getFragmentShader() const { return _pFragmentShader; }
+        inline CullMode getCullMode() const { return _cullMode; }
+        inline FrontFace getFaceWindingOrder() const { return _frontFace; }
+        inline bool isDepthTestEnabled() const { return _enableDepthTest; }
+        inline DepthCompareOperation getDepthCompareOperation() const { return _depthCmpOp; }
+        inline bool isColorBlendEnabled() const { return _enableColorBlending; }
+        inline uint32_t getPushConstantsSize() const { return _pushConstantSize; }
+        inline uint32_t getPushConstantsStageFlags() { return _pushConstantStageFlags; }
 
         inline PipelineImpl* getImpl() const { return _pImpl; }
     };

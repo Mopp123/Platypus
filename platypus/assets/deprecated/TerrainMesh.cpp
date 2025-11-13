@@ -13,7 +13,7 @@ namespace platypus
         bool dynamic,
         bool generateTangents
     ) :
-        Asset(AssetType::ASSET_TYPE_TERRAIN_MESH),
+        Asset(AssetType::ASSET_TYPE_MESH),
         _tileSize(tileSize)
     {
         const float minTileSize = 0.05f;
@@ -113,11 +113,11 @@ namespace platypus
 				if (x >= _verticesPerRow - 1 || z >= _verticesPerRow - 1)
 					continue;
 
-				uint32_t topLeft = x + (z + 1) * _verticesPerRow;
-				uint32_t bottomLeft = x + z * _verticesPerRow;
+				uint32_t topLeft = x + z * _verticesPerRow;
+				uint32_t bottomLeft = x + (z + 1) * _verticesPerRow;
 
-				uint32_t topRight = (x + 1) + (z + 1) * _verticesPerRow;
-				uint32_t bottomRight = (x + 1) + z * _verticesPerRow;
+				uint32_t topRight = (x + 1) + z * _verticesPerRow;
+				uint32_t bottomRight = (x + 1) + (z + 1) * _verticesPerRow;
 
                 indices.insert(
                     indices.end(),

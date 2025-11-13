@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BaseScene.h"
+#include "BaseScene.hpp"
 
 class UITestScene : public BaseScene
 {

@@ -1,18 +1,16 @@
+#version 300 es
 precision mediump float;
 
-varying vec3 var_normal;
-varying vec2 var_texCoord;
-varying vec3 var_fragPos; // in tangent space
-varying vec3 var_toCamera; // in tangent space
-varying vec3 var_lightDir; // in tangent space
-varying vec4 var_lightColor;
-varying vec4 var_ambientLightColor;
+in vec3 var_normal;
+in vec2 var_texCoord;
+in vec3 var_fragPos; // in tangent space
+in vec3 var_toCamera; // in tangent space
+in vec3 var_lightDir; // in tangent space
+in vec4 var_lightColor;
+in vec4 var_ambientLightColor;
 
-varying float var_tileSize;
-varying float var_verticesPerRow;
-
-varying mat3 var_toTangentSpace; // uses locations 9-11
-varying vec4 var_tangent;
+in mat3 var_toTangentSpace; // uses locations 9-11
+in vec4 var_tangent;
 
 uniform sampler2D blendmapTexture;
 
@@ -34,51 +32,59 @@ uniform sampler2D normalTextureChannel2;
 uniform sampler2D normalTextureChannel3;
 uniform sampler2D normalTextureChannel4;
 
-// NOTE: Not sure if need to pass that kind of material stuff here just yet
-struct MaterialData
+layout(std140) uniform MaterialData
 {
-    vec4 data;
     // x = specular strength
     // y = shininess
     // z = is shadeless
-    // w = dunno...
-};
-uniform MaterialData materialData;
+    // w = unused
+    vec4 lightingProperties;
 
+    // x,y = texture offset
+    // z,w = texture scale
+    vec4 textureProperties;
+} materialData;
+
+layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
-    vec4 blendmapColor = texture2D(blendmapTexture, var_texCoord);
+    // NOTE: Not sure should offset be added to original coord or tiled coord...
+    //  -> would be nice to be able to affect both separately!
+    //vec2 tiledCoord = var_texCoord * (var_verticesPerRow - 1.0);
+    vec2 tiledCoord = var_texCoord * materialData.textureProperties.zw;
+    tiledCoord = tiledCoord + materialData.textureProperties.xy;
+
+    vec4 blendmapColor = texture(blendmapTexture, var_texCoord);
     float transparency = 1.0 - blendmapColor.a;
     float blackAmount = max(1.0 - blendmapColor.r - blendmapColor.g - blendmapColor.b - transparency, 0.0);
 
-    vec4 diffuseChannel0Color = texture2D(diffuseTextureChannel0, tiledCoord) * blackAmount;
-    vec4 diffuseChannel1Color = texture2D(diffuseTextureChannel1, tiledCoord) * blendmapColor.r;
-    vec4 diffuseChannel2Color = texture2D(diffuseTextureChannel2, tiledCoord) * blendmapColor.g;
-    vec4 diffuseChannel3Color = texture2D(diffuseTextureChannel3, tiledCoord) * blendmapColor.b;
-    vec4 diffuseChannel4Color = texture2D(diffuseTextureChannel4, tiledCoord) * transparency;
+    vec4 diffuseChannel0Color = texture(diffuseTextureChannel0, tiledCoord) * blackAmount;
+    vec4 diffuseChannel1Color = texture(diffuseTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 diffuseChannel2Color = texture(diffuseTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 diffuseChannel3Color = texture(diffuseTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 diffuseChannel4Color = texture(diffuseTextureChannel4, tiledCoord) * transparency;
 
-    vec4 specularChannel0Color = texture2D(specularTextureChannel0, tiledCoord) * blackAmount;
-    vec4 specularChannel1Color = texture2D(specularTextureChannel1, tiledCoord) * blendmapColor.r;
-    vec4 specularChannel2Color = texture2D(specularTextureChannel2, tiledCoord) * blendmapColor.g;
-    vec4 specularChannel3Color = texture2D(specularTextureChannel3, tiledCoord) * blendmapColor.b;
-    vec4 specularChannel4Color = texture2D(specularTextureChannel4, tiledCoord) * transparency;
+    vec4 specularChannel0Color = texture(specularTextureChannel0, tiledCoord) * blackAmount;
+    vec4 specularChannel1Color = texture(specularTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 specularChannel2Color = texture(specularTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 specularChannel3Color = texture(specularTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 specularChannel4Color = texture(specularTextureChannel4, tiledCoord) * transparency;
 
-    vec4 normalChannel0Color = texture2D(normalTextureChannel0, tiledCoord) * blackAmount;
-    vec4 normalChannel1Color = texture2D(normalTextureChannel1, tiledCoord) * blendmapColor.r;
-    vec4 normalChannel2Color = texture2D(normalTextureChannel2, tiledCoord) * blendmapColor.g;
-    vec4 normalChannel3Color = texture2D(normalTextureChannel3, tiledCoord) * blendmapColor.b;
-    vec4 normalChannel4Color = texture2D(normalTextureChannel4, tiledCoord) * transparency;
+    vec4 normalChannel0Color = texture(normalTextureChannel0, tiledCoord) * blackAmount;
+    vec4 normalChannel1Color = texture(normalTextureChannel1, tiledCoord) * blendmapColor.r;
+    vec4 normalChannel2Color = texture(normalTextureChannel2, tiledCoord) * blendmapColor.g;
+    vec4 normalChannel3Color = texture(normalTextureChannel3, tiledCoord) * blendmapColor.b;
+    vec4 normalChannel4Color = texture(normalTextureChannel4, tiledCoord) * transparency;
 
     // TODO: Better naming for these
     vec4 totalDiffuseColor = diffuseChannel0Color + diffuseChannel1Color + diffuseChannel2Color + diffuseChannel3Color + diffuseChannel4Color;
     vec4 totalSpecularColor = specularChannel0Color + specularChannel1Color + specularChannel2Color + specularChannel3Color + specularChannel4Color;
     vec4 totalNormalColor = normalChannel0Color + normalChannel1Color + normalChannel2Color + normalChannel3Color + normalChannel4Color;
 
-    float specularStrength = materialData.data.x;
-    float shininess = materialData.data.y;
-    float isShadeless = materialData.data.z;
+    float specularStrength = materialData.lightingProperties.x;
+    float shininess = materialData.lightingProperties.y;
+    float isShadeless = materialData.lightingProperties.z;
 
     // Make it between -1 and 1
     vec3 normalMapNormal = totalNormalColor.rgb * 2.0 - 1.0;
@@ -98,5 +104,5 @@ void main()
     vec4 finalDiffuseColor = lightColor * diffuseFactor * totalDiffuseColor;
     vec4 finalSpecularColor = lightColor * (specularFactor * specularStrength) * totalSpecularColor;
 
-    gl_FragColor = finalAmbientColor + finalDiffuseColor + finalSpecularColor;
+    outColor = finalAmbientColor + finalDiffuseColor + finalSpecularColor;
 }

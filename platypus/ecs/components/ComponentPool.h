@@ -63,6 +63,7 @@ namespace platypus
         // Returns ptr to first existing component.
         // Takes possible destroyed components from middle, beginning, etc into account.
         void* first();
+        const void* first() const;
 
         // If allowResize and not enough space, this also adds space to the _pStorage
         void* allocComponent(entityID_t entityID);

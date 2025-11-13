@@ -56,6 +56,8 @@ namespace platypus
     Vector3f get_transform_up(Transform* pTransform);
     Vector3f get_transform_right(Transform* pTransform);
 
+    Matrix4f get_global_rotation_matrix(const Transform* pTransform);
+
     // Creates Transform hierarchy for joints and returns the root joint entity
     std::vector<entityID_t> create_skeleton(
         const std::vector<Joint>& joints,

@@ -6,7 +6,7 @@
 #include "DesktopSwapchain.h"
 #include "DesktopCommandBuffer.h"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <vulkan/vk_enum_string_helper.h>
 #include <cstring>
 #include <set>
@@ -130,7 +130,9 @@ namespace platypus
         VkInstance instance,
         VkSurfaceKHR surface,
         const std::vector<const char*>& requiredExtensions,
-        size_t& outMinUniformBufferOffsetAlignment
+        size_t& outMinUniformBufferOffsetAlignment,
+        std::vector<VkFormat>& outAvailableDepthFormats,
+        std::vector<VkFormat>& outAvailableColorFormats
     )
     {
         uint32_t physicalDeviceCount = 0;
@@ -147,6 +149,27 @@ namespace platypus
         std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
         vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices.data());
 
+        const std::vector<VkFormat> possibleDepthFormats = {
+            VK_FORMAT_D16_UNORM,
+            VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D16_UNORM_S8_UINT,
+            VK_FORMAT_D24_UNORM_S8_UINT,
+            VK_FORMAT_D32_SFLOAT_S8_UINT
+        };
+
+        const std::vector<VkFormat> possibleColorFormats = {
+            VK_FORMAT_R8_SRGB,
+            VK_FORMAT_R8G8B8_SRGB,
+            VK_FORMAT_R8G8B8A8_SRGB,
+            VK_FORMAT_B8G8R8A8_SRGB,
+            VK_FORMAT_B8G8R8_SRGB,
+            VK_FORMAT_R8_UNORM,
+            VK_FORMAT_R8G8B8_UNORM,
+            VK_FORMAT_R8G8B8A8_UNORM,
+            VK_FORMAT_B8G8R8A8_UNORM,
+            VK_FORMAT_B8G8R8_UNORM
+        };
+
         Debug::log(
             "Found physical devices:"
         );
@@ -154,6 +177,43 @@ namespace platypus
         {
             VkPhysicalDeviceProperties properties;
             vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+            // Get available depth formats
+            for (VkFormat possibleFormat : possibleDepthFormats)
+            {
+                VkFormatProperties possibleFormatProperties;
+                vkGetPhysicalDeviceFormatProperties(
+                    physicalDevice,
+                    possibleFormat,
+                    &possibleFormatProperties
+                );
+                if (!(possibleFormatProperties.bufferFeatures == 0 &&
+                    possibleFormatProperties.linearTilingFeatures == 0 &&
+                    possibleFormatProperties.optimalTilingFeatures == 0)
+                )
+                {
+                    outAvailableDepthFormats.push_back(possibleFormat);
+                }
+            }
+
+            // Get available color formats
+            for (VkFormat possibleFormat : possibleColorFormats)
+            {
+                VkFormatProperties possibleFormatProperties;
+                vkGetPhysicalDeviceFormatProperties(
+                    physicalDevice,
+                    possibleFormat,
+                    &possibleFormatProperties
+                );
+                if (!(possibleFormatProperties.bufferFeatures == 0 &&
+                    possibleFormatProperties.linearTilingFeatures == 0 &&
+                    possibleFormatProperties.optimalTilingFeatures == 0)
+                )
+                {
+                    outAvailableColorFormats.push_back(possibleFormat);
+                }
+            }
+
             // TODO:
             //  * Maybe display some more info?
             //  * Store device limits somewhere?
@@ -182,8 +242,11 @@ namespace platypus
 
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
-    size_t Device::s_minUniformBufferOffsetAlignment = 1;
+    size_t Device::s_minUniformBufferOffsetAlignment = 0;
     CommandPool* Device::s_pCommandPool = nullptr;
+    std::vector<ImageFormat> Device::s_supportedDepthFormats;
+    std::vector<ImageFormat> Device::s_supportedColorFormats;
+
     void Device::create(Window* pWindow)
     {
         s_pWindow = pWindow;
@@ -194,12 +257,21 @@ namespace platypus
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
 
+        std::vector<VkFormat> deviceDepthFormats;
+        std::vector<VkFormat> deviceColorFormats;
         VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(
             Context::get_impl()->instance,
             surface,
             requiredExtensions,
-            s_minUniformBufferOffsetAlignment
+            s_minUniformBufferOffsetAlignment,
+            deviceDepthFormats,
+            deviceColorFormats
         );
+        for (VkFormat supportedDepthFormat : deviceDepthFormats)
+            s_supportedDepthFormats.push_back(to_engine_format(supportedDepthFormat));
+        for (VkFormat supportedColorFormat : deviceColorFormats)
+            s_supportedColorFormats.push_back(to_engine_format(supportedColorFormat));
+
         DeviceImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(
             selectedPhysicalDevice,
             surface

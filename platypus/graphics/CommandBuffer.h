@@ -32,7 +32,8 @@ namespace  platypus
 
         void free();
 
-        void begin(const RenderPass& renderPass);
+        // pRenderPass can also be nullptr for primary command buffers
+        void begin(const RenderPass* pRenderPass);
         void end();
 
         void beginSingleUse();

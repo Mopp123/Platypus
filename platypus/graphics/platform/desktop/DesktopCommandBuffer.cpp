@@ -42,16 +42,17 @@ namespace platypus
         _pImpl->handle = VK_NULL_HANDLE;
     }
 
-    void CommandBuffer::begin(const RenderPass& renderPass)
+    void CommandBuffer::begin(const RenderPass* pRenderPass)
     {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         VkCommandBufferInheritanceInfo inheritanceInfo{};
         if (_level == CommandBufferLevel::SECONDARY_COMMAND_BUFFER)
         {
+            PLATYPUS_ASSERT(pRenderPass);
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
             inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-            inheritanceInfo.renderPass = renderPass.getImpl()->handle;
+            inheritanceInfo.renderPass = pRenderPass->getImpl()->handle;
             inheritanceInfo.subpass = 0;
             beginInfo.pInheritanceInfo = &inheritanceInfo;
         }

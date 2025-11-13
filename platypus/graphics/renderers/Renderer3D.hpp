@@ -2,6 +2,7 @@
 
 #include "platypus/graphics/CommandBuffer.h"
 #include "Batch.hpp"
+#include <unordered_map>
 
 
 namespace platypus
@@ -12,7 +13,7 @@ namespace platypus
     private:
         MasterRenderer& _masterRendererRef;
 
-        std::vector<CommandBuffer> _commandBuffers;
+        std::unordered_map<RenderPassType, std::vector<CommandBuffer>> _commandBuffers;
         size_t _currentFrame = 0;
 
     public:
@@ -25,6 +26,8 @@ namespace platypus
             float viewportHeight,
             const std::vector<Batch*>& toRender
         );
+
+        void advanceFrame();
 
         void allocCommandBuffers();
         void freeCommandBuffers();

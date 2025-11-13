@@ -1,7 +1,7 @@
-#include "SkinnedMeshTestScene.h"
+#include "SkinnedMeshTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
-#include "MaterialTestScene.h"
+#include "MaterialTestScene.hpp"
 #include <string>
 
 
@@ -110,9 +110,6 @@ void SkinnedMeshTestScene::init()
     _camController.setOffsetPos({ 0, 0, 0 });
 
     std::vector<KeyframeAnimationData> animations;
-    // NOTE:
-    // File: "assets/models/SkeletonTest3Linear2.glb" works because it
-    // has keyframes for ALL joints at the SAME TIME for EVERY KEYFRAME!
     Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/MultiAnimSkeletonTest.glb",
         animations
@@ -159,7 +156,7 @@ void SkinnedMeshTestScene::init()
     );
     Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
 
-    int area = 1;
+    int area = 2;
     float spacing = 3.25f;
 
     for (int x = 0; x < area; ++x)
@@ -202,9 +199,9 @@ void SkinnedMeshTestScene::init()
         }
     }
 
-    DirectionalLight* pDirLight = (DirectionalLight*)getComponent(
+    Light* pDirLight = (Light*)getComponent(
         _lightEntity,
-        ComponentType::COMPONENT_TYPE_DIRECTIONAL_LIGHT
+        ComponentType::COMPONENT_TYPE_LIGHT
     );
     pDirLight->direction = { 0.75f, -1.5f, 1.0f };
 }
