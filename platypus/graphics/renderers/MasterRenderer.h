@@ -48,9 +48,9 @@ namespace platypus
         // NOTE: Switched using single framebuffer and textures for testing offscreen rendering..
         //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
         //  touch these + the mem barrier in render commands
+        ImageFormat _shadowDepthImageFormat;
         Framebuffer* _pShadowFramebuffer;
         TextureSampler _shadowTextureSampler;
-        Texture* _pShadowFramebufferColorTexture;
         Texture* _pShadowFramebufferDepthTexture;
         uint32_t _shadowmapWidth = 2048;
 
@@ -84,7 +84,6 @@ namespace platypus
         ) const;
 
         inline const RenderPass& getShadowPass() const { return _shadowPass; }
-        inline Texture* getShadowFramebufferColorTexture() { return _pShadowFramebufferColorTexture; }
         inline Texture* getShadowFramebufferDepthTexture() { return _pShadowFramebufferDepthTexture; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }

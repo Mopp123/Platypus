@@ -27,10 +27,15 @@ namespace platypus
             case ImageFormat::R8G8B8_UNORM: return "R8G8B8_UNORM";
             case ImageFormat::R8G8B8A8_UNORM: return "R8G8B8A8_UNORM";
 
-            case ImageFormat::B8G8R8_UNORM: return "B8G8R8_UNORM";
             case ImageFormat::B8G8R8A8_UNORM: return "B8G8R8A8_UNORM";
+            case ImageFormat::B8G8R8_UNORM: return "B8G8R8_UNORM";
 
+            // Depth formats
+            case ImageFormat::D16_UNORM: return "D16_UNORM";
             case ImageFormat::D32_SFLOAT: return "D32_SFLOAT";
+            case ImageFormat::D16_UNORM_S8_UINT: return "16_UNORM_S8_UINT";
+            case ImageFormat::D24_UNORM_S8_UINT: return "D24_UNORM_S8_UINT";
+            case ImageFormat::D32_SFLOAT_S8_UINT: return "D32_SFLOAT_S8_UINT";
 
             default: return "INVALID FORMAT";
         }
@@ -56,7 +61,12 @@ namespace platypus
             case ImageFormat::B8G8R8_UNORM: return 3;
             case ImageFormat::B8G8R8A8_UNORM: return 4;
 
+            // Depth formats
+            case ImageFormat::D16_UNORM: return 1;
             case ImageFormat::D32_SFLOAT: return 1;
+            case ImageFormat::D16_UNORM_S8_UINT: return 1;
+            case ImageFormat::D24_UNORM_S8_UINT: return 1;
+            case ImageFormat::D32_SFLOAT_S8_UINT: return 1;
 
             default: return 0;
         }
@@ -111,6 +121,29 @@ namespace platypus
         {
             return false;
         }
+    }
+
+    ImageFormat srgb_format_to_unorm(ImageFormat srgb)
+    {
+        switch (srgb)
+        {
+            case ImageFormat::R8_SRGB: return ImageFormat::R8_UNORM;
+            case ImageFormat::R8G8B8_SRGB: return ImageFormat::R8G8B8_UNORM;
+            case ImageFormat::R8G8B8A8_SRGB: return ImageFormat::R8G8B8A8_UNORM;
+
+            case ImageFormat::B8G8R8A8_SRGB: return ImageFormat::B8G8R8A8_UNORM;
+            case ImageFormat::B8G8R8_SRGB: return ImageFormat::B8G8R8_UNORM;
+
+            default: {
+                Debug::log(
+                    "@srgb_format_to_unorm "
+                    "Invalid SRGB image format",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+        return ImageFormat::NONE;
     }
 
 

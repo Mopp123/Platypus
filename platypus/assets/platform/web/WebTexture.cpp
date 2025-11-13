@@ -31,7 +31,13 @@ namespace platypus
             case ImageFormat::B8G8R8A8_UNORM: return GL_RGBA;
             case ImageFormat::B8G8R8_UNORM: return GL_RGB;
 
+            // Depth formats
+            // NOTE: Only D32_SFLOAT has been tested from these!
+            case ImageFormat::D16_UNORM: return GL_DEPTH_COMPONENT16;
             case ImageFormat::D32_SFLOAT: return GL_FLOAT;
+            case ImageFormat::D16_UNORM_S8_UINT: return GL_DEPTH_COMPONENT16;
+            case ImageFormat::D24_UNORM_S8_UINT: return GL_DEPTH_COMPONENT24;
+            case ImageFormat::D32_SFLOAT_S8_UINT: return GL_FLOAT;
         }
         PLATYPUS_ASSERT(false);
         return GL_RED;
@@ -59,7 +65,13 @@ namespace platypus
             case ImageFormat::B8G8R8A8_UNORM: return GL_RGBA;
             case ImageFormat::B8G8R8_UNORM: return GL_RGB;
 
+            // Depth formats
+            // NOTE: Only D32_SFLOAT has been tested from these!
+            case ImageFormat::D16_UNORM: return GL_DEPTH_COMPONENT16;
             case ImageFormat::D32_SFLOAT: return GL_FLOAT;
+            case ImageFormat::D16_UNORM_S8_UINT: return GL_DEPTH_COMPONENT16;
+            case ImageFormat::D24_UNORM_S8_UINT: return GL_DEPTH_COMPONENT24;
+            case ImageFormat::D32_SFLOAT_S8_UINT: return GL_FLOAT;
         }
         PLATYPUS_ASSERT(false);
         return GL_RED;

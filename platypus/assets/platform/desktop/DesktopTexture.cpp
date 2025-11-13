@@ -110,6 +110,7 @@ namespace platypus
     {
         switch (imageFormat)
         {
+            // Color formats
             case ImageFormat::R8_SRGB: return VK_FORMAT_R8_SRGB;
             case ImageFormat::R8G8B8_SRGB: return VK_FORMAT_R8G8B8_SRGB;
             case ImageFormat::R8G8B8A8_SRGB: return VK_FORMAT_R8G8B8A8_SRGB;
@@ -124,7 +125,12 @@ namespace platypus
             case ImageFormat::B8G8R8A8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
             case ImageFormat::B8G8R8_UNORM: return VK_FORMAT_B8G8R8_UNORM;
 
-            case ImageFormat::D32_SFLOAT: return VK_FORMAT_D32_SFLOAT;
+            // Depth formats
+            case ImageFormat::D16_UNORM:          return VK_FORMAT_D16_UNORM;
+            case ImageFormat::D32_SFLOAT:         return VK_FORMAT_D32_SFLOAT;
+            case ImageFormat::D16_UNORM_S8_UINT:  return VK_FORMAT_D16_UNORM_S8_UINT;
+            case ImageFormat::D24_UNORM_S8_UINT:  return VK_FORMAT_D24_UNORM_S8_UINT;
+            case ImageFormat::D32_SFLOAT_S8_UINT: return VK_FORMAT_D32_SFLOAT_S8_UINT;
 
             default:
             {
@@ -138,21 +144,27 @@ namespace platypus
     {
         switch (format)
         {
-            case VK_FORMAT_R8_SRGB: return ImageFormat::R8_SRGB;
-            case VK_FORMAT_R8G8B8_SRGB: return ImageFormat::R8G8B8_SRGB;
-            case VK_FORMAT_R8G8B8A8_SRGB: return ImageFormat::R8G8B8A8_SRGB;
+            // Color formats
+            case VK_FORMAT_R8_SRGB:         return ImageFormat::R8_SRGB;
+            case VK_FORMAT_R8G8B8_SRGB:     return ImageFormat::R8G8B8_SRGB;
+            case VK_FORMAT_R8G8B8A8_SRGB:   return ImageFormat::R8G8B8A8_SRGB;
 
-            case VK_FORMAT_B8G8R8A8_SRGB: return ImageFormat::B8G8R8A8_SRGB;
-            case VK_FORMAT_B8G8R8_SRGB: return ImageFormat::B8G8R8_SRGB;
+            case VK_FORMAT_B8G8R8A8_SRGB:   return ImageFormat::B8G8R8A8_SRGB;
+            case VK_FORMAT_B8G8R8_SRGB:     return ImageFormat::B8G8R8_SRGB;
 
-            case VK_FORMAT_R8_UNORM: return ImageFormat::R8_UNORM;
-            case VK_FORMAT_R8G8B8_UNORM: return ImageFormat::R8G8B8_UNORM;
-            case VK_FORMAT_R8G8B8A8_UNORM: return ImageFormat::R8G8B8A8_UNORM;
+            case VK_FORMAT_R8_UNORM:        return ImageFormat::R8_UNORM;
+            case VK_FORMAT_R8G8B8_UNORM:    return ImageFormat::R8G8B8_UNORM;
+            case VK_FORMAT_R8G8B8A8_UNORM:  return ImageFormat::R8G8B8A8_UNORM;
 
-            case VK_FORMAT_B8G8R8A8_UNORM: return ImageFormat::B8G8R8A8_UNORM;
-            case VK_FORMAT_B8G8R8_UNORM: return ImageFormat::B8G8R8_UNORM;
+            case VK_FORMAT_B8G8R8A8_UNORM:  return ImageFormat::B8G8R8A8_UNORM;
+            case VK_FORMAT_B8G8R8_UNORM:    return ImageFormat::B8G8R8_UNORM;
 
-            case VK_FORMAT_D32_SFLOAT: return ImageFormat::D32_SFLOAT;
+            // Depth formats
+            case VK_FORMAT_D16_UNORM:          return ImageFormat::D16_UNORM;
+            case VK_FORMAT_D32_SFLOAT:         return ImageFormat::D32_SFLOAT;
+            case VK_FORMAT_D16_UNORM_S8_UINT:  return ImageFormat::D16_UNORM_S8_UINT;
+            case VK_FORMAT_D24_UNORM_S8_UINT:  return ImageFormat::D24_UNORM_S8_UINT;
+            case VK_FORMAT_D32_SFLOAT_S8_UINT: return ImageFormat::D32_SFLOAT_S8_UINT;
 
             default:
             {

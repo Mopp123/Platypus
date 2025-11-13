@@ -3,14 +3,11 @@
 #include "platypus/graphics/Device.hpp"
 #include "DesktopDevice.hpp"
 #include "DesktopContext.hpp"
-#include "DesktopRenderPass.h"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/core/Debug.h"
-#include "platypus/core/Application.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <algorithm>
 #include <vulkan/vk_enum_string_helper.h>
-#include <map>
 
 
 namespace platypus
@@ -64,11 +61,13 @@ namespace platypus
 
     static VkFormat get_supported_depth_image_format(VkPhysicalDevice physicalDevice)
     {
-        std::vector<VkFormat> desiredFormats =
-        {
+        // In order which we prefer the most
+        const std::vector<VkFormat> desiredFormats = {
             VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D16_UNORM,
             VK_FORMAT_D32_SFLOAT_S8_UINT,
-            VK_FORMAT_D24_UNORM_S8_UINT
+            VK_FORMAT_D24_UNORM_S8_UINT,
+            VK_FORMAT_D16_UNORM_S8_UINT
         };
         VkFormatFeatureFlags featureFlags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
         for (VkFormat format : desiredFormats)

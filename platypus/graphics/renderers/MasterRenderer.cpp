@@ -71,10 +71,15 @@ namespace platypus
         allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
         createCommonShaderResources();
 
-        // TESTING ------------------------------------------------------------
+        // Not sure if this fallback is enough...
+        if (Device::is_depth_format_supported(ImageFormat::D32_SFLOAT))
+            _shadowDepthImageFormat = ImageFormat::D32_SFLOAT;
+        else
+            _shadowDepthImageFormat = Device::get_first_supported_depth_format();
+
         _shadowPass.create(
-            ImageFormat::R8G8B8A8_SRGB,
-            ImageFormat::D32_SFLOAT
+            ImageFormat::NONE,
+            _shadowDepthImageFormat
         );
         createShadowPassResources();
     }
@@ -407,20 +412,10 @@ namespace platypus
 
     void MasterRenderer::createShadowPassResources()
     {
-        ImageFormat testFramebufferColorFormat = ImageFormat::R8G8B8A8_SRGB;
-        _pShadowFramebufferColorTexture = new Texture(
-            TextureType::COLOR_TEXTURE,
-            _shadowTextureSampler,
-            testFramebufferColorFormat, // TODO: Query available color format instead of hard coding here!!!!
-            _shadowmapWidth,
-            _shadowmapWidth
-        );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferColorTexture);
-
         _pShadowFramebufferDepthTexture = new Texture(
             TextureType::DEPTH_TEXTURE,
             _shadowTextureSampler,
-            ImageFormat::D32_SFLOAT, // TODO: Query available depth format instead of hard coding here!!!!
+            _shadowDepthImageFormat,
             _shadowmapWidth,
             _shadowmapWidth
         );
@@ -428,7 +423,7 @@ namespace platypus
 
         _pShadowFramebuffer = new Framebuffer(
             _shadowPass,
-            { _pShadowFramebufferColorTexture },
+            { },
             _pShadowFramebufferDepthTexture,
             _shadowmapWidth,
             _shadowmapWidth
@@ -446,11 +441,9 @@ namespace platypus
 
     void MasterRenderer::destroyShadowPassResources()
     {
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferColorTexture);
         Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
         delete _pShadowFramebuffer;
 
-        _pShadowFramebufferColorTexture = nullptr;
         _pShadowFramebufferDepthTexture = nullptr;
         _pShadowFramebuffer = nullptr;
     }

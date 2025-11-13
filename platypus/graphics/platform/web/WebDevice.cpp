@@ -14,6 +14,24 @@ namespace platypus
     size_t Device::s_minUniformBufferOffsetAlignment = 0;
     CommandPool* Device::s_pCommandPool = nullptr;
 
+    // NOTE: Not sure are these really all supported...
+    std::vector<ImageFormat> Device::s_supportedDepthFormats = {
+        ImageFormat::D16_UNORM,
+        ImageFormat::D32_SFLOAT
+    };
+    std::vector<ImageFormat> Device::s_supportedColorFormats = {
+        ImageFormat::R8_SRGB,
+        ImageFormat::R8G8B8_SRGB,
+        ImageFormat::R8G8B8A8_SRGB,
+        ImageFormat::B8G8R8A8_SRGB,
+        ImageFormat::B8G8R8_SRGB,
+        ImageFormat::R8_UNORM,
+        ImageFormat::R8G8B8_UNORM,
+        ImageFormat::R8G8B8A8_UNORM,
+        ImageFormat::B8G8R8A8_UNORM,
+        ImageFormat::B8G8R8_UNORM
+    };
+
     void Device::create(Window* pWindow)
     {
         s_pCommandPool = new CommandPool;

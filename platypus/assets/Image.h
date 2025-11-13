@@ -12,6 +12,7 @@ namespace platypus
     {
         NONE,
 
+        // Color formats
         R8_SRGB,
         R8G8B8_SRGB,
         R8G8B8A8_SRGB,
@@ -26,7 +27,12 @@ namespace platypus
         B8G8R8A8_UNORM,
         B8G8R8_UNORM,
 
-        D32_SFLOAT
+        // Depth formats
+        D16_UNORM,
+        D32_SFLOAT,
+        D16_UNORM_S8_UINT,
+        D24_UNORM_S8_UINT,
+        D32_SFLOAT_S8_UINT
     };
 
     enum class ImageLayout
@@ -48,6 +54,7 @@ namespace platypus
     size_t get_image_format_channel_count(ImageFormat format);
     ImageFormat channel_count_to_image_format(size_t channelCount, bool sRGB);
     bool is_image_format_valid(ImageFormat format, int channels);
+    ImageFormat srgb_format_to_unorm(ImageFormat srgb);
 
     struct ImageImpl;
     class Image : public Asset

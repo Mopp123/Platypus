@@ -3,6 +3,9 @@
 #include "platypus/core/Window.hpp"
 #include "CommandBuffer.h"
 #include "Swapchain.h"
+#include "platypus/assets/Image.h"
+#include "platypus/core/Debug.h"
+#include <algorithm>
 
 
 namespace platypus
@@ -15,15 +18,17 @@ namespace platypus
         static Window* s_pWindow;
         static size_t s_minUniformBufferOffsetAlignment;
         static CommandPool* s_pCommandPool;
+        static std::vector<ImageFormat> s_supportedDepthFormats;
+        static std::vector<ImageFormat> s_supportedColorFormats;
 
     public:
         static void create(Window* pWindow);
         static void destroy();
 
-        // At the moment all rendering is done in a way that we have a single render pass and a single
+        // At the moment all rendering is done in a way that we have a single
         // primary command buffer in which we have recorded secondary command buffers.
-        // Eventually we submit the primary command buffer for execution into the device's graphics queue.
-        // TODO: Completely separate class for "Device" handling Device specific stuff like this
+        // Eventually we submit the primary command buffer for execution into the device's
+        // graphics queue.
         static void submit_primary_command_buffer(
             Swapchain& swapchain,
             const CommandBuffer& cmdBuf,
@@ -41,6 +46,45 @@ namespace platypus
         static size_t get_min_uniform_buffer_offset_align();
 
         static CommandPool* get_command_pool();
+
+        static bool is_depth_format_supported(ImageFormat format)
+        {
+            return std::find_if(
+                s_supportedDepthFormats.begin(),
+                s_supportedDepthFormats.end(),
+                [format](const ImageFormat& supportedFormat)
+                {
+                    return supportedFormat == format;
+                }
+            ) != s_supportedDepthFormats.end();
+        }
+
+        static bool is_color_format_supported(ImageFormat format)
+        {
+            return std::find_if(
+                s_supportedColorFormats.begin(),
+                s_supportedColorFormats.end(),
+                [format](const ImageFormat& supportedFormat)
+                {
+                    return supportedFormat == format;
+                }
+            ) != s_supportedColorFormats.end();
+        }
+
+        static ImageFormat get_first_supported_depth_format()
+        {
+            if (s_supportedDepthFormats.empty())
+            {
+                Debug::log(
+                    "@Device::get_first_supported_depth_format "
+                    "No supported depth formats exist!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return ImageFormat::NONE;
+            }
+            return s_supportedDepthFormats[0];
+        }
 
         static DeviceImpl* get_impl();
     };
