@@ -121,24 +121,9 @@ namespace platypus
         const RenderPass* pRenderPass,
         ID_t meshID,
         ID_t materialID,
-        void* pShadowPushConstants,
-        size_t shadowPushConstantsSize
+        const Light * const pDirectionalLight
     )
     {
-        // TODO: Some better way to deal with these...
-        const size_t requiredShadowPushConstantsSize = sizeof(Matrix4f) * 2;
-        if (pShadowPushConstants != nullptr && shadowPushConstantsSize != requiredShadowPushConstantsSize)
-        {
-            Debug::log(
-                "@create_static_shadow_batch "
-                "Invalid shadow push constants size: " + std::to_string(shadowPushConstantsSize) + " "
-                "required size is " + std::to_string(requiredShadowPushConstantsSize),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return NULL_ID;
-        }
-
         ID_t identifier = ID::hash(meshID, materialID);
         if (!batcher.validateBatchDoesntExist("create_static_shadow_batch", pRenderPass->getType(), identifier))
             return nullptr;
@@ -166,13 +151,25 @@ namespace platypus
         );
         pBatch->pIndexBuffer = pMesh->getIndexBuffer();
 
-        pBatch->pushConstantsSize = shadowPushConstantsSize;
+        if (!pDirectionalLight)
+        {
+            Debug::log(
+                "@create_static_shadow_batch "
+                "Directional light was nullptr!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            delete pBatch;
+            return nullptr;
+        }
+        // TODO: Better way of handling this
+        pBatch->pushConstantsSize = sizeof(Matrix4f) * 2;
         pBatch->pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
         pBatch->pushConstantsUniformInfos = {
             { ShaderDataType::Mat4 },
             { ShaderDataType::Mat4 }
         };
-        pBatch->pPushConstantsData = pShadowPushConstants;
+        pBatch->pPushConstantsData = (void*)pDirectionalLight;
 
         std::vector<VertexBufferLayout> usedVertexBufferLayouts;
         pMasterRenderer->solveVertexBufferLayouts(
@@ -188,6 +185,7 @@ namespace platypus
             "shadows/StaticFragmentShader",
             usedVertexBufferLayouts,
             { }, // DescriptorSetLayouts
+            CullMode::CULL_MODE_FRONT,
             pBatch->pushConstantsSize,
             pBatch->pushConstantsShaderStage
         );

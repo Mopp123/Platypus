@@ -1,6 +1,5 @@
 #include "Batch.hpp"
 #include "platypus/core/Application.h"
-#include "platypus/assets/AssetManager.h"
 #include "platypus/core/Debug.h"
 
 
@@ -110,6 +109,7 @@ namespace platypus
         const std::string& fragmentShaderFilename,
         const std::vector<VertexBufferLayout>& vertexBufferLayouts,
         const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
+        CullMode cullMode,
         size_t pushConstantsSize,
         ShaderStageFlagBits pushConstantsShaderStage
     )
@@ -124,8 +124,6 @@ namespace platypus
             fragmentShaderFilename,
             ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
         );
-
-        CullMode cullMode = pRenderPass->getType() == RenderPassType::SCENE_PASS ? CullMode::CULL_MODE_BACK : CullMode::CULL_MODE_FRONT;
 
         pPipelineData->pPipeline = new Pipeline(
             pRenderPass,

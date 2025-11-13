@@ -24,8 +24,7 @@ namespace platypus
         const RenderPass* pRenderPass,
         ID_t meshID,
         ID_t materialID,
-        void* pShadowPushConstants,
-        size_t shadowPushConstantsSize
+        const Light * const pDirectionalLight
     );
 
     void add_to_skinned_batch(

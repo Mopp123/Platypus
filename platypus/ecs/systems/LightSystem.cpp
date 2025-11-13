@@ -178,6 +178,7 @@ namespace platypus
         float height = (pMaxY - pMinY);
         float length = (pMaxZ - pMinZ);
 
+        // NOTE: Old comment below, currently the shadows seem fine without multiplying the height by 2...
         // * I have no idea why height has to be multiplied by 2, but if it wasnt multiplied by 2 we may
         // sometimes get shadows looking way too wrong..
         pDirectionalLight->shadowProjectionMatrix = create_orthographic_projection_matrix(

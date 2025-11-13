@@ -1,0 +1,31 @@
+Batch creation:
+
+1. validate batch doesnt exist already for targeted render pass
+2. get pipeline from material (if uses material, otherwise create the pipeline)
+3. if receives shadows -> get shadow proj and view matrices as push constants from pDirLight
+4. get or create per batch dynamic vertex buffers (optional)
+    *requiers knowing the dynamic vertex buffer's element size
+    *requires knowing the batch's "shared batch resource's" indices if the resource was already created
+        -> requires some kind of batch creation layout for each different kind of batch to know this, which also helps a lot in few other things!
+5. get used mesh's vertex and index buffers
+6. get or create per batch descriptor sets (optional)
+    *requires knowing the ShaderResourceLayouts for the batch
+    *requires knowing the "shared batch resources'" indices just like the dynamic vertex buffers at section 4.
+7. combine used descriptor sets, where:
+    Scene3DDataDescriptorSets are first.
+    Batch specific descriptor sets in the middle.
+    Material's descriptor sets last (if used by the batch at all).
+
+Adding to batch:
+
+1. put all inputted data into a single contiguous buffer
+2. go through each batch found with the batch's ID
+3. make sure the batch has enough space
+    *this requires knowing is the batch using instance or repeat count or both?
+        -> could be known using the batch layout thing mentioned earlier
+4. go through each of the batch's shared resource indices
+5. take the data in the contiguous input buffer (constructed at section 1) and update
+    the shared batch buffer at appropriate offset with appropriate size.
+6. mark the resource as updated (so batches sharing the same ID don't need to re update it) and
+    advance to the next position in the input buffer and batch resource index.
+    NOTE: This should be possible by knowing the batch layout thing!

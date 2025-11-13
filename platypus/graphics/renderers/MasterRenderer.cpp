@@ -126,18 +126,9 @@ namespace platypus
             return;
         }
 
-        // NOTE: ONLY TESTING, DANGEROUS AND INEFFICIENT AS FUCK!
-        // TODO: Better way to get shadow caster proj and view matrices!!!!
-        void* pShadowPassPushConstants = nullptr;
-        size_t shadowPassPushConstantsSize = 0;
         Light* pDirectionalLight = (Light*)pScene->getComponent(
             ComponentType::COMPONENT_TYPE_LIGHT
         );
-        if (pDirectionalLight)
-        {
-            pShadowPassPushConstants = (void*)pDirectionalLight;
-            shadowPassPushConstantsSize = sizeof(Matrix4f) * 2;
-        }
 
         // NOTE: Below should rather be done by the "batcher" since these are kind of batching related operations?!
         Transform* pTransform = (Transform*)pScene->getComponent(
@@ -177,8 +168,7 @@ namespace platypus
                     &_shadowPass,
                     meshID,
                     materialID,
-                    pShadowPassPushConstants,
-                    shadowPassPushConstantsSize
+                    pDirectionalLight
                 );
             }
             add_to_static_batch(
@@ -222,8 +212,7 @@ namespace platypus
                     &_shadowPass,
                     meshID,
                     materialID,
-                    pShadowPassPushConstants,
-                    shadowPassPushConstantsSize
+                    pDirectionalLight
                 );
             }
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(

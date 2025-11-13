@@ -18,8 +18,8 @@ namespace platypus
 {
     enum class ShaderResourceType
     {
-        ANY,
-        MATERIAL
+        ANY, // TODO: Rename this UNIFORM_BUFFER or something instead?
+        MATERIAL // TODO: Rename this TEXTURE or something instead?
     };
 
     // TODO: Maybe better name, since it's not just a layout (takes in Texture ptrs!)
@@ -129,6 +129,7 @@ namespace platypus
             const std::string& fragmentShaderFilename,
             const std::vector<VertexBufferLayout>& vertexBufferLayouts,
             const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
+            CullMode cullMode,
             size_t pushConstantsSize,
             ShaderStageFlagBits pushConstantsShaderStage
         );
