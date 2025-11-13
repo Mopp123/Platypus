@@ -50,8 +50,12 @@ layout(std140) uniform MaterialData
     vec4 textureProperties;
 } materialData;
 
+
 layout(location = 0) out vec4 outColor;
 
+
+const float minBias = 0.0025;
+const float maxBias = 0.01;
 
 float calcShadow(float bias, int pcfCount)
 {
@@ -73,7 +77,7 @@ float calcShadow(float bias, int pcfCount)
                 continue;
 
             float d = texture(shadowmapTexture, sampleCoord).r;
-            shadow += shadowmapCoord.z - bias > d ? 1.0 : 0.0;
+            shadow += shadowmapCoord.z > d + bias  ? 1.0 : 0.0;
         }
     }
     shadow /= float(texelCount);
@@ -143,7 +147,8 @@ void main()
 
     int shadowPCFSampleRadius = int(var_shadowProperties.y);
     float shadowStrength = var_shadowProperties.z;
-    float bias = 0.0; //max(min((1.0 - dot(unitNormal, toLight)), maxBias), minBias);
+    vec3 unitMeshNormal = normalize(var_normal);
+    float bias = 0.0;//max(maxBias * (1.0 - dot(unitMeshNormal, toLight)), minBias);
     float shadow = min(calcShadow(bias, shadowPCFSampleRadius), shadowStrength);
 
     outColor = finalAmbientColor + (1.0 - shadow) * (finalDiffuseColor + finalSpecularColor);

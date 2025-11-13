@@ -71,7 +71,8 @@ void main()
     var_lightDir = var_toTangentSpace * (sceneData.viewMatrix * vec4(sceneData.lightDirection.xyz, 0.0)).xyz;
     var_lightColor = sceneData.lightColor;
     var_ambientLightColor = sceneData.ambientLightColor;
-    var_normal = (toCameraSpace * vec4(normal, 0.0)).xyz;
+
+    var_normal = var_toTangentSpace * transformedNormal;
 
     var_tangent = vec4(biTangent, 1.0);
 

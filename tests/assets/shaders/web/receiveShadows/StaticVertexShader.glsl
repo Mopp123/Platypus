@@ -26,17 +26,6 @@ layout(std140) uniform SceneData
     vec4 shadowProperties;
 } sceneData;
 
-// struct SceneData
-// {
-//     mat4 projectionMatrix;
-//     mat4 viewMatrix;
-//     vec4 cameraPosition;
-//     vec4 lightDirection;
-//     vec4 lightColor;
-//     vec4 ambientLightColor;
-// };
-// uniform SceneData sceneData;
-
 out vec3 var_normal;
 out vec2 var_texCoord;
 out vec3 var_fragPos;
