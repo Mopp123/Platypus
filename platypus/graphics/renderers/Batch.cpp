@@ -681,13 +681,20 @@ namespace platypus
         Material* pMaterial = nullptr;
         Pipeline* pPipeline = nullptr;
         bool receivesShadows = false;
+        const bool shadowPass = pRenderPass->getType() == RenderPassType::SHADOW_PASS;
 
         size_t pushConstantsSize = 0;
         std::vector<UniformInfo> pushConstantsUniformInfos;
         ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
         void* pPushConstantsData = nullptr;
 
-        if (materialID != NULL_ID)
+        // For now all 3D rendering takes scene3DDescriptorSets IF NOT SHADOWPASS
+        std::vector<std::vector<DescriptorSet>> usedDescriptorSets;
+        if (!shadowPass)
+            usedDescriptorSets.push_back(_masterRendererRef.getScene3DDataDescriptorSets());
+
+        // Use the material's pipeline and descriptor sets if not shadowpass
+        if (materialID != NULL_ID && !shadowPass)
         {
             pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
             pPipeline = pMaterial->getPipeline(renderableType);
@@ -697,18 +704,25 @@ namespace platypus
         const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
 
         // Dynamic vertex buffers
+        //
         // NOTE: Atm allowing just a single dynamic vertex buffer for each frame in flight
         // per batch!
         // TODO: Allow more?
-        std::vector<Buffer*> dynamicVertexBuffer = getOrCreateSharedInstancedBuffer(
-            batchID,
-            instanceBufferElementSize,
-            maxBatchLength,
-            framesInFlight
-        );
+        std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
+        if (instanceBufferElementSize > 0)
+        {
+            dynamicVertexBuffers.push_back(
+                getOrCreateSharedInstancedBuffer(
+                    batchID,
+                    instanceBufferElementSize,
+                    maxBatchLength,
+                    framesInFlight
+                )
+            );
+        }
 
-        // Shadow push constants
-        if (receivesShadows || pRenderPass->getType() == RenderPassType::SHADOW_PASS)
+        // Provide shadow proj and view matrices as push constants if needed
+        if (receivesShadows || shadowPass)
         {
             if (!pDirectionalLight)
             {
@@ -731,51 +745,97 @@ namespace platypus
         }
 
         // Shared shader resources (uniform buffers + descriptor sets)
-        // For now all 3D rendering takes scene3DDescriptorSets
-        std::vector<std::vector<DescriptorSet>> usedDescriptorSets = { _masterRendererRef.getScene3DDataDescriptorSets() };
-
+        uint32_t dynamicUniformBufferElementSize = 0;
         if (!uniformResourceLayouts.empty())
         {
+            // TODO: Allow multiple shared shader resources for batch
+            if (uniformResourceLayouts.size() != 1)
+            {
+                Debug::log(
+                    "@Batcher::createBatch "
+                    "Currently supporting only a single dynamic shared resource per batch! "
+                    "Provided resource layouts: " + std::to_string(uniformResourceLayouts.size()),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
             std::vector<BatchShaderResource>& createdShaderResources = getOrCreateSharedShaderResources(
                 batchID,
                 maxBatchLength,
                 uniformResourceLayouts,
                 framesInFlight
             );
+            dynamicUniformBufferElementSize = uniformResourceLayouts[0].uniformBufferElementSize;
             for (BatchShaderResource& resource : createdShaderResources)
                 usedDescriptorSets.push_back(resource.descriptorSet);
         }
 
-        if (pMaterial)
+        // Need to add the Material descriptor sets last if using those..
+        if (materialID != NULL_ID && !shadowPass)
+        {
             usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
+        }
 
         std::vector<std::vector<DescriptorSet>> combinedDescriptorSets = combineUsedDescriptorSets(
             framesInFlight,
             usedDescriptorSets
         );
 
+        // Create pipeline if not using Material pipeline.
+        // NOTE: Currently this is used ONLY for SHADOWPASS shaders.
+        // Allow some more flexible way of creating pipelines without Materials?
+        if (!pPipeline)
+        {
+            std::vector<VertexBufferLayout> usedVertexBufferLayouts;
+            _masterRendererRef.solveVertexBufferLayouts(
+                pMesh->getVertexBufferLayout(),
+                renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE, // instanced?
+                renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE, // skinned?
+                shadowPass, // shadow pipeline?
+                usedVertexBufferLayouts
+            );
+            // NOTE: WARNING! There's an issue if the pipeline requires more descriptor set layouts than
+            // provided with the inputted uniformResourceLayouts!
+            std::vector<DescriptorSetLayout> usedDescriptorSetLayouts;
+            for (const ShaderResourceLayout& resourceLayout : uniformResourceLayouts)
+                usedDescriptorSetLayouts.push_back(resourceLayout.descriptorSetLayout);
+
+            // NOTE: Don't know if working, not tested!
+            std::string vertexShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, renderableType);
+            std::string fragmentShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, renderableType);
+            BatchPipelineData* pPipelineData = createBatchPipelineData(
+                pRenderPass,
+                vertexShaderFilename,
+                fragmentShaderFilename,
+                usedVertexBufferLayouts,
+                usedDescriptorSetLayouts,
+                CullMode::CULL_MODE_FRONT,
+                pushConstantsSize,
+                pushConstantsShaderStage
+            );
+            pPipeline = pPipelineData->pPipeline;
+        }
+
         Batch* pBatch = new Batch{
             maxBatchLength,
             pPipeline, // TODO: create pipeline if not getting it from Material!
-            std::vector<std::vector<DescriptorSet>> descriptorSets;
-            uint32_t dynamicUniformBufferElementSize = 0;
-            std::vector<const Buffer*> staticVertexBuffers;
-            std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
-            const Buffer* pIndexBuffer = nullptr;
-
-            // TODO: How to get the actual data for the push constants??
-            size_t pushConstantsSize = 0;
-            std::vector<UniformInfo> pushConstantsUniformInfos;
-            void* pPushConstantsData = nullptr;
-
+            combinedDescriptorSets,
+            dynamicUniformBufferElementSize,
+            { pMesh->getVertexBuffer() }, // Static vertex buffers
+            dynamicVertexBuffers,
+            pMesh->getIndexBuffer(),
+            pushConstantsSize,
+            pushConstantsUniformInfos,
+            pPushConstantsData,
             // Atm push constants should ONLY be used in vertex shaders!
-            ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
-
-            // Repeat count should be 1 if instanced
-            uint32_t repeatCount = 0;
-            // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
-            uint32_t instanceCount = 0;
+            pushConstantsShaderStage,
+            0, // repeat count
+            0 // instance count
         };
+
+        addBatch(pRenderPass->getType(), batchID, pBatch);
     }
 
     void Batcher::addToAllocatedShaderResources(

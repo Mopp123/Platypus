@@ -153,14 +153,7 @@ namespace platypus
             Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
             if (!pBatch)
             {
-                //create_static_batch(
-                //    _batcher,
-                //    _batcher.getMaxStaticBatchLength(),
-                //    _swapchainRef.getRenderPassPtr(),
-                //    meshID,
-                //    materialID,
-                //    pDirectionalLight
-                //);
+                // Create static scene pass batch
                 _batcher.createBatch(
                     meshID,
                     materialID,
@@ -172,13 +165,16 @@ namespace platypus
                     _swapchainRef.getRenderPassPtr()
                 );
 
-                create_static_shadow_batch(
-                    _batcher,
-                    _batcher.getMaxStaticBatchLength(),
-                    &_shadowPass,
+                // Create static shadow pass batch
+                _batcher.createBatch(
                     meshID,
                     materialID,
-                    pDirectionalLight
+                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+                    _batcher.getMaxStaticBatchLength(),
+                    sizeof(Matrix4f), // instance buffer elem size
+                    { }, // uniform resource layouts
+                    pDirectionalLight,
+                    &_shadowPass
                 );
             }
             add_to_static_batch(
@@ -205,24 +201,44 @@ namespace platypus
             Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
             if (!pBatch)
             {
-                create_skinned_batch(
-                    _batcher,
-                    maxSkinnedBatchLength,
-                    maxJoints,
-                    _swapchainRef.getRenderPassPtr(),
+                // Create skinned scene pass batch
+                const size_t dynamicJointBufferElemSize = get_dynamic_uniform_buffer_element_size(
+                    sizeof(Matrix4f) * _batcher.getMaxSkinnedMeshJoints()
+                );
+                _batcher.createBatch(
                     meshID,
                     materialID,
-                    pDirectionalLight
+                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+                    _batcher.getMaxSkinnedBatchLength(),
+                    0, // instance buffer elem size
+                    {
+                        {
+                            ShaderResourceType::ANY,
+                            dynamicJointBufferElemSize,
+                            Batcher::get_joint_descriptor_set_layout(),
+                            { }
+                        }
+                    }, // uniform resource layouts
+                    pDirectionalLight,
+                    _swapchainRef.getRenderPassPtr()
                 );
 
-                create_skinned_shadow_batch(
-                    _batcher,
-                    maxSkinnedBatchLength,
-                    maxJoints,
-                    &_shadowPass,
+                _batcher.createBatch(
                     meshID,
                     materialID,
-                    pDirectionalLight
+                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+                    _batcher.getMaxSkinnedBatchLength(),
+                    0, // instance buffer elem size
+                    {
+                        {
+                            ShaderResourceType::ANY,
+                            dynamicJointBufferElemSize,
+                            Batcher::get_joint_descriptor_set_layout(),
+                            { }
+                        }
+                    }, // uniform resource layouts
+                    pDirectionalLight,
+                    &_shadowPass
                 );
             }
             const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
@@ -258,13 +274,26 @@ namespace platypus
             Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
             if (!pBatch)
             {
-                create_terrain_batch(
-                    _batcher,
-                    _batcher.getMaxTerrainBatchLength(),
-                    _swapchainRef.getRenderPassPtr(),
+                // Create terrain scene pass batch
+                const size_t dynamicTerrainInstanceBufferElemSize = get_dynamic_uniform_buffer_element_size(
+                    sizeof(Matrix4f)
+                );
+                _batcher.createBatch(
                     meshID,
                     materialID,
-                    pDirectionalLight
+                    ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
+                    _batcher.getMaxTerrainBatchLength(),
+                    0, // instance buffer elem size
+                    {
+                        {
+                            ShaderResourceType::ANY,
+                            dynamicTerrainInstanceBufferElemSize,
+                            Batcher::get_terrain_descriptor_set_layout(),
+                            { }
+                        }
+                    }, // uniform resource layouts
+                    pDirectionalLight,
+                    _swapchainRef.getRenderPassPtr()
                 );
             }
             add_to_terrain_batch(
