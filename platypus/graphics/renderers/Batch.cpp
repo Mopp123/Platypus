@@ -144,122 +144,6 @@ namespace platypus
         return pPipelineData;
     }
 
-    void Batcher::addBatch(RenderPassType renderPassType, ID_t identifier, Batch* pBatch)
-    {
-        _identifierBatchMapping[renderPassType][identifier] = _batches[renderPassType].size();
-        _batches[renderPassType].push_back(pBatch);
-    }
-
-    /*
-    void Batcher::addToStaticBatch(
-        ID_t identifier,
-        const Matrix4f& transformationMatrix,
-        size_t currentFrame
-    )
-    {
-        Batch* pBatch = getBatch(identifier);
-        if (!pBatch)
-            return;
-
-        // TODO: Create new batch if this one is full!
-        //  -> Need to have some kind of thing where multiple batches can exist for the same identifier
-        if (pBatch->instanceCount >= _maxStaticBatchLength)
-        {
-            Debug::log(
-                "@Batcher::addToStaticBatch "
-                "Batch is full. Maximum static batch length is " + std::to_string(_maxStaticBatchLength),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        Buffer* pInstancedBuffer = getBatchBuffer(identifier, 0, currentFrame);
-        pInstancedBuffer->updateHost(
-            (void*)(&transformationMatrix),
-            sizeof(Matrix4f),
-            sizeof(Matrix4f) * pBatch->instanceCount
-        );
-        ++pBatch->instanceCount;
-        pBatch->repeatCount = 1;
-    }
-
-    void Batcher::addToSkinnedBatch(
-        ID_t identifier,
-        void* pJointData,
-        size_t jointDataSize,
-        size_t currentFrame
-    )
-    {
-        Batch* pBatch = getBatch(identifier);
-
-        // TODO: Create new batch if this one is full!
-        //  -> Need to have some kind of mapping where multiple batches can exist for the same identifier
-        if (pBatch->repeatCount >= _maxSkinnedBatchLength)
-        {
-            Debug::log(
-                "@Batcher::addToSkinnedBatch "
-                "Batch is full. Maximum skinned batch length is " + std::to_string(_maxSkinnedBatchLength),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        Buffer* pJointBuffer = getBatchBuffer(identifier, 0, currentFrame);
-        uint32_t jointBufferOffset = pBatch->repeatCount * pJointBuffer->getDataElemSize();
-        pJointBuffer->updateHost(
-            pJointData,
-            jointDataSize,
-            jointBufferOffset
-        );
-        pBatch->instanceCount = 1;
-        ++pBatch->repeatCount;
-    }
-
-    void Batcher::addToTerrainBatch(
-        ID_t identifier,
-        const Matrix4f& transformationMatrix,
-        size_t currentFrame
-    )
-    {
-        Batch* pBatch = getBatch(identifier);
-
-        // TODO: Create new batch if this one is full!
-        //  -> Need to have some kind of mapping where multiple batches can exist for the same identifier
-        if (pBatch->repeatCount >= _maxTerrainBatchLength)
-        {
-            Debug::log(
-                "@Batcher::addToTerrainBatch "
-                "Batch is full. Maximum skinned batch length is " + std::to_string(_maxSkinnedBatchLength),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        const size_t terrainDataSize = sizeof(Matrix4f) + sizeof(Vector2f);
-        std::vector<PE_byte> terrainData(terrainDataSize);
-        memcpy(terrainData.data(), &transformationMatrix, sizeof(Matrix4f));
-        // TODO: Some better way to deal with the tex coord multiplying
-        const float tileSize = 1.0f;
-        memcpy(terrainData.data() + sizeof(Matrix4f), &tileSize, sizeof(float));
-        const float fVerticesPerRow = 2.0f;
-        memcpy(terrainData.data() + sizeof(Matrix4f) + sizeof(float), &fVerticesPerRow, sizeof(float));
-
-        Buffer* pTerrainBuffer = getBatchBuffer(identifier, 0, currentFrame);
-        uint32_t terrainBufferOffset = pBatch->repeatCount * pTerrainBuffer->getDataElemSize();
-        pTerrainBuffer->updateHost(
-            terrainData.data(),
-            terrainDataSize,
-            terrainBufferOffset
-        );
-
-        pBatch->instanceCount = 1;
-        ++pBatch->repeatCount;
-    }
-    */
-
     void Batcher::updateDeviceSideBuffers(size_t currentFrame)
     {
         for (std::vector<BatchShaderResource>& batchResources : _allocatedShaderResources)
@@ -531,6 +415,7 @@ namespace platypus
         return _allocatedShaderResources[_batchShaderResourceMapping[batchID]];
     }
 
+    // NOTE: Not used anymore? TODO: Delete?
     void Batcher::updateHostSideSharedResource(
         ID_t batchID,
         size_t resourceIndex,
@@ -665,6 +550,10 @@ namespace platypus
         ID_t materialID,
         ComponentType renderableType,
         size_t maxBatchLength,
+        uint32_t maxRepeatCount,
+        uint32_t repeatAdvance,
+        uint32_t maxInstanceCount,
+        uint32_t instanceAdvance,
         size_t instanceBufferElementSize,
         const std::vector<ShaderResourceLayout>& uniformResourceLayouts,
         const Light * const pDirectionalLight,
@@ -672,8 +561,25 @@ namespace platypus
     )
     {
         ID_t batchID = ID::hash(meshID, materialID);
-        if (!validateBatchDoesntExist("Batcher::createBatch", pRenderPass->getType(), batchID))
+        RenderPassType renderPassType = pRenderPass->getType();
+        if (!validateBatchDoesntExist("Batcher::createBatch", renderPassType, batchID))
             return;
+
+        // TODO: Allow using both, repeat and instance advances.
+        // This requires marking individual shared shader resources to be using one or the other
+        // to be able to advance the buffer offset correctly when adding to this batch!
+        if (instanceAdvance > 0 && repeatAdvance > 0)
+        {
+            Debug::log(
+                "@Batcher::addToBatch "
+                "Batch was attempting to use both, repeat and instance advance. "
+                "Currently batches can use only one or the other!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
 
         Application* pApp = Application::get_instance();
         AssetManager* pAssetManager = pApp->getAssetManager();
@@ -681,7 +587,7 @@ namespace platypus
         Material* pMaterial = nullptr;
         Pipeline* pPipeline = nullptr;
         bool receivesShadows = false;
-        const bool shadowPass = pRenderPass->getType() == RenderPassType::SHADOW_PASS;
+        const bool shadowPass = renderPassType == RenderPassType::SHADOW_PASS;
 
         size_t pushConstantsSize = 0;
         std::vector<UniformInfo> pushConstantsUniformInfos;
@@ -832,10 +738,125 @@ namespace platypus
             // Atm push constants should ONLY be used in vertex shaders!
             pushConstantsShaderStage,
             0, // repeat count
-            0 // instance count
+            maxRepeatCount, // max repeat count
+            repeatAdvance, // repeat advance
+            0, // instance count
+            maxInstanceCount, // max instance count
+            instanceAdvance // instance advance
         };
 
-        addBatch(pRenderPass->getType(), batchID, pBatch);
+        _identifierBatchMapping[renderPassType][batchID] = _batches[renderPassType].size();
+        _batches[renderPassType].push_back(pBatch);
+    }
+
+    void Batcher::addToBatch(ID_t batchID, void* pData, size_t dataSize, size_t currentFrame)
+    {
+        // Need to update each render passes batches' instance or/and repeat counts
+        // BUT update their shared transforms buffer ONLY ONCE!
+        // ...this is quite dumb I know...
+        bool resourcesUpdated = false;
+        for (Batch* pBatch : getBatches(batchID))
+        {
+            // TODO: allow using both, instance and uniform buffers!
+            bool usingInstanceBuffer = pBatch->instanceAdvance > 0;
+
+            // TODO: Create new batch if this one is full!
+            //  -> Need to have some kind of thing where multiple batches can exist for the same
+            //  identifier for the same render pass
+            if (pBatch->repeatCount >= pBatch->maxRepeatCount && pBatch->repeatAdvance > 0)
+            {
+                Debug::log(
+                    "@Batcher::addToBatch "
+                    "BatchID: " + std::to_string(batchID) + " "
+                    "repeat count(" + std::to_string(pBatch->repeatCount) + ") "
+                    "reached its maximum(" + std::to_string(pBatch->maxRepeatCount) + ")",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            if (pBatch->instanceCount >= pBatch->maxInstanceCount && pBatch->instanceAdvance > 0)
+            {
+                Debug::log(
+                    "@Batcher::addToBatch "
+                    "BatchID: " + std::to_string(batchID) + " "
+                    "instance count(" + std::to_string(pBatch->instanceCount) + ") "
+                    "reached its maximum(" + std::to_string(pBatch->maxInstanceCount) + ")",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            if (!resourcesUpdated)
+            {
+                if (batchResourcesExist(batchID))
+                {
+                    size_t inputDataOffset = 0;
+                    const uint32_t entryCount = usingInstanceBuffer ? pBatch->instanceCount : pBatch->repeatCount;
+                    for (BatchShaderResource& resource : accessSharedBatchResources(batchID))
+                    {
+                        if (resource.buffer.empty())
+                            continue;
+
+                        Buffer* pBuffer = resource.buffer[currentFrame];
+                        // FUCKED UP ATM! NEED TO ADVANCE INPUT BUFFER AT DIFFERENT PACE THAN
+                        // THE RESOURCE BUFFER, SINCE RESOURCE BUFFER'S ELEM SIZE CAN BE BIGGER
+                        // THAN THE ACTUAL DATA ELEM SIZE (dyamic uniform buffer offset alignment
+                        // requirement)!!!
+                        const size_t bufferUpdateSize = pBuffer->getDataElemSize();
+                        const size_t updateOffset = pBuffer->getDataElemSize() * entryCount;
+
+                        // Make sure inside input data range
+                        if (inputDataOffset + updateSize > dataSize)
+                        {
+                            Debug::log(
+                                "@Batcher::addToBatch "
+                                "inputDataOffset(" + std::to_string(inputDataOffset) + ") "
+                                "out of bounds. Input data size: " + std::to_string(dataSize) + " "
+                                "single update size: " + std::to_string(updateSize),
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                            return;
+                        }
+
+                        // Make sure inside resource range
+                        if (updateOffset + updateSize > pBuffer->getTotalSize())
+                        {
+                            Debug::log(
+                                "@Batcher::addToBatch "
+                                "buffer updateOffset(" + std::to_string(updateOffset) + ") "
+                                "out of bounds. Buffer's total size: " + std::to_string(pBuffer->getTotalSize()) + " "
+                                "buffer element size: " + std::to_string(pBuffer->getDataElemSize()),
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                            return;
+                        }
+
+                        pBuffer->updateHost(
+                            (void*)((PE_ubyte*)pData + inputDataOffset),
+                            updateSize,
+                            updateOffset
+                        );
+                        resource.requiresDeviceUpdate = true;
+                        inputDataOffset += updateSize;
+                    }
+                    resourcesUpdated = true;
+                }
+            }
+
+            if (pBatch->repeatAdvance == 0)
+                pBatch->repeatCount = 1;
+            else
+                pBatch->repeatCount += pBatch->repeatAdvance;
+
+            if (pBatch->instanceAdvance == 0)
+                pBatch->instanceCount = 1;
+            else
+                pBatch->instanceCount += pBatch->instanceAdvance;
+        }
     }
 
     void Batcher::addToAllocatedShaderResources(

@@ -30,6 +30,7 @@ namespace platypus
         std::vector<Texture*> textures;
     };
 
+    // TODO: Allow specifying is this resource offset depending on repeat or instance count!
     struct BatchShaderResource
     {
         ShaderResourceType type;
@@ -63,8 +64,12 @@ namespace platypus
 
         // Repeat count should be 1 if instanced
         uint32_t repeatCount = 0;
+        uint32_t maxRepeatCount = 0;
+        uint32_t repeatAdvance = 0;
         // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
         uint32_t instanceCount = 0;
+        uint32_t maxInstanceCount = 0;
+        uint32_t instanceAdvance = 0;
     };
 
     struct BatchPipelineData
@@ -133,8 +138,6 @@ namespace platypus
             ShaderStageFlagBits pushConstantsShaderStage
         );
 
-        void addBatch(RenderPassType renderPassType, ID_t identifier, Batch* pBatch);
-
         // This also updates stuff that doesn't need to be done per instance but for whole
         // batch. Material data for example(if some properties have changed).
         void updateDeviceSideBuffers(size_t currentFrame);
@@ -159,6 +162,7 @@ namespace platypus
         // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
         std::vector<BatchShaderResource>& accessSharedBatchResources(ID_t batchID);
 
+        // NOTE: Not used anymore? TODO: Delete?
         void updateHostSideSharedResource(
             ID_t batchID,
             size_t resourceIndex,
@@ -225,11 +229,17 @@ namespace platypus
             ID_t materialID,
             ComponentType renderableType, // TODO: Some better way to deal with this, dumb to provide all this shit...
             size_t maxBatchLength,
+            uint32_t maxRepeatCount,
+            uint32_t repeatAdvance,
+            uint32_t maxInstanceCount,
+            uint32_t instanceAdvance,
             size_t instanceBufferElementSize,
             const std::vector<ShaderResourceLayout>& uniformResourceLayouts,
             const Light * const pDirectionalLight,
             const RenderPass* pRenderPass
         );
+
+        void addToBatch(ID_t batchID, void* pData, size_t dataSize, size_t currentFrame);
 
         inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
         inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }

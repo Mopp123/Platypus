@@ -9,9 +9,6 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "StaticBatch.hpp"
-#include "SkinnedBatch.hpp"
-#include "TerrainBatch.hpp"
 
 
 namespace platypus
@@ -159,6 +156,10 @@ namespace platypus
                     materialID,
                     ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
                     _batcher.getMaxStaticBatchLength(),
+                    1, // maxRepeatCount,
+                    0, // repeatAdvance,
+                    _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
+                    1, // instanceAdvance,
                     sizeof(Matrix4f), // instance buffer elem size
                     { }, // uniform resource layouts
                     pDirectionalLight,
@@ -171,16 +172,26 @@ namespace platypus
                     materialID,
                     ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
                     _batcher.getMaxStaticBatchLength(),
+                    1, // maxRepeatCount,
+                    0, // repeatAdvance,
+                    _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
+                    1, // instanceAdvance,
                     sizeof(Matrix4f), // instance buffer elem size
                     { }, // uniform resource layouts
                     pDirectionalLight,
                     &_shadowPass
                 );
             }
-            add_to_static_batch(
-                _batcher,
+            //add_to_static_batch(
+            //    _batcher,
+            //    batchID,
+            //    pTransform->globalMatrix,
+            //    _currentFrame
+            //);
+            _batcher.addToBatch(
                 batchID,
-                pTransform->globalMatrix,
+                (void*)&(pTransform->globalMatrix),
+                sizeof(Matrix4f),
                 _currentFrame
             );
         }
@@ -210,6 +221,10 @@ namespace platypus
                     materialID,
                     ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
                     _batcher.getMaxSkinnedBatchLength(),
+                    _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
+                    1, // repeatAdvance,
+                    1, // maxInstanceCount,
+                    0, // instanceAdvance,
                     0, // instance buffer elem size
                     {
                         {
@@ -228,6 +243,10 @@ namespace platypus
                     materialID,
                     ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
                     _batcher.getMaxSkinnedBatchLength(),
+                    _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
+                    1, // repeatAdvance,
+                    1, // maxInstanceCount,
+                    0, // instanceAdvance,
                     0, // instance buffer elem size
                     {
                         {
@@ -250,14 +269,20 @@ namespace platypus
                 AssetType::ASSET_TYPE_MESH
             );
 
-            add_to_skinned_batch(
-                _batcher,
+            //add_to_skinned_batch(
+            //    _batcher,
+            //    batchID,
+            //    (void*)pAnimation->jointMatrices,
+            //    sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
+            //    _currentFrame
+            //);
+
+            _batcher.addToBatch(
                 batchID,
                 (void*)pAnimation->jointMatrices,
                 sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
                 _currentFrame
             );
-
         }
 
         TerrainMeshRenderable* pTerrainRenderable = (TerrainMeshRenderable*)pScene->getComponent(
@@ -283,6 +308,10 @@ namespace platypus
                     materialID,
                     ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
                     _batcher.getMaxTerrainBatchLength(),
+                    _batcher.getMaxTerrainBatchLength(), // maxRepeatCount,
+                    1, // repeatAdvance,
+                    1, // maxInstanceCount,
+                    0, // instanceAdvance,
                     0, // instance buffer elem size
                     {
                         {
@@ -296,10 +325,17 @@ namespace platypus
                     _swapchainRef.getRenderPassPtr()
                 );
             }
-            add_to_terrain_batch(
-                _batcher,
+            //add_to_terrain_batch(
+            //    _batcher,
+            //    batchID,
+            //    pTransform->globalMatrix,
+            //    _currentFrame
+            //);
+
+            _batcher.addToBatch(
                 batchID,
-                pTransform->globalMatrix,
+                (void*)&(pTransform->globalMatrix),
+                sizeof(Matrix4f),
                 _currentFrame
             );
         }

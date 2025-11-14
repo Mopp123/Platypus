@@ -24,8 +24,6 @@
 #include "graphics/Shader.h"
 #include "graphics/renderers/GUIRenderer.h"
 #include "graphics/renderers/MasterRenderer.h"
-#include "graphics/renderers/deprecated/StaticMeshRenderer.h"
-#include "graphics/renderers/deprecated/Renderer.h"
 #include "graphics/Buffers.h"
 #include "graphics/Pipeline.h"
 #include "graphics/Descriptors.h"
