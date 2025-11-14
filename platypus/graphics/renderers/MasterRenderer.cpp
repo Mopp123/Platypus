@@ -182,16 +182,12 @@ namespace platypus
                     &_shadowPass
                 );
             }
-            //add_to_static_batch(
-            //    _batcher,
-            //    batchID,
-            //    pTransform->globalMatrix,
-            //    _currentFrame
-            //);
+
             _batcher.addToBatch(
                 batchID,
                 (void*)&(pTransform->globalMatrix),
                 sizeof(Matrix4f),
+                { sizeof(Matrix4f) },
                 _currentFrame
             );
         }
@@ -269,18 +265,11 @@ namespace platypus
                 AssetType::ASSET_TYPE_MESH
             );
 
-            //add_to_skinned_batch(
-            //    _batcher,
-            //    batchID,
-            //    (void*)pAnimation->jointMatrices,
-            //    sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
-            //    _currentFrame
-            //);
-
             _batcher.addToBatch(
                 batchID,
                 (void*)pAnimation->jointMatrices,
                 sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
+                { sizeof(Matrix4f) * pSkinnedMesh->getJointCount() },
                 _currentFrame
             );
         }
@@ -325,17 +314,12 @@ namespace platypus
                     _swapchainRef.getRenderPassPtr()
                 );
             }
-            //add_to_terrain_batch(
-            //    _batcher,
-            //    batchID,
-            //    pTransform->globalMatrix,
-            //    _currentFrame
-            //);
 
             _batcher.addToBatch(
                 batchID,
                 (void*)&(pTransform->globalMatrix),
                 sizeof(Matrix4f),
+                { sizeof(Matrix4f) },
                 _currentFrame
             );
         }
