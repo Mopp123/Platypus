@@ -749,7 +749,13 @@ namespace platypus
         _batches[renderPassType].push_back(pBatch);
     }
 
-    void Batcher::addToBatch(ID_t batchID, void* pData, size_t dataSize, size_t currentFrame)
+    void Batcher::addToBatch(
+        ID_t batchID,
+        void* pData,
+        size_t dataSize,
+        const std::vector<size_t>& dataElementSizes,
+        size_t currentFrame
+    )
     {
         // Need to update each render passes batches' instance or/and repeat counts
         // BUT update their shared transforms buffer ONLY ONCE!
@@ -792,6 +798,7 @@ namespace platypus
             {
                 if (batchResourcesExist(batchID))
                 {
+                    size_t inputDataIndex = 0;
                     size_t inputDataOffset = 0;
                     const uint32_t entryCount = usingInstanceBuffer ? pBatch->instanceCount : pBatch->repeatCount;
                     for (BatchShaderResource& resource : accessSharedBatchResources(batchID))
@@ -800,21 +807,33 @@ namespace platypus
                             continue;
 
                         Buffer* pBuffer = resource.buffer[currentFrame];
+
+
                         // FUCKED UP ATM! NEED TO ADVANCE INPUT BUFFER AT DIFFERENT PACE THAN
                         // THE RESOURCE BUFFER, SINCE RESOURCE BUFFER'S ELEM SIZE CAN BE BIGGER
                         // THAN THE ACTUAL DATA ELEM SIZE (dyamic uniform buffer offset alignment
                         // requirement)!!!
                         const size_t bufferUpdateSize = pBuffer->getDataElemSize();
-                        const size_t updateOffset = pBuffer->getDataElemSize() * entryCount;
+                        const size_t bufferUpdateOffset = pBuffer->getDataElemSize() * entryCount;
 
                         // Make sure inside input data range
-                        if (inputDataOffset + updateSize > dataSize)
+                        if (inputDataIndex > dataElementSizes.size())
                         {
                             Debug::log(
                                 "@Batcher::addToBatch "
-                                "inputDataOffset(" + std::to_string(inputDataOffset) + ") "
-                                "out of bounds. Input data size: " + std::to_string(dataSize) + " "
-                                "single update size: " + std::to_string(updateSize),
+                                "inputDataIndex(" + std::to_string(inputDataIndex) + ") out of bounds! "
+                                "Provided data element sizes: " + std::to_string(dataElementSizes.size()),
+                                Debug::MessageType::PLATYPUS_ERROR
+                            );
+                            PLATYPUS_ASSERT(false);
+                            return;
+                        }
+                        if (inputDataOffset > dataSize)
+                        {
+                            Debug::log(
+                                "@Batcher::addToBatch "
+                                "inputDataOffset(" + std::to_string(inputDataOffset) + ") out of bounds! "
+                                "Inputted data size: " + std::to_string(dataSize),
                                 Debug::MessageType::PLATYPUS_ERROR
                             );
                             PLATYPUS_ASSERT(false);
@@ -822,11 +841,11 @@ namespace platypus
                         }
 
                         // Make sure inside resource range
-                        if (updateOffset + updateSize > pBuffer->getTotalSize())
+                        if (bufferUpdateSize + bufferUpdateOffset > pBuffer->getTotalSize())
                         {
                             Debug::log(
                                 "@Batcher::addToBatch "
-                                "buffer updateOffset(" + std::to_string(updateOffset) + ") "
+                                "buffer updateOffset(" + std::to_string(bufferUpdateOffset) + ") "
                                 "out of bounds. Buffer's total size: " + std::to_string(pBuffer->getTotalSize()) + " "
                                 "buffer element size: " + std::to_string(pBuffer->getDataElemSize()),
                                 Debug::MessageType::PLATYPUS_ERROR
@@ -837,11 +856,12 @@ namespace platypus
 
                         pBuffer->updateHost(
                             (void*)((PE_ubyte*)pData + inputDataOffset),
-                            updateSize,
-                            updateOffset
+                            bufferUpdateSize,
+                            bufferUpdateOffset
                         );
                         resource.requiresDeviceUpdate = true;
-                        inputDataOffset += updateSize;
+                        inputDataOffset += dataElementSizes[inputDataIndex];
+                        ++inputDataIndex;
                     }
                     resourcesUpdated = true;
                 }

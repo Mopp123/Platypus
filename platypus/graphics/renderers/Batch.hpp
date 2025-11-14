@@ -239,7 +239,14 @@ namespace platypus
             const RenderPass* pRenderPass
         );
 
-        void addToBatch(ID_t batchID, void* pData, size_t dataSize, size_t currentFrame);
+        // totalDataSize has to be the size of provided pData and sum of values in pData
+        void addToBatch(
+            ID_t batchID,
+            void* pData,
+            size_t dataSize,
+            const std::vector<size_t>& dataElementSizes,
+            size_t currentFrame
+        );
 
         inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
         inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }
