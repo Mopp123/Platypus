@@ -3,10 +3,9 @@
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
-#include "platypus/assets/Material.h"
 #include "platypus/graphics/RenderPass.h"
-#include "platypus/ecs/Entity.h"
-#include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Lights.h"
+#include "platypus/ecs/components/Component.h"
 
 #include <unordered_map>
 
@@ -155,6 +154,11 @@ namespace platypus
         static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
 
         BatchShaderResource* getSharedBatchResource(ID_t batchID, size_t resourceIndex);
+
+        bool batchResourcesExist(ID_t batchID) const;
+        // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
+        std::vector<BatchShaderResource>& accessSharedBatchResources(ID_t batchID);
+
         void updateHostSideSharedResource(
             ID_t batchID,
             size_t resourceIndex,
@@ -216,6 +220,17 @@ namespace platypus
         void destroyManagedPipelines();
         void recreateManagedPipelines();
 
+        void createBatch(
+            ID_t meshID,
+            ID_t materialID,
+            ComponentType renderableType, // TODO: Some better way to deal with this, dumb to provide all this shit...
+            size_t maxBatchLength,
+            size_t instanceBufferElementSize,
+            const std::vector<ShaderResourceLayout>& uniformResourceLayouts,
+            const Light * const pDirectionalLight,
+            const RenderPass* pRenderPass
+        );
+
         inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
         inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }
         inline size_t getMaxTerrainBatchLength() const { return _maxTerrainBatchLength; }
@@ -231,6 +246,20 @@ namespace platypus
             ID_t batchID,
             const std::vector<Buffer*>& buffers,
             const std::vector<DescriptorSet> descriptorSets
+        );
+
+        std::vector<Buffer*> getOrCreateSharedInstancedBuffer(
+            ID_t batchID,
+            size_t elementSize,
+            size_t maxBatchLength,
+            size_t framesInFlight
+        );
+
+        std::vector<BatchShaderResource>& getOrCreateSharedShaderResources(
+            ID_t batchID,
+            size_t maxBatchLength,
+            const std::vector<ShaderResourceLayout>& resourceLayouts,
+            size_t framesInFlight
         );
     };
 }

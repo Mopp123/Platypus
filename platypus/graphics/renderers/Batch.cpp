@@ -500,6 +500,37 @@ namespace platypus
         return nullptr;
     }
 
+    bool Batcher::batchResourcesExist(ID_t batchID) const
+    {
+        std::unordered_map<ID_t, size_t>::const_iterator indexIt = _batchShaderResourceMapping.find(batchID);
+        if (indexIt == _batchShaderResourceMapping.end())
+        {
+            Debug::log(
+                "@Batcher::batchResourcesExist "
+                "No resource indices found for batchID: " + std::to_string(batchID),
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+            return false;
+        }
+        if (indexIt->second >= _allocatedShaderResources.size())
+        {
+            Debug::log(
+                "@Batcher::batchResourcesExist "
+                "Found resource index (" + std::to_string(indexIt->second) + ") out of bounds "
+                "using batchID: " + std::to_string(batchID),
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+            return false;
+        }
+        return true;
+    }
+
+    // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
+    std::vector<BatchShaderResource>& Batcher::accessSharedBatchResources(ID_t batchID)
+    {
+        return _allocatedShaderResources[_batchShaderResourceMapping[batchID]];
+    }
+
     void Batcher::updateHostSideSharedResource(
         ID_t batchID,
         size_t resourceIndex,
@@ -629,6 +660,124 @@ namespace platypus
         }
     }
 
+    void Batcher::createBatch(
+        ID_t meshID,
+        ID_t materialID,
+        ComponentType renderableType,
+        size_t maxBatchLength,
+        size_t instanceBufferElementSize,
+        const std::vector<ShaderResourceLayout>& uniformResourceLayouts,
+        const Light * const pDirectionalLight,
+        const RenderPass* pRenderPass
+    )
+    {
+        ID_t batchID = ID::hash(meshID, materialID);
+        if (!validateBatchDoesntExist("Batcher::createBatch", pRenderPass->getType(), batchID))
+            return;
+
+        Application* pApp = Application::get_instance();
+        AssetManager* pAssetManager = pApp->getAssetManager();
+        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+        Material* pMaterial = nullptr;
+        Pipeline* pPipeline = nullptr;
+        bool receivesShadows = false;
+
+        size_t pushConstantsSize = 0;
+        std::vector<UniformInfo> pushConstantsUniformInfos;
+        ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+        void* pPushConstantsData = nullptr;
+
+        if (materialID != NULL_ID)
+        {
+            pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+            pPipeline = pMaterial->getPipeline(renderableType);
+            receivesShadows = pMaterial->receivesShadows();
+        }
+
+        const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+
+        // Dynamic vertex buffers
+        // NOTE: Atm allowing just a single dynamic vertex buffer for each frame in flight
+        // per batch!
+        // TODO: Allow more?
+        std::vector<Buffer*> dynamicVertexBuffer = getOrCreateSharedInstancedBuffer(
+            batchID,
+            instanceBufferElementSize,
+            maxBatchLength,
+            framesInFlight
+        );
+
+        // Shadow push constants
+        if (receivesShadows || pRenderPass->getType() == RenderPassType::SHADOW_PASS)
+        {
+            if (!pDirectionalLight)
+            {
+                Debug::log(
+                    "@Batcher::createBatch "
+                    "Batch requires directional light but provided directional light was nullptr!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            // TODO: Better way of handling this
+            pushConstantsSize = sizeof(Matrix4f) * 2;
+            pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
+            pushConstantsUniformInfos = {
+                { ShaderDataType::Mat4 },
+                { ShaderDataType::Mat4 }
+            };
+            pPushConstantsData = (void*)pDirectionalLight;
+        }
+
+        // Shared shader resources (uniform buffers + descriptor sets)
+        // For now all 3D rendering takes scene3DDescriptorSets
+        std::vector<std::vector<DescriptorSet>> usedDescriptorSets = { _masterRendererRef.getScene3DDataDescriptorSets() };
+
+        if (!uniformResourceLayouts.empty())
+        {
+            std::vector<BatchShaderResource>& createdShaderResources = getOrCreateSharedShaderResources(
+                batchID,
+                maxBatchLength,
+                uniformResourceLayouts,
+                framesInFlight
+            );
+            for (BatchShaderResource& resource : createdShaderResources)
+                usedDescriptorSets.push_back(resource.descriptorSet);
+        }
+
+        if (pMaterial)
+            usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
+
+        std::vector<std::vector<DescriptorSet>> combinedDescriptorSets = combineUsedDescriptorSets(
+            framesInFlight,
+            usedDescriptorSets
+        );
+
+        Batch* pBatch = new Batch{
+            maxBatchLength,
+            pPipeline, // TODO: create pipeline if not getting it from Material!
+            std::vector<std::vector<DescriptorSet>> descriptorSets;
+            uint32_t dynamicUniformBufferElementSize = 0;
+            std::vector<const Buffer*> staticVertexBuffers;
+            std::vector<std::vector<Buffer*>> dynamicVertexBuffers;
+            const Buffer* pIndexBuffer = nullptr;
+
+            // TODO: How to get the actual data for the push constants??
+            size_t pushConstantsSize = 0;
+            std::vector<UniformInfo> pushConstantsUniformInfos;
+            void* pPushConstantsData = nullptr;
+
+            // Atm push constants should ONLY be used in vertex shaders!
+            ShaderStageFlagBits pushConstantsShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
+
+            // Repeat count should be 1 if instanced
+            uint32_t repeatCount = 0;
+            // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
+            uint32_t instanceCount = 0;
+        };
+    }
+
     void Batcher::addToAllocatedShaderResources(
         ID_t batchID,
         std::vector<BatchShaderResource>& shaderResources
@@ -662,5 +811,62 @@ namespace platypus
         {
             _allocatedShaderResources[_batchShaderResourceMapping[batchID]].push_back({ ShaderResourceType::ANY, buffers, descriptorSets });
         }
+    }
+
+    std::vector<Buffer*> Batcher::getOrCreateSharedInstancedBuffer(
+        ID_t batchID,
+        size_t elementSize,
+        size_t maxBatchLength,
+        size_t framesInFlight
+    )
+    {
+        BatchShaderResource* pBatchResource = getSharedBatchResource(batchID, 0);
+        if (pBatchResource)
+        {
+            Debug::log(
+                "@Batcher::getOrCreateSharedInstancedBuffer "
+                "Using existing instanced buffer!"
+            );
+            return pBatchResource->buffer;
+        }
+        Debug::log(
+            "@Batcher::getOrCreateSharedInstancedBuffer "
+            "Creating new instanced buffer!"
+        );
+        // TODO: Make this less dumb -> buffers after creation are available in pBatchResource?
+        // ...confusing as fuck...
+        std::vector<Buffer*> buffers(framesInFlight);
+        createSharedBatchInstancedBuffers(
+            batchID,
+            elementSize,
+            maxBatchLength,
+            framesInFlight,
+            buffers
+        );
+
+        return buffers;
+    }
+
+    std::vector<BatchShaderResource>& Batcher::getOrCreateSharedShaderResources(
+        ID_t batchID,
+        size_t maxBatchLength,
+        const std::vector<ShaderResourceLayout>& resourceLayouts,
+        size_t framesInFlight
+    )
+    {
+        if (!batchResourcesExist(batchID))
+        {
+            // TODO: remove outResources from createBatchShaderResources when this works!
+            std::vector<BatchShaderResource> shaderResources(resourceLayouts.size());
+            createBatchShaderResources(
+                framesInFlight,
+                batchID,
+                maxBatchLength,
+                resourceLayouts,
+                shaderResources
+            );
+        }
+
+        return accessSharedBatchResources(batchID);
     }
 }

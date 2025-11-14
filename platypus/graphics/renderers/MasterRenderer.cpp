@@ -153,13 +153,23 @@ namespace platypus
             Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
             if (!pBatch)
             {
-                create_static_batch(
-                    _batcher,
-                    _batcher.getMaxStaticBatchLength(),
-                    _swapchainRef.getRenderPassPtr(),
+                //create_static_batch(
+                //    _batcher,
+                //    _batcher.getMaxStaticBatchLength(),
+                //    _swapchainRef.getRenderPassPtr(),
+                //    meshID,
+                //    materialID,
+                //    pDirectionalLight
+                //);
+                _batcher.createBatch(
                     meshID,
                     materialID,
-                    pDirectionalLight
+                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+                    _batcher.getMaxStaticBatchLength(),
+                    sizeof(Matrix4f), // instance buffer elem size
+                    { }, // uniform resource layouts
+                    pDirectionalLight,
+                    _swapchainRef.getRenderPassPtr()
                 );
 
                 create_static_shadow_batch(
