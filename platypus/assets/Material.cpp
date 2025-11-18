@@ -1,5 +1,4 @@
 #include "Material.h"
-#include "platypus/graphics/Device.hpp"
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
@@ -9,7 +8,6 @@
 namespace platypus
 {
     Material::Material(
-        MaterialType type,
         ID_t blendmapTextureID,
         ID_t* pDiffuseTextureIDs,
         ID_t* pSpecularTextureIDs,
@@ -25,7 +23,6 @@ namespace platypus
         bool shadeless // NOTE: This doesn't do anything atm!?
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
-        _materialType(type),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
@@ -81,8 +78,8 @@ namespace platypus
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
 
-        // TODO: Improve this?
-        if (_materialType == MaterialType::MESH)
+        // NOTE: ONLY TEMPORARY ATM!
+        if (_blendmapTextureID == NULL_ID)
         {
             createPipeline(
                 pSceneRenderPass,
@@ -107,7 +104,7 @@ namespace platypus
                 );
             }
         }
-        else if (_materialType == MaterialType::TERRAIN)
+        else
         {
             createPipeline(
                 pSceneRenderPass,
@@ -644,8 +641,7 @@ namespace platypus
         );
     }
 
-    // TODO: This is a convoluted mess -> make cleaner!
-    // TODO: Make it impossible to attempt getting skinned shader name for terrain Material
+    // TODO: Make this convoluted mess cleaner!
     std::string Material::getShaderFilename(uint32_t shaderStage, MeshType meshType)
     {
         // Example shader names:

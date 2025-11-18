@@ -138,7 +138,6 @@ void ShadowTestScene::init()
     );
 
     _pTerrainMaterial = pAssetManager->createMaterial(
-        MaterialType::TERRAIN,
         pBlendmapTexture->getID(),
         diffuseTextures,
         specularTextures,
@@ -167,7 +166,7 @@ void ShadowTestScene::init()
         true  // receive shadows?
     );
 
-    Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
+    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
@@ -185,7 +184,7 @@ void ShadowTestScene::init()
     );
 
     std::vector<KeyframeAnimationData> animations;
-    Model* pAnimatedModel = pAssetManager->loadModel(
+    Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
         "assets/models/MultiAnimSkeletonTest.glb",
         animations
     );

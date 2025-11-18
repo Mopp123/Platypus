@@ -178,7 +178,6 @@ namespace platypus
     }
 
     Material* AssetManager::createMaterial(
-        MaterialType type,
         ID_t blendmapTextureID,
         std::vector<ID_t> diffuseTextureIDs,
         std::vector<ID_t> specularTextureIDs,
@@ -219,7 +218,6 @@ namespace platypus
         }
 
         Material* pMaterial = new Material(
-            type,
             blendmapTextureID,
             diffuseTextureIDs.data(),
             specularTextureIDs.data(),
@@ -239,7 +237,6 @@ namespace platypus
     }
 
     Material* AssetManager::createMaterial(
-        MaterialType type,
         ID_t blendmapTextureID,
         std::vector<ID_t> diffuseTextureIDs,
         std::vector<ID_t> specularTextureIDs,
@@ -250,7 +247,6 @@ namespace platypus
     )
     {
         return createMaterial(
-            type,
             blendmapTextureID,
             diffuseTextureIDs,
             specularTextureIDs,
@@ -298,7 +294,7 @@ namespace platypus
         return pMesh;
     }
 
-    Model* AssetManager::loadModel(const std::string& filepath)
+    Model* AssetManager::loadStaticModel(const std::string& filepath, bool instanced)
     {
         std::vector<MeshData> loadedMeshes;
         std::vector<KeyframeAnimationData> loadedAnimations;
@@ -358,7 +354,7 @@ namespace platypus
             }
 
             Mesh* pMesh = new Mesh(
-                MeshType::MESH_TYPE_STATIC_INSTANCED,
+                instanced ? MeshType::MESH_TYPE_STATIC_INSTANCED : MeshType::MESH_TYPE_STATIC,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,
@@ -373,7 +369,7 @@ namespace platypus
         return pModel;
     }
 
-    Model* AssetManager::loadModel(
+    Model* AssetManager::loadSkinnedModel(
         const std::string& filepath,
         std::vector<KeyframeAnimationData>& outAnimations
     )

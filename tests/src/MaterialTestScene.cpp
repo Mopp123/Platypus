@@ -98,7 +98,6 @@ void MaterialTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
@@ -107,7 +106,6 @@ void MaterialTestScene::init()
         16.0f
     );
     Material* pMaterial2 = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
@@ -116,7 +114,6 @@ void MaterialTestScene::init()
         16.0f
     );
     Material* pFloorMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pFloorTexture->getID() },
         { pFloorSpecularTexture->getID() },
@@ -125,9 +122,9 @@ void MaterialTestScene::init()
         64.0f
     );
 
-    Model* pModel = pAssetManager->loadModel("assets/TestCubeTangents.glb");
-    Model* pModel2 = pAssetManager->loadModel("assets/TestCube.glb");
-    Model* pFloorModel = pAssetManager->loadModel("assets/models/Floor.glb");
+    Model* pModel = pAssetManager->loadStaticModel("assets/TestCubeTangents.glb");
+    Model* pModel2 = pAssetManager->loadStaticModel("assets/TestCube.glb");
+    Model* pFloorModel = pAssetManager->loadStaticModel("assets/models/Floor.glb");
 
     // Create box entities
     // Normal mapped

@@ -137,7 +137,6 @@ Material* BaseScene::createMeshMaterial(
         textureSampler
     );
     Material* pMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },

@@ -12,15 +12,6 @@
 
 namespace platypus
 {
-    // TODO: Delete when getting rid of static mesh / terrain separation!
-    // Used to determine which shader to use
-    enum class MaterialType
-    {
-        NONE,
-        MESH,
-        TERRAIN
-    };
-
     struct MaterialPipelineData
     {
         Shader* pVertexShader;
@@ -51,7 +42,6 @@ namespace platypus
     class Material : public Asset
     {
     private:
-        MaterialType _materialType;
         // NOTE: Do these really need to be like this?
         ID_t _blendmapTextureID = NULL_ID;
         ID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
@@ -75,7 +65,6 @@ namespace platypus
 
     public:
         Material(
-            MaterialType type,
             ID_t blendmapTextureID,
             ID_t* pDiffuseTextureIDs,
             ID_t* pSpecularTextureIDs,
@@ -116,9 +105,7 @@ namespace platypus
 
         Pipeline* getPipeline(MeshType meshType);
 
-        // *Fuckin dumb, I know... just need to differentiate Asset type and Material type atm...
-        inline MaterialType getMaterialType() const { return _materialType; }
-
+        inline bool hasBlendmap() const { return _blendmapTextureID != NULL_ID; }
         inline bool hasNormalMap() const { return _normalTextureIDs[0] != NULL_ID; }
 
         inline size_t getTotalTextureCount() const

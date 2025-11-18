@@ -392,15 +392,15 @@ namespace platypus
         std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
     ) const
     {
-        MaterialType materialType = MaterialType::NONE;
+        bool usingBlendmap = false;
         if (pMaterial)
         {
-            materialType = pMaterial->getMaterialType();
-            if (skinned && materialType == MaterialType::TERRAIN)
+            usingBlendmap = pMaterial->hasBlendmap();
+            if (skinned && usingBlendmap)
             {
                 Debug::log(
                     "@MasterRenderer::solveDescriptorSetLayouts "
-                    "Illegal to solve descriptor set layouts for Terrain Materials with skinning!",
+                    "Currently not supporting Materials using blendmaps for skinned meshes!",
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -421,7 +421,7 @@ namespace platypus
         {
             outDescriptorSetLayouts.push_back(Batcher::get_joint_descriptor_set_layout());
         }
-        else if (materialType == MaterialType::TERRAIN)
+        else if (usingBlendmap)
         {
             outDescriptorSetLayouts.push_back(Batcher::get_terrain_descriptor_set_layout());
         }
