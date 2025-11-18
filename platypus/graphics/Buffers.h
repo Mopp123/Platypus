@@ -96,6 +96,7 @@ namespace platypus
 
         // NOTE: This has platform independent definition in Buffers.cpp
         bool operator==(const VertexBufferElement& other) const;
+        bool operator!=(const VertexBufferElement& other) const;
 
         inline uint32_t getLocation() const { return _location; }
         inline ShaderDataType getType() const { return _type; }
@@ -136,6 +137,7 @@ namespace platypus
 
         // NOTE: This has platform independent definition in Buffers.cpp
         bool operator==(const VertexBufferLayout& other) const;
+        bool operator!=(const VertexBufferLayout& other) const;
 
         static VertexBufferLayout get_common_static_layout();
         static VertexBufferLayout get_common_static_tangent_layout();

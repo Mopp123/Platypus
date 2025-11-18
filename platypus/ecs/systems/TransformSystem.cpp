@@ -29,19 +29,20 @@ namespace platypus
     )
     {
         // Attempt to find bind pose if exists
-        SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
+        // NOTE: Kind of rough to check for each possible joint...
+        Renderable3D* pRenderable = (Renderable3D*)pScene->getComponent(
             entity,
-            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
+            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
             false,
             false
         );
-        if (pSkinnedRenderable)
+        if (pRenderable)
         {
             Mesh* pMesh = (Mesh*)pAssetManager->getAsset(
-                pSkinnedRenderable->meshID,
+                pRenderable->meshID,
                 AssetType::ASSET_TYPE_MESH
             );
-            if (pMesh->hasBindPose())
+            if (pMesh->getType() == MeshType::MESH_TYPE_SKINNED)
                 pBindPose = pMesh->getBindPosePtr();
         }
 

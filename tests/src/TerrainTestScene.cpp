@@ -150,7 +150,7 @@ void TerrainTestScene::init()
         false // shadeless
     );
 
-    create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
+    create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
 
     _pMeshMaterial = createMeshMaterial(
         pAssetManager,

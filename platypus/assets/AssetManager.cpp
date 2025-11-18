@@ -287,10 +287,12 @@ namespace platypus
             false
         );
         Mesh* pMesh = new Mesh(
+            MeshType::MESH_TYPE_STATIC_INSTANCED,
             vertexBufferLayout,
             pVertexBuffer,
             pIndexBuffer,
-            Matrix4f(1.0f)
+            Matrix4f(1.0f),
+            { }
         );
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
@@ -332,11 +334,36 @@ namespace platypus
                 false
             );
 
+            if (meshData.vertexBufferLayout != VertexBufferLayout::get_common_static_layout() &&
+                 meshData.vertexBufferLayout != VertexBufferLayout::get_common_static_tangent_layout())
+            {
+                Debug::log(
+                    "@AssetManager::loadModel "
+                    "This function is ment to load static meshes only! "
+                    "Vertex buffer layout read from file " + filepath + " wasn't "
+                    "suitable for static rendering (differs from 'static' and 'static_tangent' layouts)",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (!meshData.bindPose.joints.empty())
+            {
+                Debug::log(
+                    "@AssetManager::loadModel "
+                    "This function is ment to load static meshes only! "
+                    "File " + filepath + " contained bind pose data!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
             Mesh* pMesh = new Mesh(
+                MeshType::MESH_TYPE_STATIC_INSTANCED,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,
-                meshData.transformationMatrix
+                meshData.transformationMatrix,
+                { }
             );
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
@@ -385,6 +412,7 @@ namespace platypus
             );
 
             Mesh* pMesh = new Mesh(
+                MeshType::MESH_TYPE_SKINNED,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,

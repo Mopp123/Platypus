@@ -151,7 +151,7 @@ void ShadowTestScene::init()
         false
     );
 
-    create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
+    create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
 
     // Test meshes that cast shadows
     Material* pStaticMeshMaterial = createMeshMaterial(

@@ -5,7 +5,6 @@
 #include "Mesh.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
-#include "platypus/ecs/components/Component.h"
 #include <unordered_map>
 
 #define PE_MAX_MATERIAL_TEX_CHANNELS 5
@@ -13,6 +12,7 @@
 
 namespace platypus
 {
+    // TODO: Delete when getting rid of static mesh / terrain separation!
     // Used to determine which shader to use
     enum class MaterialType
     {
@@ -64,7 +64,7 @@ namespace platypus
         bool _receiveShadows = false;
         uint32_t _shadowmapDescriptorIndex = 0;
 
-        std::unordered_map<ComponentType, MaterialPipelineData*> _pipelines;
+        std::unordered_map<MeshType, MaterialPipelineData*> _pipelines;
 
         // TODO: Material instance
         MaterialUniformBufferData _uniformBufferData;
@@ -94,7 +94,7 @@ namespace platypus
 
         void createPipeline(
             const RenderPass* pRenderPass,
-            ComponentType renderableType
+            MeshType meshType
         );
 
         void recreateExistingPipeline();
@@ -114,7 +114,7 @@ namespace platypus
         void setLightingProperties(float specularStrength, float shininess, bool shadeless);
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
 
-        Pipeline* getPipeline(ComponentType renderableType);
+        Pipeline* getPipeline(MeshType meshType);
 
         // *Fuckin dumb, I know... just need to differentiate Asset type and Material type atm...
         inline MaterialType getMaterialType() const { return _materialType; }
@@ -149,6 +149,6 @@ namespace platypus
         void updateUniformBuffers(size_t frame);
 
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, ComponentType renderableType);
+        std::string getShaderFilename(uint32_t shaderStage, MeshType meshType);
     };
 }

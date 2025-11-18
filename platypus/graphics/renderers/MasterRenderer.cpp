@@ -111,14 +111,10 @@ namespace platypus
 
     void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
-        uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
-        uint64_t requiredMask3 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE;
-        uint64_t requiredMask4 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
+        uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_RENDERABLE3D;
+        uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
         if (!(entity.componentMask & requiredMask1) &&
-            !(entity.componentMask & requiredMask2) &&
-            !(entity.componentMask & requiredMask3) &&
-            !(entity.componentMask & requiredMask4))
+            !(entity.componentMask & requiredMask2))
         {
             return;
         }
@@ -135,193 +131,171 @@ namespace platypus
             false
         );
 
-        StaticMeshRenderable* pStaticRenderable = (StaticMeshRenderable*)pScene->getComponent(
+        Renderable3D* pRenderable3D = (Renderable3D*)pScene->getComponent(
             entity.id,
-            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
             false,
             false
         );
-
-        if (pStaticRenderable)
+        if (pRenderable3D)
         {
-            const ID_t meshID = pStaticRenderable->meshID;
-            const ID_t materialID = pStaticRenderable->materialID;
-            ID_t batchID = ID::hash(meshID, materialID);
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-            if (!pBatch)
-            {
-                // Create static scene pass batch
-                _batcher.createBatch(
-                    meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
-                    _batcher.getMaxStaticBatchLength(),
-                    1, // maxRepeatCount,
-                    0, // repeatAdvance,
-                    _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
-                    1, // instanceAdvance,
-                    sizeof(Matrix4f), // instance buffer elem size
-                    { }, // uniform resource layouts
-                    pDirectionalLight,
-                    _swapchainRef.getRenderPassPtr()
-                );
+            const ID_t meshID = pRenderable3D->meshID;
+            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+            const MeshType meshType = pMesh->getType();
+            const ID_t materialID = pRenderable3D->materialID;
 
-                // Create static shadow pass batch
-                _batcher.createBatch(
-                    meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
-                    _batcher.getMaxStaticBatchLength(),
-                    1, // maxRepeatCount,
-                    0, // repeatAdvance,
-                    _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
-                    1, // instanceAdvance,
-                    sizeof(Matrix4f), // instance buffer elem size
-                    { }, // uniform resource layouts
-                    pDirectionalLight,
-                    &_shadowPass
+            if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+            {
+                ID_t batchID = ID::hash(meshID, materialID);
+                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+                if (!pBatch)
+                {
+                    // Create static scene pass batch
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxStaticBatchLength(),
+                        1, // maxRepeatCount,
+                        0, // repeatAdvance,
+                        _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
+                        1, // instanceAdvance,
+                        sizeof(Matrix4f), // instance buffer elem size
+                        { }, // uniform resource layouts
+                        pDirectionalLight,
+                        _swapchainRef.getRenderPassPtr()
+                    );
+
+                    // Create static shadow pass batch
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxStaticBatchLength(),
+                        1, // maxRepeatCount,
+                        0, // repeatAdvance,
+                        _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
+                        1, // instanceAdvance,
+                        sizeof(Matrix4f), // instance buffer elem size
+                        { }, // uniform resource layouts
+                        pDirectionalLight,
+                        &_shadowPass
+                    );
+                }
+
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)&(pTransform->globalMatrix),
+                    sizeof(Matrix4f),
+                    { sizeof(Matrix4f) },
+                    _currentFrame
                 );
             }
-
-            _batcher.addToBatch(
-                batchID,
-                (void*)&(pTransform->globalMatrix),
-                sizeof(Matrix4f),
-                { sizeof(Matrix4f) },
-                _currentFrame
-            );
-        }
-
-        SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
-            entity.id,
-            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-            false,
-            false
-        );
-        if (pSkinnedRenderable)
-        {
-            const ID_t meshID = pSkinnedRenderable->meshID;
-            const ID_t materialID = pSkinnedRenderable->materialID;
-            ID_t batchID = ID::hash(meshID, materialID);
-            const size_t maxSkinnedBatchLength = _batcher.getMaxSkinnedBatchLength();
-            const size_t maxJoints = _batcher.getMaxSkinnedMeshJoints();
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-            if (!pBatch)
+            else if (meshType == MeshType::MESH_TYPE_SKINNED)
             {
-                // Create skinned scene pass batch
-                const size_t dynamicJointBufferElemSize = get_dynamic_uniform_buffer_element_size(
-                    sizeof(Matrix4f) * _batcher.getMaxSkinnedMeshJoints()
-                );
-                _batcher.createBatch(
-                    meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-                    _batcher.getMaxSkinnedBatchLength(),
-                    _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
-                    1, // repeatAdvance,
-                    1, // maxInstanceCount,
-                    0, // instanceAdvance,
-                    0, // instance buffer elem size
-                    {
+                ID_t batchID = ID::hash(meshID, materialID);
+                const size_t maxSkinnedBatchLength = _batcher.getMaxSkinnedBatchLength();
+                const size_t maxJoints = _batcher.getMaxSkinnedMeshJoints();
+                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+                if (!pBatch)
+                {
+                    // Create skinned scene pass batch
+                    const size_t dynamicJointBufferElemSize = get_dynamic_uniform_buffer_element_size(
+                        sizeof(Matrix4f) * _batcher.getMaxSkinnedMeshJoints()
+                    );
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxSkinnedBatchLength(),
+                        _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
+                        1, // repeatAdvance,
+                        1, // maxInstanceCount,
+                        0, // instanceAdvance,
+                        0, // instance buffer elem size
                         {
-                            ShaderResourceType::ANY,
-                            dynamicJointBufferElemSize,
-                            Batcher::get_joint_descriptor_set_layout(),
-                            { }
-                        }
-                    }, // uniform resource layouts
-                    pDirectionalLight,
-                    _swapchainRef.getRenderPassPtr()
-                );
+                            {
+                                ShaderResourceType::ANY,
+                                dynamicJointBufferElemSize,
+                                Batcher::get_joint_descriptor_set_layout(),
+                                { }
+                            }
+                        }, // uniform resource layouts
+                        pDirectionalLight,
+                        _swapchainRef.getRenderPassPtr()
+                    );
 
-                _batcher.createBatch(
-                    meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-                    _batcher.getMaxSkinnedBatchLength(),
-                    _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
-                    1, // repeatAdvance,
-                    1, // maxInstanceCount,
-                    0, // instanceAdvance,
-                    0, // instance buffer elem size
-                    {
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxSkinnedBatchLength(),
+                        _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
+                        1, // repeatAdvance,
+                        1, // maxInstanceCount,
+                        0, // instanceAdvance,
+                        0, // instance buffer elem size
                         {
-                            ShaderResourceType::ANY,
-                            dynamicJointBufferElemSize,
-                            Batcher::get_joint_descriptor_set_layout(),
-                            { }
-                        }
-                    }, // uniform resource layouts
-                    pDirectionalLight,
-                    &_shadowPass
+                            {
+                                ShaderResourceType::ANY,
+                                dynamicJointBufferElemSize,
+                                Batcher::get_joint_descriptor_set_layout(),
+                                { }
+                            }
+                        }, // uniform resource layouts
+                        pDirectionalLight,
+                        &_shadowPass
+                    );
+                }
+                const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
+                    entity.id,
+                    ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+                );
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)pAnimation->jointMatrices,
+                    sizeof(Matrix4f) * pMesh->getJointCount(),
+                    { sizeof(Matrix4f) * pMesh->getJointCount() },
+                    _currentFrame
                 );
             }
-            const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
-                entity.id,
-                ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
-            );
-            const Mesh* pSkinnedMesh = (const Mesh*)Application::get_instance()->getAssetManager()->getAsset(
-                pSkinnedRenderable->meshID,
-                AssetType::ASSET_TYPE_MESH
-            );
-
-            _batcher.addToBatch(
-                batchID,
-                (void*)pAnimation->jointMatrices,
-                sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
-                { sizeof(Matrix4f) * pSkinnedMesh->getJointCount() },
-                _currentFrame
-            );
-        }
-
-        TerrainMeshRenderable* pTerrainRenderable = (TerrainMeshRenderable*)pScene->getComponent(
-            entity.id,
-            ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-            false,
-            false
-        );
-        if (pTerrainRenderable)
-        {
-            const ID_t meshID = pTerrainRenderable->meshID;
-            const ID_t materialID = pTerrainRenderable->materialID;
-            ID_t batchID = ID::hash(meshID, materialID);
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-            if (!pBatch)
+            else if (meshType == MeshType::MESH_TYPE_TERRAIN)
             {
-                // Create terrain scene pass batch
-                const size_t dynamicTerrainInstanceBufferElemSize = get_dynamic_uniform_buffer_element_size(
-                    sizeof(Matrix4f)
-                );
-                _batcher.createBatch(
-                    meshID,
-                    materialID,
-                    ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-                    _batcher.getMaxTerrainBatchLength(),
-                    _batcher.getMaxTerrainBatchLength(), // maxRepeatCount,
-                    1, // repeatAdvance,
-                    1, // maxInstanceCount,
-                    0, // instanceAdvance,
-                    0, // instance buffer elem size
-                    {
+                ID_t batchID = ID::hash(meshID, materialID);
+                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+                if (!pBatch)
+                {
+                    // Create terrain scene pass batch
+                    const size_t dynamicTerrainInstanceBufferElemSize = get_dynamic_uniform_buffer_element_size(
+                        sizeof(Matrix4f)
+                    );
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxTerrainBatchLength(),
+                        _batcher.getMaxTerrainBatchLength(), // maxRepeatCount,
+                        1, // repeatAdvance,
+                        1, // maxInstanceCount,
+                        0, // instanceAdvance,
+                        0, // instance buffer elem size
                         {
-                            ShaderResourceType::ANY,
-                            dynamicTerrainInstanceBufferElemSize,
-                            Batcher::get_terrain_descriptor_set_layout(),
-                            { }
-                        }
-                    }, // uniform resource layouts
-                    pDirectionalLight,
-                    _swapchainRef.getRenderPassPtr()
+                            {
+                                ShaderResourceType::ANY,
+                                dynamicTerrainInstanceBufferElemSize,
+                                Batcher::get_terrain_descriptor_set_layout(),
+                                { }
+                            }
+                        }, // uniform resource layouts
+                        pDirectionalLight,
+                        _swapchainRef.getRenderPassPtr()
+                    );
+                }
+
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)&(pTransform->globalMatrix),
+                    sizeof(Matrix4f),
+                    { sizeof(Matrix4f) },
+                    _currentFrame
                 );
             }
-
-            _batcher.addToBatch(
-                batchID,
-                (void*)&(pTransform->globalMatrix),
-                sizeof(Matrix4f),
-                { sizeof(Matrix4f) },
-                _currentFrame
-            );
         }
 
         if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
@@ -809,6 +783,7 @@ namespace platypus
                 //  -> Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
+                _pGUIRenderer->freeBatches();
             }
             else
             {

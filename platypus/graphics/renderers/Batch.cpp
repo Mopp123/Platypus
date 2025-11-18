@@ -65,20 +65,20 @@ namespace platypus
 
     static std::string get_shadowpass_shader_name(
         ShaderStageFlagBits shaderStage,
-        ComponentType renderableType
+        MeshType meshType
     )
     {
         std::string shaderName = "shadows/";
-        switch (renderableType)
+        switch (meshType)
         {
-            case ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE: shaderName += "Static"; break;
-            case ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE: shaderName += "Skinned"; break;
-            case ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE: shaderName += "Terrain"; break;
+            case MeshType::MESH_TYPE_STATIC_INSTANCED: shaderName += "Static"; break;
+            case MeshType::MESH_TYPE_SKINNED: shaderName += "Skinned"; break;
+            case MeshType::MESH_TYPE_TERRAIN: shaderName += "Terrain"; break;
             default:
             {
                 Debug::log(
                     "@(Batcher)get_shadowpass_shader_name "
-                    "Invalid renderable component type: " + component_type_to_string(renderableType),
+                    "Invalid mesh type: " + mesh_type_to_string(meshType),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -548,7 +548,6 @@ namespace platypus
     void Batcher::createBatch(
         ID_t meshID,
         ID_t materialID,
-        ComponentType renderableType,
         size_t maxBatchLength,
         uint32_t maxRepeatCount,
         uint32_t repeatAdvance,
@@ -584,6 +583,7 @@ namespace platypus
         Application* pApp = Application::get_instance();
         AssetManager* pAssetManager = pApp->getAssetManager();
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+        MeshType meshType = pMesh->getType();
         Material* pMaterial = nullptr;
         Pipeline* pPipeline = nullptr;
         bool receivesShadows = false;
@@ -603,7 +603,7 @@ namespace platypus
         if (materialID != NULL_ID && !shadowPass)
         {
             pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-            pPipeline = pMaterial->getPipeline(renderableType);
+            pPipeline = pMaterial->getPipeline(meshType);
             receivesShadows = pMaterial->receivesShadows();
         }
 
@@ -697,8 +697,8 @@ namespace platypus
             std::vector<VertexBufferLayout> usedVertexBufferLayouts;
             _masterRendererRef.solveVertexBufferLayouts(
                 pMesh->getVertexBufferLayout(),
-                renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE, // instanced?
-                renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE, // skinned?
+                meshType == MeshType::MESH_TYPE_STATIC_INSTANCED, // instanced?
+                meshType == MeshType::MESH_TYPE_SKINNED, // skinned?
                 shadowPass, // shadow pipeline?
                 usedVertexBufferLayouts
             );
@@ -709,8 +709,8 @@ namespace platypus
                 usedDescriptorSetLayouts.push_back(resourceLayout.descriptorSetLayout);
 
             // NOTE: Don't know if working, not tested!
-            std::string vertexShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, renderableType);
-            std::string fragmentShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, renderableType);
+            std::string vertexShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, meshType);
+            std::string fragmentShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, meshType);
             BatchPipelineData* pPipelineData = createBatchPipelineData(
                 pRenderPass,
                 vertexShaderFilename,

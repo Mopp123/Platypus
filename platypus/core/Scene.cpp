@@ -29,21 +29,9 @@ namespace platypus
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
-            sizeof(StaticMeshRenderable),
-            maxEntityCount,
-            true
-        );
-        _componentPools[ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-            sizeof(SkinnedMeshRenderable),
-            maxEntityCount,
-            true
-        );
-        _componentPools[ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-            sizeof(TerrainMeshRenderable),
+        _componentPools[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = ComponentPool(
+            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
+            sizeof(Renderable3D),
             maxEntityCount,
             true
         );

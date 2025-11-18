@@ -33,7 +33,7 @@ static entityID_t create_animated_entity(
         pMesh->getBindPose().jointChildMapping
     );
     entityID_t rootJointEntity = outJointEntities[0];
-    create_skinned_mesh_renderable(
+    create_renderable3D(
         rootJointEntity,
         pMesh->getID(),
         pMaterial->getID()
@@ -184,7 +184,7 @@ void SkinnedMeshTestScene::init()
                 { { 0, 1, 0}, 0.0f },
                 { cubeScale, cubeScale, cubeScale }
             );
-            create_static_mesh_renderable(
+            create_renderable3D(
                 boxEntity,
                 pBoxModel->getMeshes()[0]->getID(),
                 pBoxMaterial->getID()

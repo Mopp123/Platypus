@@ -167,7 +167,7 @@ entityID_t BaseScene::createStaticMeshEntity(
         rotation,
         scale
     );
-    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+    Renderable3D* pRenderable = create_renderable3D(
         entity,
         meshAssetID,
         materialAssetID
@@ -201,7 +201,7 @@ entityID_t BaseScene::createSkinnedMeshEntity(
         pMesh->getBindPose().jointChildMapping
     );
     entityID_t rootJointEntity = outJointEntities[0];
-    create_skinned_mesh_renderable(
+    create_renderable3D(
         rootJointEntity,
         pMesh->getID(),
         materialAssetID

@@ -8,9 +8,20 @@
 
 namespace platypus
 {
+    enum MeshType
+    {
+        MESH_TYPE_NONE = 0x0,
+        MESH_TYPE_STATIC = 0x1,
+        MESH_TYPE_STATIC_INSTANCED = 0x1 << 1,
+        MESH_TYPE_SKINNED = 0x1 << 2,
+        MESH_TYPE_TERRAIN = 0x1 << 3
+    };
+    std::string mesh_type_to_string(MeshType type);
+
     class Mesh : public Asset
     {
     private:
+        MeshType _type;
         VertexBufferLayout _vertexBufferLayout;
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
@@ -24,13 +35,7 @@ namespace platypus
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
-            VertexBufferLayout vertexBufferLayout,
-            Buffer* pVertexBuffer,
-            Buffer* pIndexBuffer,
-            const Matrix4f& transformationMatrix
-        );
-
-        Mesh(
+            MeshType type,
             VertexBufferLayout vertexBufferLayout,
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
@@ -47,6 +52,7 @@ namespace platypus
             bool generateTangents
         );
 
+        inline MeshType getType() const { return _type; }
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline Buffer* getVertexBuffer() { return _pVertexBuffer; }

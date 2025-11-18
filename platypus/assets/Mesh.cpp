@@ -6,32 +6,32 @@
 
 namespace platypus
 {
-    Mesh::Mesh(
-        VertexBufferLayout vertexBufferLayout,
-        Buffer* pVertexBuffer,
-        Buffer* pIndexBuffer,
-        const Matrix4f& transformationMatrix
-    ) :
-        Asset(AssetType::ASSET_TYPE_MESH),
-        _vertexBufferLayout(vertexBufferLayout),
-        _pVertexBuffer(pVertexBuffer),
-        _pIndexBuffer(pIndexBuffer),
-        _transformationMatrix(transformationMatrix)
-    {}
+    std::string mesh_type_to_string(MeshType type)
+    {
+        switch (type)
+        {
+            case MeshType::MESH_TYPE_STATIC: return "MESH_TYPE_STATIC";
+            case MeshType::MESH_TYPE_SKINNED: return "MESH_TYPE_SKINNED";
+            case MeshType::MESH_TYPE_TERRAIN: return "MESH_TYPE_TERRAIN";
+            default: return "<Invalid type>";
+        }
+    }
+
 
     Mesh::Mesh(
+        MeshType type,
         VertexBufferLayout vertexBufferLayout,
         Buffer* pVertexBuffer,
         Buffer* pIndexBuffer,
         const Matrix4f& transformationMatrix,
         Pose bindPose
     ) :
-        Mesh(
-            vertexBufferLayout,
-            pVertexBuffer,
-            pIndexBuffer,
-            transformationMatrix
-        )
+        Asset(AssetType::ASSET_TYPE_MESH),
+        _type(type),
+        _vertexBufferLayout(vertexBufferLayout),
+        _pVertexBuffer(pVertexBuffer),
+        _pIndexBuffer(pIndexBuffer),
+        _transformationMatrix(transformationMatrix)
     {
         _bindPose = bindPose;
     }
@@ -69,15 +69,6 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-
-        // Quite dumb... fix plz?
-        // NOTE: This isn't used anymore? -> remove?
-        //std::vector<VertexBufferElement> vertexBufferLayoutElements(generateTangents ? 4 : 3);
-        //vertexBufferLayoutElements[0] = { 0, ShaderDataType::Float3 };
-        //vertexBufferLayoutElements[1] = { 1, ShaderDataType::Float3 };
-        //vertexBufferLayoutElements[2] = { 2, ShaderDataType::Float2 };
-        //if (generateTangents)
-        //    vertexBufferLayoutElements[3] = { 3, ShaderDataType::Float4 };
 
 		size_t verticesPerRow = sqrt(heightmapData.size());
         size_t tilesPerRow = verticesPerRow - 1;
@@ -214,10 +205,12 @@ namespace platypus
         );
 
         Mesh* pMesh = new Mesh(
+            MeshType::MESH_TYPE_TERRAIN,
             generateTangents ? VertexBufferLayout::get_common_static_tangent_layout() : VertexBufferLayout::get_common_static_layout(),
             pVertexBuffer,
             pIndexBuffer,
-            Matrix4f(1.0f)
+            Matrix4f(1.0f),
+            { }
         );
         return pMesh;
     }

@@ -227,7 +227,6 @@ namespace platypus
         void createBatch(
             ID_t meshID,
             ID_t materialID,
-            ComponentType renderableType, // TODO: Some better way to deal with this, dumb to provide all this shit...
             size_t maxBatchLength,
             uint32_t maxRepeatCount,
             uint32_t repeatAdvance,

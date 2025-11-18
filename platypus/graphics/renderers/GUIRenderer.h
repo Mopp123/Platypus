@@ -102,6 +102,8 @@ namespace platypus
 
         void destroyPipeline();
 
+        // NOTE: This also destroys all texture descriptor sets!
+        // This should ONLY be called on swapchain image count change or scene switch!
         void freeBatches();
         void freeDescriptorSets();
 

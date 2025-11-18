@@ -15,9 +15,20 @@ namespace platypus
         return _location == other._location && _type == other._type;
     }
 
+    bool VertexBufferElement::operator!=(const VertexBufferElement& other) const
+    {
+        return _location != other._location || _type != other._type;
+    }
+
+
     bool VertexBufferLayout::operator==(const VertexBufferLayout& other) const
     {
         return _elements == other._elements && _inputRate == other._inputRate && _stride == other._stride;
+    }
+
+    bool VertexBufferLayout::operator!=(const VertexBufferLayout& other) const
+    {
+        return _elements != other._elements || _inputRate != other._inputRate || _stride != other._stride;
     }
 
 

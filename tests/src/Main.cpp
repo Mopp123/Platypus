@@ -1,4 +1,4 @@
-#include "ShadowTestScene.hpp"
+#include "SkinnedMeshTestScene.hpp"
 
 
 int main(int argc, const char** argv)
@@ -14,7 +14,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new ShadowTestScene
+        new SkinnedMeshTestScene
     );
     app.run();
     return 0;

@@ -137,7 +137,7 @@ void MaterialTestScene::init()
         pModel->getMeshes()[0]->getTransformationMatrix()
     );
     pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
-    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+    Renderable3D* pRenderable = create_renderable3D(
         _boxEntity,
         pModel2->getMeshes()[0]->getID(),
         pMaterial2->getID()
@@ -150,7 +150,7 @@ void MaterialTestScene::init()
     );
     pTransform2->globalMatrix[2 + 3 * 4] = -12.0f;
     pTransform2->globalMatrix[0 + 3 * 4] = -6.0f;
-    StaticMeshRenderable* pRenderable2 = create_static_mesh_renderable(
+    Renderable3D* pRenderable2 = create_renderable3D(
         entity2,
         pModel2->getMeshes()[0]->getID(),
         pMaterial2->getID()
@@ -164,7 +164,7 @@ void MaterialTestScene::init()
         { { 0, 1, 0 }, 0 },
         { 1, 1, 1 }
     );
-    StaticMeshRenderable* pFloorRenderable = create_static_mesh_renderable(
+    Renderable3D* pFloorRenderable = create_renderable3D(
         floorEntity,
         pFloorModel->getMeshes()[0]->getID(),
         pFloorMaterial->getID()
