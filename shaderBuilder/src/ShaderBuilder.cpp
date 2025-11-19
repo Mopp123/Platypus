@@ -159,11 +159,13 @@ namespace platypus
             }
 
             beginPushConstants();
+            ++_currentScopeIndentation;
             for (size_t i = 0; i < pushConstantsInfo.size(); ++i)
             {
                 const UniformInfo& uniformInfo = pushConstantsInfo[i];
-                addVariable(uniformInfo.type, variableNames[i], true);
+                addVariable(uniformInfo.type, variableNames[i]);
             }
+            --_currentScopeIndentation;
             endPushConstants("shadowPushConstants");
         }
 
@@ -189,17 +191,19 @@ namespace platypus
             }
 
             beginUniformBlock(blockName, _descriptorSetCount, descriptorSetLayoutBinding.getBinding());
+            ++_currentScopeIndentation;
             for (size_t i = 0; i < uniformInfo.size(); ++i)
             {
-                addVariable(uniformInfo[i].type, variableNames[i], true);
+                addVariable(uniformInfo[i].type, variableNames[i]);
             }
+            --_currentScopeIndentation;
             endUniformBlock(blockVariableName);
             ++_descriptorSetCount;
         }
 
-        void ShaderStageBuilder::addVariable(ShaderDataType type, const std::string name, bool indent)
+        void ShaderStageBuilder::addVariable(ShaderDataType type, const std::string name)
         {
-            addLine(shader_datatype_to_glsl(type) + " " + name + ";", indent ? 1 : 0);
+            addLine(shader_datatype_to_glsl(type) + " " + name + ";");
         }
 
         void ShaderStageBuilder::beginFunction(
@@ -210,7 +214,7 @@ namespace platypus
         {
             if (functionName == "main")
             {
-                _mainFuncBeginRow = _lines.size();
+                _nextOutDefinitionPos = _lines.size();
             }
 
             std::string line;
@@ -225,21 +229,21 @@ namespace platypus
 
                 line += shader_datatype_to_glsl(arg.variable.type) + " " + arg.variable.name;
 
-                if (i == args.size() - 1)
-                    line += ")";
-                else
+                if (i < args.size() - 1)
                     line += ", ";
             }
-            addLine(line);
+            addLine(line + ")");
             addLine("{");
+            ++_currentScopeIndentation;
         }
 
         void ShaderStageBuilder::endFunction(ShaderVariable returnValue)
         {
             if (returnValue.type != ShaderDataType::None)
             {
-                addLine(_indentation + " return " + returnValue.name + ";");
+                addLine(" return " + returnValue.name + ";");
             }
+            --_currentScopeIndentation;
             addLine("}");
             endSection();
         }
@@ -249,21 +253,21 @@ namespace platypus
             addLine("");
         }
 
-        void ShaderStageBuilder::addLine(const std::string& line, int indentations)
+        void ShaderStageBuilder::addLine(const std::string& line)
         {
-            std::string totalIndentations = "";
-            for (int i = 0; i < indentations; ++i)
+            std::string totalIndentations;
+            for (int i = 0; i < _currentScopeIndentation; ++i)
                 totalIndentations += _indentation;
             _lines.push_back(totalIndentations + line + "\n");
         }
 
         void ShaderStageBuilder::setOutputTEST(uint32_t location, ShaderVariable variable)
         {
-            if (_mainFuncBeginRow == 0)
+            if (_nextOutDefinitionPos == 0)
             {
                 Debug::log(
                     "ShaderStageBuilder::setOutputTEST "
-                    "Invalid row(" + std::to_string(_mainFuncBeginRow) + ") for main func!",
+                    "Invalid row(" + std::to_string(_nextOutDefinitionPos) + ") for _nextOutDefinitionPos",
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -271,9 +275,11 @@ namespace platypus
             }
             addLine(variable.name + " = TESTING;");
             std::vector<std::string> tempLines;
-            tempLines.insert(tempLines.end(), _lines.begin(), _lines.begin() + _mainFuncBeginRow);
+            tempLines.insert(tempLines.end(), _lines.begin(), _lines.begin() + _nextOutDefinitionPos);
             tempLines.push_back("layout(location = " + std::to_string(location) + ") out " + shader_datatype_to_glsl(variable.type) + " " + variable.name + ";\n");
-            tempLines.insert(tempLines.end(), _lines.begin() + _mainFuncBeginRow, _lines.end());
+            size_t nextOutPosition = tempLines.size();
+            tempLines.insert(tempLines.end(), _lines.begin() + _nextOutDefinitionPos, _lines.end());
+            _nextOutDefinitionPos = nextOutPosition;
             _lines = tempLines;
         }
 
@@ -297,6 +303,7 @@ namespace platypus
         void VulkanShaderStageBuilder::beginUniformBlock(const std::string& blockName, uint32_t setIndex, uint32_t binding)
         {
             addLine("layout(set = " + std::to_string(setIndex) + ", binding = " + std::to_string(binding) + ") uniform " + blockName);
+            addLine("{");
         }
 
         void VulkanShaderStageBuilder::endUniformBlock(const std::string& variableName)

@@ -35,10 +35,12 @@ namespace platypus
         protected:
             std::vector<std::string> _lines;
             const std::string _indentation = "    ";
-            size_t currentScopeIndentation = 0;
+            size_t _currentScopeIndentation = 0;
             size_t _descriptorSetCount = 0;
 
-            size_t _mainFuncBeginRow = 0;
+            // At which line the next encountered output definition gets put.
+            // All outputs are defined right before the main function.
+            size_t _nextOutDefinitionPos = 0;
 
         public:
             virtual ~ShaderStageBuilder() {}
@@ -60,7 +62,7 @@ namespace platypus
                 const std::string& blockName,
                 const std::string& blockVariableName
             );
-            void addVariable(ShaderDataType type, const std::string name, bool indent);
+            void addVariable(ShaderDataType type, const std::string name);
 
             void beginFunction(
                 const std::string& functionName,
@@ -71,7 +73,7 @@ namespace platypus
 
             void endSection();
 
-            void addLine(const std::string& line, int indentations = 0);
+            void addLine(const std::string& line);
 
             void setOutputTEST(uint32_t location, ShaderVariable variable);
 

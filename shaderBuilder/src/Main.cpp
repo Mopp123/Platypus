@@ -93,10 +93,20 @@ int main(int argc, const char** argv)
 
     // TODO: Something like below
     //vertexShaderBuilder.calcVertexPosition();
-    // TODO: Maybe store all _source rows in a vector/list, which we can
-    // later reorder so we can put all outputs just before main()?
-    //vertexShaderBuilder.passTexCoord();
+    vertexShaderBuilder.setOutputTEST(0, { ShaderDataType::Float3, "var_fragCoord" });
+
+    vertexShaderBuilder.beginFunction(
+        "testFunc",
+        ShaderDataType::Float,
+        {
+            { { ShaderDataType::Float2, "texCoord" }, shaderBuilder::FunctionArgQualifier::None },
+            { { ShaderDataType::Float3, "color" }, shaderBuilder::FunctionArgQualifier::In }
+        }
+    );
+    vertexShaderBuilder.endFunction({ ShaderDataType::Float, "ans" });
+
     vertexShaderBuilder.setOutputTEST(2, { ShaderDataType::Float2, "var_texCoord" });
+    vertexShaderBuilder.setOutputTEST(3, { ShaderDataType::Float4, "var_TEST" });
 
     vertexShaderBuilder.endFunction({});
 
