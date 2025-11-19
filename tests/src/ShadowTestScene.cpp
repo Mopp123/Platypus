@@ -146,7 +146,7 @@ void ShadowTestScene::init()
         32.0f,
         { 0, 0 },
         { (float)tilesPerRow, (float)tilesPerRow },
-        true, // receive shadows
+        false, // receive shadows
         false
     );
 
@@ -157,13 +157,13 @@ void ShadowTestScene::init()
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true,
-        true // receive shadows?
+        false // receive shadows?
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/characterTest.png",
         false,
-        true  // receive shadows?
+        false  // receive shadows?
     );
 
     Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb")->getMeshes()[0];

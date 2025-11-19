@@ -18,12 +18,12 @@ namespace platypus
     // at all..
     enum class ShaderVersion
     {
-        GLSL3,
-        ESSL3
+        VULKAN_GLSL_450,
+        OPENGLES_GLSL_300
     };
 
-
     std::string shader_stage_to_string(uint32_t shaderStage);
+    std::string shader_version_to_string(ShaderVersion version);
 
     std::string get_default_complete_shader_filename(
         const std::string nameBegin,

@@ -5,8 +5,6 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderPass.h"
 #include "platypus/ecs/components/Lights.h"
-#include "platypus/ecs/components/Component.h"
-
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...

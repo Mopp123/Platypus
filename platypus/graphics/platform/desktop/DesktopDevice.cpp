@@ -465,6 +465,19 @@ namespace platypus
 
     DeviceImpl* Device::get_impl()
     {
+        #ifdef PLATYPUS_DEBUG
+        if (!s_pImpl)
+        {
+            Debug::log(
+                "@Device::get_impl "
+                "Device's s_pImpl was nullptr! "
+                "Make sure you have created the device throught Application "
+                "or explicitly with Device::create.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        #endif
         return s_pImpl;
     }
 }

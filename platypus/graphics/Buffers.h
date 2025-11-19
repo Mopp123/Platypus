@@ -113,13 +113,6 @@ namespace platypus
         VertexInputRate _inputRate = VertexInputRate::VERTEX_INPUT_RATE_VERTEX;
         int32_t _stride = 0;
 
-        static VertexBufferLayout s_commonStaticLayout;
-        static VertexBufferLayout s_commonStaticTangentLayout;
-        static VertexBufferLayout s_commonSkinnedLayout;
-        static VertexBufferLayout s_commonSkinnedTangentLayout;
-        static VertexBufferLayout s_commonTerrainLayout;
-        static VertexBufferLayout s_commonTerrainTangentLayout;
-
     public:
         VertexBufferLayout();
         // NOTE: Not sure if copying elems goes correctly here..

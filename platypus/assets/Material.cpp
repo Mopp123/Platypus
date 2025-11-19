@@ -655,6 +655,7 @@ namespace platypus
 
         switch (meshType)
         {
+            case MeshType::MESH_TYPE_STATIC : shaderName += "Static"; break;
             case MeshType::MESH_TYPE_STATIC_INSTANCED : shaderName += "Static"; break;
             case MeshType::MESH_TYPE_SKINNED : shaderName += "Skinned"; break;
             case MeshType::MESH_TYPE_TERRAIN : shaderName += "Terrain"; break;
@@ -671,17 +672,37 @@ namespace platypus
         }
 
         // Using same vertex shader for diffuse and diffuse+specular
+        // TODO: Make this less stupid
         if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
         {
             shaderName += "VertexShader";
-            if (_normalTextureCount > 0)
-                shaderName += "_tangent";
+            if (hasNormalMap() || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+            {
+                shaderName += "_";
+                if (hasNormalMap())
+                {
+                    // t stands for tangent
+                    shaderName += "t";
+                }
+                if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                {
+                    // i stands for instanced
+                    shaderName += "i";
+                }
+            }
         }
         else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
         {
             shaderName += "FragmentShader";
+            // If using non instanced, we got one additional descriptor set containing
+            // transformation matrix, etc. -> Need to use fragment shader that takes this into account!
+            if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                shaderName += "_i_";
+            else
+                shaderName += "_";
+
             // adding d here since all materials needs to have at least one diffuse texture
-            shaderName += "_d";
+            shaderName += "d";
             if (_specularTextureCount > 0)
                 shaderName += "s";
             if (_normalTextureCount > 0)

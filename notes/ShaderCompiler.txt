@@ -1,0 +1,5 @@
+
+*Think about nodes in shader graphs
+
+*Categorize things that may be accessed (vertex attributes, Scene3DData, etc.)
+

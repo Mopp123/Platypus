@@ -31,7 +31,8 @@ namespace platypus
                         { ShaderDataType::Float4 },
                         { ShaderDataType::Float4 },
                         { ShaderDataType::Float4 },
-                        { ShaderDataType::Float4 }
+                        { ShaderDataType::Float4 },
+                        { ShaderDataType::Float4 } // NOTE: For some reason this worked, even I had forgotten to put the shadow properties into this
                     }
                 }
             }
