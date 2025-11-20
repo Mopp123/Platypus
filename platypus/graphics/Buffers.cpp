@@ -77,6 +77,7 @@ namespace platypus
             case ShaderDataType::Float3: return "Float3";
             case ShaderDataType::Float4: return "Float4";
 
+            case ShaderDataType::Mat3: return "Mat3";
             case ShaderDataType::Mat4: return "Mat4";
             default: return "Invalid type";
         }

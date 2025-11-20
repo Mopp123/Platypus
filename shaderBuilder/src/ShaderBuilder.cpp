@@ -1,5 +1,6 @@
 #include "ShaderBuilder.hpp"
 #include "platypus/core/Debug.h"
+#include <cctype>
 
 
 namespace platypus
@@ -48,6 +49,121 @@ namespace platypus
             }
         }
 
+        static bool is_number(const std::string& str)
+        {
+            if (str.empty())
+                return false;
+
+            bool firstDigit = false;
+            bool foundDecimal = false;
+            for (char c : str)
+            {
+                if (!std::isdigit(c))
+                {
+                    if (firstDigit && c == '-')
+                        continue;
+                    else if (!foundDecimal && c == '.')
+                        continue;
+
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        static char vector_component_index_to_name(size_t index, bool rgba)
+        {
+            if (index >= 4)
+            {
+                Debug::log(
+                    "@vector_component_index_to_variable_xyzw "
+                    "Index(" + std::to_string(index) + ") out of bounds!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return ' ';
+            }
+
+            if (rgba)
+            {
+                switch (index)
+                {
+                    case 0: return 'r';
+                    case 1: return 'g';
+                    case 2: return 'b';
+                    case 3: return 'a';
+                }
+            }
+            switch (index)
+            {
+                case 0: return 'x';
+                case 1: return 'y';
+                case 2: return 'z';
+                case 3: return 'w';
+            }
+        }
+
+        static char calc_operation_to_char(CalcOperation operation)
+        {
+            switch (operation)
+            {
+                case CalcOperation::Mul: return '*';
+            }
+        }
+
+
+        ShaderStageBuilder::ShaderStageBuilder()
+        {
+            // Temporarely adding all basic types here...
+            _structDefinitions["int"] = { "int", ShaderDataType::Int };
+            _structDefinitions["float"] = { "float", ShaderDataType::Float };
+
+            _structDefinitions["vec2"] = {
+                "vec2",
+                ShaderDataType::Float2,
+                {
+                    { "x", ShaderDataType::Float },
+                    { "y", ShaderDataType::Float }
+                },
+                { { "x", 0 }, { "y", 1 } }
+            };
+
+            _structDefinitions["vec3"] = {
+                "vec3",
+                ShaderDataType::Float3,
+                {
+                    { "x", ShaderDataType::Float },
+                    { "y", ShaderDataType::Float },
+                    { "z", ShaderDataType::Float }
+                },
+                { { "x", 0 }, { "y", 1 }, { "z", 2 } }
+            };
+
+            _structDefinitions["vec4"] = {
+                "vec4",
+                ShaderDataType::Float4,
+                {
+                    { "x", ShaderDataType::Float },
+                    { "y", ShaderDataType::Float },
+                    { "z", ShaderDataType::Float },
+                    { "w", ShaderDataType::Float }
+                },
+                { { "x", 0 }, { "y", 1 }, { "z", 2 }, { "w", 3 } }
+            };
+
+            _structDefinitions["mat3"] = {
+                "mat3",
+                ShaderDataType::Mat3,
+                { }, // NOTE: Not sure what to do with the members here?
+                { }
+            };
+            _structDefinitions["mat4"] = {
+                "mat4",
+                ShaderDataType::Mat4,
+                { }, // NOTE: Not sure what to do with the members here?
+                { }
+            };
+        }
 
         void ShaderStageBuilder::addVersion(ShaderVersion version)
         {
@@ -94,6 +210,7 @@ namespace platypus
                 return;
             }
 
+            std::vector<ShaderObject> vertexAttributes;
             size_t layoutIndex = 0;
             uint32_t locationIndex = 0;
             for (const VertexBufferLayout& layout : vertexBufferLayouts)
@@ -118,6 +235,7 @@ namespace platypus
                     const VertexBufferElement& element = elements[elementIndex];
                     const uint32_t elementLocation = element.getLocation();
                     const ShaderDataType elementType = element.getType();
+
                     std::string locationStr;
                     if (useLocationByOrder)
                         locationStr = std::to_string(locationIndex);
@@ -127,7 +245,48 @@ namespace platypus
                     std::string elementTypeStr = shader_datatype_to_glsl(elementType);
                     std::string attributeName = attributeNames[elementIndex];
 
+                    // NOTE: For now all instance data is separate from "actual mesh vertex
+                    // attributes"! Currently the instanced vertex attribs are globally accessably.
+                    // TODO: separate struct for instanced data?
+                    ShaderObject attribObject{ attributeName, elementType };
+                    if (layout.getInputRate() == VertexInputRate::VERTEX_INPUT_RATE_VERTEX)
+                        vertexAttributes.push_back(attribObject);
+
                     addLine("layout(location = " + locationStr + ") in " + elementTypeStr + " " + attributeName + ";");
+
+                    // Add the attribute as variable too!
+                    if (variableExists(attributeName))
+                    {
+                        Debug::log(
+                            "@ShaderStageBuilder::addVertexAttributes "
+                            "Variable: " + attributeName + " already exists!",
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
+                        return;
+                    }
+                    _variables[attributeName] = attribObject;
+                    // Also add all the components of the attrib as variables.
+                    // This is done in order to be able to get anything like:
+                    //  someObject.vertex.position.z
+                    // Pretty annoying and dumb, I know...
+                    if (elementType != ShaderDataType::Mat3 &&
+                        elementType != ShaderDataType::Mat4 &&
+                        elementType != ShaderDataType::Int &&
+                        elementType != ShaderDataType::Float &&
+                        elementType != ShaderDataType::Struct &&
+                        elementType != ShaderDataType::None
+                    )
+                    {
+                        size_t attribComponentCount = get_shader_datatype_component_count(elementType);
+                        for (size_t i = 0; i < attribComponentCount; ++i)
+                        {
+                            std::string attribMemberNameXYZW = attributeName + "." + vector_component_index_to_name(i, false);
+                            std::string attribMemberNameRGBA = attributeName + "." + vector_component_index_to_name(i, true);
+                            _variables[attribMemberNameXYZW] = { attribMemberNameXYZW, ShaderDataType::Float };
+                            _variables[attribMemberNameRGBA] = { attribMemberNameRGBA, ShaderDataType::Float };
+                        }
+                    }
 
                     // Consumes 4 locations, if mat4
                     if (useLocationByOrder && elementType == ShaderDataType::Mat4)
@@ -138,11 +297,20 @@ namespace platypus
                 ++layoutIndex;
             }
             endSection();
+
+            beginStruct("Vertex");
+            for (const ShaderObject& vertexAttribute : vertexAttributes)
+            {
+                addVariable(vertexAttribute.type, vertexAttribute.name, "");
+            }
+            endStruct();
+            endSection();
         }
 
         void ShaderStageBuilder::addPushConstants(
             const std::vector<UniformInfo>& pushConstantsInfo,
-            const std::vector<std::string>& variableNames
+            const std::vector<std::string>& variableNames,
+            const std::string& instanceName
         )
         {
             if (pushConstantsInfo.size() != variableNames.size())
@@ -157,23 +325,42 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
                 return;
             }
+            if (structExists(_pushConstantsStructName))
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::addPushConstant "
+                    "Push constants already defined!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
 
             beginPushConstants();
             ++_currentScopeIndentation;
             for (size_t i = 0; i < pushConstantsInfo.size(); ++i)
             {
                 const UniformInfo& uniformInfo = pushConstantsInfo[i];
-                addVariable(uniformInfo.type, variableNames[i]);
+                addVariable(uniformInfo.type, variableNames[i], "");
             }
             --_currentScopeIndentation;
             endPushConstants("shadowPushConstants");
+
+            // Instantiate
+            const ShaderObject& pushConstantsDefinition = _structDefinitions[_pushConstantsStructName];
+            for (auto member : pushConstantsDefinition.memberIndices)
+            {
+                const std::string& memberName = member.first;
+                std::string fullName = instanceName + "." + memberName;
+                _variables[fullName] = pushConstantsDefinition.members[member.second];
+            }
         }
 
         void ShaderStageBuilder::addUniformBlock(
             const DescriptorSetLayoutBinding& descriptorSetLayoutBinding,
             const std::vector<std::string>& variableNames,
             const std::string& blockName,
-            const std::string& blockVariableName
+            const std::string& instanceName
         )
         {
             const std::vector<UniformInfo>& uniformInfo = descriptorSetLayoutBinding.getUniformInfo();
@@ -194,16 +381,233 @@ namespace platypus
             ++_currentScopeIndentation;
             for (size_t i = 0; i < uniformInfo.size(); ++i)
             {
-                addVariable(uniformInfo[i].type, variableNames[i]);
+                // TODO: ADDING VARIABLE SHOULD ADD TO _variables ALWAYS! even if member of somethin
+                addVariable(uniformInfo[i].type, variableNames[i], "");
             }
             --_currentScopeIndentation;
-            endUniformBlock(blockVariableName);
+            endUniformBlock(instanceName);
             ++_descriptorSetCount;
+
+            // Instantiate
+            const ShaderObject& blockDefinition = _structDefinitions[blockName];
+            for (auto member : blockDefinition.memberIndices)
+            {
+                const std::string& memberName = member.first;
+                std::string fullName = instanceName + "." + memberName;
+                _variables[fullName] = blockDefinition.members[member.second];
+            }
         }
 
-        void ShaderStageBuilder::addVariable(ShaderDataType type, const std::string name)
+        // TODO: Allow adding/defining structs as members
+        void ShaderStageBuilder::addVariable(
+            ShaderDataType type,
+            const std::string& name,
+            const std::string& structName
+        )
         {
-            addLine(shader_datatype_to_glsl(type) + " " + name + ";");
+            if (!_pActiveWriteObject)
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::addVariable "
+                    "Active write object was nullptr! "
+                    "Make sure you began push constant, uniform block or struct with the "
+                    "appropriate function!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            if (name.empty())
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::addVariable "
+                    "name required!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            ShaderObject newVariable{ name, type };
+            std::string useType = shader_datatype_to_glsl(type);
+            if (type == ShaderDataType::Struct)
+            {
+                if (!structExists(structName))
+                {
+                    Debug::log(
+                        "@ShaderStageBuilder::addVariable "
+                        "Variable type was struct but no struct named: " + structName + " found!",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
+                useType = structName;
+                const ShaderObject& shaderStruct = _structDefinitions[structName];
+                newVariable.members = shaderStruct.members;
+                newVariable.memberIndices = shaderStruct.memberIndices;
+            }
+
+            if (_pActiveWriteObject->memberIndices.find(name) != _pActiveWriteObject->memberIndices.end())
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::addVariable "
+                    "Struct: " + structName + " already has member: " + name,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            _pActiveWriteObject->memberIndices[name] = _pActiveWriteObject->members.size();
+            _pActiveWriteObject->members.push_back(newVariable);
+
+            addLine(useType + " " + name + ";");
+        }
+
+        void ShaderStageBuilder::reqisterVariable(const ShaderObject& variable, const std::string& parentName)
+        {
+            std::string fullName = parentName.empty() ? variable.name : parentName + "." + variable.name;
+            _variables[fullName] = variable;
+            for (const ShaderObject& member : variable.members)
+            {
+                reqisterVariable(member, fullName);
+            }
+        }
+
+        void ShaderStageBuilder::beginStruct(const std::string& name)
+        {
+            if (_pActiveWriteObject != nullptr)
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::beginStruct "
+                    "_pActiveWriteObject wasn't nullptr! "
+                    "Make sure you ended previous object write operation with the appropriate "
+                    "end function!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            if (structExists(name))
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::beginStruct "
+                    "Struct: " + name + " already exists!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            addLine("struct " + name);
+            addLine("{");
+            ++_currentScopeIndentation;
+
+            _structDefinitions[name] = { name, ShaderDataType::Struct };
+            _pActiveWriteObject = &_structDefinitions[name];
+        }
+
+        void ShaderStageBuilder::endStruct()
+        {
+            --_currentScopeIndentation;
+            addLine("};");
+            _pActiveWriteObject = nullptr;
+        }
+
+        void ShaderStageBuilder::instantiateObject(
+            const std::string& structName,
+            const std::string& instanceName,
+            const std::vector<std::pair<ShaderDataType, std::string>>& args
+        )
+        {
+            if (!structExists(structName))
+            {
+                std::string definedStructs;
+                for (auto definedStruct : _structDefinitions)
+                    definedStructs += definedStruct.first + "\n";
+
+                Debug::log(
+                    "@ShaderStageBuilder::instantiateObject "
+                    "No struct definition found for: " + structName + " "
+                    "Currently defined structs:\n" + definedStructs,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            if (args.empty())
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::instantiateObject "
+                    "Provided no args. No structs should exist without members!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            // TODO: Validate already existing variable names in current scope!
+            std::string line = structName + " " + instanceName + " = " + structName + "(";
+            const ShaderObject& structDefinition = _structDefinitions[structName];
+            if (structDefinition.members.size() != args.size())
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::instantiateObject "
+                    "Provided " + std::to_string(args.size()) + " args for"
+                    " " + structName + " struct which has " + std::to_string(structDefinition.members.size()) + " "
+                    "members!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            for (size_t i = 0; i < args.size(); ++i)
+            {
+                ShaderDataType argType = args[i].first;
+                const std::string& arg = args[i].second;
+                if (argType != structDefinition.members[i].type)
+                {
+                    Debug::log(
+                        "@ShaderStageBuilder::instantiateObject "
+                        "Invalid type: " + shader_datatype_to_string(argType) + " "
+                        "for arg: " + arg,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
+
+                if (!is_number(arg) && !variableExists(arg))
+                {
+                    Debug::log(
+                        "@ShaderStageBuilder::instantiateObject "
+                        "Invalid argument: " + arg,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
+
+                const std::string& fullVariableName = instanceName + "." + structDefinition.members[i].name;
+                _variables[fullVariableName] = {
+                    fullVariableName,
+                    structDefinition.members[i].type,
+                    structDefinition.members[i].members,
+                    structDefinition.members[i].memberIndices,
+                };
+
+                line += arg;
+                if (i < args.size() - 1)
+                    line += ", ";
+            }
+
+            line += ");";
+
+            addLine(line);
+            endSection();
         }
 
         void ShaderStageBuilder::beginFunction(
@@ -227,7 +631,23 @@ namespace platypus
                 if (!qualifier.empty())
                     line += " ";
 
-                line += shader_datatype_to_glsl(arg.variable.type) + " " + arg.variable.name;
+                std::string useType = shader_datatype_to_glsl(arg.type);
+                if (arg.type == ShaderDataType::Struct)
+                {
+                    if (!structExists(arg.structName))
+                    {
+                        Debug::log(
+                            "@ShaderStageBuilder::beginFunction "
+                            "No struct: " + arg.structName + " found!",
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
+                        return;
+                    }
+                    useType = arg.structName;
+                }
+
+                line += useType + " " + arg.name;
 
                 if (i < args.size() - 1)
                     line += ", ";
@@ -237,11 +657,11 @@ namespace platypus
             ++_currentScopeIndentation;
         }
 
-        void ShaderStageBuilder::endFunction(ShaderVariable returnValue)
+        void ShaderStageBuilder::endFunction(const std::string& returnValueName)
         {
-            if (returnValue.type != ShaderDataType::None)
+            if (!returnValueName.empty())
             {
-                addLine(" return " + returnValue.name + ";");
+                addLine(" return " + returnValueName + ";");
             }
             --_currentScopeIndentation;
             addLine("}");
@@ -261,7 +681,11 @@ namespace platypus
             _lines.push_back(totalIndentations + line + "\n");
         }
 
-        void ShaderStageBuilder::setOutputTEST(uint32_t location, ShaderVariable variable)
+        void ShaderStageBuilder::setOutputTEST(
+            uint32_t location,
+            ShaderDataType type,
+            const std::string name
+        )
         {
             if (_nextOutDefinitionPos == 0)
             {
@@ -273,14 +697,191 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
                 return;
             }
-            addLine(variable.name + " = TESTING;");
+            addLine(name + " = TESTING;");
             std::vector<std::string> tempLines;
             tempLines.insert(tempLines.end(), _lines.begin(), _lines.begin() + _nextOutDefinitionPos);
-            tempLines.push_back("layout(location = " + std::to_string(location) + ") out " + shader_datatype_to_glsl(variable.type) + " " + variable.name + ";\n");
+            tempLines.push_back("layout(location = " + std::to_string(location) + ") out " + shader_datatype_to_glsl(type) + " " + name + ";\n");
             size_t nextOutPosition = tempLines.size();
             tempLines.insert(tempLines.end(), _lines.begin() + _nextOutDefinitionPos, _lines.end());
             _nextOutDefinitionPos = nextOutPosition;
             _lines = tempLines;
+        }
+
+        bool ShaderStageBuilder::variableExists(const std::string& name) const
+        {
+            if (_variables.find(name) != _variables.end())
+            {
+                return true;
+            }
+
+            Debug::log("___TEST___searching var: " + name);
+            size_t dotPos = name.find(".");
+
+            if (dotPos == name.npos)
+                return false;
+
+            std::string next = name.substr(dotPos + 1, name.size() - dotPos);
+            return variableExists(next);
+        }
+
+        bool ShaderStageBuilder::structExists(const std::string& name) const
+        {
+            return _structDefinitions.find(name) != _structDefinitions.end();
+        }
+
+        bool ShaderStageBuilder::structMemberExists(
+            const ShaderObject& shaderStruct,
+            const std::string memberName
+        ) const
+        {
+            return shaderStruct.memberIndices.find(memberName) != shaderStruct.memberIndices.end();
+        }
+
+
+        // TESTING -----
+        ShaderObject ShaderStageBuilder::newVec4(const std::string& instanceName)
+        {
+            ShaderObject obj = _structDefinitions["vec4"];
+            std::string line = "vec4 " + instanceName;
+            instantiateObject(
+                "vec4",
+                instanceName,
+                {
+                    { ShaderDataType::Float, "0.0" },
+                    { ShaderDataType::Float, "0.0" },
+                    { ShaderDataType::Float, "0.0" },
+                    { ShaderDataType::Float, "0.0" }
+                }
+            );
+            return obj;
+        }
+
+        ShaderObject ShaderStageBuilder::newVec4(
+            const std::string& instanceName,
+            const ShaderObject& vec3,
+            const std::string& w
+        )
+        {
+            ShaderObject obj = _structDefinitions["vec4"];
+
+            std::string useW = w;
+            if (!is_number(w) && !variableExists(w))
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::newVec4 "
+                    "Invalid argument w: " + w,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return { };
+            }
+
+            if (!instanceName.empty())
+            {
+                if (variableExists(instanceName))
+                {
+                    Debug::log(
+                        "@ShaderStageBuilder::newVec4 "
+                        "Variable: " + instanceName + " already exists!",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return { };
+                }
+                obj.name = instanceName;
+
+                std::string line = "vec4 " + instanceName;
+                instantiateObject(
+                    "vec4",
+                    instanceName,
+                    {
+                        { ShaderDataType::Float, vec3.name + ".x" },
+                        { ShaderDataType::Float, vec3.name + ".y" },
+                        { ShaderDataType::Float, vec3.name + ".z" },
+                        { ShaderDataType::Float, w }
+                    }
+                );
+                return obj;
+            }
+            return obj;
+        }
+
+        void ShaderStageBuilder::eval(
+            const ShaderObject& target,
+            ObjectCalculation calculation
+        )
+        {
+            if (target.type == ShaderDataType::Struct)
+            {
+                Debug::log(
+                    "@ShaderStageBuilder::eval "
+                    "Target's type was: Struct! "
+                    "Only basic shader data types are allowed for calculation evaluation. ",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            std::string line;
+            if (!variableExists(target.name))
+            {
+                line += shader_datatype_to_glsl(target.type) + " ";
+                reqisterVariable(target, "");
+            }
+            line += target.name + " = ";
+
+            // TODO: way to chain multiple operations with multiple data
+            // TODO: validate these variables exists!
+            line += calculation.left.name + " " + calc_operation_to_char(calculation.operation) + " " + calculation.right.name + ";";
+
+            addLine(line);
+        }
+
+        void ShaderStageBuilder::calcVertexWorldPosition()
+        {
+            //ShaderObject testVec4 = newVec4(
+            //    "testVec4",
+            //    _variables["vertex.position"],
+            //    "1.0"
+            //);
+
+            ObjectCalculation calc{
+                _variables["transformationMatrix"],
+                _variables["vertex.position"],
+                CalcOperation::Mul
+            };
+
+            eval({ _varNameVertexWorldSpace, ShaderDataType::Float4 }, calc);
+
+            //vec4(_varNameVertexWorldSpace, "vertex.position", "1.0");
+
+            endSection();
+        }
+
+        void ShaderStageBuilder::printVariables()
+        {
+            Debug::log("Shader variables:");
+            std::string allVariables;
+            for (auto variable : _variables)
+            {
+                allVariables += "    " + variable.first + "\n";
+            }
+            Debug::log(allVariables);
+        }
+
+        void ShaderStageBuilder::printObjects()
+        {
+            Debug::log("Shader objects:");
+            std::string allStructs;
+            for (auto structDefinition : _structDefinitions)
+            {
+                allStructs += "    " + structDefinition.first + "\n";
+                for (auto member : structDefinition.second.memberIndices)
+                    allStructs += "        " + member.first + "\n";
+
+            }
+            Debug::log(allStructs);
         }
 
 
@@ -290,26 +891,56 @@ namespace platypus
 
         void VulkanShaderStageBuilder::beginPushConstants()
         {
+            if (_pActiveWriteObject != nullptr)
+            {
+                Debug::log(
+                    "@VulkanShaderStageBuilder::beginPushConstants "
+                    "_pActiveWriteObject wasn't nullptr! "
+                    "Make sure you ended previous object write operation with the appropriate "
+                    "end function!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            _structDefinitions[_pushConstantsStructName] = { _pushConstantsStructName, ShaderDataType::Struct };
             addLine("layout(push_constant) uniform PushConstants");
             addLine("{");
+            _pActiveWriteObject = &_structDefinitions[_pushConstantsStructName];
         }
 
-        void VulkanShaderStageBuilder::endPushConstants(const std::string& variableName)
+        void VulkanShaderStageBuilder::endPushConstants(const std::string& instanceName)
         {
-            addLine("} " + variableName + ";");
+            addLine("} " + instanceName + ";");
             endSection();
+            _pActiveWriteObject = nullptr;
         }
 
         void VulkanShaderStageBuilder::beginUniformBlock(const std::string& blockName, uint32_t setIndex, uint32_t binding)
         {
+            if (_pActiveWriteObject != nullptr)
+            {
+                Debug::log(
+                    "@VulkanShaderStageBuilder::beginUniformBlock "
+                    "_pActiveWriteObject wasn't nullptr! "
+                    "Make sure you ended previous object write operation with the appropriate "
+                    "end function!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            _structDefinitions[blockName] = { blockName, ShaderDataType::Struct };
             addLine("layout(set = " + std::to_string(setIndex) + ", binding = " + std::to_string(binding) + ") uniform " + blockName);
             addLine("{");
+            _pActiveWriteObject = &_structDefinitions[blockName];
         }
 
-        void VulkanShaderStageBuilder::endUniformBlock(const std::string& variableName)
+        void VulkanShaderStageBuilder::endUniformBlock(const std::string& instanceName)
         {
-            addLine("} " + variableName + ";");
+            addLine("} " + instanceName + ";");
             endSection();
+            _pActiveWriteObject = nullptr;
         }
     }
 }

@@ -21,11 +21,21 @@ int main(int argc, const char** argv)
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
         0
     );
+    VertexBufferLayout instancedVertexBufferLayout(
+        {
+            { 0, ShaderDataType::Mat4 }
+        },
+        VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
+        0
+    );
     std::vector<std::string> vertexAttributeNames{
         "position",
         "normal",
         "texCoord",
         "tangent"
+    };
+    std::vector<std::string> instancedVertexAttributeNames{
+        "transformationMatrix",
     };
 
     std::vector<UniformInfo> shadowPushConstants = {
@@ -67,15 +77,20 @@ int main(int argc, const char** argv)
     shaderBuilder::VulkanShaderStageBuilder vertexShaderBuilder;
     vertexShaderBuilder.addVersion(ShaderVersion::VULKAN_GLSL_450);
     vertexShaderBuilder.addVertexAttributes(
-        { vertexBufferLayout },
         {
-            vertexAttributeNames
+            vertexBufferLayout,
+            instancedVertexBufferLayout
+        },
+        {
+            vertexAttributeNames,
+            instancedVertexAttributeNames
         }
     );
 
     vertexShaderBuilder.addPushConstants(
         shadowPushConstants,
-        pushConstantsVariableNames
+        pushConstantsVariableNames,
+        "shadowPushConstants"
     );
 
     vertexShaderBuilder.addUniformBlock(
@@ -90,24 +105,29 @@ int main(int argc, const char** argv)
         ShaderDataType::None,
         { }
     );
+    {
+        // TODO: Something like below
+        //ShaderVariable worldSpaceVertexPosition{ShaderDataType::Float4, ""};
+        //vertexShaderBuilder.calcVertexPosition();
 
-    // TODO: Something like below
-    //vertexShaderBuilder.calcVertexPosition();
-    vertexShaderBuilder.setOutputTEST(0, { ShaderDataType::Float3, "var_fragCoord" });
+        vertexShaderBuilder.instantiateObject(
+            "Vertex",
+            "vertex",
+            {
+                { ShaderDataType::Float3, "position" },
+                { ShaderDataType::Float3, "normal" },
+                { ShaderDataType::Float2, "texCoord" },
+                { ShaderDataType::Float4, "tangent" }
+            }
+        );
 
-    vertexShaderBuilder.beginFunction(
-        "testFunc",
-        ShaderDataType::Float,
-        {
-            { { ShaderDataType::Float2, "texCoord" }, shaderBuilder::FunctionArgQualifier::None },
-            { { ShaderDataType::Float3, "color" }, shaderBuilder::FunctionArgQualifier::In }
-        }
-    );
-    vertexShaderBuilder.endFunction({ ShaderDataType::Float, "ans" });
+        vertexShaderBuilder.calcVertexWorldPosition();
+        vertexShaderBuilder.printVariables();
 
-    vertexShaderBuilder.setOutputTEST(2, { ShaderDataType::Float2, "var_texCoord" });
-    vertexShaderBuilder.setOutputTEST(3, { ShaderDataType::Float4, "var_TEST" });
-
+        vertexShaderBuilder.setOutputTEST(0, ShaderDataType::Float3, "var_fragCoord");
+        vertexShaderBuilder.setOutputTEST(2, ShaderDataType::Float2, "var_texCoord");
+        vertexShaderBuilder.setOutputTEST(3, ShaderDataType::Float4, "var_TEST");
+    }
     vertexShaderBuilder.endFunction({});
 
     Debug::log("Built shader: ");

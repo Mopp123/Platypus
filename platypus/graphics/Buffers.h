@@ -22,7 +22,10 @@ namespace platypus
         Float3,
         Float4,
 
-        Mat4
+        Mat3,
+        Mat4,
+
+        Struct
     };
 
 
