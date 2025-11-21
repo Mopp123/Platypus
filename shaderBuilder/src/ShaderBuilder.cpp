@@ -754,95 +754,15 @@ namespace platypus
             return shaderStruct.memberIndices.find(memberName) != shaderStruct.memberIndices.end();
         }
 
-
-        // TESTING -----
-        void ShaderStageBuilder::eval(Operation* pOperation, std::string& line)
-        {
-            const ShaderObject& object = pOperation->object;
-
-            if (object.type == ShaderDataType::Struct)
-            {
-                Debug::log(
-                    "@ShaderStageBuilder::eval "
-                    "Operations aren't supported for non in built structs!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return;
-            }
-
-            // If non constant named object and variable with the name not found?
-            // (if non named object, it means the object is temporary and ignore this)
-            //  -> instantiate new var if assignment operation
-            //  -> error if assignment operation
-            if (!object.name.empty() && !is_number(object.name))
-            {
-                if (!variableExists(object.name))
-                {
-                    if (pOperation->type != OperationType::Assign)
-                    {
-                        Debug::log(
-                            "@ShaderStageBuilder::eval "
-                            "Variable: " + object.name + " not found!",
-                            Debug::MessageType::PLATYPUS_ERROR
-                        );
-                        PLATYPUS_ASSERT(false);
-                        return;
-                    }
-                    reqisterVariable(object, "");
-                    line += shader_datatype_to_glsl(object.type) + " ";
-                }
-            }
-
-            line += pOperation->object.name;
-            if (pOperation->type != OperationType::None)
-            {
-                line += " " + operation_type_to_string(pOperation->type) + " ";
-            }
-
-            if (pOperation->pRight)
-            {
-                eval(pOperation->pRight.get(), line);
-            }
-            else
-            {
-                addLine(line + ";");
-            }
-        }
-
         void ShaderStageBuilder::calcVertexWorldPosition()
         {
-            ShaderObject finalPos = _structDefinitions["vec4"];
-            finalPos.name = "finalPos";
-
-            Operation testOper{
-                finalPos,
-                OperationType::Assign,
-                newOper(
-                    _variables["sceneData.projectionMatrix"],
-                    OperationType::Mul,
-                    newOper(
-                        _variables["sceneData.viewMatrix"],
-                        OperationType::Mul,
-                        newOper(
-                            _variables["vertex.position"],
-                            OperationType::None
-                        )
-                    )
-                )
-            };
-
-            std::string testLine;
-            eval(&testOper, testLine);
-
-            // ---
-            //ShaderObject worldSpaceVertex = newVec4(_varNameVertexWorldSpace);
-            //ShaderObject transformationMatrix = _variables["transformationMatrix"];
-            //ShaderObject vertexPos = _variables["vertex.position"];
-            //addLine(
-            //    newVarAssign(ShaderDataType::Float4, _varNameVertexWorldSpace) + " ="
-            //    " "+ transformationMatrix.name + " * " + vertexPos.name
-            //);
+            ShaderObject worldSpaceVertex = newVec4(_varNameVertexWorldSpace);
+            ShaderObject transformationMatrix = _variables["transformationMatrix"];
+            ShaderObject vertexPos = _variables["vertex.position"];
+            addLine(
+                newVarAssign(ShaderDataType::Float4, _varNameVertexWorldSpace) + " ="
+                " "+ transformationMatrix.name + " * " + vertexPos.name
+            );
 
             endSection();
         }

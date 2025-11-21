@@ -24,39 +24,6 @@ namespace platypus
             ShaderObject* pDefinition = nullptr;
         };
 
-        enum class OperationType
-        {
-            None,
-            Assign,
-            Add,
-            Neg,
-            Mul,
-            Div
-        };
-
-        struct Operation
-        {
-            ShaderObject object;
-            OperationType type;
-            std::unique_ptr<Operation> pRight = nullptr;
-        };
-
-        enum class FunctionArgQualifier
-        {
-            None,
-            In,
-            Out,
-            InOut
-        };
-
-        struct FunctionInput
-        {
-            ShaderDataType type;
-            std::string name;
-            std::string structName;
-            FunctionArgQualifier argQualifier;
-        };
-
         class ShaderStageBuilder
         {
         protected:
@@ -145,8 +112,6 @@ namespace platypus
 
 
             // TESTING -----
-            void eval(Operation* pOperation, std::string& line);
-
             void calcVertexWorldPosition();
 
             void printVariables();
