@@ -121,8 +121,8 @@ int main(int argc, const char** argv)
             }
         );
 
-        vertexShaderBuilder.calcVertexWorldPosition();
         vertexShaderBuilder.printVariables();
+        vertexShaderBuilder.calcVertexWorldPosition();
 
         vertexShaderBuilder.setOutputTEST(0, ShaderDataType::Float3, "var_fragCoord");
         vertexShaderBuilder.setOutputTEST(2, ShaderDataType::Float2, "var_texCoord");

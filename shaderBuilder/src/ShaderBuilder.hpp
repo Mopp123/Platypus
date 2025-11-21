@@ -5,6 +5,9 @@
 #include "platypus/graphics/Shader.h"
 #include <string>
 #include <unordered_map>
+#include <memory>
+
+#define newOper(...) std::unique_ptr<Operation>(new Operation{__VA_ARGS__})
 
 
 namespace platypus
@@ -18,18 +21,24 @@ namespace platypus
             ShaderDataType type = ShaderDataType::None;
             std::vector<ShaderObject> members; // Members, if this type == Struct
             std::unordered_map<std::string, size_t> memberIndices;
+            ShaderObject* pDefinition = nullptr;
         };
 
-        enum class CalcOperation
+        enum class OperationType
         {
-            Mul
+            None,
+            Assign,
+            Add,
+            Neg,
+            Mul,
+            Div
         };
 
-        struct ObjectCalculation
+        struct Operation
         {
-            ShaderObject left;
-            ShaderObject right;
-            CalcOperation operation;
+            ShaderObject object;
+            OperationType type;
+            std::unique_ptr<Operation> pRight = nullptr;
         };
 
         enum class FunctionArgQualifier
@@ -136,17 +145,7 @@ namespace platypus
 
 
             // TESTING -----
-            ShaderObject newVec4(const std::string& instanceName);
-            ShaderObject newVec4(
-                const std::string& instanceName,
-                const ShaderObject& vec3,
-                const std::string& w
-            );
-
-            void eval(
-                const ShaderObject& target,
-                ObjectCalculation calculation
-            );
+            void eval(Operation* pOperation, std::string& line);
 
             void calcVertexWorldPosition();
 

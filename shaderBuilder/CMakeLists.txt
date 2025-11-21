@@ -6,10 +6,11 @@ project(${PROJECT_NAME})
 # Need to have absolute dirs so we cannot use '../' to get the engine directory here!
 get_filename_component(PARENT_DIR ../ ABSOLUTE)
 
-set(CMAKE_CXX_STANDARD 17)
+# V 20 to be able to use designated initializers
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(
-    -Wall -g
+    -Wall -g -Wpedantic
 )
 
 set(SRC_FILES
