@@ -54,6 +54,11 @@ namespace platypus
         BUFFER_UPDATE_FREQUENCY_STREAM
     };
 
+    enum UniformBlockLayout
+    {
+        std140,
+        std430
+    };
 
     enum IndexType
     {
@@ -75,6 +80,8 @@ namespace platypus
     //       For example: to draw multiple things with different transformation matrices without having
     //       to have different uniform buffer for each rendered object.
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize);
+
+    std::string uniform_block_layout_to_string(UniformBlockLayout layout);
 
     class Pipeline;
 

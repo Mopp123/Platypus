@@ -1,12 +1,21 @@
 #include "ShaderBuilder.hpp"
 #include "platypus/core/Debug.h"
-#include <cctype>
+#include <format>
 
 
 namespace platypus
 {
     namespace shaderBuilder
     {
+        static std::string vector_to_string(const std::vector<std::string>& v)
+        {
+            std::string out;
+            for (size_t i = 0; i < v.size(); ++i)
+                out += "    " + v[i] + "\n";
+
+            return out;
+        }
+
         static std::string shader_datatype_to_glsl(ShaderDataType type)
         {
             switch (type)
@@ -103,29 +112,19 @@ namespace platypus
             }
         }
 
-        static std::string operation_type_to_string(OperationType type)
-        {
-            switch (type)
-            {
-                case OperationType::Assign: return "=";
-                case OperationType::Add:    return "+";
-                case OperationType::Neg:    return "-";
-                case OperationType::Mul:    return "*";
-                case OperationType::Div:    return "/";
-                default:{
-                    Debug::log(
-                        "@operation_type_to_char "
-                        "Invalid operation type",
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                    return "";
-                }
-            }
-        }
 
-
-        ShaderStageBuilder::ShaderStageBuilder()
+        ShaderStageBuilder::NVertex ShaderStageBuilder::s_inVertex;
+        ShaderStageBuilder::NVertexOut ShaderStageBuilder::s_outVertex;
+        ShaderStageBuilder::NSceneData ShaderStageBuilder::s_uSceneData;
+        ShaderStageBuilder::NJoint ShaderStageBuilder::s_uJoint;
+        ShaderStageBuilder::NGlobal ShaderStageBuilder::s_global;
+        ShaderStageBuilder::ShaderStageBuilder(
+            ShaderVersion version,
+            uint32_t shaderStage,
+            const std::vector<ShaderObject>& vertexShaderOutput
+        ) :
+            _version(version),
+            _shaderStage(shaderStage)
         {
             // Temporarely adding all basic types here...
             _structDefinitions["int"] = { "int", ShaderDataType::Int };
@@ -176,15 +175,12 @@ namespace platypus
                 { }, // NOTE: Not sure what to do with the members here?
                 { }
             };
-        }
 
-        void ShaderStageBuilder::addVersion(ShaderVersion version)
-        {
-            if (version == ShaderVersion::VULKAN_GLSL_450)
+            if (_version == ShaderVersion::VULKAN_GLSL_450)
             {
                 addLine("#version 450");
             }
-            else if (version == ShaderVersion::OPENGLES_GLSL_300)
+            else if (_version == ShaderVersion::OPENGLES_GLSL_300)
             {
                 addLine("#version 300 es");
 
@@ -201,7 +197,234 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
             endSection();
+
+            for (size_t i = 0; i < vertexShaderOutput.size(); ++i)
+            {
+                const ShaderObject& obj = vertexShaderOutput[i];
+                addInput((uint32_t)i, obj.type, obj.name);
+            }
         }
+
+        void ShaderStageBuilder::build()
+        {
+            beginFunction(
+                "main",
+                ShaderDataType::None,
+                { }
+            );
+            {
+                if (_shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
+                {
+                    instantiateObject(
+                        "Vertex",
+                        "vertex",
+                        {
+                            { ShaderDataType::Float3, "position" },
+                            { ShaderDataType::Float4, "weights" },
+                            { ShaderDataType::Float4, "jointIDs" },
+                            { ShaderDataType::Float3, "normal" },
+                            { ShaderDataType::Float2, "texCoord" }
+                        }
+                    );
+
+                    calcFinalVertexPosition();
+                    calcVertexShaderOutput();
+                }
+                else if (_shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
+                {
+                }
+            }
+            endFunction({});
+        }
+
+        void ShaderStageBuilder::beginPushConstants()
+        {
+            if (_pActiveWriteObject != nullptr)
+            {
+                Debug::log(
+                    "@VulkanShaderStageBuilder::beginPushConstants "
+                    "_pActiveWriteObject wasn't nullptr! "
+                    "Make sure you ended previous object write operation with the appropriate "
+                    "end function!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            _structDefinitions[_pushConstantsStructName] = { _pushConstantsStructName, ShaderDataType::Struct };
+            if (_version == ShaderVersion::VULKAN_GLSL_450)
+            {
+                addLine("layout(push_constant) uniform " + _pushConstantsStructName);
+                addLine("{");
+            }
+            else if (_version == ShaderVersion::OPENGLES_GLSL_300)
+            {
+                addLine("struct " + _pushConstantsStructName);
+                addLine("{");
+            }
+            else
+            {
+                error(
+                    "Invalid shader version: " + shader_version_to_string(_version),
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+
+            _pActiveWriteObject = &_structDefinitions[_pushConstantsStructName];
+        }
+
+        void ShaderStageBuilder::endPushConstants(const std::string& instanceName)
+        {
+            if (_version == ShaderVersion::VULKAN_GLSL_450)
+            {
+                addLine("} " + instanceName + ";");
+            }
+            else if (_version == ShaderVersion::OPENGLES_GLSL_300)
+            {
+                addLine("};");
+                addLine("uniform " + _pushConstantsStructName + " " + instanceName + ";");
+            }
+            else
+            {
+                error(
+                    "Invalid shader version: " + shader_version_to_string(_version),
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+            endSection();
+            _pActiveWriteObject = nullptr;
+        }
+
+        void ShaderStageBuilder::beginUniformBlock(
+            const std::string& blockName,
+            UniformBlockLayout blockLayout,
+            uint32_t setIndex,
+            uint32_t binding
+        )
+        {
+            if (_pActiveWriteObject != nullptr)
+            {
+                error(
+                    "_pActiveWriteObject wasn't nullptr! "
+                    "Make sure you ended previous object write operation with the appropriate "
+                    "end function!",
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+            _structDefinitions[blockName] = { blockName, ShaderDataType::Struct };
+            const std::string blockLayoutStr = uniform_block_layout_to_string(blockLayout);
+            if (_version == ShaderVersion::VULKAN_GLSL_450)
+            {
+                addLine("layout(" + blockLayoutStr + ", set = " + std::to_string(setIndex) + ", binding = " + std::to_string(binding) + ") uniform " + blockName);
+                addLine("{");
+            }
+            else if (_version == ShaderVersion::OPENGLES_GLSL_300)
+            {
+                addLine("layout(" + blockLayoutStr + ") uniform " + blockName);
+                addLine("{");
+            }
+            else
+            {
+                error(
+                    "Invalid shader version: " + shader_version_to_string(_version),
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+            _pActiveWriteObject = &_structDefinitions[blockName];
+        }
+
+        void ShaderStageBuilder::endUniformBlock(const std::string& instanceName)
+        {
+            addLine("} " + instanceName + ";");
+            endSection();
+            _pActiveWriteObject = nullptr;
+        }
+
+        void ShaderStageBuilder::addInput(
+            uint32_t location,
+            ShaderDataType type,
+            const std::string& name
+        )
+        {
+            if (variableExists(name))
+            {
+                error(
+                    "Variable: " + name + " already exists!",
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+            // Also add all the vector components as variables.
+            // This is done in order to be able to get anything like:
+            //  someObject.vertex.position.z
+            // Pretty annoying and dumb, I know...
+            if (type != ShaderDataType::Mat3 &&
+                type != ShaderDataType::Mat4 &&
+                type != ShaderDataType::Int &&
+                type != ShaderDataType::Float &&
+                type != ShaderDataType::Struct &&
+                type != ShaderDataType::None
+            )
+            {
+                size_t attribComponentCount = get_shader_datatype_component_count(type);
+                for (size_t i = 0; i < attribComponentCount; ++i)
+                {
+                    std::string attribMemberNameXYZW = name + "." + vector_component_index_to_name(i, false);
+                    std::string attribMemberNameRGBA = name + "." + vector_component_index_to_name(i, true);
+                    _variables[attribMemberNameXYZW] = { attribMemberNameXYZW, ShaderDataType::Float };
+                    _variables[attribMemberNameRGBA] = { attribMemberNameRGBA, ShaderDataType::Float };
+                }
+            }
+
+            // Add name prefix only in fragment shader
+            std::string namePrefix;
+            if (_shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
+                namePrefix = _inputPrefix;
+
+            // ES 300 doesn't have layout qualifiers in fragment shader input!
+            std::string layoutPrefix;
+            if (_version == ShaderVersion::VULKAN_GLSL_450 ||
+                (_version == ShaderVersion::OPENGLES_GLSL_300 && _shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT))
+            {
+                layoutPrefix = "layout(location = " + std::to_string(location) + ") ";
+            }
+
+            addLine(layoutPrefix + "in " + shader_datatype_to_glsl(type) + " " + namePrefix + name + ";");
+            _variables[name] = { name, type };
+        }
+
+        void ShaderStageBuilder::addOutput(
+            ShaderDataType type,
+            const std::string& name,
+            const std::string& value
+        )
+        {
+            if (_nextOutDefinitionPos == 0)
+            {
+                Debug::log(
+                    "ShaderStageBuilder::setOutputTEST "
+                    "Invalid row(" + std::to_string(_nextOutDefinitionPos) + ") for _nextOutDefinitionPos",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            const size_t location = _output.size();
+            const std::string typeName = shader_datatype_to_glsl(type);
+            ShaderObject object = _structDefinitions[typeName];
+            object.name = name;
+            _output.push_back(object);
+
+            addLine(name + " = " + value + ";");
+
+            std::vector<std::string> tempLines;
+            tempLines.insert(tempLines.end(), _lines.begin(), _lines.begin() + _nextOutDefinitionPos);
+            tempLines.push_back("layout(location = " + std::to_string(location) + ") out " + typeName + " " + name + ";\n");
+            size_t nextOutPosition = tempLines.size();
+            tempLines.insert(tempLines.end(), _lines.begin() + _nextOutDefinitionPos, _lines.end());
+            _nextOutDefinitionPos = nextOutPosition;
+            _lines = tempLines;
+        }
+
 
         void ShaderStageBuilder::addVertexAttributes(
             const std::vector<VertexBufferLayout>& vertexBufferLayouts,
@@ -246,16 +469,14 @@ namespace platypus
                 for (size_t elementIndex = 0; elementIndex < elements.size(); ++elementIndex)
                 {
                     const VertexBufferElement& element = elements[elementIndex];
-                    const uint32_t elementLocation = element.getLocation();
                     const ShaderDataType elementType = element.getType();
+                    uint32_t elementLocation = element.getLocation();
 
-                    std::string locationStr;
                     if (useLocationByOrder)
-                        locationStr = std::to_string(locationIndex);
+                        elementLocation = locationIndex;
                     else
-                        locationStr = std::to_string(elementLocation);
+                        elementLocation = elementLocation;
 
-                    std::string elementTypeStr = shader_datatype_to_glsl(elementType);
                     std::string attributeName = attributeNames[elementIndex];
 
                     // NOTE: For now all instance data is separate from "actual mesh vertex
@@ -265,41 +486,7 @@ namespace platypus
                     if (layout.getInputRate() == VertexInputRate::VERTEX_INPUT_RATE_VERTEX)
                         vertexAttributes.push_back(attribObject);
 
-                    addLine("layout(location = " + locationStr + ") in " + elementTypeStr + " " + attributeName + ";");
-
-                    // Add the attribute as variable too!
-                    if (variableExists(attributeName))
-                    {
-                        Debug::log(
-                            "@ShaderStageBuilder::addVertexAttributes "
-                            "Variable: " + attributeName + " already exists!",
-                            Debug::MessageType::PLATYPUS_ERROR
-                        );
-                        PLATYPUS_ASSERT(false);
-                        return;
-                    }
-                    _variables[attributeName] = attribObject;
-                    // Also add all the components of the attrib as variables.
-                    // This is done in order to be able to get anything like:
-                    //  someObject.vertex.position.z
-                    // Pretty annoying and dumb, I know...
-                    if (elementType != ShaderDataType::Mat3 &&
-                        elementType != ShaderDataType::Mat4 &&
-                        elementType != ShaderDataType::Int &&
-                        elementType != ShaderDataType::Float &&
-                        elementType != ShaderDataType::Struct &&
-                        elementType != ShaderDataType::None
-                    )
-                    {
-                        size_t attribComponentCount = get_shader_datatype_component_count(elementType);
-                        for (size_t i = 0; i < attribComponentCount; ++i)
-                        {
-                            std::string attribMemberNameXYZW = attributeName + "." + vector_component_index_to_name(i, false);
-                            std::string attribMemberNameRGBA = attributeName + "." + vector_component_index_to_name(i, true);
-                            _variables[attribMemberNameXYZW] = { attribMemberNameXYZW, ShaderDataType::Float };
-                            _variables[attribMemberNameRGBA] = { attribMemberNameRGBA, ShaderDataType::Float };
-                        }
-                    }
+                    addInput(elementLocation, element.getType(), attributeName);
 
                     // Consumes 4 locations, if mat4
                     if (useLocationByOrder && elementType == ShaderDataType::Mat4)
@@ -379,22 +566,26 @@ namespace platypus
             const std::vector<UniformInfo>& uniformInfo = descriptorSetLayoutBinding.getUniformInfo();
             if (uniformInfo.size() != variableNames.size())
             {
-                Debug::log(
-                    "@ShaderStageBuilder::addUniformBlock "
+                error(
                     "Provided " + std::to_string(variableNames.size()) + " names "
                     "for " + std::to_string(uniformInfo.size()) + " uniform block variables. "
                     "You have to provide matching number of elements in uniform info and variable names!",
-                    Debug::MessageType::PLATYPUS_ERROR
+                    PLATYPUS_CURRENT_FUNC_NAME
                 );
                 PLATYPUS_ASSERT(false);
                 return;
             }
 
-            beginUniformBlock(blockName, _descriptorSetCount, descriptorSetLayoutBinding.getBinding());
+            beginUniformBlock(
+                blockName,
+                UniformBlockLayout::std140,
+                _descriptorSetCount,
+                descriptorSetLayoutBinding.getBinding()
+            );
             ++_currentScopeIndentation;
             for (size_t i = 0; i < uniformInfo.size(); ++i)
             {
-                addVariable(uniformInfo[i].type, variableNames[i], "");
+                addVariable(uniformInfo[i].type, variableNames[i], "", uniformInfo[i].arrayLen);
             }
             --_currentScopeIndentation;
             endUniformBlock(instanceName);
@@ -418,7 +609,8 @@ namespace platypus
         void ShaderStageBuilder::addVariable(
             ShaderDataType type,
             const std::string& name,
-            const std::string& structName
+            const std::string& structName,
+            int arrayLength
         )
         {
             if (!_pActiveWriteObject)
@@ -480,7 +672,11 @@ namespace platypus
             _pActiveWriteObject->memberIndices[name] = _pActiveWriteObject->members.size();
             _pActiveWriteObject->members.push_back(newVariable);
 
-            addLine(useType + " " + name + ";");
+            std::string line = useType + " " + name;
+            if (arrayLength > 1)
+                line += "[" + std::to_string(arrayLength) + "]";
+
+            addLine(line + ";");
         }
 
         void ShaderStageBuilder::reqisterVariable(const ShaderObject& variable, const std::string& parentName)
@@ -685,6 +881,50 @@ namespace platypus
             endSection();
         }
 
+        void ShaderStageBuilder::beginIf(const std::string& condition)
+        {
+            addLine("if (" + condition + ")");
+            addLine("{");
+            ++_currentScopeIndentation;
+        }
+
+        void ShaderStageBuilder::beginElseIf(const std::string& condition)
+        {
+            --_currentScopeIndentation;
+            addLine("}");
+            addLine("else if (" + condition + ")");
+            addLine("{");
+            ++_currentScopeIndentation;
+        }
+
+        void ShaderStageBuilder::beginElse()
+        {
+            --_currentScopeIndentation;
+            addLine("}");
+            addLine("else");
+            addLine("{");
+            ++_currentScopeIndentation;
+        }
+
+        void ShaderStageBuilder::endIf()
+        {
+            --_currentScopeIndentation;
+            addLine("}");
+        }
+
+        void ShaderStageBuilder::newVariable(
+            ShaderDataType type,
+            const std::string& name,
+            const std::string& value
+        )
+        {
+            const std::string typeName = shader_datatype_to_glsl(type);
+            ShaderObject variable = _structDefinitions[typeName];
+            variable.name = name;
+            reqisterVariable(variable, "");
+            addLine(typeName + " " + name + " = " + value + ";");
+        }
+
         void ShaderStageBuilder::endSection()
         {
             addLine("");
@@ -696,32 +936,6 @@ namespace platypus
             for (int i = 0; i < _currentScopeIndentation; ++i)
                 totalIndentations += _indentation;
             _lines.push_back(totalIndentations + line + "\n");
-        }
-
-        void ShaderStageBuilder::setOutputTEST(
-            uint32_t location,
-            ShaderDataType type,
-            const std::string name
-        )
-        {
-            if (_nextOutDefinitionPos == 0)
-            {
-                Debug::log(
-                    "ShaderStageBuilder::setOutputTEST "
-                    "Invalid row(" + std::to_string(_nextOutDefinitionPos) + ") for _nextOutDefinitionPos",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return;
-            }
-            addLine(name + " = TESTING;");
-            std::vector<std::string> tempLines;
-            tempLines.insert(tempLines.end(), _lines.begin(), _lines.begin() + _nextOutDefinitionPos);
-            tempLines.push_back("layout(location = " + std::to_string(location) + ") out " + shader_datatype_to_glsl(type) + " " + name + ";\n");
-            size_t nextOutPosition = tempLines.size();
-            tempLines.insert(tempLines.end(), _lines.begin() + _nextOutDefinitionPos, _lines.end());
-            _nextOutDefinitionPos = nextOutPosition;
-            _lines = tempLines;
         }
 
         bool ShaderStageBuilder::variableExists(const std::string& name) const
@@ -741,6 +955,19 @@ namespace platypus
             return variableExists(next);
         }
 
+        bool ShaderStageBuilder::variablesExists(
+            const std::vector<std::string>& toSearch,
+            std::vector<std::string>& missingVariables
+        ) const
+        {
+            for (const std::string& name : toSearch)
+            {
+                if (!variableExists(name))
+                    missingVariables.push_back(name);
+            }
+            return missingVariables.empty();
+        }
+
         bool ShaderStageBuilder::structExists(const std::string& name) const
         {
             return _structDefinitions.find(name) != _structDefinitions.end();
@@ -754,14 +981,207 @@ namespace platypus
             return shaderStruct.memberIndices.find(memberName) != shaderStruct.memberIndices.end();
         }
 
-        void ShaderStageBuilder::calcVertexWorldPosition()
+        void ShaderStageBuilder::calcFinalVertexPosition()
         {
-            ShaderObject worldSpaceVertex = newVec4(_varNameVertexWorldSpace);
-            ShaderObject transformationMatrix = _variables["transformationMatrix"];
-            ShaderObject vertexPos = _variables["vertex.position"];
+            // If skinning related stuff exists, make sure they ALL exist!
+            std::vector<std::string> skinningDataNames = {
+                s_inVertex.weights,
+                s_inVertex.jointIDs,
+                s_uJoint.jointMatrices
+            };
+            std::vector<std::string> missingSkinningData;
+            bool doSkinning = variablesExists(skinningDataNames, missingSkinningData);
+            if (!missingSkinningData.empty() && (missingSkinningData != skinningDataNames))
+            {
+                error(
+                    "Some skinning data found, but missing:\n" + vector_to_string(missingSkinningData) + ""
+                    "Skinning requires providing all:\n" + vector_to_string(skinningDataNames) + " "
+                    "not just some of them!",
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+
+            if (doSkinning)
+            {
+                if (variableExists(s_global.transformationMatrix))
+                {
+                    error(
+                        "Shader was using vertex weights but transformationMatrix already exists! "
+                        "Doing skinning constructs the transformation matrix so it can't exist already.",
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+                // Calc final transform according to used joints and weights.
+                // For some reason I've been defaulting to first joint,
+                // if weights sum < 1.0. Don't know if this should even be done...
+                newVariable(
+                    ShaderDataType::Float,
+                    "weightsSum",
+                    "vertex.weights[0] + vertex.weights[1] + vertex.weights[2] + vertex.weights[3]"
+                );
+                newVariable(
+                    ShaderDataType::Mat4,
+                    s_global.transformationMatrix,
+                    s_uJoint.jointMatrices + "[int(" + s_inVertex.jointIDs + "[0])]"
+                );
+                beginIf("weightSum >= 1.0");
+                {
+                    for (size_t i = 0; i < _maxJointsPerVertex; ++i)
+                    {
+                        // Assign first and add the rest since the current isn't correct!
+                        std::string oper = i == 0 ? " = " : " += ";
+                        addLine(
+                            s_global.transformationMatrix + oper +
+                            s_uJoint.jointMatrices + "[int(" + s_inVertex.jointIDs + "[" + std::to_string(i) + "])] * " + s_inVertex.weights + "[" + std::to_string(i) + "];"
+                        );
+                    }
+                }endIf();
+            }
+            validateVariable(s_uSceneData.projectionMatrix, PLATYPUS_CURRENT_FUNC_NAME);
+            validateVariable(s_uSceneData.viewMatrix, PLATYPUS_CURRENT_FUNC_NAME);
+            validateVariable(s_global.transformationMatrix, PLATYPUS_CURRENT_FUNC_NAME);
+
+            newVariable(
+                ShaderDataType::Float4,
+                s_global.vertexWorldPosition,
+                s_global.transformationMatrix + " * vec4" + s_inVertex.position + ", 1.0)"
+            );
+            newVariable(
+                ShaderDataType::Mat4,
+                s_global.toCameraSpace,
+                s_uSceneData.viewMatrix + " * " + s_global.transformationMatrix
+            );
+
             addLine(
-                newVarAssign(ShaderDataType::Float4, _varNameVertexWorldSpace) + " ="
-                " "+ transformationMatrix.name + " * " + vertexPos.name
+                "gl_Position = " +
+                s_uSceneData.projectionMatrix + " * " +
+                s_uSceneData.viewMatrix + " * " +
+                s_global.vertexWorldPosition + ";"
+            );
+
+            endSection();
+        }
+
+        void ShaderStageBuilder::calcVertexShaderOutput()
+        {
+            if (variableExists(s_inVertex.tangent))
+            {
+                if (!variableExists(s_global.toCameraSpace))
+                {
+                    error(
+                        "Variable: " + s_global.toCameraSpace + " required for shaders using "
+                        "tangent vertex attribute. Currently this is created by "
+                        "calcFinalVertexPosition(). Make sure you called it before this function!",
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+                if (!variableExists(s_global.vertexWorldPosition))
+                {
+                    error(
+                        "Variable: " + s_global.vertexWorldPosition + " required for shaders using "
+                        "tangent vertex attribute. Currently this is created by "
+                        "calcFinalVertexPosition(). Make sure you called it before this function!",
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+                // Create toTangentSpace matrix and calc toCamera and lightDir vectors
+                // in tangent space
+                newVariable(
+                    ShaderDataType::Float3,
+                    "transformedNormal",
+                    std::format(
+                        "normalize({} * vec4({}, 0.0)).xyz",
+                        s_global.toCameraSpace,
+                        s_inVertex.normal
+                    )
+                );
+                newVariable(
+                    ShaderDataType::Float3,
+                    "transformedTangent",
+                    std::format(
+                        "normalize(({} * vec4({}.xyz, 0.0)).xyz)",
+                        s_global.toCameraSpace,
+                        s_inVertex.tangent
+                    )
+                );
+                // T = normalize(T - dot(T, N) * N);
+                addLine(
+                    "transformedTangent = normalize("
+                    "transformedTangent - "
+                    "dot(transformedTangent, transformedNormal) * "
+                    "transformedNormal);"
+                );
+                addLine(
+                    "vec3 biTangent = normalize(cross(transformedNormal, transformedTangent));"
+                );
+                addLine(
+                    "mat3 toTangentSpace = transpose("
+                    "mat3(transformedTangent, biTangent, transformedNormal)"
+                    ");"
+                );
+                addOutput(
+                    ShaderDataType::Float3,
+                    s_outVertex.toCamera,
+                    std::format(
+                        "normalize("
+                        "toTangentSpace * (({}) * vec4({}, 0.0)).xyz"
+                        ")",
+                        s_uSceneData.viewMatrix,
+                        s_uSceneData.cameraPosition + ".xyz - " + s_global.vertexWorldPosition + ".xyz"
+                    )
+                );
+                // NOTE: This probably results in unit vec, but why not normalize just in case?
+                addOutput(
+                    ShaderDataType::Float3,
+                    s_outVertex.lightDirection,
+                    std::format(
+                        "toTangentSpace * ("
+                        "{} * vec4({}.xyz, 0.0)"
+                        ").xyz",
+                        s_uSceneData.viewMatrix,
+                        s_uSceneData.lightDirection
+                    )
+                );
+            }
+            else
+            {
+                addOutput(
+                    ShaderDataType::Float3,
+                    s_outVertex.position,
+                    s_global.vertexWorldPosition + ".xyz"
+                );
+                addOutput(
+                    ShaderDataType::Float3,
+                    s_outVertex.normal,
+                    "(" + s_global.transformationMatrix + " * vec4(" + s_inVertex.normal + ", 0.0)).xyz"
+                );
+                addOutput(
+                    ShaderDataType::Float2,
+                    s_outVertex.texCoord,
+                    s_inVertex.texCoord
+                );
+
+                addOutput(
+                    ShaderDataType::Float3,
+                    s_outVertex.cameraPosition,
+                    s_uSceneData.cameraPosition + ".xyz"
+                );
+                addOutput(
+                    ShaderDataType::Float3,
+                    s_outVertex.lightDirection,
+                    s_uSceneData.lightDirection
+                );
+            }
+
+            addOutput(
+                ShaderDataType::Float4,
+                s_outVertex.lightColor,
+                s_uSceneData.lightColor
+            );
+            addOutput(
+                ShaderDataType::Float4,
+                s_outVertex.ambientLightColor,
+                s_uSceneData.ambientLightColor
             );
 
             endSection();
@@ -792,63 +1212,26 @@ namespace platypus
             Debug::log(allStructs);
         }
 
-
-        VulkanShaderStageBuilder::~VulkanShaderStageBuilder()
+        void ShaderStageBuilder::error(const std::string& msg, const char* funcName) const
         {
+            std::string funcNameStr(funcName);
+            Debug::log(
+                "@ShaderStageBuilder::" + funcNameStr + " " + msg,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
         }
 
-        void VulkanShaderStageBuilder::beginPushConstants()
+        void ShaderStageBuilder::validateVariable(const std::string& variable, const char* funcName)
         {
-            if (_pActiveWriteObject != nullptr)
+            if (!variableExists(variable))
             {
-                Debug::log(
-                    "@VulkanShaderStageBuilder::beginPushConstants "
-                    "_pActiveWriteObject wasn't nullptr! "
-                    "Make sure you ended previous object write operation with the appropriate "
-                    "end function!",
-                    Debug::MessageType::PLATYPUS_ERROR
+                error(
+                    "No variable: " + variable + " found!",
+                    funcName
                 );
                 PLATYPUS_ASSERT(false);
-                return;
             }
-            _structDefinitions[_pushConstantsStructName] = { _pushConstantsStructName, ShaderDataType::Struct };
-            addLine("layout(push_constant) uniform PushConstants");
-            addLine("{");
-            _pActiveWriteObject = &_structDefinitions[_pushConstantsStructName];
-        }
-
-        void VulkanShaderStageBuilder::endPushConstants(const std::string& instanceName)
-        {
-            addLine("} " + instanceName + ";");
-            endSection();
-            _pActiveWriteObject = nullptr;
-        }
-
-        void VulkanShaderStageBuilder::beginUniformBlock(const std::string& blockName, uint32_t setIndex, uint32_t binding)
-        {
-            if (_pActiveWriteObject != nullptr)
-            {
-                Debug::log(
-                    "@VulkanShaderStageBuilder::beginUniformBlock "
-                    "_pActiveWriteObject wasn't nullptr! "
-                    "Make sure you ended previous object write operation with the appropriate "
-                    "end function!",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return;
-            }
-            _structDefinitions[blockName] = { blockName, ShaderDataType::Struct };
-            addLine("layout(set = " + std::to_string(setIndex) + ", binding = " + std::to_string(binding) + ") uniform " + blockName);
-            addLine("{");
-            _pActiveWriteObject = &_structDefinitions[blockName];
-        }
-
-        void VulkanShaderStageBuilder::endUniformBlock(const std::string& instanceName)
-        {
-            addLine("} " + instanceName + ";");
-            endSection();
-            _pActiveWriteObject = nullptr;
         }
     }
 }

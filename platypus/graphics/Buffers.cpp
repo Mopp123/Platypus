@@ -103,6 +103,16 @@ namespace platypus
         return  alignRequirement * (diff + 1);
     }
 
+    std::string uniform_block_layout_to_string(UniformBlockLayout layout)
+    {
+        switch (layout)
+        {
+            case std140: return "std140";
+            case std430: return "std430";
+            default: return "<Invalid layout>";
+        }
+    }
+
     void Buffer::updateHost(void* pData, size_t dataSize, size_t offset)
     {
         if (!_pData)

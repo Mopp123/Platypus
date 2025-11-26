@@ -5,9 +5,6 @@
 #include "platypus/graphics/Shader.h"
 #include <string>
 #include <unordered_map>
-#include <memory>
-
-#define newOper(...) std::unique_ptr<Operation>(new Operation{__VA_ARGS__})
 
 
 namespace platypus
@@ -24,9 +21,83 @@ namespace platypus
             ShaderObject* pDefinition = nullptr;
         };
 
+        enum class FunctionArgQualifier
+        {
+            None,
+            In,
+            Out,
+            InOut
+        };
+
+        struct FunctionInput
+        {
+            ShaderDataType type;
+            std::string name;
+            std::string structName;
+            FunctionArgQualifier argQualifier;
+        };
+
         class ShaderStageBuilder
         {
-        protected:
+        private:
+            // All possible named vertex attributes
+            struct NVertex
+            {
+                const std::string position  = "vertex.position";
+                const std::string normal    = "vertex.normal";
+                const std::string weights   = "vertex.weights";
+                const std::string jointIDs  = "vertex.jointIDs";
+                const std::string texCoord  = "vertex.texCoord";
+                const std::string tangent   = "vertex.tangent";
+            };
+
+            const std::string _outputPrefix = "out_";
+            const std::string _inputPrefix = "in_";
+            struct NVertexOut
+            {
+                const std::string position  = "position"; // Meaning the vertex position
+                const std::string normal    = "normal";
+                const std::string texCoord  = "texCoord";
+                const std::string toCamera  = "toCamera";
+                const std::string cameraPosition  = "cameraPosition";
+                const std::string lightDirection  = "lightDirection";
+                const std::string lightColor  = "lightColor";
+                const std::string ambientLightColor  = "ambientLightColor";
+            };
+
+            struct NSceneData
+            {
+                const std::string projectionMatrix  = "sceneData.projectionMatrix";
+                const std::string viewMatrix        = "sceneData.viewMatrix";
+                const std::string cameraPosition    = "sceneData.cameraPosition";
+
+                const std::string ambientLightColor = "sceneData.ambientLightColor";
+                const std::string lightDirection    = "sceneData.lightDirection";
+                const std::string lightColor        = "sceneData.lightColor";
+
+                const std::string shadowProperties  = "sceneData.shadowProperties";
+            };
+
+            struct NJoint
+            {
+                const std::string jointMatrices = "jointData.data";
+            };
+
+            struct NGlobal
+            {
+                const std::string toCameraSpace = "toCameraSpace";
+                const std::string transformationMatrix = "transformationMatrix";
+                const std::string vertexWorldPosition = "vertexWorldPosition";
+            };
+
+            static NVertex s_inVertex;
+            static NVertexOut s_outVertex;
+            static NSceneData s_uSceneData;
+            static NJoint s_uJoint;
+            static NGlobal s_global;
+
+            ShaderVersion _version;
+            uint32_t _shaderStage;
             std::vector<std::string> _lines;
             const std::string _indentation = "    ";
 
@@ -42,16 +113,43 @@ namespace platypus
             std::unordered_map<std::string, ShaderObject> _structDefinitions;
             std::unordered_map<std::string, ShaderObject> _variables;
 
-            const std::string _pushConstantsStructName = "PushConstants";
+            std::vector<ShaderObject> _output;
 
-            const std::string _varNameVertexWorldSpace = "vertexWorldSpace";
+            const std::string _pushConstantsStructName = "PushConstants";
+            const size_t _maxJointsPerVertex = 4;
 
         public:
-            ShaderStageBuilder();
+            ShaderStageBuilder(
+                ShaderVersion version,
+                uint32_t shaderStage,
+                const std::vector<ShaderObject>& vertexShaderOutput
+            );
             virtual ~ShaderStageBuilder() {}
+            void build();
 
             // NOTE: Maybe should call "declare" or "define" instead of "add" here?
-            void addVersion(ShaderVersion version);
+            void beginPushConstants();
+            void endPushConstants(const std::string& instanceName);
+            void beginUniformBlock(
+                const std::string& blockName,
+                UniformBlockLayout blockLayout,
+                uint32_t setIndex,
+                uint32_t binding
+            );
+            void endUniformBlock(const std::string& instanceName);
+
+            void addInput(
+                uint32_t location,
+                ShaderDataType type,
+                const std::string& name
+            );
+
+            void addOutput(
+                ShaderDataType type,
+                const std::string& name,
+                const std::string& value
+            );
+
             void addVertexAttributes(
                 const std::vector<VertexBufferLayout>& vertexBufferLayouts,
                 const std::vector<std::vector<std::string>>& layoutAttributeNames,
@@ -73,7 +171,8 @@ namespace platypus
             void addVariable(
                 ShaderDataType type,
                 const std::string& name,
-                const std::string& structName
+                const std::string& structName,
+                int arrayLength = 1
             );
             void reqisterVariable(const ShaderObject& variable, const std::string& parentName);
 
@@ -93,46 +192,44 @@ namespace platypus
             );
             void endFunction(const std::string& returnValueName);
 
+            void beginIf(const std::string& condition);
+            void beginElseIf(const std::string& condition);
+            void beginElse();
+            void endIf();
+
+            void newVariable(
+                ShaderDataType type,
+                const std::string& name,
+                const std::string& value
+            );
+
             void endSection();
 
             void addLine(const std::string& line);
 
-            void setOutputTEST(
-                uint32_t location,
-                ShaderDataType type,
-                const std::string name
-            );
-
             bool variableExists(const std::string& name) const;
+            bool variablesExists(
+                const std::vector<std::string>& toSearch,
+                std::vector<std::string>& missingVariables
+            ) const;
             bool structExists(const std::string& name) const;
             bool structMemberExists(
                 const ShaderObject& shaderStruct,
                 const std::string memberName
             ) const;
 
-
-            // TESTING -----
-            void calcVertexWorldPosition();
+            void calcFinalVertexPosition();
+            void calcVertexShaderOutput();
 
             void printVariables();
             void printObjects();
 
-            virtual void beginPushConstants() = 0;
-            virtual void endPushConstants(const std::string& instanceName) = 0;
-            virtual void beginUniformBlock(const std::string& blockName, uint32_t setIndex, uint32_t binding) = 0;
-            virtual void endUniformBlock(const std::string& instanceName) = 0;
-
             inline const std::vector<std::string>& getLines() const { return _lines; }
-        };
+            inline const std::vector<ShaderObject>& getOutput() const { return _output; }
 
-        class VulkanShaderStageBuilder : public ShaderStageBuilder
-        {
-        public:
-            ~VulkanShaderStageBuilder();
-            virtual void beginPushConstants();
-            virtual void endPushConstants(const std::string& instanceName);
-            virtual void beginUniformBlock(const std::string& blockName, uint32_t setIndex, uint32_t binding);
-            virtual void endUniformBlock(const std::string& instanceName);
+        private:
+            void error(const std::string& msg, const char* funcName) const;
+            void validateVariable(const std::string& variable, const char* funcName);
         };
     }
 }

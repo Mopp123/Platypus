@@ -7,6 +7,7 @@
 
 
 using namespace platypus;
+using namespace shaderBuilder;
 
 int main(int argc, const char** argv)
 {
@@ -14,28 +15,20 @@ int main(int argc, const char** argv)
     VertexBufferLayout vertexBufferLayout(
         {
             { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float2 },
-            { 4, ShaderDataType::Float4 }
+            { 1, ShaderDataType::Float4 }, // weights
+            { 2, ShaderDataType::Float4 }, // jointIDs
+            { 3, ShaderDataType::Float3 }, // normal
+            { 4, ShaderDataType::Float2 } // tex coord
         },
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    );
-    VertexBufferLayout instancedVertexBufferLayout(
-        {
-            { 0, ShaderDataType::Mat4 }
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
         0
     );
     std::vector<std::string> vertexAttributeNames{
         "position",
         "normal",
-        "texCoord",
-        "tangent"
-    };
-    std::vector<std::string> instancedVertexAttributeNames{
-        "transformationMatrix",
+        "weights",
+        "jointIDs",
+        "texCoord"
     };
 
     std::vector<UniformInfo> shadowPushConstants = {
@@ -47,7 +40,7 @@ int main(int argc, const char** argv)
         "viewMat"
     };
 
-    DescriptorSetLayoutBinding descriptorSetLayoutBinding{
+    DescriptorSetLayoutBinding sceneDataDescriptorSetLayoutBinding{
         0,
         1,
         DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -62,7 +55,7 @@ int main(int argc, const char** argv)
             { ShaderDataType::Float4 }
         }
     };
-    std::vector<std::string> descriptorSetVariableNames{
+    std::vector<std::string> sceneDataDescriptorSetVariableNames{
         "projectionMatrix",
         "viewMatrix",
         "cameraPosition",
@@ -71,19 +64,33 @@ int main(int argc, const char** argv)
         "lightColor",
         "shadowProperties"
     };
+    const size_t maxJoints = 32;
+    DescriptorSetLayoutBinding jointDescriptorSetLayoutBinding{
+        0,
+        1,
+        DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
+        ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+        {
+            { ShaderDataType::Mat4, (int)maxJoints },
+        }
+    };
+    std::vector<std::string> jointDescriptorSetVariableNames{
+        "data",
+    };
 
 
-    // Test shader building
-    shaderBuilder::VulkanShaderStageBuilder vertexShaderBuilder;
-    vertexShaderBuilder.addVersion(ShaderVersion::VULKAN_GLSL_450);
+    // Test vertex shader building
+    ShaderStageBuilder vertexShaderBuilder(
+        ShaderVersion::VULKAN_GLSL_450,
+        ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+        { }
+    );
     vertexShaderBuilder.addVertexAttributes(
         {
-            vertexBufferLayout,
-            instancedVertexBufferLayout
+            vertexBufferLayout
         },
         {
-            vertexAttributeNames,
-            instancedVertexAttributeNames
+            vertexAttributeNames
         }
     );
 
@@ -94,45 +101,31 @@ int main(int argc, const char** argv)
     );
 
     vertexShaderBuilder.addUniformBlock(
-        descriptorSetLayoutBinding,
-        descriptorSetVariableNames,
+        sceneDataDescriptorSetLayoutBinding,
+        sceneDataDescriptorSetVariableNames,
         "SceneData",
         "sceneData"
     );
 
-    vertexShaderBuilder.beginFunction(
-        "main",
-        ShaderDataType::None,
-        { }
+    vertexShaderBuilder.addUniformBlock(
+        jointDescriptorSetLayoutBinding,
+        jointDescriptorSetVariableNames,
+        "JointData",
+        "jointData"
     );
-    {
-        // TODO: Something like below
-        //ShaderVariable worldSpaceVertexPosition{ShaderDataType::Float4, ""};
-        //vertexShaderBuilder.calcVertexPosition();
 
-        vertexShaderBuilder.instantiateObject(
-            "Vertex",
-            "vertex",
-            {
-                { ShaderDataType::Float3, "position" },
-                { ShaderDataType::Float3, "normal" },
-                { ShaderDataType::Float2, "texCoord" },
-                { ShaderDataType::Float4, "tangent" }
-            }
-        );
+    vertexShaderBuilder.build();
 
-        vertexShaderBuilder.printVariables();
-        vertexShaderBuilder.calcVertexWorldPosition();
-
-        vertexShaderBuilder.setOutputTEST(0, ShaderDataType::Float3, "var_fragCoord");
-        vertexShaderBuilder.setOutputTEST(2, ShaderDataType::Float2, "var_texCoord");
-        vertexShaderBuilder.setOutputTEST(3, ShaderDataType::Float4, "var_TEST");
-    }
-    vertexShaderBuilder.endFunction({});
+    // Test fragment shader building
+    ShaderStageBuilder fragmentShaderBuilder(
+        ShaderVersion::OPENGLES_GLSL_300,
+        ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+        vertexShaderBuilder.getOutput()
+    );
 
     Debug::log("Built shader: ");
     std::string source;
-    for (const std::string& line : vertexShaderBuilder.getLines())
+    for (const std::string& line : fragmentShaderBuilder.getLines())
         source += line;
 
     Debug::log(source);
