@@ -4,6 +4,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Shader.h"
 #include <string>
+#include <map>
 #include <unordered_map>
 
 
@@ -39,7 +40,6 @@ namespace platypus
 
         enum class TextureChannel
         {
-            Blendmap,
             Diffuse,
             Specular,
             Normal
@@ -59,18 +59,18 @@ namespace platypus
                 const std::string tangent   = "vertex.tangent";
             };
 
-            const std::string _outputPrefix = "out_";
-            const std::string _inputPrefix = "in_";
             struct NVertexOut
             {
-                const std::string position  = "position"; // Meaning the vertex position
-                const std::string normal    = "normal";
-                const std::string texCoord  = "texCoord";
-                const std::string toCamera  = "toCamera";
-                const std::string cameraPosition  = "cameraPosition";
-                const std::string lightDirection  = "lightDirection";
-                const std::string lightColor  = "lightColor";
-                const std::string ambientLightColor  = "ambientLightColor";
+                const std::string position  = "var_position"; // Meaning the vertex position
+                const std::string positionLightSpace  = "var_positionLightSpace"; // Meaning the vertex position
+                const std::string normal    = "var_normal";
+                const std::string texCoord  = "var_texCoord";
+                const std::string toCamera  = "var_toCamera";
+                const std::string cameraPosition  = "var_cameraPosition";
+                const std::string lightDirection  = "var_lightDirection";
+                const std::string lightColor  = "var_lightColor";
+                const std::string ambientLightColor  = "var_ambientLightColor";
+                const std::string shadowProperties  = "var_shadowProperties";
             };
 
             struct NSceneData
@@ -94,12 +94,33 @@ namespace platypus
             struct NMaterial
             {
                 // Actual textures
-                std::unordered_map<TextureChannel, std::vector<std::string>> textures;
+                const std::string blendmapTexture = "blendmapTexture";
+                std::map<TextureChannel, std::vector<std::string>> textures;
+
                 // Sampled colors from textures
+                const std::string blendmapTextureColor = "blendmapTextureColor";
                 std::unordered_map<TextureChannel, std::vector<std::string>> textureColors;
+                const std::map<TextureChannel, std::string> totalTextureColors = {
+                    { TextureChannel::Diffuse, "totalDiffuseTextureColor" },
+                    { TextureChannel::Specular, "totalSpecularTextureColor" },
+                    { TextureChannel::Normal, "totalNormalTextureColor" }
+                };
 
                 const std::string lightingProperties = "materialData.lightingProperties";
                 const std::string textureProperties = "materialData.textureProperties";
+
+                // How many textures per channel can be blended with blendmapTextureColor.rgba
+                // (+1 since also using the "blackness")
+                const size_t maxChannelEntryBlends = 5;
+            };
+
+            // NOTE: These should be part of scene data if having multiple shadow casters?
+            struct NShadow
+            {
+                const std::string pushConstants = "shadowPushConstants";
+                const std::string projectionMatrix = pushConstants + ".projectionMatrix";
+                const std::string viewMatrix = pushConstants + ".viewMatrix";
+                const std::string shadowmapTexture = "shadowmapTexture";
             };
 
             struct NGlobal
@@ -110,13 +131,20 @@ namespace platypus
                 const std::string useTexCoord = "useTexCoord";
             };
 
+            struct NFunctions
+            {
+                const std::string calcShadow = "calcShadow";
+            };
+
             // TODO: None of these should be static?
             static NVertex s_inVertex;
             static NVertexOut s_outVertex;
             static NSceneData s_uSceneData;
             static NJoint s_uJoint;
             NMaterial _uMaterial;
+            static NShadow s_uShadow;
             static NGlobal s_global;
+            static NFunctions s_functionNames;
 
             ShaderVersion _version;
             uint32_t _shaderStage;
@@ -132,6 +160,7 @@ namespace platypus
             // All outputs are defined right before the main function.
             size_t _nextOutDefinitionPos = 0;
 
+            std::set<std::string> _functionDefinitions;
             std::unordered_map<std::string, ShaderObject> _structDefinitions;
             std::unordered_map<std::string, ShaderObject> _variables;
 
@@ -139,7 +168,7 @@ namespace platypus
 
             const std::string _pushConstantsStructName = "PushConstants";
             const std::string _materialDataStructName = "Material";
-            const std::string _materialDataInstanceName = "Material";
+            const std::string _materialDataInstanceName = "material";
             const size_t _maxJointsPerVertex = 4;
 
         public:
@@ -185,6 +214,7 @@ namespace platypus
                 const std::vector<std::string>& variableNames,
                 const std::string& instanceName
             );
+            void addReceiveShadowPushConstants();
 
             // NOTE: You can't control the descriptor set number here!
             // All descriptor sets needs to be given in order!
@@ -196,11 +226,12 @@ namespace platypus
             );
 
             void addMaterial(
-                const DescriptorSetLayoutBinding& blendmapTextureBinding,
-                const std::vector<DescriptorSetLayoutBinding>& diffuseTextureBindings,
-                const std::vector<DescriptorSetLayoutBinding>& specularTextureBindings,
-                const std::vector<DescriptorSetLayoutBinding>& normalTextureBindings,
-                const DescriptorSetLayoutBinding& dataBinding
+                bool hasBlendmap,
+                size_t diffuseTextureBindings,
+                size_t specularTextureBindings,
+                size_t normalTextureBindings,
+                const DescriptorSetLayoutBinding& dataBinding,
+                bool receiveShadows
             );
 
             // Used for adding members to object definitions
@@ -228,6 +259,12 @@ namespace platypus
             );
             void endFunction(const std::string& returnValueName);
 
+            // Used for just pushing lines of func def without anything fancy!
+            void pushFunction(
+                const std::vector<std::string>& definition,
+                const std::string name
+            );
+
             void beginIf(const std::string& condition);
             void beginElseIf(const std::string& condition);
             void beginElse();
@@ -254,12 +291,18 @@ namespace platypus
                 const std::string memberName
             ) const;
 
+            bool functionExists(const std::string& name) const;
+
             void calcFinalVertexPosition();
             void calcVertexShaderOutput();
             void calcTextureColors();
+            void calcNormal();
+            void calcDiffuseLighting();
 
             void printVariables();
             void printObjects();
+
+            static NFunctions getFunctions();
 
             inline const std::vector<std::string>& getLines() const { return _lines; }
             inline const std::vector<ShaderObject>& getOutput() const { return _output; }

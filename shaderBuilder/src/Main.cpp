@@ -95,11 +95,7 @@ int main(int argc, const char** argv)
         }
     );
 
-    vertexShaderBuilder.addPushConstants(
-        shadowPushConstants,
-        pushConstantsVariableNames,
-        "shadowPushConstants"
-    );
+    vertexShaderBuilder.addReceiveShadowPushConstants();
 
     vertexShaderBuilder.addDescriptorSet(
         { sceneDataDescriptorSetLayoutBinding },
@@ -147,11 +143,12 @@ int main(int argc, const char** argv)
         vertexShaderBuilder.getDescriptorSetCount()
     );
     fragmentShaderBuilder.addMaterial(
-        { },
-        { materialTextureBinding },
-        { materialTextureBinding, materialTextureBinding, materialTextureBinding },
-        { materialTextureBinding, materialTextureBinding },
-        materialDataBinding
+        false,
+        1,
+        1,
+        1,
+        materialDataBinding,
+        true
     );
 
     fragmentShaderBuilder.build();

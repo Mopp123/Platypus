@@ -645,7 +645,7 @@ namespace platypus
     std::string Material::getShaderFilename(uint32_t shaderStage, MeshType meshType)
     {
         // Example shader names:
-        // vertex shader: "StaticVertexShader", "StaticVertexShader_tangent", "SkinnedVertexShader"
+        // vertex shader: "StaticVertexShader", "StaticVertexShader_t", "StaticVertexShader_ti"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
         std::string shaderName = "";
         if (_receiveShadows)
@@ -696,6 +696,7 @@ namespace platypus
             shaderName += "FragmentShader";
             // If using non instanced, we got one additional descriptor set containing
             // transformation matrix, etc. -> Need to use fragment shader that takes this into account!
+            // ...FUCKING STUPID AND ANNOYING!
             if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
                 shaderName += "_i_";
             else

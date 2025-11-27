@@ -1,5 +1,6 @@
 #include "ShaderBuilder.hpp"
 #include "platypus/core/Debug.h"
+#include "ShaderFunctions.hpp"
 #include <format>
 
 
@@ -119,7 +120,6 @@ namespace platypus
         {
             switch (type)
             {
-                case TextureChannel::Blendmap: return "blendmap";
                 case TextureChannel::Diffuse: return "diffuse";
                 case TextureChannel::Specular: return "Specular";
                 case TextureChannel::Normal: return "normal";
@@ -133,7 +133,9 @@ namespace platypus
         ShaderStageBuilder::NSceneData ShaderStageBuilder::s_uSceneData;
         ShaderStageBuilder::NJoint ShaderStageBuilder::s_uJoint;
         //ShaderStageBuilder::NMaterial ShaderStageBuilder::s_uMaterial;
+        ShaderStageBuilder::NShadow ShaderStageBuilder::s_uShadow;
         ShaderStageBuilder::NGlobal ShaderStageBuilder::s_global;
+        ShaderStageBuilder::NFunctions ShaderStageBuilder::s_functionNames;
         ShaderStageBuilder::ShaderStageBuilder(
             ShaderVersion version,
             uint32_t shaderStage,
@@ -230,6 +232,17 @@ namespace platypus
                 addInput((uint32_t)i, obj.type, obj.name);
             }
             endSection();
+
+            // If having shadow properties and light space vertex position as
+            // input, define calcShadow function
+            if (variableExists(s_outVertex.positionLightSpace) &&
+                variableExists(s_outVertex.shadowProperties))
+            {
+                pushFunction(
+                    get_func_def(_version, s_functionNames.calcShadow),
+                    s_functionNames.calcShadow
+                );
+            }
         }
 
         void ShaderStageBuilder::build()
@@ -259,18 +272,18 @@ namespace platypus
                 }
                 else if (_shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
                 {
-                    const std::string inTexCoord = _inputPrefix + s_outVertex.texCoord;
-                    if (!variableExists(inTexCoord))
+                    if (!variableExists(s_outVertex.texCoord))
                     {
-                        error("Variable: " + inTexCoord + " not found!", PLATYPUS_CURRENT_FUNC_NAME);
+                        error("Variable: " + s_outVertex.texCoord + " not found!", PLATYPUS_CURRENT_FUNC_NAME);
                     }
                     // Apply texture scale and offset from materialData to texCoord
                     newVariable(
                         ShaderDataType::Float2,
                         s_global.useTexCoord,
-                        inTexCoord + " * " + _uMaterial.textureProperties + ".zw + " + _uMaterial.textureProperties + ".xy"
+                        s_outVertex.texCoord + " * " + _uMaterial.textureProperties + ".zw + " + _uMaterial.textureProperties + ".xy"
                     );
                     calcTextureColors();
+                    calcLighting();
                 }
             }
             endFunction({});
@@ -414,21 +427,15 @@ namespace platypus
                 }
             }
 
-            // Add name prefix only in fragment shader
-            std::string namePrefix;
-            if (_shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
-                namePrefix = _inputPrefix;
-
-            // ES 300 doesn't have layout qualifiers in fragment shader input!
+            // GLSL ES 3 doesn't have "varying" layout qualifiers (vertex shader output)
             std::string layoutPrefix;
             if (_version == ShaderVersion::VULKAN_GLSL_450 ||
                 (_version == ShaderVersion::OPENGLES_GLSL_300 && _shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT))
             {
                 layoutPrefix = "layout(location = " + std::to_string(location) + ") ";
             }
-            std::string fullName = namePrefix + name;
-            addLine(layoutPrefix + "in " + shader_datatype_to_glsl(type) + " " + fullName + ";");
-            _variables[fullName] = { fullName, type };
+            addLine(layoutPrefix + "in " + shader_datatype_to_glsl(type) + " " + name + ";");
+            _variables[name] = { name, type };
         }
 
         void ShaderStageBuilder::addOutput(
@@ -450,6 +457,7 @@ namespace platypus
             const size_t location = _output.size();
             const std::string typeName = shader_datatype_to_glsl(type);
             ShaderObject object = _structDefinitions[typeName];
+            const std::string useName =
             object.name = name;
             _output.push_back(object);
 
@@ -457,7 +465,13 @@ namespace platypus
 
             std::vector<std::string> tempLines;
             tempLines.insert(tempLines.end(), _lines.begin(), _lines.begin() + _nextOutDefinitionPos);
-            tempLines.push_back("layout(location = " + std::to_string(location) + ") out " + typeName + " " + name + ";\n");
+
+            // GLSL ES 3 doesn't have "varying" layout qualifiers
+            std::string layoutPrefix;
+            if (_version == ShaderVersion::VULKAN_GLSL_450)
+                layoutPrefix = "layout(location = " + std::to_string(location) + ") ";
+
+            tempLines.push_back(layoutPrefix + "out " + typeName + " " + name + ";\n");
             size_t nextOutPosition = tempLines.size();
             tempLines.insert(tempLines.end(), _lines.begin() + _nextOutDefinitionPos, _lines.end());
             _nextOutDefinitionPos = nextOutPosition;
@@ -595,6 +609,21 @@ namespace platypus
             }
         }
 
+        void ShaderStageBuilder::addReceiveShadowPushConstants()
+        {
+            addPushConstants(
+                {
+                    { ShaderDataType::Mat4 },
+                    { ShaderDataType::Mat4 }
+                },
+                {
+                    "projectionMatrix",
+                    "viewMatrix"
+                },
+                s_uShadow.pushConstants
+            );
+        }
+
         void ShaderStageBuilder::addDescriptorSet(
             const std::vector<DescriptorSetLayoutBinding>& bindings,
             const std::vector<std::vector<std::string>>& bindingNames,
@@ -684,43 +713,102 @@ namespace platypus
         }
 
         void ShaderStageBuilder::addMaterial(
-            const DescriptorSetLayoutBinding& blendmapTextureBinding,
-            const std::vector<DescriptorSetLayoutBinding>& diffuseTextureBindings,
-            const std::vector<DescriptorSetLayoutBinding>& specularTextureBindings,
-            const std::vector<DescriptorSetLayoutBinding>& normalTextureBindings,
-            const DescriptorSetLayoutBinding& dataBinding
+            bool hasBlendmap,
+            size_t diffuseTextureBindings,
+            size_t specularTextureBindings,
+            size_t normalTextureBindings,
+            const DescriptorSetLayoutBinding& dataBinding,
+            bool receiveShadows
         )
         {
+            if (receiveShadows)
+            {
+                const std::string lightSpaceVertexPosition = s_outVertex.positionLightSpace;
+                if (!variableExists(lightSpaceVertexPosition))
+                {
+                    error(
+                        "Material was receiving shadows but no vertex shader "
+                        "output: " + lightSpaceVertexPosition + " found!",
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+                const std::string shadowProperties = s_outVertex.shadowProperties;
+                if (!variableExists(shadowProperties))
+                {
+                    error(
+                        "Material was receiving shadows but no vertex shader "
+                        "output: " + shadowProperties + " found!",
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+            }
+
             std::vector<DescriptorSetLayoutBinding> combinedBindings;
             std::vector<std::vector<std::string>> bindingNames;
-            if (blendmapTextureBinding.getType() != DescriptorType::DESCRIPTOR_TYPE_NONE)
+            if (hasBlendmap)
             {
-                combinedBindings.push_back(blendmapTextureBinding);
-                std::string textureName = texture_channel_to_string(TextureChannel::Blendmap) + "Texture";
-                _uMaterial.textures[TextureChannel::Blendmap].push_back(textureName);
+                combinedBindings.push_back({
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { } }
+                });
+                std::string textureName = _uMaterial.blendmapTexture;
                 bindingNames.push_back({ textureName });
             }
 
-            for (size_t i = 0; i < diffuseTextureBindings.size(); ++i)
+            for (size_t i = 0; i < diffuseTextureBindings; ++i)
             {
-                combinedBindings.push_back(diffuseTextureBindings[i]);
+                combinedBindings.push_back({
+                    (uint32_t)(combinedBindings.size()), // binding
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { } }
+                });
                 std::string textureName = texture_channel_to_string(TextureChannel::Diffuse) + "Texture" + std::to_string(i);
                 _uMaterial.textures[TextureChannel::Diffuse].push_back(textureName);
                 bindingNames.push_back({ textureName });
             }
-            for (size_t i = 0; i < specularTextureBindings.size(); ++i)
+            for (size_t i = 0; i < specularTextureBindings; ++i)
             {
-                combinedBindings.push_back(specularTextureBindings[i]);
+                combinedBindings.push_back({
+                    (uint32_t)(combinedBindings.size()), // binding
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { } }
+                });
                 std::string textureName = texture_channel_to_string(TextureChannel::Specular) + "Texture" + std::to_string(i);
                 _uMaterial.textures[TextureChannel::Specular].push_back(textureName);
                 bindingNames.push_back({ textureName });
             }
-            for (size_t i = 0; i < normalTextureBindings.size(); ++i)
+            for (size_t i = 0; i < normalTextureBindings; ++i)
             {
-                combinedBindings.push_back(normalTextureBindings[i]);
+                combinedBindings.push_back({
+                    (uint32_t)(combinedBindings.size()), // binding
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { } }
+                });
                 std::string textureName = texture_channel_to_string(TextureChannel::Normal) + "Texture" + std::to_string(i);
                 _uMaterial.textures[TextureChannel::Normal].push_back(textureName);
                 bindingNames.push_back({ textureName });
+            }
+
+            // If receiving shadow, the shadowmap needs to be the last texture
+            if (receiveShadows)
+            {
+                combinedBindings.push_back({
+                    (uint32_t)(combinedBindings.size()), // binding
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                    { { } }
+                });
+                bindingNames.push_back({ s_uShadow.shadowmapTexture });
             }
 
             combinedBindings.push_back(dataBinding);
@@ -958,6 +1046,14 @@ namespace platypus
             const std::vector<FunctionInput>& args
         )
         {
+            if (functionExists(functionName))
+            {
+                error(
+                    "Function: " + functionName + " already exists!",
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+
             if (functionName == "main")
             {
                 _nextOutDefinitionPos = _lines.size();
@@ -997,6 +1093,8 @@ namespace platypus
             addLine(line + ")");
             addLine("{");
             ++_currentScopeIndentation;
+
+            _functionDefinitions.insert(functionName);
         }
 
         void ShaderStageBuilder::endFunction(const std::string& returnValueName)
@@ -1008,6 +1106,25 @@ namespace platypus
             --_currentScopeIndentation;
             addLine("}");
             endSection();
+        }
+
+        void ShaderStageBuilder::pushFunction(
+            const std::vector<std::string>& definition,
+            const std::string name
+        )
+        {
+            if (functionExists(name))
+            {
+                error(
+                    "Function: " + name + " already exists!",
+                    PLATYPUS_CURRENT_FUNC_NAME
+                );
+            }
+            for (const std::string& line : definition)
+                addLine(line);
+
+            endSection();
+            _functionDefinitions.insert(name);
         }
 
         void ShaderStageBuilder::beginIf(const std::string& condition)
@@ -1070,7 +1187,6 @@ namespace platypus
 
         bool ShaderStageBuilder::variableExists(const std::string& name) const
         {
-            Debug::log("___TEST___searching var: " + name);
             if (_variables.find(name) != _variables.end())
             {
                 return true;
@@ -1109,6 +1225,11 @@ namespace platypus
         ) const
         {
             return shaderStruct.memberIndices.find(memberName) != shaderStruct.memberIndices.end();
+        }
+
+        bool ShaderStageBuilder::functionExists(const std::string& name) const
+        {
+            return _functionDefinitions.find(name) != _functionDefinitions.end();
         }
 
         void ShaderStageBuilder::calcFinalVertexPosition()
@@ -1174,7 +1295,7 @@ namespace platypus
             newVariable(
                 ShaderDataType::Float4,
                 s_global.vertexWorldPosition,
-                s_global.transformationMatrix + " * vec4" + s_inVertex.position + ", 1.0)"
+                s_global.transformationMatrix + " * vec4(" + s_inVertex.position + ", 1.0)"
             );
             newVariable(
                 ShaderDataType::Mat4,
@@ -1303,6 +1424,39 @@ namespace platypus
                 );
             }
 
+            // If shadow proj and view matrices exist
+            //  -> output vertex light space pos and shadow properties
+            const std::vector<std::string> recvShadowVariables{
+                s_uShadow.projectionMatrix,
+                s_uShadow.viewMatrix
+            };
+            std::vector<std::string> missingRecvShadowVariables;
+            if (!variablesExists(recvShadowVariables, missingRecvShadowVariables))
+            {
+                // Make sure none of the recv shadow vars exist if some of them not found
+                if (missingRecvShadowVariables != recvShadowVariables)
+                {
+                    error(
+                        "Missing variables for receiving shadow: \n" + vector_to_string(missingRecvShadowVariables) + "\n"
+                        "All following variables needs to exist in order to receive shadow: " + vector_to_string(recvShadowVariables),
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+            }
+            else
+            {
+                addOutput(
+                    ShaderDataType::Float4,
+                    s_outVertex.positionLightSpace,
+                    s_uShadow.projectionMatrix + " * " + s_uShadow.viewMatrix + " * " + s_global.vertexWorldPosition
+                );
+                addOutput(
+                    ShaderDataType::Float4,
+                    s_outVertex.shadowProperties,
+                    s_uSceneData.shadowProperties
+                );
+            }
+
             addOutput(
                 ShaderDataType::Float4,
                 s_outVertex.lightColor,
@@ -1319,30 +1473,116 @@ namespace platypus
 
         void ShaderStageBuilder::calcTextureColors()
         {
-            // TODO: Blending!
-            if (_uMaterial.textures.find(TextureChannel::Blendmap) != _uMaterial.textures.end())
+            validateVariable(s_global.useTexCoord, PLATYPUS_CURRENT_FUNC_NAME);
+
+            // NOTE: Blend factors go in following order: "black", r, g, b, a
+            std::vector<std::string> blendFactors(_uMaterial.maxChannelEntryBlends);
+            if (variableExists(_uMaterial.blendmapTexture))
             {
+                ShaderObject blendmapTextureColor = newVariable(
+                    ShaderDataType::Float4,
+                    _uMaterial.blendmapTextureColor,
+                    std::format(
+                        "texture({}, {})",
+                        _uMaterial.blendmapTexture,
+                        s_global.useTexCoord
+                    )
+                );
+                // Using "black" and alpha channels requires a bit tweaking.
+                // NOTE: Alpha as blend channel still doesn't work perfectly!
+                ShaderObject transparency = newVariable(
+                    ShaderDataType::Float,
+                    "transparency",
+                    "1.0 - " + _uMaterial.blendmapTextureColor + ".a"
+                );
+                ShaderObject blackness = newVariable(
+                    ShaderDataType::Float,
+                    "blackness",
+                    std::format(
+                        "max("
+                        "1.0 - {0}.r - {0}.g - {0}.b - {1}, 0.0"
+                        ")",
+                        _uMaterial.blendmapTextureColor,
+                        transparency.name
+                    )
+                );
+                blendFactors[0] = " * " + blackness.name;
+                blendFactors[1] = " * " + _uMaterial.blendmapTextureColor + ".r";
+                blendFactors[2] = " * " + _uMaterial.blendmapTextureColor + ".g";
+                blendFactors[3] = " * " + _uMaterial.blendmapTextureColor + ".b";
+                blendFactors[4] = " * " + transparency.name;
+            }
+            endSection();
+
+            for (auto channelIt = _uMaterial.textures.begin(); channelIt != _uMaterial.textures.end(); ++channelIt)
+            {
+                // TODO: Maybe make this a little less dumb?
+                // Not using the newVariable func here to make the code look at least some what
+                // more readable...
+                const std::string& totalChannelColorName = _uMaterial.totalTextureColors.find(channelIt->first)->second;
+                reqisterVariable({ totalChannelColorName, ShaderDataType::Float4 }, "");
+                for (size_t i = 0; i < channelIt->second.size(); ++i)
+                {
+                    const std::string newVariable = i == 0 ? "vec4 " : "";
+                    const std::string assignment = i == 0 ? " = " : " += ";
+
+                    const std::string& channelTexture = channelIt->second[i];
+                    const std::string& textureBlendFactor = blendFactors[i];
+                    // Adds line like:
+                    //  vec4 totalDiffuseColor = texture(sampler, coord);
+                    //  or
+                    //  vec4 totalDiffuseColor = texture(sampler, coord) * blendmapBlackness;
+                    //  or
+                    //  totalDiffuseColor += texture(sampler, coord) * blendmapColor.r;
+                    addLine(
+                        std::format(
+                            "{}{}{}texture({}, {}){};",
+                            newVariable,
+                            totalChannelColorName,
+                            assignment,
+                            channelTexture,
+                            s_global.useTexCoord,
+                            textureBlendFactor
+                        )
+                    );
+                }
+            }
+            endSection();
+        }
+
+        void ShaderStageBuilder::calcNormal()
+        {
+            // Get normal
+            // If using normal mapping
+            if (_uMaterial.textures.find(TextureChannel::Normal) != _uMaterial.textures.end())
+            {
+                // vec3 unitNormal = normalize(normalTextureColor.rgb * 2.0 - 1.0);
+                newVariable(
+                    ShaderDataType::Float3,
+                    "unitNormal",
+                    std::format(
+                        "normalize({}.rgb * 2.0 - 1.0)",
+                        _uMaterial.totalTextureColors.find(TextureChannel::Normal)->second
+                    )
+                );
             }
             else
             {
-                validateVariable(s_global.useTexCoord, PLATYPUS_CURRENT_FUNC_NAME);
-                std::unordered_map<TextureChannel, std::vector<std::string>>::const_iterator it;
-                for (it = _uMaterial.textures.begin(); it != _uMaterial.textures.end(); ++it)
-                {
-                    for (const std::string& texture : it->second)
-                    {
-                        ShaderObject textureColor = newVariable(
-                            ShaderDataType::Sampler2D,
-                            texture + "Color",
-                            std::format(
-                                "texture({}, {});",
-                                texture,
-                                s_global.useTexCoord
-                            )
-                        );
-                    }
-                }
+                newVariable(
+                    ShaderDataType::Float3,
+                    "unitNormal",
+                    "normalize(" + s_outVertex.normal + ")"
+                );
             }
+        }
+
+        void ShaderStageBuilder::calcDiffuseLighting()
+        {
+            newVariable(
+                ShaderDataType::Float3,
+                "toLight",
+                "normalize(-" + s_outVertex.lightDirection + ")"
+            );
         }
 
         void ShaderStageBuilder::printVariables()
@@ -1368,6 +1608,11 @@ namespace platypus
 
             }
             Debug::log(allStructs);
+        }
+
+        ShaderStageBuilder::NFunctions ShaderStageBuilder::getFunctions()
+        {
+            return s_functionNames;
         }
 
         void ShaderStageBuilder::error(const std::string& msg, const char* funcName) const

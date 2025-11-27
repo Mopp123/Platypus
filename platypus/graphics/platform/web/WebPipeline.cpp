@@ -103,7 +103,7 @@ namespace platypus
         _pImpl->viewportWidth = swapchainExtent.width;
         _pImpl->viewportHeight = swapchainExtent.height;
         OpenglShaderProgram* pShaderProgram = new OpenglShaderProgram(
-            ShaderVersion::ESSL3,
+            ShaderVersion::OPENGLES_GLSL_300,
             (const ShaderImpl*)_pVertexShader->_pImpl,
             (const ShaderImpl*)_pFragmentShader->_pImpl
         );
