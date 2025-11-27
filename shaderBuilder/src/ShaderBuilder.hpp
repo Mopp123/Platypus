@@ -37,6 +37,14 @@ namespace platypus
             FunctionArgQualifier argQualifier;
         };
 
+        enum class TextureChannel
+        {
+            Blendmap,
+            Diffuse,
+            Specular,
+            Normal
+        };
+
         class ShaderStageBuilder
         {
         private:
@@ -83,17 +91,31 @@ namespace platypus
                 const std::string jointMatrices = "jointData.data";
             };
 
+            struct NMaterial
+            {
+                // Actual textures
+                std::unordered_map<TextureChannel, std::vector<std::string>> textures;
+                // Sampled colors from textures
+                std::unordered_map<TextureChannel, std::vector<std::string>> textureColors;
+
+                const std::string lightingProperties = "materialData.lightingProperties";
+                const std::string textureProperties = "materialData.textureProperties";
+            };
+
             struct NGlobal
             {
                 const std::string toCameraSpace = "toCameraSpace";
                 const std::string transformationMatrix = "transformationMatrix";
                 const std::string vertexWorldPosition = "vertexWorldPosition";
+                const std::string useTexCoord = "useTexCoord";
             };
 
+            // TODO: None of these should be static?
             static NVertex s_inVertex;
             static NVertexOut s_outVertex;
             static NSceneData s_uSceneData;
             static NJoint s_uJoint;
+            NMaterial _uMaterial;
             static NGlobal s_global;
 
             ShaderVersion _version;
@@ -116,13 +138,16 @@ namespace platypus
             std::vector<ShaderObject> _output;
 
             const std::string _pushConstantsStructName = "PushConstants";
+            const std::string _materialDataStructName = "Material";
+            const std::string _materialDataInstanceName = "Material";
             const size_t _maxJointsPerVertex = 4;
 
         public:
             ShaderStageBuilder(
                 ShaderVersion version,
                 uint32_t shaderStage,
-                const std::vector<ShaderObject>& vertexShaderOutput
+                const std::vector<ShaderObject>& vertexShaderOutput,
+                size_t previousStageDescriptorSetCount
             );
             virtual ~ShaderStageBuilder() {}
             void build();
@@ -160,11 +185,22 @@ namespace platypus
                 const std::vector<std::string>& variableNames,
                 const std::string& instanceName
             );
-            void addUniformBlock(
-                const DescriptorSetLayoutBinding& descriptorSetLayoutBinding,
-                const std::vector<std::string>& variableNames,
+
+            // NOTE: You can't control the descriptor set number here!
+            // All descriptor sets needs to be given in order!
+            void addDescriptorSet(
+                const std::vector<DescriptorSetLayoutBinding>& bindings,
+                const std::vector<std::vector<std::string>>& bindingNames,
                 const std::string& blockName,
-                const std::string& instanceName
+                const std::string& blockInstanceName
+            );
+
+            void addMaterial(
+                const DescriptorSetLayoutBinding& blendmapTextureBinding,
+                const std::vector<DescriptorSetLayoutBinding>& diffuseTextureBindings,
+                const std::vector<DescriptorSetLayoutBinding>& specularTextureBindings,
+                const std::vector<DescriptorSetLayoutBinding>& normalTextureBindings,
+                const DescriptorSetLayoutBinding& dataBinding
             );
 
             // Used for adding members to object definitions
@@ -197,7 +233,7 @@ namespace platypus
             void beginElse();
             void endIf();
 
-            void newVariable(
+            ShaderObject newVariable(
                 ShaderDataType type,
                 const std::string& name,
                 const std::string& value
@@ -220,12 +256,14 @@ namespace platypus
 
             void calcFinalVertexPosition();
             void calcVertexShaderOutput();
+            void calcTextureColors();
 
             void printVariables();
             void printObjects();
 
             inline const std::vector<std::string>& getLines() const { return _lines; }
             inline const std::vector<ShaderObject>& getOutput() const { return _output; }
+            inline const size_t getDescriptorSetCount() const { return _descriptorSetCount; }
 
         private:
             void error(const std::string& msg, const char* funcName) const;

@@ -83,7 +83,8 @@ int main(int argc, const char** argv)
     ShaderStageBuilder vertexShaderBuilder(
         ShaderVersion::VULKAN_GLSL_450,
         ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-        { }
+        { },
+        0
     );
     vertexShaderBuilder.addVertexAttributes(
         {
@@ -100,16 +101,18 @@ int main(int argc, const char** argv)
         "shadowPushConstants"
     );
 
-    vertexShaderBuilder.addUniformBlock(
-        sceneDataDescriptorSetLayoutBinding,
-        sceneDataDescriptorSetVariableNames,
+    vertexShaderBuilder.addDescriptorSet(
+        { sceneDataDescriptorSetLayoutBinding },
+        {
+            sceneDataDescriptorSetVariableNames,
+        },
         "SceneData",
         "sceneData"
     );
 
-    vertexShaderBuilder.addUniformBlock(
-        jointDescriptorSetLayoutBinding,
-        jointDescriptorSetVariableNames,
+    vertexShaderBuilder.addDescriptorSet(
+        { jointDescriptorSetLayoutBinding },
+        { jointDescriptorSetVariableNames },
         "JointData",
         "jointData"
     );
@@ -117,11 +120,41 @@ int main(int argc, const char** argv)
     vertexShaderBuilder.build();
 
     // Test fragment shader building
-    ShaderStageBuilder fragmentShaderBuilder(
-        ShaderVersion::OPENGLES_GLSL_300,
+    const size_t textureBindingCount = 1;
+    DescriptorSetLayoutBinding materialTextureBinding{
+        0,
+        1,
+        DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-        vertexShaderBuilder.getOutput()
+        { { } }
+    };
+
+    DescriptorSetLayoutBinding materialDataBinding{
+        textureBindingCount,
+        1,
+        DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+        {
+            { ShaderDataType::Float4 }, // x = specular strength, y = shininess, z = is shadeless, w = undefined for now
+            { ShaderDataType::Float4 } // x,y = texture offset, z,w = texture scale
+        }
+    };
+
+    ShaderStageBuilder fragmentShaderBuilder(
+        ShaderVersion::VULKAN_GLSL_450,
+        ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+        vertexShaderBuilder.getOutput(),
+        vertexShaderBuilder.getDescriptorSetCount()
     );
+    fragmentShaderBuilder.addMaterial(
+        { },
+        { materialTextureBinding },
+        { materialTextureBinding, materialTextureBinding, materialTextureBinding },
+        { materialTextureBinding, materialTextureBinding },
+        materialDataBinding
+    );
+
+    fragmentShaderBuilder.build();
 
     Debug::log("Built shader: ");
     std::string source;

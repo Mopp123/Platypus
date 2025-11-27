@@ -25,6 +25,8 @@ namespace platypus
         Mat3,
         Mat4,
 
+        Sampler2D,
+
         Struct
     };
 

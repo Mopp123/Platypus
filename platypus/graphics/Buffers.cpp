@@ -79,6 +79,9 @@ namespace platypus
 
             case ShaderDataType::Mat3: return "Mat3";
             case ShaderDataType::Mat4: return "Mat4";
+
+            case ShaderDataType::Sampler2D: return "Sampler2D";
+
             default: return "Invalid type";
         }
     }

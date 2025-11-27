@@ -31,7 +31,10 @@ namespace platypus
                 case Float3: return "vec3";
                 case Float4: return "vec4";
 
+                case Mat3: return "mat3";
                 case Mat4: return "mat4";
+
+                case Sampler2D: return "sampler2D";
 
                 default: {
                     Debug::log(
@@ -112,19 +115,34 @@ namespace platypus
             }
         }
 
+        static std::string texture_channel_to_string(TextureChannel type)
+        {
+            switch (type)
+            {
+                case TextureChannel::Blendmap: return "blendmap";
+                case TextureChannel::Diffuse: return "diffuse";
+                case TextureChannel::Specular: return "Specular";
+                case TextureChannel::Normal: return "normal";
+                default: return "<Invalid type>";
+            }
+        }
+
 
         ShaderStageBuilder::NVertex ShaderStageBuilder::s_inVertex;
         ShaderStageBuilder::NVertexOut ShaderStageBuilder::s_outVertex;
         ShaderStageBuilder::NSceneData ShaderStageBuilder::s_uSceneData;
         ShaderStageBuilder::NJoint ShaderStageBuilder::s_uJoint;
+        //ShaderStageBuilder::NMaterial ShaderStageBuilder::s_uMaterial;
         ShaderStageBuilder::NGlobal ShaderStageBuilder::s_global;
         ShaderStageBuilder::ShaderStageBuilder(
             ShaderVersion version,
             uint32_t shaderStage,
-            const std::vector<ShaderObject>& vertexShaderOutput
+            const std::vector<ShaderObject>& vertexShaderOutput,
+            size_t previousStageDescriptorSetCount
         ) :
             _version(version),
-            _shaderStage(shaderStage)
+            _shaderStage(shaderStage),
+            _descriptorSetCount(previousStageDescriptorSetCount)
         {
             // Temporarely adding all basic types here...
             _structDefinitions["int"] = { "int", ShaderDataType::Int };
@@ -176,6 +194,13 @@ namespace platypus
                 { }
             };
 
+            _structDefinitions["sampler2D"] = {
+                "sampler2D",
+                ShaderDataType::Sampler2D,
+                { }, // NOTE: Not sure what to do with the members here?
+                { }
+            };
+
             if (_version == ShaderVersion::VULKAN_GLSL_450)
             {
                 addLine("#version 450");
@@ -198,11 +223,13 @@ namespace platypus
             }
             endSection();
 
+            // Add inputs from vertex shader
             for (size_t i = 0; i < vertexShaderOutput.size(); ++i)
             {
                 const ShaderObject& obj = vertexShaderOutput[i];
                 addInput((uint32_t)i, obj.type, obj.name);
             }
+            endSection();
         }
 
         void ShaderStageBuilder::build()
@@ -232,6 +259,18 @@ namespace platypus
                 }
                 else if (_shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
                 {
+                    const std::string inTexCoord = _inputPrefix + s_outVertex.texCoord;
+                    if (!variableExists(inTexCoord))
+                    {
+                        error("Variable: " + inTexCoord + " not found!", PLATYPUS_CURRENT_FUNC_NAME);
+                    }
+                    // Apply texture scale and offset from materialData to texCoord
+                    newVariable(
+                        ShaderDataType::Float2,
+                        s_global.useTexCoord,
+                        inTexCoord + " * " + _uMaterial.textureProperties + ".zw + " + _uMaterial.textureProperties + ".xy"
+                    );
+                    calcTextureColors();
                 }
             }
             endFunction({});
@@ -387,9 +426,9 @@ namespace platypus
             {
                 layoutPrefix = "layout(location = " + std::to_string(location) + ") ";
             }
-
-            addLine(layoutPrefix + "in " + shader_datatype_to_glsl(type) + " " + namePrefix + name + ";");
-            _variables[name] = { name, type };
+            std::string fullName = namePrefix + name;
+            addLine(layoutPrefix + "in " + shader_datatype_to_glsl(type) + " " + fullName + ";");
+            _variables[fullName] = { fullName, type };
         }
 
         void ShaderStageBuilder::addOutput(
@@ -556,53 +595,143 @@ namespace platypus
             }
         }
 
-        void ShaderStageBuilder::addUniformBlock(
-            const DescriptorSetLayoutBinding& descriptorSetLayoutBinding,
-            const std::vector<std::string>& variableNames,
+        void ShaderStageBuilder::addDescriptorSet(
+            const std::vector<DescriptorSetLayoutBinding>& bindings,
+            const std::vector<std::vector<std::string>>& bindingNames,
             const std::string& blockName,
-            const std::string& instanceName
+            const std::string& blockInstanceName
         )
         {
-            const std::vector<UniformInfo>& uniformInfo = descriptorSetLayoutBinding.getUniformInfo();
-            if (uniformInfo.size() != variableNames.size())
+            if (bindingNames.size() != bindings.size())
             {
                 error(
-                    "Provided " + std::to_string(variableNames.size()) + " names "
-                    "for " + std::to_string(uniformInfo.size()) + " uniform block variables. "
-                    "You have to provide matching number of elements in uniform info and variable names!",
+                    "Provided " + std::to_string(bindingNames.size()) + " names "
+                    "for " + std::to_string(bindings.size()) + " descriptor set layout bindings. "
+                    "You have to provide matching number of elements in bindings and bindingNames!",
                     PLATYPUS_CURRENT_FUNC_NAME
                 );
-                PLATYPUS_ASSERT(false);
-                return;
             }
-
-            beginUniformBlock(
-                blockName,
-                UniformBlockLayout::std140,
-                _descriptorSetCount,
-                descriptorSetLayoutBinding.getBinding()
-            );
-            ++_currentScopeIndentation;
-            for (size_t i = 0; i < uniformInfo.size(); ++i)
+            for (size_t i = 0; i < bindings.size(); ++i)
             {
-                addVariable(uniformInfo[i].type, variableNames[i], "", uniformInfo[i].arrayLen);
+                const DescriptorSetLayoutBinding& binding = bindings[i];
+                const std::vector<UniformInfo>& uniformInfo = binding.getUniformInfo();
+                if (uniformInfo.size() != bindingNames[i].size())
+                {
+                    error(
+                        "Provided " + std::to_string(bindingNames[i].size()) + " names "
+                        "for " + std::to_string(uniformInfo.size()) + " uniform infos at binding index " + std::to_string(i) + " "
+                        "You have to provide matching number of elements in bindings' uniform infos and binding names!",
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
+                if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                {
+                    if (binding.getUniformInfo().size() != 1)
+                    {
+                        error(
+                            "Texture bindings can't have more than one uniform info!",
+                            PLATYPUS_CURRENT_FUNC_NAME
+                        );
+                    }
+
+                    std::string layoutPrefix;
+                    if (_version == ShaderVersion::VULKAN_GLSL_450)
+                        layoutPrefix = "layout(set = " + std::to_string(_descriptorSetCount) + ", binding = " + std::to_string(i) + ") ";
+
+                    ShaderObject obj{ bindingNames[i][0], ShaderDataType::Sampler2D };
+                    addLine(layoutPrefix + "uniform " + shader_datatype_to_glsl(obj.type) + " " + obj.name + ";");
+                    reqisterVariable(obj, "");
+                }
+                else if (binding.getType() == DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                        binding.getType() == DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER)
+                {
+                    beginUniformBlock(
+                        blockName,
+                        UniformBlockLayout::std140,
+                        _descriptorSetCount,
+                        i
+                    );
+                    ++_currentScopeIndentation;
+                    for (size_t j = 0; j < uniformInfo.size(); ++j)
+                    {
+                        addVariable(uniformInfo[j].type, bindingNames[i][j], "", uniformInfo[j].arrayLen);
+                    }
+                    --_currentScopeIndentation;
+                    endUniformBlock(blockInstanceName);
+
+                    // Instantiate
+                    const ShaderObject& blockDefinition = _structDefinitions[blockName];
+                    for (auto member : blockDefinition.memberIndices)
+                    {
+                        const std::string& memberName = member.first;
+                        std::string fullName = blockInstanceName + "." + memberName;
+                        // Need to change the internal name of the member to global here..
+                        //  ...annoying and shit fuck.. this is becomming a mess..
+                        ShaderObject globalObject = blockDefinition.members[member.second];
+                        globalObject.name = fullName;
+                        _variables[fullName] = globalObject;
+                    }
+                }
+                else
+                {
+                    error(
+                        "Invalid descriptor type at binding index: " + std::to_string(i),
+                        PLATYPUS_CURRENT_FUNC_NAME
+                    );
+                }
             }
-            --_currentScopeIndentation;
-            endUniformBlock(instanceName);
             ++_descriptorSetCount;
+        }
 
-            // Instantiate
-            const ShaderObject& blockDefinition = _structDefinitions[blockName];
-            for (auto member : blockDefinition.memberIndices)
+        void ShaderStageBuilder::addMaterial(
+            const DescriptorSetLayoutBinding& blendmapTextureBinding,
+            const std::vector<DescriptorSetLayoutBinding>& diffuseTextureBindings,
+            const std::vector<DescriptorSetLayoutBinding>& specularTextureBindings,
+            const std::vector<DescriptorSetLayoutBinding>& normalTextureBindings,
+            const DescriptorSetLayoutBinding& dataBinding
+        )
+        {
+            std::vector<DescriptorSetLayoutBinding> combinedBindings;
+            std::vector<std::vector<std::string>> bindingNames;
+            if (blendmapTextureBinding.getType() != DescriptorType::DESCRIPTOR_TYPE_NONE)
             {
-                const std::string& memberName = member.first;
-                std::string fullName = instanceName + "." + memberName;
-                // Need to change the internal name of the member to global here..
-                //  ...annoying and shit fuck.. this is becomming a mess..
-                ShaderObject globalObject = blockDefinition.members[member.second];
-                globalObject.name = fullName;
-                _variables[fullName] = globalObject;
+                combinedBindings.push_back(blendmapTextureBinding);
+                std::string textureName = texture_channel_to_string(TextureChannel::Blendmap) + "Texture";
+                _uMaterial.textures[TextureChannel::Blendmap].push_back(textureName);
+                bindingNames.push_back({ textureName });
             }
+
+            for (size_t i = 0; i < diffuseTextureBindings.size(); ++i)
+            {
+                combinedBindings.push_back(diffuseTextureBindings[i]);
+                std::string textureName = texture_channel_to_string(TextureChannel::Diffuse) + "Texture" + std::to_string(i);
+                _uMaterial.textures[TextureChannel::Diffuse].push_back(textureName);
+                bindingNames.push_back({ textureName });
+            }
+            for (size_t i = 0; i < specularTextureBindings.size(); ++i)
+            {
+                combinedBindings.push_back(specularTextureBindings[i]);
+                std::string textureName = texture_channel_to_string(TextureChannel::Specular) + "Texture" + std::to_string(i);
+                _uMaterial.textures[TextureChannel::Specular].push_back(textureName);
+                bindingNames.push_back({ textureName });
+            }
+            for (size_t i = 0; i < normalTextureBindings.size(); ++i)
+            {
+                combinedBindings.push_back(normalTextureBindings[i]);
+                std::string textureName = texture_channel_to_string(TextureChannel::Normal) + "Texture" + std::to_string(i);
+                _uMaterial.textures[TextureChannel::Normal].push_back(textureName);
+                bindingNames.push_back({ textureName });
+            }
+
+            combinedBindings.push_back(dataBinding);
+            bindingNames.push_back({ "lightingProperties", "textureProperties" });
+
+            addDescriptorSet(
+                combinedBindings,
+                bindingNames,
+                _materialDataStructName,
+                _materialDataInstanceName
+            );
         }
 
         // TODO: Allow adding/defining structs as members
@@ -912,7 +1041,7 @@ namespace platypus
             addLine("}");
         }
 
-        void ShaderStageBuilder::newVariable(
+        ShaderObject ShaderStageBuilder::newVariable(
             ShaderDataType type,
             const std::string& name,
             const std::string& value
@@ -923,6 +1052,7 @@ namespace platypus
             variable.name = name;
             reqisterVariable(variable, "");
             addLine(typeName + " " + name + " = " + value + ";");
+            return variable;
         }
 
         void ShaderStageBuilder::endSection()
@@ -1185,6 +1315,34 @@ namespace platypus
             );
 
             endSection();
+        }
+
+        void ShaderStageBuilder::calcTextureColors()
+        {
+            // TODO: Blending!
+            if (_uMaterial.textures.find(TextureChannel::Blendmap) != _uMaterial.textures.end())
+            {
+            }
+            else
+            {
+                validateVariable(s_global.useTexCoord, PLATYPUS_CURRENT_FUNC_NAME);
+                std::unordered_map<TextureChannel, std::vector<std::string>>::const_iterator it;
+                for (it = _uMaterial.textures.begin(); it != _uMaterial.textures.end(); ++it)
+                {
+                    for (const std::string& texture : it->second)
+                    {
+                        ShaderObject textureColor = newVariable(
+                            ShaderDataType::Sampler2D,
+                            texture + "Color",
+                            std::format(
+                                "texture({}, {});",
+                                texture,
+                                s_global.useTexCoord
+                            )
+                        );
+                    }
+                }
+            }
         }
 
         void ShaderStageBuilder::printVariables()
