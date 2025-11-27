@@ -11,8 +11,8 @@ namespace platypus
         switch (type)
         {
             case MeshType::MESH_TYPE_STATIC: return "MESH_TYPE_STATIC";
+            case MeshType::MESH_TYPE_STATIC_INSTANCED: return "MESH_TYPE_STATIC_INSTANCED";
             case MeshType::MESH_TYPE_SKINNED: return "MESH_TYPE_SKINNED";
-            case MeshType::MESH_TYPE_TERRAIN: return "MESH_TYPE_TERRAIN";
             default: return "<Invalid type>";
         }
     }
@@ -205,7 +205,7 @@ namespace platypus
         );
 
         Mesh* pMesh = new Mesh(
-            MeshType::MESH_TYPE_TERRAIN,
+            MeshType::MESH_TYPE_STATIC,
             generateTangents ? VertexBufferLayout::get_common_static_tangent_layout() : VertexBufferLayout::get_common_static_layout(),
             pVertexBuffer,
             pIndexBuffer,

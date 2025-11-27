@@ -102,13 +102,13 @@ namespace platypus
         //std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierPipelineDataMapping;
 
         size_t _maxStaticBatchLength;
+        size_t _maxStaticInstancedBatchLength;
         size_t _maxSkinnedBatchLength;
-        size_t _maxTerrainBatchLength;
         size_t _maxSkinnedMeshJoints;
 
         static RenderPassType s_availableRenderPasses[2];
+        static DescriptorSetLayout s_staticDescriptorSetLayout; // single transformation mat as dynamic ubo for all batch members
         static DescriptorSetLayout s_jointDescriptorSetLayout;
-        static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
         std::vector<std::vector<BatchShaderResource>> _allocatedShaderResources;
@@ -119,8 +119,8 @@ namespace platypus
             MasterRenderer& masterRenderer,
             DescriptorPool& descriptorPool,
             size_t maxStaticBatchLength,
+            size_t maxStaticInstancedBatchLength,
             size_t maxSkinnedBatchLength,
-            size_t maxTerrainBatchLength,
             size_t maxSkinnedMeshJoints
         );
         ~Batcher();
@@ -151,8 +151,8 @@ namespace platypus
         // Returns batches sharing the same ID for all render passes
         std::vector<Batch*> getBatches(ID_t identifier);
 
+        static const DescriptorSetLayout& get_static_descriptor_set_layout();
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
-        static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
 
         BatchShaderResource* getSharedBatchResource(ID_t batchID, size_t resourceIndex);
 
@@ -246,8 +246,8 @@ namespace platypus
         );
 
         inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
+        inline size_t getMaxStaticInstancedBatchLength() const { return _maxStaticInstancedBatchLength; }
         inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }
-        inline size_t getMaxTerrainBatchLength() const { return _maxTerrainBatchLength; }
         inline size_t getMaxSkinnedMeshJoints() const { return _maxSkinnedMeshJoints; }
 
     private:

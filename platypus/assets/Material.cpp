@@ -79,6 +79,7 @@ namespace platypus
         const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
 
         // NOTE: ONLY TEMPORARY ATM!
+        /*
         if (_blendmapTextureID == NULL_ID)
         {
             createPipeline(
@@ -111,6 +112,7 @@ namespace platypus
                 MeshType::MESH_TYPE_TERRAIN
             );
         }
+        */
 
         createShaderResources();
 
@@ -187,8 +189,8 @@ namespace platypus
         pMaterialPipelineData->pFragmentShader = pFragmentShader;
 
         VertexBufferLayout meshVertexBufferLayout;
-        if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED ||
-            meshType == MeshType::MESH_TYPE_TERRAIN)
+        if (meshType == MeshType::MESH_TYPE_STATIC ||
+            meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
         {
             if (hasNormalMap())
                 meshVertexBufferLayout = VertexBufferLayout::get_common_static_tangent_layout();
@@ -658,7 +660,6 @@ namespace platypus
             case MeshType::MESH_TYPE_STATIC : shaderName += "Static"; break;
             case MeshType::MESH_TYPE_STATIC_INSTANCED : shaderName += "Static"; break;
             case MeshType::MESH_TYPE_SKINNED : shaderName += "Skinned"; break;
-            case MeshType::MESH_TYPE_TERRAIN : shaderName += "Terrain"; break;
             default:
             {
                 Debug::log(
@@ -702,8 +703,10 @@ namespace platypus
             else
                 shaderName += "_";
 
-            // adding d here since all materials needs to have at least one diffuse texture
-            shaderName += "d";
+            if (_blendmapTextureID != NULL_ID)
+                shaderName += "b";
+            if (_diffuseTextureCount > 0)
+                shaderName += "d";
             if (_specularTextureCount > 0)
                 shaderName += "s";
             if (_normalTextureCount > 0)

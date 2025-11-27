@@ -14,7 +14,6 @@ namespace platypus
         MESH_TYPE_STATIC = 0x1,
         MESH_TYPE_STATIC_INSTANCED = 0x1 << 1,
         MESH_TYPE_SKINNED = 0x1 << 2,
-        MESH_TYPE_TERRAIN = 0x1 << 3
     };
     std::string mesh_type_to_string(MeshType type);
 

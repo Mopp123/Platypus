@@ -10,37 +10,25 @@ namespace platypus
         RenderPassType::SHADOW_PASS
     };
 
+    DescriptorSetLayout Batcher::s_staticDescriptorSetLayout;
     DescriptorSetLayout Batcher::s_jointDescriptorSetLayout;
-    DescriptorSetLayout Batcher::s_terrainDescriptorSetLayout;
 
     Batcher::Batcher(
         MasterRenderer& masterRenderer,
         DescriptorPool& descriptorPool,
         size_t maxStaticBatchLength,
+        size_t maxStaticInstancedBatchLength,
         size_t maxSkinnedBatchLength,
-        size_t maxTerrainBatchLength,
         size_t maxSkinnedMeshJoints
     ) :
         _masterRendererRef(masterRenderer),
         _descriptorPoolRef(descriptorPool),
         _maxStaticBatchLength(maxStaticBatchLength),
+        _maxStaticInstancedBatchLength(maxStaticInstancedBatchLength),
         _maxSkinnedBatchLength(maxSkinnedBatchLength),
-        _maxTerrainBatchLength(maxTerrainBatchLength),
         _maxSkinnedMeshJoints(maxSkinnedMeshJoints)
     {
-        s_jointDescriptorSetLayout = DescriptorSetLayout(
-            {
-                {
-                    0,
-                    1,
-                    DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
-                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                    { { ShaderDataType::Mat4, (int)_maxSkinnedMeshJoints } }
-                }
-            }
-        );
-
-        s_terrainDescriptorSetLayout = DescriptorSetLayout(
+        s_staticDescriptorSetLayout = DescriptorSetLayout(
             {
                 {
                     0,
@@ -53,14 +41,25 @@ namespace platypus
                 }
             }
         );
+        s_jointDescriptorSetLayout = DescriptorSetLayout(
+            {
+                {
+                    0,
+                    1,
+                    DescriptorType::DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER,
+                    ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                    { { ShaderDataType::Mat4, (int)_maxSkinnedMeshJoints } }
+                }
+            }
+        );
     }
 
     Batcher::~Batcher()
     {
         destroyManagedPipelines();
 
+        s_staticDescriptorSetLayout.destroy();
         s_jointDescriptorSetLayout.destroy();
-        s_terrainDescriptorSetLayout.destroy();
     }
 
     static std::string get_shadowpass_shader_name(
@@ -69,11 +68,20 @@ namespace platypus
     )
     {
         std::string shaderName = "shadows/";
+        std::string extension;
+
         switch (meshType)
         {
-            case MeshType::MESH_TYPE_STATIC_INSTANCED: shaderName += "Static"; break;
-            case MeshType::MESH_TYPE_SKINNED: shaderName += "Skinned"; break;
-            case MeshType::MESH_TYPE_TERRAIN: shaderName += "Terrain"; break;
+            case MeshType::MESH_TYPE_STATIC:
+                shaderName += "Static";
+                break;
+            case MeshType::MESH_TYPE_STATIC_INSTANCED:
+                shaderName += "Static";
+                extension = shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? "_i" : "";
+            break;
+            case MeshType::MESH_TYPE_SKINNED:
+                shaderName += "Skinned";
+                break;
             default:
             {
                 Debug::log(
@@ -85,6 +93,7 @@ namespace platypus
                 return "";
             }
         }
+
         switch (shaderStage)
         {
             case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: shaderName += "Vertex"; break;
@@ -100,7 +109,7 @@ namespace platypus
                 return "";
             }
         }
-        return shaderName + "Shader";
+        return shaderName + "Shader" + extension;
     }
 
     BatchPipelineData* Batcher::createBatchPipelineData(
@@ -203,14 +212,14 @@ namespace platypus
         _batchShaderResourceMapping.clear();
     }
 
+    const DescriptorSetLayout& Batcher::get_static_descriptor_set_layout()
+    {
+        return s_staticDescriptorSetLayout;
+    }
+
     const DescriptorSetLayout& Batcher::get_joint_descriptor_set_layout()
     {
         return s_jointDescriptorSetLayout;
-    }
-
-    const DescriptorSetLayout& Batcher::get_terrain_descriptor_set_layout()
-    {
-        return s_terrainDescriptorSetLayout;
     }
 
     void Batcher::createSharedBatchInstancedBuffers(
@@ -603,6 +612,10 @@ namespace platypus
         if (materialID != NULL_ID && !shadowPass)
         {
             pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+            // Create material pipeline if doesn't exist
+            if (!pMaterial->getPipeline(meshType))
+                pMaterial->createPipeline(pRenderPass, meshType);
+
             pPipeline = pMaterial->getPipeline(meshType);
             receivesShadows = pMaterial->receivesShadows();
         }

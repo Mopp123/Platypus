@@ -16,7 +16,7 @@ namespace platypus
     MasterRenderer::MasterRenderer(Swapchain& swapchain) :
         _swapchainRef(swapchain),
         _descriptorPool(_swapchainRef),
-        _batcher(*this, _descriptorPool, 1000, 1000, 9, 50),
+        _batcher(*this, _descriptorPool, 1000, 1000, 500, 50),
 
         _scene3DDataDescriptorSetLayout(
             {
@@ -156,10 +156,10 @@ namespace platypus
                     _batcher.createBatch(
                         meshID,
                         materialID,
-                        _batcher.getMaxStaticBatchLength(),
+                        _batcher.getMaxStaticInstancedBatchLength(),
                         1, // maxRepeatCount,
                         0, // repeatAdvance,
-                        _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
+                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
                         1, // instanceAdvance,
                         sizeof(Matrix4f), // instance buffer elem size
                         { }, // uniform resource layouts
@@ -171,15 +171,55 @@ namespace platypus
                     _batcher.createBatch(
                         meshID,
                         materialID,
-                        _batcher.getMaxStaticBatchLength(),
+                        _batcher.getMaxStaticInstancedBatchLength(),
                         1, // maxRepeatCount,
                         0, // repeatAdvance,
-                        _batcher.getMaxStaticBatchLength(), // maxInstanceCount,
+                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
                         1, // instanceAdvance,
                         sizeof(Matrix4f), // instance buffer elem size
                         { }, // uniform resource layouts
                         pDirectionalLight,
                         &_shadowPass
+                    );
+                }
+
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)&(pTransform->globalMatrix),
+                    sizeof(Matrix4f),
+                    { sizeof(Matrix4f) },
+                    _currentFrame
+                );
+            }
+            else if (meshType == MeshType::MESH_TYPE_STATIC)
+            {
+                ID_t batchID = ID::hash(meshID, materialID);
+                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+                if (!pBatch)
+                {
+                    // Create static scene pass batch
+                    const size_t dynamicStaticInstanceBufferElemSize = get_dynamic_uniform_buffer_element_size(
+                        sizeof(Matrix4f)
+                    );
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxStaticBatchLength(),
+                        _batcher.getMaxStaticBatchLength(), // maxRepeatCount,
+                        1, // repeatAdvance,
+                        1, // maxInstanceCount,
+                        0, // instanceAdvance,
+                        0, // instance buffer elem size
+                        {
+                            {
+                                ShaderResourceType::ANY,
+                                dynamicStaticInstanceBufferElemSize,
+                                Batcher::get_static_descriptor_set_layout(),
+                                { }
+                            }
+                        }, // uniform resource layouts
+                        pDirectionalLight,
+                        _swapchainRef.getRenderPassPtr()
                     );
                 }
 
@@ -254,46 +294,6 @@ namespace platypus
                     (void*)pAnimation->jointMatrices,
                     sizeof(Matrix4f) * pMesh->getJointCount(),
                     { sizeof(Matrix4f) * pMesh->getJointCount() },
-                    _currentFrame
-                );
-            }
-            else if (meshType == MeshType::MESH_TYPE_TERRAIN)
-            {
-                ID_t batchID = ID::hash(meshID, materialID);
-                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-                if (!pBatch)
-                {
-                    // Create terrain scene pass batch
-                    const size_t dynamicTerrainInstanceBufferElemSize = get_dynamic_uniform_buffer_element_size(
-                        sizeof(Matrix4f)
-                    );
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxTerrainBatchLength(),
-                        _batcher.getMaxTerrainBatchLength(), // maxRepeatCount,
-                        1, // repeatAdvance,
-                        1, // maxInstanceCount,
-                        0, // instanceAdvance,
-                        0, // instance buffer elem size
-                        {
-                            {
-                                ShaderResourceType::ANY,
-                                dynamicTerrainInstanceBufferElemSize,
-                                Batcher::get_terrain_descriptor_set_layout(),
-                                { }
-                            }
-                        }, // uniform resource layouts
-                        pDirectionalLight,
-                        _swapchainRef.getRenderPassPtr()
-                    );
-                }
-
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)&(pTransform->globalMatrix),
-                    sizeof(Matrix4f),
-                    { sizeof(Matrix4f) },
                     _currentFrame
                 );
             }
@@ -424,7 +424,7 @@ namespace platypus
         }
         else if (usingBlendmap)
         {
-            outDescriptorSetLayouts.push_back(Batcher::get_terrain_descriptor_set_layout());
+            outDescriptorSetLayouts.push_back(Batcher::get_static_descriptor_set_layout());
         }
 
         // Checking if shadow pipeline here, since need to add the Material descriptor set layout
