@@ -157,7 +157,7 @@ void ShadowTestScene::init()
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true,
-        true // receive shadows?
+        false // receive shadows?
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
@@ -166,13 +166,13 @@ void ShadowTestScene::init()
         true  // receive shadows?
     );
 
-    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb")->getMeshes()[0];
+    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCubeTangents.glb", false)->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
         pStaticMesh->getID(),
-        pStaticMeshMaterial->getID()
+        _pTerrainMaterial->getID()
     );
 
     entityID_t boxEntity2 = createStaticMeshEntity(
@@ -180,7 +180,7 @@ void ShadowTestScene::init()
         { { 0, 2, 0 }, 0.0f },
         { 2, 2, 2 },
         pStaticMesh->getID(),
-        pStaticMeshMaterial->getID()
+        _pTerrainMaterial->getID()
     );
 
     std::vector<KeyframeAnimationData> animations;

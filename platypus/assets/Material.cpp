@@ -219,6 +219,7 @@ namespace platypus
         std::vector<DescriptorSetLayout> descriptorSetLayouts;
         pMasterRenderer->solveDescriptorSetLayouts(
             this,
+            instanced,
             skinned,
             false,
             descriptorSetLayouts

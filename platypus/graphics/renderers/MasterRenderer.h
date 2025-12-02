@@ -79,6 +79,7 @@ namespace platypus
         ) const;
         void solveDescriptorSetLayouts(
             const Material* pMaterial,
+            bool instanced,
             bool skinned,
             bool shadowPipeline,
             std::vector<DescriptorSetLayout>& outDescriptorSetLayouts

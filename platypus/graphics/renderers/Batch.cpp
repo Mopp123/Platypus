@@ -579,7 +579,7 @@ namespace platypus
         if (instanceAdvance > 0 && repeatAdvance > 0)
         {
             Debug::log(
-                "@Batcher::addToBatch "
+                "@Batcher::createBatch "
                 "Batch was attempting to use both, repeat and instance advance. "
                 "Currently batches can use only one or the other!",
                 Debug::MessageType::PLATYPUS_ERROR
@@ -588,12 +588,36 @@ namespace platypus
             return;
         }
 
-
         Application* pApp = Application::get_instance();
         AssetManager* pAssetManager = pApp->getAssetManager();
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
         MeshType meshType = pMesh->getType();
-        Material* pMaterial = nullptr;
+
+        // Currently batching requires valid material in order to figure out some unique batch ID.
+        // TODO: Allow creating batches without materials?
+        if (materialID == NULL_ID)
+        {
+            Debug::log(
+                "@Batcher::createBatch "
+                "materialID was NULL_ID! "
+                "Currently batching requires a material.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        Material* pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+        if (!pMaterial)
+        {
+            Debug::log(
+                "@Batcher::createBatch "
+                "Material with ID: " + std::to_string(materialID) + " was nullptr!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
         Pipeline* pPipeline = nullptr;
         bool receivesShadows = false;
         const bool shadowPass = renderPassType == RenderPassType::SHADOW_PASS;
@@ -609,9 +633,8 @@ namespace platypus
             usedDescriptorSets.push_back(_masterRendererRef.getScene3DDataDescriptorSets());
 
         // Use the material's pipeline and descriptor sets if not shadowpass
-        if (materialID != NULL_ID && !shadowPass)
+        if (pMaterial && !shadowPass)
         {
-            pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
             // Create material pipeline if doesn't exist
             if (!pMaterial->getPipeline(meshType))
                 pMaterial->createPipeline(pRenderPass, meshType);
@@ -693,9 +716,7 @@ namespace platypus
 
         // Need to add the Material descriptor sets last if using those..
         if (materialID != NULL_ID && !shadowPass)
-        {
             usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
-        }
 
         std::vector<std::vector<DescriptorSet>> combinedDescriptorSets = combineUsedDescriptorSets(
             framesInFlight,

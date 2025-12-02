@@ -146,52 +146,7 @@ namespace platypus
             const MeshType meshType = pMesh->getType();
             const ID_t materialID = pRenderable3D->materialID;
 
-            if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
-            {
-                ID_t batchID = ID::hash(meshID, materialID);
-                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-                if (!pBatch)
-                {
-                    // Create static scene pass batch
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxStaticInstancedBatchLength(),
-                        1, // maxRepeatCount,
-                        0, // repeatAdvance,
-                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
-                        1, // instanceAdvance,
-                        sizeof(Matrix4f), // instance buffer elem size
-                        { }, // uniform resource layouts
-                        pDirectionalLight,
-                        _swapchainRef.getRenderPassPtr()
-                    );
-
-                    // Create static shadow pass batch
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxStaticInstancedBatchLength(),
-                        1, // maxRepeatCount,
-                        0, // repeatAdvance,
-                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
-                        1, // instanceAdvance,
-                        sizeof(Matrix4f), // instance buffer elem size
-                        { }, // uniform resource layouts
-                        pDirectionalLight,
-                        &_shadowPass
-                    );
-                }
-
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)&(pTransform->globalMatrix),
-                    sizeof(Matrix4f),
-                    { sizeof(Matrix4f) },
-                    _currentFrame
-                );
-            }
-            else if (meshType == MeshType::MESH_TYPE_STATIC)
+            if (meshType == MeshType::MESH_TYPE_STATIC)
             {
                 ID_t batchID = ID::hash(meshID, materialID);
                 Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
@@ -220,6 +175,73 @@ namespace platypus
                         }, // uniform resource layouts
                         pDirectionalLight,
                         _swapchainRef.getRenderPassPtr()
+                    );
+
+                    // Create static shadow pass batch
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxStaticBatchLength(),
+                        _batcher.getMaxStaticBatchLength(), // maxRepeatCount,
+                        1, // repeatAdvance,
+                        1, // maxInstanceCount,
+                        0, // instanceAdvance,
+                        0, // instance buffer elem size
+                        {
+                            {
+                                ShaderResourceType::ANY,
+                                dynamicStaticInstanceBufferElemSize,
+                                Batcher::get_static_descriptor_set_layout(),
+                                { }
+                            }
+                        }, // uniform resource layouts
+                        pDirectionalLight,
+                        &_shadowPass
+                    );
+                }
+
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)&(pTransform->globalMatrix),
+                    sizeof(Matrix4f),
+                    { sizeof(Matrix4f) },
+                    _currentFrame
+                );
+            }
+            else if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+            {
+                ID_t batchID = ID::hash(meshID, materialID);
+                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+                if (!pBatch)
+                {
+                    // Create static instanced scene pass batch
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxStaticInstancedBatchLength(),
+                        1, // maxRepeatCount,
+                        0, // repeatAdvance,
+                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
+                        1, // instanceAdvance,
+                        sizeof(Matrix4f), // instance buffer elem size
+                        { }, // uniform resource layouts
+                        pDirectionalLight,
+                        _swapchainRef.getRenderPassPtr()
+                    );
+
+                    // Create static instanced shadow pass batch
+                    _batcher.createBatch(
+                        meshID,
+                        materialID,
+                        _batcher.getMaxStaticInstancedBatchLength(),
+                        1, // maxRepeatCount,
+                        0, // repeatAdvance,
+                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
+                        1, // instanceAdvance,
+                        sizeof(Matrix4f), // instance buffer elem size
+                        { }, // uniform resource layouts
+                        pDirectionalLight,
+                        &_shadowPass
                     );
                 }
 
@@ -388,6 +410,7 @@ namespace platypus
 
     void MasterRenderer::solveDescriptorSetLayouts(
         const Material* pMaterial,
+        bool instanced,
         bool skinned,
         bool shadowPipeline,
         std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
@@ -401,7 +424,16 @@ namespace platypus
             {
                 Debug::log(
                     "@MasterRenderer::solveDescriptorSetLayouts "
-                    "Currently not supporting Materials using blendmaps for skinned meshes!",
+                    "Currently not supporting Materials with blendmaps for skinned meshes!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (instanced && usingBlendmap)
+            {
+                Debug::log(
+                    "@MasterRenderer::solveDescriptorSetLayouts "
+                    "Currently not supporting Materials with blendmaps for instanced meshes!",
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -422,7 +454,7 @@ namespace platypus
         {
             outDescriptorSetLayouts.push_back(Batcher::get_joint_descriptor_set_layout());
         }
-        else if (usingBlendmap)
+        else if (!instanced)
         {
             outDescriptorSetLayouts.push_back(Batcher::get_static_descriptor_set_layout());
         }
