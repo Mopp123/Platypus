@@ -124,7 +124,7 @@ namespace platypus
             ComponentType::COMPONENT_TYPE_LIGHT
         );
 
-        // NOTE: Below should rather be done by the "batcher" since these are kind of batching related operations?!
+        // NOTE: Below should rather be done by the "batcher" since these are kind of batching related things?
         Transform* pTransform = (Transform*)pScene->getComponent(
             entity.id,
             ComponentType::COMPONENT_TYPE_TRANSFORM,
@@ -140,111 +140,22 @@ namespace platypus
         );
         if (pRenderable3D)
         {
-            const ID_t meshID = pRenderable3D->meshID;
             AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+            const ID_t meshID = pRenderable3D->meshID;
             Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
             const MeshType meshType = pMesh->getType();
             const ID_t materialID = pRenderable3D->materialID;
 
-            if (meshType == MeshType::MESH_TYPE_STATIC)
+            ID_t batchID = ID::hash(meshID, materialID);
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            if (!pBatch)
             {
-                ID_t batchID = ID::hash(meshID, materialID);
-                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-                if (!pBatch)
-                {
-                    // Create static scene pass batch
-                    const size_t dynamicStaticInstanceBufferElemSize = get_dynamic_uniform_buffer_element_size(
-                        sizeof(Matrix4f)
-                    );
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxStaticBatchLength(),
-                        _batcher.getMaxStaticBatchLength(), // maxRepeatCount,
-                        1, // repeatAdvance,
-                        1, // maxInstanceCount,
-                        0, // instanceAdvance,
-                        0, // instance buffer elem size
-                        {
-                            {
-                                ShaderResourceType::ANY,
-                                dynamicStaticInstanceBufferElemSize,
-                                Batcher::get_static_descriptor_set_layout(),
-                                { }
-                            }
-                        }, // uniform resource layouts
-                        pDirectionalLight,
-                        _swapchainRef.getRenderPassPtr()
-                    );
-
-                    // Create static shadow pass batch
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxStaticBatchLength(),
-                        _batcher.getMaxStaticBatchLength(), // maxRepeatCount,
-                        1, // repeatAdvance,
-                        1, // maxInstanceCount,
-                        0, // instanceAdvance,
-                        0, // instance buffer elem size
-                        {
-                            {
-                                ShaderResourceType::ANY,
-                                dynamicStaticInstanceBufferElemSize,
-                                Batcher::get_static_descriptor_set_layout(),
-                                { }
-                            }
-                        }, // uniform resource layouts
-                        pDirectionalLight,
-                        &_shadowPass
-                    );
-                }
-
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)&(pTransform->globalMatrix),
-                    sizeof(Matrix4f),
-                    { sizeof(Matrix4f) },
-                    _currentFrame
-                );
+                _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
+                _batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
             }
-            else if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+
+            if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
             {
-                ID_t batchID = ID::hash(meshID, materialID);
-                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-                if (!pBatch)
-                {
-                    // Create static instanced scene pass batch
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxStaticInstancedBatchLength(),
-                        1, // maxRepeatCount,
-                        0, // repeatAdvance,
-                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
-                        1, // instanceAdvance,
-                        sizeof(Matrix4f), // instance buffer elem size
-                        { }, // uniform resource layouts
-                        pDirectionalLight,
-                        _swapchainRef.getRenderPassPtr()
-                    );
-
-                    // Create static instanced shadow pass batch
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxStaticInstancedBatchLength(),
-                        1, // maxRepeatCount,
-                        0, // repeatAdvance,
-                        _batcher.getMaxStaticInstancedBatchLength(), // maxInstanceCount,
-                        1, // instanceAdvance,
-                        sizeof(Matrix4f), // instance buffer elem size
-                        { }, // uniform resource layouts
-                        pDirectionalLight,
-                        &_shadowPass
-                    );
-                }
-
                 _batcher.addToBatch(
                     batchID,
                     (void*)&(pTransform->globalMatrix),
@@ -255,58 +166,6 @@ namespace platypus
             }
             else if (meshType == MeshType::MESH_TYPE_SKINNED)
             {
-                ID_t batchID = ID::hash(meshID, materialID);
-                const size_t maxSkinnedBatchLength = _batcher.getMaxSkinnedBatchLength();
-                const size_t maxJoints = _batcher.getMaxSkinnedMeshJoints();
-                Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-                if (!pBatch)
-                {
-                    // Create skinned scene pass batch
-                    const size_t dynamicJointBufferElemSize = get_dynamic_uniform_buffer_element_size(
-                        sizeof(Matrix4f) * _batcher.getMaxSkinnedMeshJoints()
-                    );
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxSkinnedBatchLength(),
-                        _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
-                        1, // repeatAdvance,
-                        1, // maxInstanceCount,
-                        0, // instanceAdvance,
-                        0, // instance buffer elem size
-                        {
-                            {
-                                ShaderResourceType::ANY,
-                                dynamicJointBufferElemSize,
-                                Batcher::get_joint_descriptor_set_layout(),
-                                { }
-                            }
-                        }, // uniform resource layouts
-                        pDirectionalLight,
-                        _swapchainRef.getRenderPassPtr()
-                    );
-
-                    _batcher.createBatch(
-                        meshID,
-                        materialID,
-                        _batcher.getMaxSkinnedBatchLength(),
-                        _batcher.getMaxSkinnedBatchLength(), // maxRepeatCount,
-                        1, // repeatAdvance,
-                        1, // maxInstanceCount,
-                        0, // instanceAdvance,
-                        0, // instance buffer elem size
-                        {
-                            {
-                                ShaderResourceType::ANY,
-                                dynamicJointBufferElemSize,
-                                Batcher::get_joint_descriptor_set_layout(),
-                                { }
-                            }
-                        }, // uniform resource layouts
-                        pDirectionalLight,
-                        &_shadowPass
-                    );
-                }
                 const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
                     entity.id,
                     ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION

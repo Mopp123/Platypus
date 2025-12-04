@@ -52,6 +52,57 @@ namespace platypus
                 }
             }
         );
+
+        // Create batch templates
+        const size_t staticBatchDynamicUBOElemSize = get_dynamic_uniform_buffer_element_size(
+            sizeof(Matrix4f)
+        );
+        _batchTemplates[MeshType::MESH_TYPE_STATIC] = {
+            _maxStaticBatchLength, // maxBatchLength
+            (uint32_t)_maxStaticBatchLength, // maxRepeatCount
+            1, // repeatAdvance,
+            1, // maxInstanceCount,
+            0, // instanceAdvance,
+            0, // instance buffer elem size
+            {
+                {
+                    ShaderResourceType::ANY,
+                    staticBatchDynamicUBOElemSize,
+                    s_staticDescriptorSetLayout,
+                    { }
+                }
+            } // uniform resource layouts
+        };
+
+        _batchTemplates[MeshType::MESH_TYPE_STATIC_INSTANCED] = {
+            _maxStaticInstancedBatchLength, // maxBatchLength
+            1, // maxRepeatCount,
+            0, // repeatAdvance,
+            (uint32_t)_maxStaticInstancedBatchLength, // maxInstanceCount,
+            1, // instanceAdvance,
+            sizeof(Matrix4f), // instance buffer elem size
+            { } // uniform resource layouts
+        };
+
+        const size_t dynamicJointBufferElemSize = get_dynamic_uniform_buffer_element_size(
+            sizeof(Matrix4f) * _maxSkinnedMeshJoints
+        );
+        _batchTemplates[MeshType::MESH_TYPE_SKINNED] = {
+            _maxSkinnedBatchLength,
+            (uint32_t)_maxSkinnedBatchLength, // maxRepeatCount,
+            1, // repeatAdvance,
+            1, // maxInstanceCount,
+            0, // instanceAdvance,
+            0, // instance buffer elem size
+            {
+                {
+                    ShaderResourceType::ANY,
+                    dynamicJointBufferElemSize,
+                    s_jointDescriptorSetLayout,
+                    { }
+                }
+            }, // uniform resource layouts
+        };
     }
 
     Batcher::~Batcher()
@@ -185,7 +236,8 @@ namespace platypus
 
     void Batcher::freeBatches()
     {
-        // Free batches themselves
+        destroyManagedPipelines();
+
         std::unordered_map<RenderPassType, std::vector<Batch*>>::iterator batchIt;
         for (batchIt = _batches.begin(); batchIt != _batches.end(); ++batchIt)
         {
@@ -480,36 +532,6 @@ namespace platypus
         resource.requiresDeviceUpdate = true;
     }
 
-    Pipeline* Batcher::getSuitableManagedPipeline(
-        const std::string& vertexShaderFilename,
-        const std::string& fragmentShaderFilename,
-        const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-        const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
-        size_t pushConstantsSize,
-        ShaderStageFlagBits pushConstantsShaderStage
-    )
-    {
-        for (BatchPipelineData* pPipelineData : _managedPipelineData)
-        {
-            Pipeline* pPipeline = pPipelineData->pPipeline;
-            const std::vector<VertexBufferLayout>& pipelineVertexBufferLayouts = pPipeline->getVertexBufferLayouts();
-            const std::vector<DescriptorSetLayout>& pipelineDescriptorSetLayouts = pPipeline->getDescriptorSetLayouts();
-            // NOTE: Not sure if this comparison works properly atm!
-            if (pPipeline->getVertexShader()->getFilename() == vertexShaderFilename &&
-                pPipeline->getFragmentShader()->getFilename() == fragmentShaderFilename &&
-                pipelineVertexBufferLayouts == vertexBufferLayouts &&
-                pipelineDescriptorSetLayouts == descriptorSetLayouts &&
-                pPipeline->getPushConstantsSize() == pushConstantsSize &&
-                pPipeline->getPushConstantsStageFlags() == pushConstantsShaderStage
-            )
-            {
-                return pPipeline;
-            }
-        }
-
-        return nullptr;
-    }
-
     bool Batcher::validateBatchDoesntExist(
         const char* callLocation,
         RenderPassType renderPassType,
@@ -781,6 +803,53 @@ namespace platypus
 
         _identifierBatchMapping[renderPassType][batchID] = _batches[renderPassType].size();
         _batches[renderPassType].push_back(pBatch);
+    }
+
+    void Batcher::createBatch(
+        ID_t meshID,
+        ID_t materialID,
+        const Light * const pDirectionalLight,
+        const RenderPass* pRenderPass
+    )
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+        if (!pMesh)
+        {
+            Debug::log(
+                "@Batcher::submit "
+                "Mesh with ID: " + std::to_string(meshID) + " not found!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        std::unordered_map<MeshType, BatchTemplate>::iterator templateIt = _batchTemplates.find(pMesh->getType());
+        if (templateIt == _batchTemplates.end())
+        {
+            Debug::log(
+                "@Batcher::submit "
+                "No batch construction template found for: " + mesh_type_to_string(pMesh->getType()),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        const BatchTemplate& creationTemplate = templateIt->second;
+        createBatch(
+            meshID,
+            materialID,
+            creationTemplate.maxBatchLength,
+            creationTemplate.maxRepeatCount,
+            creationTemplate.repeatAdvance,
+            creationTemplate.maxInstanceCount,
+            creationTemplate.instanceAdvance,
+            creationTemplate.instanceBufferElementSize,
+            creationTemplate.uniformResourceLayouts,
+            pDirectionalLight,
+            pRenderPass
+        );
     }
 
     void Batcher::addToBatch(

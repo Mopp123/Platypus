@@ -4,6 +4,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderPass.h"
+#include "platypus/assets/Mesh.h"
 #include "platypus/ecs/components/Lights.h"
 #include <unordered_map>
 
@@ -70,6 +71,31 @@ namespace platypus
         uint32_t instanceAdvance = 0;
     };
 
+    struct BatchTemplate
+    {
+        size_t maxBatchLength;
+        uint32_t maxRepeatCount;
+        uint32_t repeatAdvance;
+        uint32_t maxInstanceCount;
+        uint32_t instanceAdvance;
+        size_t instanceBufferElementSize;
+        std::vector<ShaderResourceLayout> uniformResourceLayouts;
+
+        BatchTemplate& operator=(const BatchTemplate& other)
+        {
+            maxBatchLength = other.maxBatchLength;
+            maxRepeatCount = other.maxRepeatCount;
+            repeatAdvance = other.repeatAdvance;
+            maxInstanceCount = other.maxInstanceCount;
+            instanceAdvance = other.instanceAdvance;
+            instanceBufferElementSize = other.instanceBufferElementSize;
+            for (const ShaderResourceLayout& layout : other.uniformResourceLayouts)
+                uniformResourceLayouts.push_back(layout);
+
+            return *this;
+        }
+    };
+
     struct BatchPipelineData
     {
         Shader* pVertexShader = nullptr;
@@ -90,6 +116,8 @@ namespace platypus
     private:
         MasterRenderer& _masterRendererRef;
         DescriptorPool& _descriptorPoolRef;
+
+        std::unordered_map<MeshType, BatchTemplate> _batchTemplates;
 
         std::unordered_map<RenderPassType, std::vector<Batch*>> _batches;
         std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierBatchMapping;
@@ -143,7 +171,6 @@ namespace platypus
         void resetForNextFrame();
 
         void freeBatches();
-
 
         Batch* getBatch(RenderPassType renderPassType, ID_t identifier);
         // Returns all batches for a render pass
@@ -203,15 +230,6 @@ namespace platypus
             std::vector<BatchShaderResource>& outResources
         );
 
-        Pipeline* getSuitableManagedPipeline(
-            const std::string& vertexShaderFilename,
-            const std::string& fragmentShaderFilename,
-            const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-            const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
-            size_t pushConstantsSize,
-            ShaderStageFlagBits pushConstantsShaderStage
-        );
-
         // ...dumb I know, just want to make sure...
         bool validateBatchDoesntExist(
             const char* callLocation,
@@ -232,6 +250,13 @@ namespace platypus
             uint32_t instanceAdvance,
             size_t instanceBufferElementSize,
             const std::vector<ShaderResourceLayout>& uniformResourceLayouts,
+            const Light * const pDirectionalLight,
+            const RenderPass* pRenderPass
+        );
+
+        void createBatch(
+            ID_t meshID,
+            ID_t materialID,
             const Light * const pDirectionalLight,
             const RenderPass* pRenderPass
         );

@@ -16,7 +16,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(
-    -Wall -g -Wpedantic
+    -Wall -g
 )
 
 add_compile_definitions(

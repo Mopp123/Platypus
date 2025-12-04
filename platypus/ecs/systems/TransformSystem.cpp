@@ -120,7 +120,6 @@ namespace platypus
                 parent,
                 ComponentType::COMPONENT_TYPE_TRANSFORM
             );
-            //pTransform->globalMatrix = pParentTransform->globalMatrix * pTransform->localMatrix;
             parentMatrix = pParentTransform->globalMatrix;
             pTransform->globalMatrix = parentMatrix * localMatrix;
         }

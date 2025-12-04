@@ -2,6 +2,8 @@
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
 
+#include "SkinnedMeshTestScene.hpp"
+
 
 using namespace platypus;
 
@@ -157,7 +159,7 @@ void ShadowTestScene::init()
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true,
-        false // receive shadows?
+        true // receive shadows?
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
@@ -166,21 +168,21 @@ void ShadowTestScene::init()
         true  // receive shadows?
     );
 
-    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCubeTangents.glb", false)->getMeshes()[0];
+    Mesh* pStaticInstancedMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", true)->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
-        pStaticMesh->getID(),
-        _pTerrainMaterial->getID()
+        pStaticInstancedMesh->getID(),
+        pStaticMeshMaterial->getID()
     );
 
     entityID_t boxEntity2 = createStaticMeshEntity(
         { 10, 0, 10 },
         { { 0, 2, 0 }, 0.0f },
         { 2, 2, 2 },
-        pStaticMesh->getID(),
-        _pTerrainMaterial->getID()
+        pStaticInstancedMesh->getID(),
+        pStaticMeshMaterial->getID()
     );
 
     std::vector<KeyframeAnimationData> animations;
@@ -314,5 +316,10 @@ void ShadowTestScene::update()
     else
     {
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
+    }
+
+    if (inputManager.isKeyDown(KeyName::KEY_0))
+    {
+        Application::get_instance()->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
     }
 }
