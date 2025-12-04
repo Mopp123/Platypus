@@ -20,7 +20,7 @@ namespace platypus
         _persistentAssets[pBlackImage->getID()] = pBlackImage;
 
         PE_ubyte zeroPixels[4] = { 0, 0, 0, 0 };
-        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
+        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
         _persistentAssets[pZeroImage->getID()] = pZeroImage;
 
         TextureSampler defaultTextureSampler(
@@ -187,7 +187,9 @@ namespace platypus
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
         bool receiveShadows,
-        bool shadeless
+        bool shadeless,
+        const std::string& customVertexShaderFilename,
+        const std::string& customFragmentShaderFilename
     )
     {
         // At least a single diffuse texture is required.
@@ -230,7 +232,9 @@ namespace platypus
             textureOffset,
             textureScale,
             receiveShadows,
-            shadeless
+            shadeless,
+            customVertexShaderFilename,
+            customFragmentShaderFilename
         );
         _assets[pMaterial->getID()] = pMaterial;
         return pMaterial;
@@ -256,14 +260,17 @@ namespace platypus
             { 0, 0 },
             { 1, 1 },
             false,
-            shadeless
+            shadeless,
+            "",
+            ""
         );
     }
 
     Mesh* AssetManager::createMesh(
         const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
-        const std::vector<uint32_t>& indexData
+        const std::vector<uint32_t>& indexData,
+        MeshType meshType
     )
     {
         Buffer* pVertexBuffer = new Buffer(
@@ -283,7 +290,7 @@ namespace platypus
             false
         );
         Mesh* pMesh = new Mesh(
-            MeshType::MESH_TYPE_STATIC_INSTANCED,
+            meshType,
             vertexBufferLayout,
             pVertexBuffer,
             pIndexBuffer,

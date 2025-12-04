@@ -63,6 +63,9 @@ namespace platypus
         std::vector<Buffer*> _uniformBuffers;
         std::vector<DescriptorSet> _descriptorSets;
 
+        std::string _customVertexShaderFilename;
+        std::string _customFragmentShaderFilename;
+
     public:
         Material(
             ID_t blendmapTextureID,
@@ -77,7 +80,9 @@ namespace platypus
             const Vector2f& textureOffset = { 0, 0 },
             const Vector2f& textureScale = { 1, 1 },
             bool receiveShadows = false,
-            bool shadeless = false // NOTE: This doesn't do anything atm!?
+            bool shadeless = false,
+            const std::string& customVertexShaderFilename = "",
+            const std::string& customFragmentShaderFilename = ""
         );
         ~Material();
 

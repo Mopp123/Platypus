@@ -2,6 +2,7 @@
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+#include "platypus/graphics/Device.hpp"
 #include <vector>
 
 
@@ -20,14 +21,19 @@ namespace platypus
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
         bool receiveShadows,
-        bool shadeless // NOTE: This doesn't do anything atm!?
+        bool shadeless,
+        const std::string& customVertexShaderFilename,
+        const std::string& customFragmentShaderFilename
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
         _normalTextureCount(normalTextureCount),
-        _receiveShadows(receiveShadows)
+        _receiveShadows(receiveShadows),
+
+        _customVertexShaderFilename(customVertexShaderFilename),
+        _customFragmentShaderFilename(customFragmentShaderFilename)
     {
         validateTextureCounts();
 
@@ -78,42 +84,6 @@ namespace platypus
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
 
-        // NOTE: ONLY TEMPORARY ATM!
-        /*
-        if (_blendmapTextureID == NULL_ID)
-        {
-            createPipeline(
-                pSceneRenderPass,
-                MeshType::MESH_TYPE_STATIC_INSTANCED
-            );
-
-            if (_normalTextureCount == 0)
-            {
-                createPipeline(
-                    pSceneRenderPass,
-                    MeshType::MESH_TYPE_SKINNED
-                );
-            }
-            else
-            {
-                Debug::log(
-                    "@Material::Material "
-                    "Created material with normal texture! "
-                    "Currently skinned meshes don't support this so "
-                    "make sure you don't use this material for skinned meshes!",
-                    Debug::MessageType::PLATYPUS_WARNING
-                );
-            }
-        }
-        else
-        {
-            createPipeline(
-                pSceneRenderPass,
-                MeshType::MESH_TYPE_TERRAIN
-            );
-        }
-        */
-
         createShaderResources();
 
         const size_t maxFramesInFlight = Application::get_instance()->getMasterRenderer()->getSwapchain().getMaxFramesInFlight();
@@ -142,14 +112,22 @@ namespace platypus
         MeshType meshType
     )
     {
-        const std::string vertexShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            meshType
-        );
-        const std::string fragmentShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            meshType
-        );
+        std::string vertexShaderFilename = _customVertexShaderFilename;
+        if (vertexShaderFilename.empty())
+        {
+            vertexShaderFilename = getShaderFilename(
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                meshType
+            );
+        }
+        std::string fragmentShaderFilename = _customFragmentShaderFilename;
+        if (fragmentShaderFilename.empty())
+        {
+            fragmentShaderFilename = getShaderFilename(
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                meshType
+            );
+        }
         Debug::log(
             "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
         );
@@ -514,8 +492,12 @@ namespace platypus
         _uniformBufferData.textureProperties.y = textureOffset.y;
         _uniformBufferData.textureProperties.z = textureScale.x;
         _uniformBufferData.textureProperties.w = textureScale.y;
-        const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
-        updateUniformBuffers(currentFrame);
+        //const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
+        //updateUniformBuffers(currentFrame);
+        const size_t framesInFlight = Application::get_instance()->getMasterRenderer()->getSwapchain().getMaxFramesInFlight();
+        Device::wait_for_operations();
+        for (size_t i = 0; i < framesInFlight; ++i)
+            updateUniformBuffers(i);
     }
 
     Pipeline* Material::getPipeline(MeshType meshType)

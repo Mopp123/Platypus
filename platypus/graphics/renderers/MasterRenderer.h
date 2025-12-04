@@ -26,6 +26,9 @@ namespace platypus
         Vector4f lightColor = Vector4f(1, 1, 1, 1);
         // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
         Vector4f shadowProperties;
+
+        // NOTE: Danger if adding anything after this, since the layout has to be taken into account!
+        float time = 0.0f;
     };
 
     class MasterRenderer

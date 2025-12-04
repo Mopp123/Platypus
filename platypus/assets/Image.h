@@ -80,7 +80,6 @@ namespace platypus
 
         static Image* load_image(const std::string& filepath, ImageFormat format);
         int getColorChannelValue(
-            const Image * const pImage,
             uint32_t x,
             uint32_t y,
             uint32_t channelIndex

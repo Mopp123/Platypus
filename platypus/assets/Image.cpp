@@ -195,7 +195,6 @@ namespace platypus
     }
 
     int Image::getColorChannelValue(
-        const Image * const pImage,
         uint32_t x,
         uint32_t y,
         uint32_t channelIndex

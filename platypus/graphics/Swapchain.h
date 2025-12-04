@@ -26,6 +26,7 @@ namespace platypus
         RenderPass _renderPass;
         std::vector<Image*> _colorImages;
         std::vector<Texture*> _colorTextures;
+
         Image* _pDepthImage;
         Texture* _pDepthTexture;
         std::vector<Framebuffer*> _framebuffers;

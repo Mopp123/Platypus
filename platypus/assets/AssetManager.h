@@ -52,7 +52,9 @@ namespace platypus
             const Vector2f& textureOffset,
             const Vector2f& textureScale,
             bool receiveShadows,
-            bool shadeless
+            bool shadeless,
+            const std::string& customVertexShaderFilename = "",
+            const std::string& customFragmentShaderFilename = ""
         );
         Material* createMaterial(
             ID_t blendmapTextureID,
@@ -66,7 +68,8 @@ namespace platypus
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,
             const std::vector<float>& vertexData,
-            const std::vector<uint32_t>& indexData
+            const std::vector<uint32_t>& indexData,
+            MeshType meshType
         );
         // TODO: Way to load "scenes" containing skinned and non skinned meshes
         Model* loadStaticModel(const std::string& filepath, bool instanced = true);

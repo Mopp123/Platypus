@@ -7,26 +7,6 @@
 
 using namespace platypus;
 
-static std::vector<ID_t> load_textures(
-    AssetManager* pAssetManager,
-    ImageFormat imageFormat,
-    TextureSampler sampler,
-    std::vector<std::string> filepaths
-)
-{
-    std::vector<ID_t> textures;
-    for (const std::string& path : filepaths)
-    {
-        textures.push_back(
-            pAssetManager->loadTexture(
-                path,
-                imageFormat,
-                sampler
-            )->getID()
-        );
-    }
-    return textures;
-}
 
 ShadowTestScene::ShadowTestScene()
 {
@@ -120,19 +100,19 @@ void ShadowTestScene::init()
         "assets/textures/terrain/jungle_mntn2_n.png"
     };
 
-    std::vector<ID_t> diffuseTextures = load_textures(
+    std::vector<ID_t> diffuseTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         textureSampler,
         diffuseTexturePaths
     );
-    std::vector<ID_t> specularTextures = load_textures(
+    std::vector<ID_t> specularTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         textureSampler,
         specularTexturePaths
     );
-    std::vector<ID_t> normalTextures = load_textures(
+    std::vector<ID_t> normalTextures = loadTextures(
         pAssetManager,
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler,

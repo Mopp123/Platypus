@@ -2,14 +2,14 @@
 #include "platypus/assets/Texture.h"
 #include "platypus/core/Application.h"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/core/Debug.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-
+#include "platypus/core/Timing.h"
+#include "platypus/core/Debug.h"
 
 namespace platypus
 {
@@ -32,7 +32,8 @@ namespace platypus
                         { ShaderDataType::Float4 },
                         { ShaderDataType::Float4 },
                         { ShaderDataType::Float4 },
-                        { ShaderDataType::Float4 } // NOTE: For some reason this worked, even I had forgotten to put the shadow properties into this
+                        { ShaderDataType::Float4 }, // NOTE: For some reason this worked, even I had forgotten to put the shadow properties into this
+                        { ShaderDataType::Float }
                     }
                 }
             }
@@ -542,6 +543,7 @@ namespace platypus
             0.9f, // shadow strength
             0.0f // undetermined
         };
+        _scene3DData.time += 1.0f * Timing::get_delta_time();
 
         _scene3DDataUniformBuffers[_currentFrame]->updateDeviceAndHost(
             &_scene3DData,
