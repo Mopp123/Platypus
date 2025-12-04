@@ -98,7 +98,6 @@ void MaterialTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
@@ -107,7 +106,6 @@ void MaterialTestScene::init()
         16.0f
     );
     Material* pMaterial2 = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
@@ -116,7 +114,6 @@ void MaterialTestScene::init()
         16.0f
     );
     Material* pFloorMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pFloorTexture->getID() },
         { pFloorSpecularTexture->getID() },
@@ -125,9 +122,9 @@ void MaterialTestScene::init()
         64.0f
     );
 
-    Model* pModel = pAssetManager->loadModel("assets/TestCubeTangents.glb");
-    Model* pModel2 = pAssetManager->loadModel("assets/TestCube.glb");
-    Model* pFloorModel = pAssetManager->loadModel("assets/models/Floor.glb");
+    Model* pModel = pAssetManager->loadStaticModel("assets/TestCubeTangents.glb");
+    Model* pModel2 = pAssetManager->loadStaticModel("assets/TestCube.glb");
+    Model* pFloorModel = pAssetManager->loadStaticModel("assets/models/Floor.glb");
 
     // Create box entities
     // Normal mapped
@@ -137,7 +134,7 @@ void MaterialTestScene::init()
         pModel->getMeshes()[0]->getTransformationMatrix()
     );
     pTransform->globalMatrix[2 + 3 * 4] = -12.0f;
-    StaticMeshRenderable* pRenderable = create_static_mesh_renderable(
+    Renderable3D* pRenderable = create_renderable3D(
         _boxEntity,
         pModel2->getMeshes()[0]->getID(),
         pMaterial2->getID()
@@ -150,7 +147,7 @@ void MaterialTestScene::init()
     );
     pTransform2->globalMatrix[2 + 3 * 4] = -12.0f;
     pTransform2->globalMatrix[0 + 3 * 4] = -6.0f;
-    StaticMeshRenderable* pRenderable2 = create_static_mesh_renderable(
+    Renderable3D* pRenderable2 = create_renderable3D(
         entity2,
         pModel2->getMeshes()[0]->getID(),
         pMaterial2->getID()
@@ -164,7 +161,7 @@ void MaterialTestScene::init()
         { { 0, 1, 0 }, 0 },
         { 1, 1, 1 }
     );
-    StaticMeshRenderable* pFloorRenderable = create_static_mesh_renderable(
+    Renderable3D* pFloorRenderable = create_renderable3D(
         floorEntity,
         pFloorModel->getMeshes()[0]->getID(),
         pFloorMaterial->getID()

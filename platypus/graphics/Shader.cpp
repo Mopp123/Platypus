@@ -8,7 +8,17 @@ namespace platypus
         {
             case ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT: return "Vertex Shader";
             case ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT: return "Fragment Shader";
-            default: return "Invalid Shader Stage";
+            default: return "<Invalid shader stage>";
+        }
+    }
+
+    std::string shader_version_to_string(ShaderVersion version)
+    {
+        switch (version)
+        {
+            case ShaderVersion::VULKAN_GLSL_450: return "VULKAN_GLSL_450";
+            case ShaderVersion::OPENGLES_GLSL_300: return "OPENGLES_GLSL_300";
+            default: return "<Invalid version>";
         }
     }
 

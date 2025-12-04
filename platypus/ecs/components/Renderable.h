@@ -8,19 +8,7 @@
 
 namespace platypus
 {
-    struct StaticMeshRenderable
-    {
-        ID_t meshID = NULL_ID;
-        ID_t materialID = NULL_ID;
-    };
-
-    struct SkinnedMeshRenderable
-    {
-        ID_t meshID = NULL_ID;
-        ID_t materialID = NULL_ID;
-    };
-
-    struct TerrainMeshRenderable
+    struct Renderable3D
     {
         ID_t meshID = NULL_ID;
         ID_t materialID = NULL_ID;
@@ -41,19 +29,7 @@ namespace platypus
         std::wstring text;
     };
 
-    StaticMeshRenderable* create_static_mesh_renderable(
-        entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID
-    );
-
-    SkinnedMeshRenderable* create_skinned_mesh_renderable(
-        entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID
-    );
-
-    TerrainMeshRenderable* create_terrain_mesh_renderable(
+    Renderable3D* create_renderable3D(
         entityID_t target,
         ID_t meshAssetID,
         ID_t materialAssetID

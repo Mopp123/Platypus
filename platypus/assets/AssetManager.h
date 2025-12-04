@@ -43,7 +43,6 @@ namespace platypus
             uint32_t textureAtlasRows = 1
         );
         Material* createMaterial(
-            MaterialType type,
             ID_t blendmapTextureID,
             std::vector<ID_t> diffuseTextureIDs,
             std::vector<ID_t> specularTextureIDs,
@@ -56,7 +55,6 @@ namespace platypus
             bool shadeless
         );
         Material* createMaterial(
-            MaterialType type,
             ID_t blendmapTextureID,
             std::vector<ID_t> diffuseTextureIDs,
             std::vector<ID_t> specularTextureIDs,
@@ -70,8 +68,9 @@ namespace platypus
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData
         );
-        Model* loadModel(const std::string& filepath);
-        Model* loadModel(
+        // TODO: Way to load "scenes" containing skinned and non skinned meshes
+        Model* loadStaticModel(const std::string& filepath, bool instanced = true);
+        Model* loadSkinnedModel(
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );

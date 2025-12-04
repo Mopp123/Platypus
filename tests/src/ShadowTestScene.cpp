@@ -2,6 +2,8 @@
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
 
+#include "SkinnedMeshTestScene.hpp"
+
 
 using namespace platypus;
 
@@ -138,7 +140,6 @@ void ShadowTestScene::init()
     );
 
     _pTerrainMaterial = pAssetManager->createMaterial(
-        MaterialType::TERRAIN,
         pBlendmapTexture->getID(),
         diffuseTextures,
         specularTextures,
@@ -151,28 +152,28 @@ void ShadowTestScene::init()
         false
     );
 
-    create_terrain_mesh_renderable(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
+    create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
 
     // Test meshes that cast shadows
     Material* pStaticMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true,
-        true
+        true // receive shadows?
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/characterTest.png",
         false,
-        true
+        true  // receive shadows?
     );
 
-    Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb")->getMeshes()[0];
+    Mesh* pStaticInstancedMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", true)->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
-        pStaticMesh->getID(),
+        pStaticInstancedMesh->getID(),
         pStaticMeshMaterial->getID()
     );
 
@@ -180,12 +181,12 @@ void ShadowTestScene::init()
         { 10, 0, 10 },
         { { 0, 2, 0 }, 0.0f },
         { 2, 2, 2 },
-        pStaticMesh->getID(),
+        pStaticInstancedMesh->getID(),
         pStaticMeshMaterial->getID()
     );
 
     std::vector<KeyframeAnimationData> animations;
-    Model* pAnimatedModel = pAssetManager->loadModel(
+    Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
         "assets/models/MultiAnimSkeletonTest.glb",
         animations
     );
@@ -315,5 +316,10 @@ void ShadowTestScene::update()
     else
     {
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
+    }
+
+    if (inputManager.isKeyDown(KeyName::KEY_0))
+    {
+        Application::get_instance()->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
     }
 }

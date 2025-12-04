@@ -3,11 +3,9 @@
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
-#include "platypus/assets/Material.h"
 #include "platypus/graphics/RenderPass.h"
-#include "platypus/ecs/Entity.h"
-#include "platypus/ecs/components/Renderable.h"
-
+#include "platypus/assets/Mesh.h"
+#include "platypus/ecs/components/Lights.h"
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...
@@ -31,6 +29,7 @@ namespace platypus
         std::vector<Texture*> textures;
     };
 
+    // TODO: Allow specifying is this resource offset depending on repeat or instance count!
     struct BatchShaderResource
     {
         ShaderResourceType type;
@@ -64,8 +63,37 @@ namespace platypus
 
         // Repeat count should be 1 if instanced
         uint32_t repeatCount = 0;
+        uint32_t maxRepeatCount = 0;
+        uint32_t repeatAdvance = 0;
         // NOTE: When initially creating the batch, this has to be 0 since we're going to add the first entry explicitly
         uint32_t instanceCount = 0;
+        uint32_t maxInstanceCount = 0;
+        uint32_t instanceAdvance = 0;
+    };
+
+    struct BatchTemplate
+    {
+        size_t maxBatchLength;
+        uint32_t maxRepeatCount;
+        uint32_t repeatAdvance;
+        uint32_t maxInstanceCount;
+        uint32_t instanceAdvance;
+        size_t instanceBufferElementSize;
+        std::vector<ShaderResourceLayout> uniformResourceLayouts;
+
+        BatchTemplate& operator=(const BatchTemplate& other)
+        {
+            maxBatchLength = other.maxBatchLength;
+            maxRepeatCount = other.maxRepeatCount;
+            repeatAdvance = other.repeatAdvance;
+            maxInstanceCount = other.maxInstanceCount;
+            instanceAdvance = other.instanceAdvance;
+            instanceBufferElementSize = other.instanceBufferElementSize;
+            for (const ShaderResourceLayout& layout : other.uniformResourceLayouts)
+                uniformResourceLayouts.push_back(layout);
+
+            return *this;
+        }
     };
 
     struct BatchPipelineData
@@ -89,6 +117,8 @@ namespace platypus
         MasterRenderer& _masterRendererRef;
         DescriptorPool& _descriptorPoolRef;
 
+        std::unordered_map<MeshType, BatchTemplate> _batchTemplates;
+
         std::unordered_map<RenderPassType, std::vector<Batch*>> _batches;
         std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierBatchMapping;
 
@@ -100,13 +130,13 @@ namespace platypus
         //std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierPipelineDataMapping;
 
         size_t _maxStaticBatchLength;
+        size_t _maxStaticInstancedBatchLength;
         size_t _maxSkinnedBatchLength;
-        size_t _maxTerrainBatchLength;
         size_t _maxSkinnedMeshJoints;
 
         static RenderPassType s_availableRenderPasses[2];
+        static DescriptorSetLayout s_staticDescriptorSetLayout; // single transformation mat as dynamic ubo for all batch members
         static DescriptorSetLayout s_jointDescriptorSetLayout;
-        static DescriptorSetLayout s_terrainDescriptorSetLayout;
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
         std::vector<std::vector<BatchShaderResource>> _allocatedShaderResources;
@@ -117,8 +147,8 @@ namespace platypus
             MasterRenderer& masterRenderer,
             DescriptorPool& descriptorPool,
             size_t maxStaticBatchLength,
+            size_t maxStaticInstancedBatchLength,
             size_t maxSkinnedBatchLength,
-            size_t maxTerrainBatchLength,
             size_t maxSkinnedMeshJoints
         );
         ~Batcher();
@@ -134,8 +164,6 @@ namespace platypus
             ShaderStageFlagBits pushConstantsShaderStage
         );
 
-        void addBatch(RenderPassType renderPassType, ID_t identifier, Batch* pBatch);
-
         // This also updates stuff that doesn't need to be done per instance but for whole
         // batch. Material data for example(if some properties have changed).
         void updateDeviceSideBuffers(size_t currentFrame);
@@ -144,17 +172,22 @@ namespace platypus
 
         void freeBatches();
 
-
         Batch* getBatch(RenderPassType renderPassType, ID_t identifier);
         // Returns all batches for a render pass
         const std::vector<Batch*>& getBatches(RenderPassType renderPassType);
         // Returns batches sharing the same ID for all render passes
         std::vector<Batch*> getBatches(ID_t identifier);
 
+        static const DescriptorSetLayout& get_static_descriptor_set_layout();
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
-        static const DescriptorSetLayout& get_terrain_descriptor_set_layout();
 
         BatchShaderResource* getSharedBatchResource(ID_t batchID, size_t resourceIndex);
+
+        bool batchResourcesExist(ID_t batchID) const;
+        // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
+        std::vector<BatchShaderResource>& accessSharedBatchResources(ID_t batchID);
+
+        // NOTE: Not used anymore? TODO: Delete?
         void updateHostSideSharedResource(
             ID_t batchID,
             size_t resourceIndex,
@@ -197,15 +230,6 @@ namespace platypus
             std::vector<BatchShaderResource>& outResources
         );
 
-        Pipeline* getSuitableManagedPipeline(
-            const std::string& vertexShaderFilename,
-            const std::string& fragmentShaderFilename,
-            const std::vector<VertexBufferLayout>& vertexBufferLayouts,
-            const std::vector<DescriptorSetLayout>& descriptorSetLayouts,
-            size_t pushConstantsSize,
-            ShaderStageFlagBits pushConstantsShaderStage
-        );
-
         // ...dumb I know, just want to make sure...
         bool validateBatchDoesntExist(
             const char* callLocation,
@@ -216,9 +240,39 @@ namespace platypus
         void destroyManagedPipelines();
         void recreateManagedPipelines();
 
+        void createBatch(
+            ID_t meshID,
+            ID_t materialID,
+            size_t maxBatchLength,
+            uint32_t maxRepeatCount,
+            uint32_t repeatAdvance,
+            uint32_t maxInstanceCount,
+            uint32_t instanceAdvance,
+            size_t instanceBufferElementSize,
+            const std::vector<ShaderResourceLayout>& uniformResourceLayouts,
+            const Light * const pDirectionalLight,
+            const RenderPass* pRenderPass
+        );
+
+        void createBatch(
+            ID_t meshID,
+            ID_t materialID,
+            const Light * const pDirectionalLight,
+            const RenderPass* pRenderPass
+        );
+
+        // totalDataSize has to be the size of provided pData and sum of values in pData
+        void addToBatch(
+            ID_t batchID,
+            void* pData,
+            size_t dataSize,
+            const std::vector<size_t>& dataElementSizes,
+            size_t currentFrame
+        );
+
         inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
+        inline size_t getMaxStaticInstancedBatchLength() const { return _maxStaticInstancedBatchLength; }
         inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }
-        inline size_t getMaxTerrainBatchLength() const { return _maxTerrainBatchLength; }
         inline size_t getMaxSkinnedMeshJoints() const { return _maxSkinnedMeshJoints; }
 
     private:
@@ -231,6 +285,20 @@ namespace platypus
             ID_t batchID,
             const std::vector<Buffer*>& buffers,
             const std::vector<DescriptorSet> descriptorSets
+        );
+
+        std::vector<Buffer*> getOrCreateSharedInstancedBuffer(
+            ID_t batchID,
+            size_t elementSize,
+            size_t maxBatchLength,
+            size_t framesInFlight
+        );
+
+        std::vector<BatchShaderResource>& getOrCreateSharedShaderResources(
+            ID_t batchID,
+            size_t maxBatchLength,
+            const std::vector<ShaderResourceLayout>& resourceLayouts,
+            size_t framesInFlight
         );
     };
 }

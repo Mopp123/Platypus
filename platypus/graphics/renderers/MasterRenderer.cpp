@@ -9,9 +9,6 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "StaticBatch.hpp"
-#include "SkinnedBatch.hpp"
-#include "TerrainBatch.hpp"
 
 
 namespace platypus
@@ -19,7 +16,7 @@ namespace platypus
     MasterRenderer::MasterRenderer(Swapchain& swapchain) :
         _swapchainRef(swapchain),
         _descriptorPool(_swapchainRef),
-        _batcher(*this, _descriptorPool, 1000, 1000, 9, 50),
+        _batcher(*this, _descriptorPool, 1000, 1000, 500, 50),
 
         _scene3DDataDescriptorSetLayout(
             {
@@ -34,7 +31,8 @@ namespace platypus
                         { ShaderDataType::Float4 },
                         { ShaderDataType::Float4 },
                         { ShaderDataType::Float4 },
-                        { ShaderDataType::Float4 }
+                        { ShaderDataType::Float4 },
+                        { ShaderDataType::Float4 } // NOTE: For some reason this worked, even I had forgotten to put the shadow properties into this
                     }
                 }
             }
@@ -114,14 +112,10 @@ namespace platypus
 
     void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
     {
-        uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
-        uint64_t requiredMask3 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE;
-        uint64_t requiredMask4 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
+        uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_RENDERABLE3D;
+        uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
         if (!(entity.componentMask & requiredMask1) &&
-            !(entity.componentMask & requiredMask2) &&
-            !(entity.componentMask & requiredMask3) &&
-            !(entity.componentMask & requiredMask4))
+            !(entity.componentMask & requiredMask2))
         {
             return;
         }
@@ -130,7 +124,7 @@ namespace platypus
             ComponentType::COMPONENT_TYPE_LIGHT
         );
 
-        // NOTE: Below should rather be done by the "batcher" since these are kind of batching related operations?!
+        // NOTE: Below should rather be done by the "batcher" since these are kind of batching related things?
         Transform* pTransform = (Transform*)pScene->getComponent(
             entity.id,
             ComponentType::COMPONENT_TYPE_TRANSFORM,
@@ -138,131 +132,52 @@ namespace platypus
             false
         );
 
-        StaticMeshRenderable* pStaticRenderable = (StaticMeshRenderable*)pScene->getComponent(
+        Renderable3D* pRenderable3D = (Renderable3D*)pScene->getComponent(
             entity.id,
-            ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE,
+            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
             false,
             false
         );
-
-        if (pStaticRenderable)
+        if (pRenderable3D)
         {
-            const ID_t meshID = pStaticRenderable->meshID;
-            const ID_t materialID = pStaticRenderable->materialID;
+            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+            const ID_t meshID = pRenderable3D->meshID;
+            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+            const MeshType meshType = pMesh->getType();
+            const ID_t materialID = pRenderable3D->materialID;
+
             ID_t batchID = ID::hash(meshID, materialID);
             Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
             if (!pBatch)
             {
-                create_static_batch(
-                    _batcher,
-                    _batcher.getMaxStaticBatchLength(),
-                    _swapchainRef.getRenderPassPtr(),
-                    meshID,
-                    materialID,
-                    pDirectionalLight
-                );
-
-                create_static_shadow_batch(
-                    _batcher,
-                    _batcher.getMaxStaticBatchLength(),
-                    &_shadowPass,
-                    meshID,
-                    materialID,
-                    pDirectionalLight
-                );
+                _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
+                _batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
             }
-            add_to_static_batch(
-                _batcher,
-                batchID,
-                pTransform->globalMatrix,
-                _currentFrame
-            );
-        }
 
-        SkinnedMeshRenderable* pSkinnedRenderable = (SkinnedMeshRenderable*)pScene->getComponent(
-            entity.id,
-            ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE,
-            false,
-            false
-        );
-        if (pSkinnedRenderable)
-        {
-            const ID_t meshID = pSkinnedRenderable->meshID;
-            const ID_t materialID = pSkinnedRenderable->materialID;
-            ID_t batchID = ID::hash(meshID, materialID);
-            const size_t maxSkinnedBatchLength = _batcher.getMaxSkinnedBatchLength();
-            const size_t maxJoints = _batcher.getMaxSkinnedMeshJoints();
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-            if (!pBatch)
+            if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
             {
-                create_skinned_batch(
-                    _batcher,
-                    maxSkinnedBatchLength,
-                    maxJoints,
-                    _swapchainRef.getRenderPassPtr(),
-                    meshID,
-                    materialID,
-                    pDirectionalLight
-                );
-
-                create_skinned_shadow_batch(
-                    _batcher,
-                    maxSkinnedBatchLength,
-                    maxJoints,
-                    &_shadowPass,
-                    meshID,
-                    materialID,
-                    pDirectionalLight
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)&(pTransform->globalMatrix),
+                    sizeof(Matrix4f),
+                    { sizeof(Matrix4f) },
+                    _currentFrame
                 );
             }
-            const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
-                entity.id,
-                ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
-            );
-            const Mesh* pSkinnedMesh = (const Mesh*)Application::get_instance()->getAssetManager()->getAsset(
-                pSkinnedRenderable->meshID,
-                AssetType::ASSET_TYPE_MESH
-            );
-
-            add_to_skinned_batch(
-                _batcher,
-                batchID,
-                (void*)pAnimation->jointMatrices,
-                sizeof(Matrix4f) * pSkinnedMesh->getJointCount(),
-                _currentFrame
-            );
-
-        }
-
-        TerrainMeshRenderable* pTerrainRenderable = (TerrainMeshRenderable*)pScene->getComponent(
-            entity.id,
-            ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE,
-            false,
-            false
-        );
-        if (pTerrainRenderable)
-        {
-            const ID_t meshID = pTerrainRenderable->meshID;
-            const ID_t materialID = pTerrainRenderable->materialID;
-            ID_t batchID = ID::hash(meshID, materialID);
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
-            if (!pBatch)
+            else if (meshType == MeshType::MESH_TYPE_SKINNED)
             {
-                create_terrain_batch(
-                    _batcher,
-                    _batcher.getMaxTerrainBatchLength(),
-                    _swapchainRef.getRenderPassPtr(),
-                    meshID,
-                    materialID,
-                    pDirectionalLight
+                const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
+                    entity.id,
+                    ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+                );
+                _batcher.addToBatch(
+                    batchID,
+                    (void*)pAnimation->jointMatrices,
+                    sizeof(Matrix4f) * pMesh->getJointCount(),
+                    { sizeof(Matrix4f) * pMesh->getJointCount() },
+                    _currentFrame
                 );
             }
-            add_to_terrain_batch(
-                _batcher,
-                batchID,
-                pTransform->globalMatrix,
-                _currentFrame
-            );
         }
 
         if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
@@ -354,20 +269,30 @@ namespace platypus
 
     void MasterRenderer::solveDescriptorSetLayouts(
         const Material* pMaterial,
+        bool instanced,
         bool skinned,
         bool shadowPipeline,
         std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
     ) const
     {
-        MaterialType materialType = MaterialType::NONE;
+        bool usingBlendmap = false;
         if (pMaterial)
         {
-            materialType = pMaterial->getMaterialType();
-            if (skinned && materialType == MaterialType::TERRAIN)
+            usingBlendmap = pMaterial->hasBlendmap();
+            if (skinned && usingBlendmap)
             {
                 Debug::log(
                     "@MasterRenderer::solveDescriptorSetLayouts "
-                    "Illegal to solve descriptor set layouts for Terrain Materials with skinning!",
+                    "Currently not supporting Materials with blendmaps for skinned meshes!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (instanced && usingBlendmap)
+            {
+                Debug::log(
+                    "@MasterRenderer::solveDescriptorSetLayouts "
+                    "Currently not supporting Materials with blendmaps for instanced meshes!",
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -388,9 +313,9 @@ namespace platypus
         {
             outDescriptorSetLayouts.push_back(Batcher::get_joint_descriptor_set_layout());
         }
-        else if (materialType == MaterialType::TERRAIN)
+        else if (!instanced)
         {
-            outDescriptorSetLayouts.push_back(Batcher::get_terrain_descriptor_set_layout());
+            outDescriptorSetLayouts.push_back(Batcher::get_static_descriptor_set_layout());
         }
 
         // Checking if shadow pipeline here, since need to add the Material descriptor set layout
@@ -750,6 +675,7 @@ namespace platypus
                 //  -> Makes window resizing even slower.
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
+                _pGUIRenderer->freeBatches();
             }
             else
             {

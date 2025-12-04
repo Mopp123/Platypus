@@ -33,7 +33,7 @@ static entityID_t create_animated_entity(
         pMesh->getBindPose().jointChildMapping
     );
     entityID_t rootJointEntity = outJointEntities[0];
-    create_skinned_mesh_renderable(
+    create_renderable3D(
         rootJointEntity,
         pMesh->getID(),
         pMaterial->getID()
@@ -110,7 +110,7 @@ void SkinnedMeshTestScene::init()
     _camController.setOffsetPos({ 0, 0, 0 });
 
     std::vector<KeyframeAnimationData> animations;
-    Model* pAnimatedModel = pAssetManager->loadModel(
+    Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
         "assets/models/MultiAnimSkeletonTest.glb",
         animations
     );
@@ -137,7 +137,6 @@ void SkinnedMeshTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
@@ -146,7 +145,6 @@ void SkinnedMeshTestScene::init()
         16.0f
     );
     Material* pBoxMaterial = pAssetManager->createMaterial(
-        MaterialType::MESH,
         NULL_ID,
         { pBoxDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
@@ -154,7 +152,7 @@ void SkinnedMeshTestScene::init()
         0.8f,
         16.0f
     );
-    Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb");
+    Model* pBoxModel = pAssetManager->loadStaticModel("assets/TestCube.glb");
 
     int area = 2;
     float spacing = 3.25f;
@@ -184,7 +182,7 @@ void SkinnedMeshTestScene::init()
                 { { 0, 1, 0}, 0.0f },
                 { cubeScale, cubeScale, cubeScale }
             );
-            create_static_mesh_renderable(
+            create_renderable3D(
                 boxEntity,
                 pBoxModel->getMeshes()[0]->getID(),
                 pBoxMaterial->getID()

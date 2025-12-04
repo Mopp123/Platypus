@@ -1,6 +1,4 @@
-#include "platypus/Platypus.h"
 #include "ShadowTestScene.hpp"
-#include <iostream>
 
 
 int main(int argc, const char** argv)

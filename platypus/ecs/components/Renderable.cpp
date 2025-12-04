@@ -1,14 +1,12 @@
 #include "Renderable.h"
 #include "platypus/core/Application.h"
-#include "platypus/assets/Material.h"
-#include "platypus/assets/Mesh.h"
 #include "platypus/core/Scene.h"
 #include "platypus/core/Debug.h"
 
 
 namespace platypus
 {
-    StaticMeshRenderable* create_static_mesh_renderable(
+    Renderable3D* create_renderable3D(
         entityID_t target,
         ID_t meshAssetID,
         ID_t materialAssetID
@@ -16,92 +14,25 @@ namespace platypus
     {
         Application* pApp = Application::get_instance();
         Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_static_mesh_renderable"))
+        if (!pScene->isValidEntity(target, "create_renderable3D"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_RENDERABLE3D;
         void* pComponent = pScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
-                "@create_static_mesh_renderable "
-                "Failed to allocate StaticMeshRenderable component for entity: " + std::to_string(target),
+                "@create_renderable3D "
+                "Failed to allocate Renderable3D component for entity: " + std::to_string(target),
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         pScene->addToComponentMask(target, componentType);
-        StaticMeshRenderable* pRenderable = (StaticMeshRenderable*)pComponent;
-        pRenderable->meshID = meshAssetID;
-        pRenderable->materialID = materialAssetID;
-
-        return pRenderable;
-    }
-
-    // NOTE: Currently this is exactly tha same as static mesh renderable creation...
-    SkinnedMeshRenderable* create_skinned_mesh_renderable(
-        entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID
-    )
-    {
-        Application* pApp = Application::get_instance();
-        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_skinned_mesh_renderable"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
-        void* pComponent = pScene->allocateComponent(target, componentType);
-        if (!pComponent)
-        {
-            Debug::log(
-                "@create_skinned_mesh_renderable "
-                "Failed to allocate SkinnedMeshRenderable component for entity: " + std::to_string(target),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        pScene->addToComponentMask(target, componentType);
-        SkinnedMeshRenderable* pRenderable = (SkinnedMeshRenderable*)pComponent;
-        pRenderable->meshID = meshAssetID;
-        pRenderable->materialID = materialAssetID;
-
-        return pRenderable;
-    }
-
-    TerrainMeshRenderable* create_terrain_mesh_renderable(
-        entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID
-    )
-    {
-        Application* pApp = Application::get_instance();
-        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_terrain_mesh_renderable"))
-        {
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        ComponentType componentType = ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE;
-        void* pComponent = pScene->allocateComponent(target, componentType);
-        if (!pComponent)
-        {
-            Debug::log(
-                "@create_terrain_mesh_renderable "
-                "Failed to allocate TerrainMeshRenderable component for entity: " + std::to_string(target),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        pScene->addToComponentMask(target, componentType);
-        TerrainMeshRenderable* pRenderable = (TerrainMeshRenderable*)pComponent;
+        Renderable3D* pRenderable = (Renderable3D*)pComponent;
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
 

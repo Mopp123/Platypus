@@ -1,5 +1,4 @@
 #include "Material.h"
-#include "platypus/graphics/Device.hpp"
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
@@ -9,7 +8,6 @@
 namespace platypus
 {
     Material::Material(
-        MaterialType type,
         ID_t blendmapTextureID,
         ID_t* pDiffuseTextureIDs,
         ID_t* pSpecularTextureIDs,
@@ -25,7 +23,6 @@ namespace platypus
         bool shadeless // NOTE: This doesn't do anything atm!?
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
-        _materialType(type),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
@@ -81,19 +78,20 @@ namespace platypus
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
 
-        // TODO: Improve this?
-        if (_materialType == MaterialType::MESH)
+        // NOTE: ONLY TEMPORARY ATM!
+        /*
+        if (_blendmapTextureID == NULL_ID)
         {
             createPipeline(
                 pSceneRenderPass,
-                ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE
+                MeshType::MESH_TYPE_STATIC_INSTANCED
             );
 
             if (_normalTextureCount == 0)
             {
                 createPipeline(
                     pSceneRenderPass,
-                    ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE
+                    MeshType::MESH_TYPE_SKINNED
                 );
             }
             else
@@ -107,13 +105,14 @@ namespace platypus
                 );
             }
         }
-        else if (_materialType == MaterialType::TERRAIN)
+        else
         {
             createPipeline(
                 pSceneRenderPass,
-                ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE
+                MeshType::MESH_TYPE_TERRAIN
             );
         }
+        */
 
         createShaderResources();
 
@@ -127,7 +126,7 @@ namespace platypus
         destroyShaderResources();
         _descriptorSetLayout.destroy();
 
-        std::unordered_map<ComponentType, MaterialPipelineData*>::iterator it;
+        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
             // NOTE: Maybe should at least warn in this case?
@@ -140,22 +139,22 @@ namespace platypus
 
     void Material::createPipeline(
         const RenderPass* pRenderPass,
-        ComponentType renderableType
+        MeshType meshType
     )
     {
         const std::string vertexShaderFilename = getShaderFilename(
             ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            renderableType
+            meshType
         );
         const std::string fragmentShaderFilename = getShaderFilename(
             ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            renderableType
+            meshType
         );
         Debug::log(
             "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
         );
 
-        std::unordered_map<ComponentType, MaterialPipelineData*>::const_iterator pipelineIt = _pipelines.find(renderableType);
+        std::unordered_map<MeshType, MaterialPipelineData*>::const_iterator pipelineIt = _pipelines.find(meshType);
         if (pipelineIt != _pipelines.end())
         {
             if (pipelineIt->second != nullptr)
@@ -163,7 +162,7 @@ namespace platypus
                 Debug::log(
                     "@Material::createPipeline "
                     "Pipeline data already exists for material with ID: " + std::to_string(getID()) + " "
-                    "for component: " + component_type_to_string(renderableType),
+                    "for mesh type: " + mesh_type_to_string(meshType),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -172,11 +171,11 @@ namespace platypus
         }
 
         // TODO: Unfuck below
-        bool instanced = renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE;
-        bool skinned = renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE;
+        bool instanced = meshType == MeshType::MESH_TYPE_STATIC_INSTANCED;
+        bool skinned = meshType == MeshType::MESH_TYPE_SKINNED;
 
-        _pipelines[renderableType] = new MaterialPipelineData;
-        MaterialPipelineData* pMaterialPipelineData = _pipelines[renderableType];
+        _pipelines[meshType] = new MaterialPipelineData;
+        MaterialPipelineData* pMaterialPipelineData = _pipelines[meshType];
 
         Shader* pVertexShader = new Shader(
             vertexShaderFilename,
@@ -190,15 +189,15 @@ namespace platypus
         pMaterialPipelineData->pFragmentShader = pFragmentShader;
 
         VertexBufferLayout meshVertexBufferLayout;
-        if (renderableType == ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE ||
-            renderableType == ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE)
+        if (meshType == MeshType::MESH_TYPE_STATIC ||
+            meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
         {
             if (hasNormalMap())
                 meshVertexBufferLayout = VertexBufferLayout::get_common_static_tangent_layout();
             else
                 meshVertexBufferLayout = VertexBufferLayout::get_common_static_layout();
         }
-        else if (renderableType == ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE)
+        else if (meshType == MeshType::MESH_TYPE_SKINNED)
         {
             if (hasNormalMap())
                 meshVertexBufferLayout = VertexBufferLayout::get_common_skinned_tangent_layout();
@@ -220,6 +219,7 @@ namespace platypus
         std::vector<DescriptorSetLayout> descriptorSetLayouts;
         pMasterRenderer->solveDescriptorSetLayouts(
             this,
+            instanced,
             skinned,
             false,
             descriptorSetLayouts
@@ -255,7 +255,7 @@ namespace platypus
     {
         bool created = false;
 
-        std::unordered_map<ComponentType, MaterialPipelineData*>::iterator it;
+        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
             // NOTE: Maybe should at least warn in this case?
@@ -277,7 +277,7 @@ namespace platypus
     {
         bool destroyed = false;
 
-        std::unordered_map<ComponentType, MaterialPipelineData*>::iterator it;
+        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
             // NOTE: Maybe should at least warn in this case?
@@ -518,9 +518,9 @@ namespace platypus
         updateUniformBuffers(currentFrame);
     }
 
-    Pipeline* Material::getPipeline(ComponentType renderableType)
+    Pipeline* Material::getPipeline(MeshType meshType)
     {
-        std::unordered_map<ComponentType, MaterialPipelineData*>::iterator it = _pipelines.find(renderableType);
+        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it = _pipelines.find(meshType);
         if (it != _pipelines.end())
             return it->second->pPipeline;
 
@@ -644,12 +644,11 @@ namespace platypus
         );
     }
 
-    // TODO: This is a convoluted mess -> make cleaner!
-    // TODO: Make it impossible to attempt getting skinned shader name for terrain Material
-    std::string Material::getShaderFilename(uint32_t shaderStage, ComponentType renderableType)
+    // TODO: Make this convoluted mess cleaner!
+    std::string Material::getShaderFilename(uint32_t shaderStage, MeshType meshType)
     {
         // Example shader names:
-        // vertex shader: "StaticVertexShader", "StaticVertexShader_tangent", "SkinnedVertexShader"
+        // vertex shader: "StaticVertexShader", "StaticVertexShader_t", "StaticVertexShader_ti"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
         std::string shaderName = "";
         if (_receiveShadows)
@@ -657,16 +656,16 @@ namespace platypus
             shaderName += "receiveShadows/";
         }
 
-        switch (renderableType)
+        switch (meshType)
         {
-            case ComponentType::COMPONENT_TYPE_STATIC_MESH_RENDERABLE : shaderName += "Static"; break;
-            case ComponentType::COMPONENT_TYPE_SKINNED_MESH_RENDERABLE : shaderName += "Skinned"; break;
-            case ComponentType::COMPONENT_TYPE_TERRAIN_MESH_RENDERABLE : shaderName += "Terrain"; break;
+            case MeshType::MESH_TYPE_STATIC : shaderName += "Static"; break;
+            case MeshType::MESH_TYPE_STATIC_INSTANCED : shaderName += "Static"; break;
+            case MeshType::MESH_TYPE_SKINNED : shaderName += "Skinned"; break;
             default:
             {
                 Debug::log(
                     "@Material::getShaderFilename "
-                    "Invalid renderable component type: " + component_type_to_string(renderableType),
+                    "Invalid mesh type: " + mesh_type_to_string(meshType),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -675,17 +674,40 @@ namespace platypus
         }
 
         // Using same vertex shader for diffuse and diffuse+specular
+        // TODO: Make this less stupid
         if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
         {
             shaderName += "VertexShader";
-            if (_normalTextureCount > 0)
-                shaderName += "_tangent";
+            if (hasNormalMap() || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+            {
+                shaderName += "_";
+                if (hasNormalMap())
+                {
+                    // t stands for tangent
+                    shaderName += "t";
+                }
+                if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                {
+                    // i stands for instanced
+                    shaderName += "i";
+                }
+            }
         }
         else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
         {
             shaderName += "FragmentShader";
-            // adding d here since all materials needs to have at least one diffuse texture
-            shaderName += "_d";
+            // If using non instanced, we got one additional descriptor set containing
+            // transformation matrix, etc. -> Need to use fragment shader that takes this into account!
+            // ...FUCKING STUPID AND ANNOYING!
+            if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                shaderName += "_i_";
+            else
+                shaderName += "_";
+
+            if (_blendmapTextureID != NULL_ID)
+                shaderName += "b";
+            if (_diffuseTextureCount > 0)
+                shaderName += "d";
             if (_specularTextureCount > 0)
                 shaderName += "s";
             if (_normalTextureCount > 0)

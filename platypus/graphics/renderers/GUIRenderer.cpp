@@ -194,11 +194,14 @@ namespace platypus
         _fontPipeline.destroy();
     }
 
+    // NOTE: This also destroys all texture descriptor sets!
+    // This should ONLY be called on swapchain image count change or scene switch!
     void GUIRenderer::freeBatches()
     {
         for (BatchData& batch : _batches)
         {
             batch.type = BatchType::NONE;
+            freeTextureDescriptorSets(batch.textureID);
             batch.textureID = NULL_ID;
             batch.count = 0;
         }
@@ -626,8 +629,10 @@ namespace platypus
         _toRender[layer].erase(batchIndex);
         if (_toRender[layer].empty())
         {
+            // NOTE: Had assert false here earlier for some reason...
+            // No idea why, since I suppose this SHOULD be fine?
             _toRender.erase(layer);
-            PLATYPUS_ASSERT(false);
+            //PLATYPUS_ASSERT(false);
         }
 
         Debug::log(

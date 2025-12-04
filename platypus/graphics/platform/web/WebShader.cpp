@@ -173,7 +173,7 @@ namespace platypus
                 glValidateProgram(_id);
                 Debug::log("OpenglShader created successfully");
                 // NOTE: Below not tested!! May not work!
-                if (shaderVersion == ShaderVersion::ESSL3)
+                if (shaderVersion == ShaderVersion::OPENGLES_GLSL_300)
                 {
                     Debug::log(
                         "\t->Version was ESSL1. Attempting to get attrib and uniform locations..."

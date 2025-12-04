@@ -22,7 +22,12 @@ namespace platypus
         Float3,
         Float4,
 
-        Mat4
+        Mat3,
+        Mat4,
+
+        Sampler2D,
+
+        Struct
     };
 
 
@@ -51,6 +56,11 @@ namespace platypus
         BUFFER_UPDATE_FREQUENCY_STREAM
     };
 
+    enum UniformBlockLayout
+    {
+        std140,
+        std430
+    };
 
     enum IndexType
     {
@@ -72,6 +82,8 @@ namespace platypus
     //       For example: to draw multiple things with different transformation matrices without having
     //       to have different uniform buffer for each rendered object.
     size_t get_dynamic_uniform_buffer_element_size(size_t requestSize);
+
+    std::string uniform_block_layout_to_string(UniformBlockLayout layout);
 
     class Pipeline;
 
@@ -96,6 +108,7 @@ namespace platypus
 
         // NOTE: This has platform independent definition in Buffers.cpp
         bool operator==(const VertexBufferElement& other) const;
+        bool operator!=(const VertexBufferElement& other) const;
 
         inline uint32_t getLocation() const { return _location; }
         inline ShaderDataType getType() const { return _type; }
@@ -111,13 +124,6 @@ namespace platypus
         std::vector<VertexBufferElement> _elements;
         VertexInputRate _inputRate = VertexInputRate::VERTEX_INPUT_RATE_VERTEX;
         int32_t _stride = 0;
-
-        static VertexBufferLayout s_commonStaticLayout;
-        static VertexBufferLayout s_commonStaticTangentLayout;
-        static VertexBufferLayout s_commonSkinnedLayout;
-        static VertexBufferLayout s_commonSkinnedTangentLayout;
-        static VertexBufferLayout s_commonTerrainLayout;
-        static VertexBufferLayout s_commonTerrainTangentLayout;
 
     public:
         VertexBufferLayout();
@@ -136,6 +142,7 @@ namespace platypus
 
         // NOTE: This has platform independent definition in Buffers.cpp
         bool operator==(const VertexBufferLayout& other) const;
+        bool operator!=(const VertexBufferLayout& other) const;
 
         static VertexBufferLayout get_common_static_layout();
         static VertexBufferLayout get_common_static_tangent_layout();

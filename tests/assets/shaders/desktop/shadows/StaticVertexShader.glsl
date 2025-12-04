@@ -1,7 +1,6 @@
 #version 450
 
 layout(location = 0) in vec3 position;
-layout(location = 1) in mat4 transformationMatrix;
 
 layout (push_constant) uniform PushConstants
 {
@@ -9,7 +8,12 @@ layout (push_constant) uniform PushConstants
     mat4 viewMatrix;
 } pushConstants;
 
+layout (set = 0, binding = 0) uniform InstanceData
+{
+    mat4 transformationMatrix;
+} instanceData;
+
 void main()
 {
-    gl_Position = pushConstants.projectionMatrix * pushConstants.viewMatrix * transformationMatrix * vec4(position, 1.0);
+    gl_Position = pushConstants.projectionMatrix * pushConstants.viewMatrix * instanceData.transformationMatrix * vec4(position, 1.0);
 }

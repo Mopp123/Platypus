@@ -15,9 +15,20 @@ namespace platypus
         return _location == other._location && _type == other._type;
     }
 
+    bool VertexBufferElement::operator!=(const VertexBufferElement& other) const
+    {
+        return _location != other._location || _type != other._type;
+    }
+
+
     bool VertexBufferLayout::operator==(const VertexBufferLayout& other) const
     {
         return _elements == other._elements && _inputRate == other._inputRate && _stride == other._stride;
+    }
+
+    bool VertexBufferLayout::operator!=(const VertexBufferLayout& other) const
+    {
+        return _elements != other._elements || _inputRate != other._inputRate || _stride != other._stride;
     }
 
 
@@ -66,7 +77,11 @@ namespace platypus
             case ShaderDataType::Float3: return "Float3";
             case ShaderDataType::Float4: return "Float4";
 
+            case ShaderDataType::Mat3: return "Mat3";
             case ShaderDataType::Mat4: return "Mat4";
+
+            case ShaderDataType::Sampler2D: return "Sampler2D";
+
             default: return "Invalid type";
         }
     }
@@ -89,6 +104,16 @@ namespace platypus
         #endif
         size_t diff = (std::max(requestSize - 1, (size_t)1)) / alignRequirement;
         return  alignRequirement * (diff + 1);
+    }
+
+    std::string uniform_block_layout_to_string(UniformBlockLayout layout)
+    {
+        switch (layout)
+        {
+            case std140: return "std140";
+            case std430: return "std430";
+            default: return "<Invalid layout>";
+        }
     }
 
     void Buffer::updateHost(void* pData, size_t dataSize, size_t offset)
@@ -150,89 +175,63 @@ namespace platypus
         return true;
     }
 
-    VertexBufferLayout VertexBufferLayout::s_commonStaticLayout = {
-        {
-            { 0, ShaderDataType::Float3 }, // position
-            { 1, ShaderDataType::Float3 }, // normal
-            { 2, ShaderDataType::Float2 }  // tex coord
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
-
-    VertexBufferLayout VertexBufferLayout::s_commonStaticTangentLayout = {
-        {
-            { 0, ShaderDataType::Float3 }, // position
-            { 1, ShaderDataType::Float3 }, // normal
-            { 2, ShaderDataType::Float2 }, // tex coord
-            { 3, ShaderDataType::Float4 }  // tangent
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
-
-    VertexBufferLayout VertexBufferLayout::s_commonSkinnedLayout = {
-        {
-            { 0, ShaderDataType::Float3 }, // position
-            { 1, ShaderDataType::Float4 }, // weights
-            { 2, ShaderDataType::Float4 }, // jointIDs
-            { 3, ShaderDataType::Float3 }, // normal
-            { 4, ShaderDataType::Float2 }  // tex coord
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
-
-    VertexBufferLayout VertexBufferLayout::s_commonSkinnedTangentLayout = {
-        {
-            { 0, ShaderDataType::Float3 }, // position
-            { 1, ShaderDataType::Float4 }, // weights
-            { 2, ShaderDataType::Float4 }, // jointIDs
-            { 3, ShaderDataType::Float3 }, // normal
-            { 4, ShaderDataType::Float2 }, // tex coord
-            { 5, ShaderDataType::Float4 }  // tangent
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
-
-    VertexBufferLayout VertexBufferLayout::s_commonTerrainLayout = {
-        {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 }
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
-
-    VertexBufferLayout VertexBufferLayout::s_commonTerrainTangentLayout = {
-        {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float3 } // NOTE: gltf meshes' tangent is vec4 since that's how we get it from the file, but the terrain is generated in a way that tangent is vec3... don't know why I'm doing this...
-        },
-        VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
-        0
-    };
 
     VertexBufferLayout VertexBufferLayout::get_common_static_layout()
     {
-        return s_commonStaticLayout;
+        return {
+            {
+                { 0, ShaderDataType::Float3 }, // position
+                { 1, ShaderDataType::Float3 }, // normal
+                { 2, ShaderDataType::Float2 }  // tex coord
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
     }
 
     VertexBufferLayout VertexBufferLayout::get_common_static_tangent_layout()
     {
-        return s_commonStaticTangentLayout;
+        return {
+            {
+                { 0, ShaderDataType::Float3 }, // position
+                { 1, ShaderDataType::Float3 }, // normal
+                { 2, ShaderDataType::Float2 }, // tex coord
+                { 3, ShaderDataType::Float4 }  // tangent
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
     }
 
     VertexBufferLayout VertexBufferLayout::get_common_skinned_layout()
     {
-        return s_commonSkinnedLayout;
+        return {
+            {
+                { 0, ShaderDataType::Float3 }, // position
+                { 1, ShaderDataType::Float4 }, // weights
+                { 2, ShaderDataType::Float4 }, // jointIDs
+                { 3, ShaderDataType::Float3 }, // normal
+                { 4, ShaderDataType::Float2 }  // tex coord
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
     }
 
     VertexBufferLayout VertexBufferLayout::get_common_skinned_tangent_layout()
     {
-        return s_commonSkinnedTangentLayout;
+        return {
+            {
+                { 0, ShaderDataType::Float3 }, // position
+                { 1, ShaderDataType::Float4 }, // weights
+                { 2, ShaderDataType::Float4 }, // jointIDs
+                { 3, ShaderDataType::Float3 }, // normal
+                { 4, ShaderDataType::Float2 }, // tex coord
+                { 5, ShaderDataType::Float4 }  // tangent
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
     }
 
     VertexBufferLayout VertexBufferLayout::get_common_skinned_shadow_layout(int32_t overrideStride)
@@ -251,11 +250,26 @@ namespace platypus
 
     VertexBufferLayout VertexBufferLayout::get_common_terrain_layout()
     {
-        return s_commonTerrainLayout;
+        return {
+            {
+                { 0, ShaderDataType::Float3 },
+                { 1, ShaderDataType::Float3 }
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
     }
 
     VertexBufferLayout VertexBufferLayout::get_common_terrain_tangent_layout()
     {
-        return s_commonTerrainTangentLayout;
+        return {
+            {
+                { 0, ShaderDataType::Float3 },
+                { 1, ShaderDataType::Float3 },
+                { 2, ShaderDataType::Float3 } // NOTE: gltf meshes' tangent is vec4 since that's how we get it from the file, but the terrain is generated in a way that tangent is vec3... don't know why I'm doing this...
+            },
+            VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
+            0
+        };
     }
 }

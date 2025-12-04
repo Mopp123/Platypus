@@ -3,8 +3,9 @@
 #include "platypus/graphics/CommandBuffer.h"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
-#include "platypus/ecs/components/Renderable.h"
 #include "platypus/graphics/Framebuffer.hpp"
+#include "platypus/ecs/components/Renderable.h"
+#include "platypus/assets/Material.h"
 #include "GUIRenderer.h"
 #include "Renderer3D.hpp"
 #include "Batch.hpp"
@@ -78,6 +79,7 @@ namespace platypus
         ) const;
         void solveDescriptorSetLayouts(
             const Material* pMaterial,
+            bool instanced,
             bool skinned,
             bool shadowPipeline,
             std::vector<DescriptorSetLayout>& outDescriptorSetLayouts

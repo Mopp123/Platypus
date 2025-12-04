@@ -61,6 +61,9 @@ namespace platypus
         std::vector<UniformInfo> _uniformInfo;
 
     public:
+
+        // NOTE: ADDED RECENTLY! NOT SURE IF BREAKS SOMETHING?!?!
+        DescriptorSetLayoutBinding() {}
         // NOTE:
         //  * If using this binding as an array, descriptorCount is the length of the array
         //  * Don't remember why I allowed having multiple shader stage flags...
