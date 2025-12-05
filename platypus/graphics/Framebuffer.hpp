@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 #include "platypus/assets/Texture.h"
 
 namespace platypus

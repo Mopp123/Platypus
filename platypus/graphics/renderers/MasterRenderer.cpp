@@ -80,6 +80,13 @@ namespace platypus
             ImageFormat::NONE,
             _shadowDepthImageFormat
         );
+        _pShadowPassInstance = new RenderPassInstance(
+            _shadowPass,
+            _shadowmapWidth,
+            _shadowmapWidth,
+            false
+        );
+
         createShadowPassResources();
     }
 
@@ -152,7 +159,7 @@ namespace platypus
             if (!pBatch)
             {
                 _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
-                _batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
+                //_batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
             }
 
             if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
@@ -336,13 +343,18 @@ namespace platypus
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferDepthTexture);
 
-        _pShadowFramebuffer = new Framebuffer(
-            _shadowPass,
+        _pShadowPassInstance->createFramebuffers(
             { },
             _pShadowFramebufferDepthTexture,
-            _shadowmapWidth,
-            _shadowmapWidth
+            1
         );
+        //_pShadowFramebuffer = new Framebuffer(
+        //    _shadowPass,
+        //    { },
+        //    _pShadowFramebufferDepthTexture,
+        //    _shadowmapWidth,
+        //    _shadowmapWidth
+        //);
 
         // Update new shadow texture for materials that receive shadows
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -357,10 +369,11 @@ namespace platypus
     void MasterRenderer::destroyShadowPassResources()
     {
         Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
-        delete _pShadowFramebuffer;
+        //delete _pShadowFramebuffer;
+        _pShadowPassInstance->destroyFramebuffers();
 
         _pShadowFramebufferDepthTexture = nullptr;
-        _pShadowFramebuffer = nullptr;
+        //_pShadowFramebuffer = nullptr;
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
@@ -561,13 +574,40 @@ namespace platypus
         currentCommandBuffer.begin(nullptr);
 
 
+        // TESTING CUSTOM RENDER PASS SYSTEM
+        //for (RenderPassInstance* pRenderPassInstance : _renderPasses)
+        //{
+        //    RenderPass* pRenderPass = pRenderPassInstance->getRenderPass();
+        //    Framebuffer* pFramebuffer = pRenderPassInstance->getFramebuffer(_currentFrame);
+        //    render::begin_render_pass(
+        //        currentCommandBuffer,
+        //        pRenderPass,
+        //        pFramebuffer,
+        //        pFramebuffer->getDepthAttachment(),
+        //        pRenderPassInstance->getClearColor(),
+        //        true
+        //    );
+        //    std::vector<CommandBuffer> secondaryCommandBuffers;
+        //    secondaryCommandBuffers.push_back(
+        //        _pRenderer3D->recordCommandBuffer(
+        //            pRenderPass,
+        //            (float)pRenderPassInstance->getViewportWidth(),
+        //            (float)pRenderPassInstance->getViewportHeight(),
+        //            _batcher.getBatches(pRenderPassInstance->getType())
+        //        )
+        //    );
+        //    render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
+        //    render::end_render_pass(currentCommandBuffer);
+        //}
+
 
         // TESTING SHADOW PASS -----------------------------------
+        Framebuffer* pShadowFramebuffer = _pShadowPassInstance->getFramebuffer(0);
         render::begin_render_pass(
             currentCommandBuffer,
             _shadowPass,
-            _pShadowFramebuffer,
-            _pShadowFramebuffer->getDepthAttachment(),
+            pShadowFramebuffer,
+            pShadowFramebuffer->getDepthAttachment(),
             { 1, 0, 1, 1 },
             true
         );
@@ -583,7 +623,6 @@ namespace platypus
         render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
         render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
-
 
 
 

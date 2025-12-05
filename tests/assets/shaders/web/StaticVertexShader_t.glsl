@@ -17,6 +17,7 @@ layout(std140) uniform SceneData
     vec4 lightColor;
     // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
     vec4 shadowProperties;
+    float time;
 } sceneData;
 
 layout(std140) uniform InstanceData

@@ -3,7 +3,7 @@
 #include "Swapchain.h"
 #include "platypus/utils/Maths.h"
 #include "CommandBuffer.h"
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 #include "Framebuffer.hpp"
 #include "Pipeline.h"
 #include "Descriptors.h"

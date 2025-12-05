@@ -1,4 +1,4 @@
-#include "platypus/graphics/RenderPass.h"
+#include "platypus/graphics/RenderPass.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include "DesktopDevice.hpp"

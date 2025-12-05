@@ -1,4 +1,4 @@
-#include "platypus/graphics/RenderPass.h"
+#include "platypus/graphics/RenderPass.hpp"
 
 namespace platypus
 {

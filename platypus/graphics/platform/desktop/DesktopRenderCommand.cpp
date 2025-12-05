@@ -1,6 +1,5 @@
 #include "platypus/graphics/RenderCommand.h"
 #include "DesktopSwapchain.h"
-#include "platypus/graphics/RenderPass.h"
 #include "DesktopRenderPass.h"
 #include "DesktopFramebuffer.hpp"
 #include "DesktopCommandBuffer.h"

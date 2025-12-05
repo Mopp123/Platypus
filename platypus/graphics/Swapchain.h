@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platypus/core/Window.hpp"
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 #include "Framebuffer.hpp"
 #include <platypus/Common.h>
 

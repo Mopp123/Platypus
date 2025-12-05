@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <cstdint>
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 
 
 namespace  platypus

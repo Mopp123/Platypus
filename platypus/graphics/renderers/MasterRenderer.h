@@ -4,6 +4,7 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Framebuffer.hpp"
+#include "platypus/graphics/RenderPass.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/assets/Material.h"
 #include "GUIRenderer.h"
@@ -28,7 +29,7 @@ namespace platypus
         Vector4f shadowProperties;
 
         // NOTE: Danger if adding anything after this, since the layout has to be taken into account!
-        float time = 0.0f;
+        alignas(16) float time = 0.0f;
     };
 
     class MasterRenderer
@@ -53,10 +54,10 @@ namespace platypus
         //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
         //  touch these + the mem barrier in render commands
         ImageFormat _shadowDepthImageFormat;
-        Framebuffer* _pShadowFramebuffer;
         TextureSampler _shadowTextureSampler;
         Texture* _pShadowFramebufferDepthTexture;
         uint32_t _shadowmapWidth = 2048;
+        RenderPassInstance* _pShadowPassInstance;
 
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
 

@@ -16,6 +16,7 @@ layout(std140) uniform SceneData
     vec4 lightColor;
     // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
     vec4 shadowProperties;
+
     float time;
 } sceneData;
 
@@ -31,24 +32,20 @@ out vec3 var_cameraPos;
 out vec3 var_lightDir;
 out vec4 var_lightColor;
 out vec4 var_ambientLightColor;
+out float var_time;
 
-void main()
-{
+void main() {
     vec4 translatedPos = instanceData.transformationMatrix * vec4(position, 1.0);
     gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
     vec4 rotatedNormal = instanceData.transformationMatrix * vec4(normal, 0.0);
     var_normal = rotatedNormal.xyz;
-
-    //float tileSize = instanceData.meshProperties.x;
-    //float verticesPerRow = instanceData.meshProperties.y;
-    //float tilesPerRow = verticesPerRow - 1.0;
-    //var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
     var_texCoord = texCoord;
-
     var_fragPos = translatedPos.xyz;
     var_cameraPos = sceneData.cameraPosition.xyz;
 
     var_lightDir = sceneData.lightDirection.xyz;
     var_lightColor = sceneData.lightColor;
     var_ambientLightColor = sceneData.ambientLightColor;
+
+    var_time = sceneData.time;
 }

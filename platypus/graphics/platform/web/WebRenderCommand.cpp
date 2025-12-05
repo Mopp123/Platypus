@@ -605,6 +605,9 @@ namespace platypus
 
                         const Buffer* pUniformBuffer = (const Buffer*)pDescriptorSetComponent->pData;
                         uint32_t uniformBufferID = pUniformBuffer->getImpl()->id;
+                        Debug::log(
+                            "___TEST___Binding dynamic uniform block range with total size: " + std::to_string(pUniformBuffer->getTotalSize()) + "elem size: " + std::to_string(pUniformBuffer->getDataElemSize())
+                        );
 
                         // NOTE: Not sure if this breaks in some impl, if the GLintptr becomes something else
                         // than: signed long long int and GLsizeiptr becomes something else than signed long int
