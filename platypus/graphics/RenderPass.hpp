@@ -49,7 +49,10 @@ namespace platypus
 
         void create(
             ImageFormat colorFormat,
-            ImageFormat depthFormat
+            ImageFormat depthFormat,
+            bool clearColorAttachment = true,
+            bool clearDepthAttachment = true,
+            bool test = false
         );
         void destroy();
 

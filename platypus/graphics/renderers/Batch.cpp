@@ -8,6 +8,7 @@ namespace platypus
     RenderPassType Batcher::s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES] = {
         RenderPassType::SHADOW_PASS,
         RenderPassType::OPAQUE_PASS,
+        RenderPassType::TRANSPARENT_PASS,
         RenderPassType::SCREEN_PASS
     };
 

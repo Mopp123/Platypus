@@ -23,6 +23,7 @@ namespace platypus
             const RenderPass& renderPass,
             Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
+            bool clearColorBuffer,
             bool clearDepthBuffer
         )
         {
@@ -70,24 +71,71 @@ namespace platypus
                 );
                 pCmdBufferImpl->pDepthAttachment = pDepthAttachment;
             }
+            // QUICK HACK -> TESTING
+            Texture* pColorAttachment = nullptr;
+            if (pFramebuffer->getColorAttachments().size() > 0)
+                pColorAttachment = pFramebuffer->getColorAttachments()[0];
+            if (renderPass.isOffscreenPass() && pColorAttachment)
+            {
+                TextureImpl* pColorTextureImpl = pColorAttachment->getImpl();
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.oldLayout = pColorTextureImpl->imageLayout;
+                barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = pColorTextureImpl->image;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+
+                barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+
+                vkCmdPipelineBarrier(
+                    pCmdBufferImpl->handle,
+                    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    1, &barrier
+                );
+                pCmdBufferImpl->pColorAttachment = pColorAttachment;
+            }
 
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             beginInfo.renderPass = renderPass.getImpl()->handle;
             beginInfo.framebuffer = pFramebuffer->getImpl()->handle;
 
+            // NOTE: Below very dumb.. just didn't want to use something like std::vector here... :D
             VkClearValue clearColorValue{};
             clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
+
             VkClearValue clearDepthStencilValue{};
             clearDepthStencilValue.depthStencil = { 1.0f, 0 };
-            VkClearValue clearValues[2] = { clearColorValue, clearDepthStencilValue };
+
+            VkClearValue clearValues[2];
+
+            beginInfo.clearValueCount = 0;
+            if (clearColorBuffer)
+            {
+                clearValues[beginInfo.clearValueCount] = clearColorValue;
+                ++beginInfo.clearValueCount;
+            }
 
             if (clearDepthBuffer)
-                beginInfo.clearValueCount = 2;
-            else
-                beginInfo.clearValueCount = 1;
+            {
+                clearValues[beginInfo.clearValueCount] = clearDepthStencilValue;
+                ++beginInfo.clearValueCount;
+            }
 
-            beginInfo.pClearValues = clearValues;
+            if (beginInfo.clearValueCount > 0)
+                beginInfo.pClearValues = clearValues;
 
             beginInfo.renderArea.offset = { 0, 0 };
             beginInfo.renderArea.extent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
@@ -137,6 +185,44 @@ namespace platypus
                 pDepthTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             }
 
+            // QUICK HACK -> TESTING
+            // NOTE: This should be done at the end of the opaque pass!
+            // At the end of the transparent pass you should transition from COLOR_ATTACHMENT_OPTIMAL to
+            // SHADER_READ_ONLY_OPTIMAL!
+            if (pCmdBufferImpl->pColorAttachment)
+            {
+                TextureImpl* pColorTextureImpl = pCmdBufferImpl->pColorAttachment->getImpl();
+
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = pColorTextureImpl->image;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+
+                barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                vkCmdPipelineBarrier(
+                    pCmdBufferImpl->handle,
+                    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    1, &barrier
+                );
+                pColorTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+
+            commandBuffer.getImpl()->pColorAttachment = nullptr;
             commandBuffer.getImpl()->pDepthAttachment = nullptr;
         }
 

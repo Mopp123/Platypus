@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...
-#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 3
+#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 4
 
 
 namespace platypus

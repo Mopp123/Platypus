@@ -208,7 +208,7 @@ void WaterTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment()->getID()
+        pMasterRenderer->getTransparentFramebuffer()->getColorAttachments()[0]->getID()
     );
 }
 
@@ -223,7 +223,7 @@ void WaterTestScene::update()
     );
 
     MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
-    Texture* framebufferTexture = pMasterRenderer->getOpaquePassInstance()->getFramebuffer(0)->getDepthAttachment();
+    Texture* framebufferTexture = pMasterRenderer->getTransparentFramebuffer()->getColorAttachments()[0];
     if (framebufferTexture)
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
     else

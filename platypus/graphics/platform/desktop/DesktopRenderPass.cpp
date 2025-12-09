@@ -29,7 +29,10 @@ namespace platypus
 
     void RenderPass::create(
         ImageFormat colorFormat,
-        ImageFormat depthFormat
+        ImageFormat depthFormat,
+        bool clearColorAttachment,
+        bool clearDepthAttachment,
+        bool test
     )
     {
         _colorFormat = colorFormat;
@@ -43,13 +46,30 @@ namespace platypus
             VkAttachmentDescription colorAttachmentDescription{};
             colorAttachmentDescription.format = to_vk_format(_colorFormat);
             colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-            colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+            if (clearColorAttachment)
+                colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            else
+                colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
             colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            // TESTING! For continueing using same color attachment for transparent pass
+            if (test)
+                colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            else
+                colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
             VkImageLayout colorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            colorAttachmentDescription.finalLayout = colorImageLayout;
+
+            // TESTING! For continueing using same color attachment for transparent pass
+            if (test)
+                colorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            else
+                colorAttachmentDescription.finalLayout = colorImageLayout;
+
             attachmentDescriptions.push_back(colorAttachmentDescription);
 
             VkAttachmentReference colorAttachmentRef{};
@@ -68,11 +88,22 @@ namespace platypus
             VkAttachmentDescription depthAttachmentDescription{};
             depthAttachmentDescription.format = to_vk_format(_depthFormat);
             depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-            depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+            if (clearDepthAttachment)
+                depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            else
+                depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
             depthAttachmentDescription.storeOp = _offscreen ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
             depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            // TESTING! For continueing using same color attachment for transparent pass
+            if (test)
+                depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            else
+                depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
             depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachmentDescriptions.push_back(depthAttachmentDescription);
 

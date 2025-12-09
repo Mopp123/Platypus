@@ -46,6 +46,10 @@ namespace platypus
             RenderPassType::OPAQUE_PASS,
             true
         ),
+        _transparentPass(
+            RenderPassType::TRANSPARENT_PASS,
+            true
+        ),
         _offscreenTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -71,13 +75,6 @@ namespace platypus
                     }
                 }
             }
-        ),
-        _opaquePassInstance(
-            _opaquePass,
-            0,
-            0,
-            _offscreenTextureSampler,
-            true
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
@@ -95,9 +92,19 @@ namespace platypus
             ImageFormat::NONE,
             shadowmapDepthFormat
         );
+        // TODO: Query which color and depth formats actually available!
+        _offscreenColorFormat = ImageFormat::R8G8B8A8_SRGB;
+        _offscreenDepthFormat = ImageFormat::D32_SFLOAT;
         _opaquePass.create(
-            ImageFormat::R8G8B8A8_SRGB,
-            shadowmapDepthFormat
+            _offscreenColorFormat,
+            _offscreenDepthFormat
+        );
+        _transparentPass.create(
+            _offscreenColorFormat,
+            _offscreenDepthFormat,
+            false,
+            false,
+            true
         );
         createOffscreenPassResources();
     }
@@ -107,6 +114,7 @@ namespace platypus
         destroyOffscreenPassResources();
         _shadowPass.destroy();
         _opaquePass.destroy();
+        _transparentPass.destroy();
         _shadowmapDescriptorSetLayout.destroy();
 
         destroyCommonShaderResources();
@@ -173,15 +181,16 @@ namespace platypus
             // NOTE: This will change, JUST TESTING RENDERING TRANSPARENT IN SCREEN PASS!
             if (pMaterial->isTransparent())
             {
-                if (!_batcher.getBatch(RenderPassType::SCREEN_PASS, batchID))
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
+                if (!_batcher.getBatch(RenderPassType::TRANSPARENT_PASS, batchID))
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_transparentPass);
             }
             else
             {
                 if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_opaquePassInstance.getRenderPass()));
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_opaquePass);
             }
 
+            // NOTE: ATM SHADOW BATCHES ARE DISABLED!!!!
             //if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
             //    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
 
@@ -357,8 +366,41 @@ namespace platypus
 
     void MasterRenderer::createOffscreenPassResources()
     {
+        const Extent2D swapchainExtent = _swapchainRef.getExtent();
+        _pColorAttachment = new Texture(
+            TextureType::COLOR_TEXTURE,
+            _offscreenTextureSampler,
+            _offscreenColorFormat,
+            swapchainExtent.width,
+            swapchainExtent.height
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
+
+        _pDepthAttachment = new Texture(
+            TextureType::DEPTH_TEXTURE,
+            _offscreenTextureSampler,
+            _offscreenDepthFormat,
+            swapchainExtent.width,
+            swapchainExtent.height
+        );
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+
+        _pOpaqueFramebuffer = new Framebuffer(
+            _opaquePass,
+            { _pColorAttachment },
+            _pDepthAttachment,
+            swapchainExtent.width,
+            swapchainExtent.height
+        );
+        _pTransparentFramebuffer = new Framebuffer(
+            _transparentPass,
+            { _pColorAttachment },
+            _pDepthAttachment,
+            swapchainExtent.width,
+            swapchainExtent.height
+        );
+
         _shadowPassInstance.create();
-        _opaquePassInstance.create();
 
         // Update new shadow texture for materials that receive shadows
         // TODO: Some way to know if Material uses framebuffer attachment as texture!!
@@ -374,13 +416,16 @@ namespace platypus
 
     void MasterRenderer::destroyOffscreenPassResources()
     {
-        //Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
-        //delete _pShadowFramebuffer;
-        _shadowPassInstance.destroy();
-        _opaquePassInstance.destroy();
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
+        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+        _pColorAttachment = nullptr;
+        _pDepthAttachment = nullptr;
+        delete _pOpaqueFramebuffer;
+        delete _pTransparentFramebuffer;
+        _pOpaqueFramebuffer = nullptr;
+        _pTransparentFramebuffer = nullptr;
 
-        //_pShadowFramebufferDepthTexture = nullptr;
-        //_pShadowFramebuffer = nullptr;
+        _shadowPassInstance.destroy();
     }
 
     void MasterRenderer::allocCommandBuffers(uint32_t count)
@@ -615,6 +660,7 @@ namespace platypus
             _shadowPassInstance.getRenderPass(),
             pShadowFramebuffer,
             { 1, 0, 1, 1 },
+            true,
             true
         );
         std::vector<CommandBuffer> shadowpassCommandBuffers;
@@ -632,24 +678,47 @@ namespace platypus
 
 
         // TESTING OPAQUE PASS -----------------------------------
-        Framebuffer* pOpaqueFramebuffer = _opaquePassInstance.getFramebuffer(0);
         render::begin_render_pass(
             currentCommandBuffer,
-            _opaquePassInstance.getRenderPass(),
-            pOpaqueFramebuffer,
+            _opaquePass,
+            _pOpaqueFramebuffer,
             { 1, 0, 1, 1 },
+            true,
             true
         );
         std::vector<CommandBuffer> opaquePassCommandBuffers;
         opaquePassCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
-                _opaquePassInstance.getRenderPass(),
-                (float)pOpaqueFramebuffer->getWidth(),
-                (float)pOpaqueFramebuffer->getHeight(),
+                _opaquePass,
+                (float)_pOpaqueFramebuffer->getWidth(),
+                (float)_pOpaqueFramebuffer->getHeight(),
                 _batcher.getBatches(RenderPassType::OPAQUE_PASS)
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, opaquePassCommandBuffers);
+        render::end_render_pass(currentCommandBuffer);
+        // TESTING END ^^^ -------------------------------------------
+
+
+        // TESTING TRANSPARENT PASS -----------------------------------
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _transparentPass,
+            _pTransparentFramebuffer,
+            { 1, 0, 1, 1 },
+            false,
+            false
+        );
+        std::vector<CommandBuffer> transparentPassCommandBuffers;
+        transparentPassCommandBuffers.push_back(
+            _pRenderer3D->recordCommandBuffer(
+                _transparentPass,
+                (float)_pTransparentFramebuffer->getWidth(),
+                (float)_pTransparentFramebuffer->getHeight(),
+                _batcher.getBatches(RenderPassType::TRANSPARENT_PASS)
+            )
+        );
+        render::exec_secondary_command_buffers(currentCommandBuffer, transparentPassCommandBuffers);
         render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
 
@@ -660,6 +729,7 @@ namespace platypus
             _swapchainRef.getRenderPass(),
             pCurrentSwapchainFramebuffer,
             pScene->environmentProperties.clearColor,
+            true,
             true
         );
 

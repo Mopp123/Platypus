@@ -24,6 +24,7 @@ namespace platypus
             const RenderPass& renderPass,
             Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
+            bool clearColorBuffer,
             bool clearDepthBuffer
         );
 
