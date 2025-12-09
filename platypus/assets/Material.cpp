@@ -20,8 +20,8 @@ namespace platypus
         float shininess,
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
+        bool castShadows,
         bool receiveShadows,
-        bool shadeless,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     ) :
@@ -30,6 +30,7 @@ namespace platypus
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
         _normalTextureCount(normalTextureCount),
+        _castShadows(castShadows),
         _receiveShadows(receiveShadows),
 
         _customVertexShaderFilename(customVertexShaderFilename),
@@ -47,7 +48,7 @@ namespace platypus
 
         _uniformBufferData.lightingProperties.x = specularStrength;
         _uniformBufferData.lightingProperties.y = shininess;
-        _uniformBufferData.lightingProperties.z = shadeless;
+        _uniformBufferData.lightingProperties.z = 0; // Was originally having this as indicator is this using any kind of lighting/shading at all (shadeless)
         _uniformBufferData.lightingProperties.w = 0.0f;
         _uniformBufferData.textureProperties.x = textureOffset.x;
         _uniformBufferData.textureProperties.y = textureOffset.y;
@@ -471,7 +472,8 @@ namespace platypus
         if (_receiveShadows)
         {
             MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-            textures.push_back(pMasterRenderer->getShadowFramebufferDepthTexture());
+            Texture* pShadowPassDepthAttachment = pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment();
+            textures.push_back(pShadowPassDepthAttachment);
         }
 
         return textures;

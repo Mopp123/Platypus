@@ -186,8 +186,8 @@ namespace platypus
         float shininess,
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
+        bool castShadows,
         bool receiveShadows,
-        bool shadeless,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     )
@@ -231,8 +231,8 @@ namespace platypus
             shininess,
             textureOffset,
             textureScale,
+            castShadows,
             receiveShadows,
-            shadeless,
             customVertexShaderFilename,
             customFragmentShaderFilename
         );
@@ -246,8 +246,7 @@ namespace platypus
         std::vector<ID_t> specularTextureIDs,
         std::vector<ID_t> normalTextureIDs,
         float specularStrength,
-        float shininess,
-        bool shadeless
+        float shininess
     )
     {
         return createMaterial(
@@ -259,8 +258,8 @@ namespace platypus
             shininess,
             { 0, 0 },
             { 1, 1 },
-            false,
-            shadeless,
+            false, // cast shadow
+            false, // receive shadow
             "",
             ""
         );

@@ -5,6 +5,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Framebuffer.hpp"
 #include "platypus/graphics/RenderPass.hpp"
+#include "platypus/graphics/RenderPassInstance.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/assets/Material.h"
 #include "GUIRenderer.h"
@@ -53,11 +54,9 @@ namespace platypus
         // NOTE: Switched using single framebuffer and textures for testing offscreen rendering..
         //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
         //  touch these + the mem barrier in render commands
-        ImageFormat _shadowDepthImageFormat;
         TextureSampler _shadowTextureSampler;
-        Texture* _pShadowFramebufferDepthTexture;
         uint32_t _shadowmapWidth = 2048;
-        RenderPassInstance* _pShadowPassInstance;
+        RenderPassInstance _shadowPassInstance;
 
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
 
@@ -65,7 +64,7 @@ namespace platypus
 
     public:
         // NOTE: CommandPool and Device must exist when creating this
-        MasterRenderer(Swapchain& swapchain);
+        MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat);
         ~MasterRenderer();
         void createPipelines();
 
@@ -90,7 +89,6 @@ namespace platypus
         ) const;
 
         inline const RenderPass& getShadowPass() const { return _shadowPass; }
-        inline Texture* getShadowFramebufferDepthTexture() { return _pShadowFramebufferDepthTexture; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
@@ -99,6 +97,8 @@ namespace platypus
         inline const DescriptorSetLayout& getShadowmapDescriptorSetLayout() const { return _shadowmapDescriptorSetLayout; }
 
         inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
+
+        inline RenderPassInstance* getShadowPassInstance() { return &_shadowPassInstance; }
 
         inline size_t getCurrentFrame() const { return _currentFrame; }
 

@@ -82,7 +82,16 @@ namespace platypus
         // NOTE: HUGE ISSUE:
         _pAssetManager = new AssetManager;
         _pSwapchain = new Swapchain(_window);
-        _pMasterRenderer = new MasterRenderer(*_pSwapchain);
+
+        // NOTE: Only temporarely figuring shadowmap depth format here!
+        // +Not sure if this fallback is enough if D32_SFLOAT not available...
+        ImageFormat shadowmapDepthFormat = ImageFormat::NONE;
+        if (Device::is_depth_format_supported(ImageFormat::D32_SFLOAT))
+            shadowmapDepthFormat = ImageFormat::D32_SFLOAT;
+        else
+            shadowmapDepthFormat = Device::get_first_supported_depth_format();
+
+        _pMasterRenderer = new MasterRenderer(*_pSwapchain, shadowmapDepthFormat);
 
         #ifdef PLATYPUS_DEBUG
             Debug::log(

@@ -21,6 +21,8 @@ namespace platypus
         ImageFormat depthFormat
     )
     {
+        _colorFormat = colorFormat;
+        _depthFormat = depthFormat;
     }
 
     void RenderPass::destroy()

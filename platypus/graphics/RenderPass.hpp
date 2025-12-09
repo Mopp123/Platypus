@@ -9,16 +9,20 @@ namespace platypus
 {
     enum class RenderPassType
     {
-        SCENE_PASS,
-        SHADOW_PASS
+        SHADOW_PASS,
+        OPAQUE_PASS,
+        TRANSPARENT_PASS,
+        SCREEN_PASS
     };
 
     static inline std::string render_pass_type_to_string(RenderPassType type)
     {
         switch (type)
         {
-            case RenderPassType::SCENE_PASS:    return "SCENE_PASS";
-            case RenderPassType::SHADOW_PASS:   return "SHADOW_PASS";
+            case RenderPassType::SHADOW_PASS:    return "SHADOW_PASS";
+            case RenderPassType::OPAQUE_PASS:   return "OPAQUE_PASS";
+            case RenderPassType::TRANSPARENT_PASS:   return "TRANSPARENT_PASS";
+            case RenderPassType::SCREEN_PASS:   return "SCREEN_PASS";
             default:                            return "<Invalid RenderPassType>";
         }
     }
@@ -32,56 +36,27 @@ namespace platypus
     private:
         RenderPassImpl* _pImpl = nullptr;
         RenderPassType _type;
+        ImageFormat _colorFormat = ImageFormat::NONE;
+        ImageFormat _depthFormat = ImageFormat::NONE;
         bool _offscreen = false;
 
     public:
-        RenderPass(RenderPassType type, bool offscreen);
+        RenderPass(
+            RenderPassType type,
+            bool offscreen
+        );
         ~RenderPass();
 
         void create(
             ImageFormat colorFormat,
             ImageFormat depthFormat
         );
-
         void destroy();
 
         inline RenderPassType getType() const { return _type; }
+        inline ImageFormat getColorFormat() const { return _colorFormat; }
+        inline ImageFormat getDepthFormat() const { return _depthFormat; }
         inline bool isOffscreenPass() const { return _offscreen; }
         inline const RenderPassImpl* getImpl() const { return _pImpl; }
-    };
-
-
-    class Framebuffer;
-    class Texture;
-    class RenderPassInstance
-    {
-    private:
-        const RenderPass& _renderPassRef;
-        uint32_t _framebufferWidth = 0;
-        uint32_t _framebufferHeight = 0;
-        bool _useWindowDimensions = false;
-        std::vector<Framebuffer*> _framebuffers;
-
-    public:
-        RenderPassInstance(
-            const RenderPass& renderPass,
-            uint32_t framebufferWidth,
-            uint32_t framebufferHeight,
-            bool useWindowDimensions
-        );
-        ~RenderPassInstance();
-
-        void destroyFramebuffers();
-        void createFramebuffers(
-            const std::vector<Texture*>& colorAttachments,
-            Texture* pDepthAttachment,
-            size_t count
-        );
-
-        inline const RenderPass& getRenderPass() const { return _renderPassRef; }
-        Framebuffer* getFramebuffer(size_t frame) const;
-
-    private:
-        void matchWindowDimensions();
     };
 }

@@ -141,6 +141,7 @@ Material* BaseScene::createMeshMaterial(
     AssetManager* pAssetManager,
     std::string textureFilepath,
     bool repeatTexture,
+    bool castShadows,
     bool receiveShadows
 )
 {
@@ -168,8 +169,8 @@ Material* BaseScene::createMeshMaterial(
         16.0f,
         { 0, 0 },
         { 1, 1 },
-        receiveShadows,
-        false // is shadeless?
+        castShadows, // cast shadows
+        receiveShadows // receive shadows
     );
     return pMaterial;
 }

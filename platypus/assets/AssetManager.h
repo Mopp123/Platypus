@@ -51,8 +51,8 @@ namespace platypus
             float shininess,
             const Vector2f& textureOffset,
             const Vector2f& textureScale,
+            bool castShadows,
             bool receiveShadows,
-            bool shadeless,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );
@@ -62,8 +62,7 @@ namespace platypus
             std::vector<ID_t> specularTextureIDs,
             std::vector<ID_t> normalTextureIDs,
             float specularStrength = 0.625f,
-            float shininess = 16.0f,
-            bool shadeless = false
+            float shininess = 16.0f
         );
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,

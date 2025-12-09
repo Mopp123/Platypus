@@ -51,6 +51,7 @@ namespace platypus
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
 
+        bool _castShadows = false;
         bool _receiveShadows = false;
         uint32_t _shadowmapDescriptorIndex = 0;
 
@@ -79,8 +80,8 @@ namespace platypus
             float shininess,
             const Vector2f& textureOffset = { 0, 0 },
             const Vector2f& textureScale = { 1, 1 },
+            bool castShadows = false,
             bool receiveShadows = false,
-            bool shadeless = false,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );
@@ -123,6 +124,7 @@ namespace platypus
         }
         inline float getSpecularStrength() const { return _uniformBufferData.lightingProperties.x; }
         inline float getShininess() const { return _uniformBufferData.lightingProperties.y; }
+        inline bool castsShadows() const { return _castShadows; }
         inline bool receivesShadows() const { return _receiveShadows; }
         inline bool isShadeless() const { return _uniformBufferData.lightingProperties.z; }
         inline Vector2f getTextureOffset() const { return { _uniformBufferData.textureProperties.x, _uniformBufferData.textureProperties.y }; }

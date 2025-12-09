@@ -112,8 +112,8 @@ void WaterTestScene::init()
         32.0f,
         { 0, 0 },
         { (float)terrainTilesPerRow, (float)terrainTilesPerRow },
-        true, // receive shadows
-        false
+        false, // cast shadows
+        false // receive shadows
     );
 
     create_renderable3D(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
@@ -167,8 +167,8 @@ void WaterTestScene::init()
         16.0f,
         { 0, 0 },
         { 1, 1 },
-        false, // receive shadows?
-        false, // is shadeless?,
+        false, // cast shadows
+        false, // receive shadows,
         "water/VertexShader",
         "water/FragmentShader"
     );

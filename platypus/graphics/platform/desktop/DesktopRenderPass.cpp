@@ -9,7 +9,10 @@
 
 namespace platypus
 {
-    RenderPass::RenderPass(RenderPassType type, bool offscreen) :
+    RenderPass::RenderPass(
+        RenderPassType type,
+        bool offscreen
+    ) :
         _type(type),
         _offscreen(offscreen)
     {
@@ -29,13 +32,16 @@ namespace platypus
         ImageFormat depthFormat
     )
     {
+        _colorFormat = colorFormat;
+        _depthFormat = depthFormat;
+
         std::vector<VkAttachmentDescription> attachmentDescriptions;
         std::vector<VkAttachmentReference> colorAttachmentReferences;
         VkAttachmentReference depthAttachmentReference{};
-        if (colorFormat != ImageFormat::NONE)
+        if (_colorFormat != ImageFormat::NONE)
         {
             VkAttachmentDescription colorAttachmentDescription{};
-            colorAttachmentDescription.format = to_vk_format(colorFormat);
+            colorAttachmentDescription.format = to_vk_format(_colorFormat);
             colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
             colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -57,10 +63,10 @@ namespace platypus
         }
 
 
-        if (depthFormat != ImageFormat::NONE)
+        if (_depthFormat != ImageFormat::NONE)
         {
             VkAttachmentDescription depthAttachmentDescription{};
-            depthAttachmentDescription.format = to_vk_format(depthFormat);
+            depthAttachmentDescription.format = to_vk_format(_depthFormat);
             depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
             depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             depthAttachmentDescription.storeOp = _offscreen ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -78,8 +84,8 @@ namespace platypus
         VkSubpassDescription subpassDescription{};
         subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpassDescription.colorAttachmentCount = (uint32_t)colorAttachmentReferences.size();
-        subpassDescription.pColorAttachments = colorFormat != ImageFormat::NONE ? colorAttachmentReferences.data() : nullptr;
-        subpassDescription.pDepthStencilAttachment = depthFormat != ImageFormat::NONE ? &depthAttachmentReference : nullptr;
+        subpassDescription.pColorAttachments = _colorFormat != ImageFormat::NONE ? colorAttachmentReferences.data() : nullptr;
+        subpassDescription.pDepthStencilAttachment = _depthFormat != ImageFormat::NONE ? &depthAttachmentReference : nullptr;
 
         VkSubpassDependency subpassDependency{};
         subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;

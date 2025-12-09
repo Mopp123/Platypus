@@ -13,7 +13,7 @@
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(Swapchain& swapchain) :
+    MasterRenderer::MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat) :
         _swapchainRef(swapchain),
         _descriptorPool(_swapchainRef),
         _batcher(*this, _descriptorPool, 1000, 1000, 500, 50),
@@ -38,12 +38,22 @@ namespace platypus
                 }
             }
         ),
-        _shadowPass(RenderPassType::SHADOW_PASS, true),
+        _shadowPass(
+            RenderPassType::SHADOW_PASS,
+            true
+        ),
         _shadowTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             false,
             0
+        ),
+        _shadowPassInstance(
+            _shadowPass,
+            _shadowmapWidth,
+            _shadowmapWidth,
+            _shadowTextureSampler,
+            false
         ),
         _shadowmapDescriptorSetLayout(
             {
@@ -70,23 +80,10 @@ namespace platypus
         allocCommandBuffers(_swapchainRef.getMaxFramesInFlight());
         createCommonShaderResources();
 
-        // Not sure if this fallback is enough...
-        if (Device::is_depth_format_supported(ImageFormat::D32_SFLOAT))
-            _shadowDepthImageFormat = ImageFormat::D32_SFLOAT;
-        else
-            _shadowDepthImageFormat = Device::get_first_supported_depth_format();
-
         _shadowPass.create(
             ImageFormat::NONE,
-            _shadowDepthImageFormat
+            shadowmapDepthFormat
         );
-        _pShadowPassInstance = new RenderPassInstance(
-            _shadowPass,
-            _shadowmapWidth,
-            _shadowmapWidth,
-            false
-        );
-
         createShadowPassResources();
     }
 
@@ -153,13 +150,15 @@ namespace platypus
             Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
             const MeshType meshType = pMesh->getType();
             const ID_t materialID = pRenderable3D->materialID;
+            const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
 
             ID_t batchID = ID::hash(meshID, materialID);
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCENE_PASS, batchID);
+            Batch* pBatch = _batcher.getBatch(RenderPassType::SCREEN_PASS, batchID);
             if (!pBatch)
             {
                 _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
-                //_batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
+                if (pMaterial->castsShadows())
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
             }
 
             if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
@@ -334,20 +333,15 @@ namespace platypus
 
     void MasterRenderer::createShadowPassResources()
     {
-        _pShadowFramebufferDepthTexture = new Texture(
-            TextureType::DEPTH_TEXTURE,
-            _shadowTextureSampler,
-            _shadowDepthImageFormat,
-            _shadowmapWidth,
-            _shadowmapWidth
-        );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferDepthTexture);
+        //_pShadowFramebufferDepthTexture = new Texture(
+        //    TextureType::DEPTH_TEXTURE,
+        //    _shadowTextureSampler,
+        //    _shadowDepthImageFormat,
+        //    _shadowmapWidth,
+        //    _shadowmapWidth
+        //);
+        //Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferDepthTexture);
 
-        _pShadowPassInstance->createFramebuffers(
-            { },
-            _pShadowFramebufferDepthTexture,
-            1
-        );
         //_pShadowFramebuffer = new Framebuffer(
         //    _shadowPass,
         //    { },
@@ -356,23 +350,26 @@ namespace platypus
         //    _shadowmapWidth
         //);
 
+        _shadowPassInstance.create();
+
         // Update new shadow texture for materials that receive shadows
+        Texture* pDepthAttachment = _shadowPassInstance.getFramebuffer(0)->getDepthAttachment();
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
         {
             Material* pMaterial = (Material*)pAsset;
             if (pMaterial->receivesShadows())
-                pMaterial->updateShadowmapDescriptorSet(_pShadowFramebufferDepthTexture);
+                pMaterial->updateShadowmapDescriptorSet(pDepthAttachment);
         }
     }
 
     void MasterRenderer::destroyShadowPassResources()
     {
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
+        //Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
         //delete _pShadowFramebuffer;
-        _pShadowPassInstance->destroyFramebuffers();
+        _shadowPassInstance.destroy();
 
-        _pShadowFramebufferDepthTexture = nullptr;
+        //_pShadowFramebufferDepthTexture = nullptr;
         //_pShadowFramebuffer = nullptr;
     }
 
@@ -602,10 +599,10 @@ namespace platypus
 
 
         // TESTING SHADOW PASS -----------------------------------
-        Framebuffer* pShadowFramebuffer = _pShadowPassInstance->getFramebuffer(0);
+        Framebuffer* pShadowFramebuffer = _shadowPassInstance.getFramebuffer(0);
         render::begin_render_pass(
             currentCommandBuffer,
-            _shadowPass,
+            _shadowPassInstance.getRenderPass(),
             pShadowFramebuffer,
             pShadowFramebuffer->getDepthAttachment(),
             { 1, 0, 1, 1 },
@@ -614,9 +611,9 @@ namespace platypus
         std::vector<CommandBuffer> testSecondaries;
         testSecondaries.push_back(
             _pRenderer3D->recordCommandBuffer(
-                _shadowPass,
-                (float)_shadowmapWidth,
-                (float)_shadowmapWidth,
+                _shadowPassInstance.getRenderPass(),
+                (float)pShadowFramebuffer->getWidth(),
+                (float)pShadowFramebuffer->getHeight(),
                 _batcher.getBatches(RenderPassType::SHADOW_PASS)
             )
         );
@@ -644,7 +641,7 @@ namespace platypus
                 _swapchainRef.getRenderPass(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
-                _batcher.getBatches(RenderPassType::SCENE_PASS)
+                _batcher.getBatches(RenderPassType::SCREEN_PASS)
             )
         );
         // NOTE: Need to reset batches for next frame's submits

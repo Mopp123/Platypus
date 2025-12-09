@@ -128,8 +128,8 @@ void ShadowTestScene::init()
         32.0f,
         { 0, 0 },
         { (float)tilesPerRow, (float)tilesPerRow },
-        true, // receive shadows
-        false
+        false, // cast shadows
+        true // receive shadows
     );
 
     create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
@@ -139,13 +139,15 @@ void ShadowTestScene::init()
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true,
-        true // receive shadows?
+        true, // cast shadows
+        true // receive shadows
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/characterTest.png",
         false,
-        true  // receive shadows?
+        true, // cast shadows
+        true // receive shadows
     );
 
     Mesh* pStaticInstancedMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", true)->getMeshes()[0];
@@ -227,7 +229,7 @@ void ShadowTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getShadowFramebufferDepthTexture()->getID()
+        pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment()->getID()
     );
 }
 
@@ -288,7 +290,7 @@ void ShadowTestScene::update()
     );
 
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    Texture* framebufferTexture = pMasterRenderer->getShadowFramebufferDepthTexture();
+    Texture* framebufferTexture = pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment();
     if (framebufferTexture)
     {
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();

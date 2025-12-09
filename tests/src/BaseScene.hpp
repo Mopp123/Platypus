@@ -41,6 +41,7 @@ public:
         platypus::AssetManager* pAssetManager,
         std::string textureFilepath,
         bool repeatTexture = false,
+        bool castShadows = false,
         bool receiveShadows = false
     );
 
