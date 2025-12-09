@@ -136,6 +136,9 @@ namespace platypus
 
             if (beginInfo.clearValueCount > 0)
                 beginInfo.pClearValues = clearValues;
+            else
+                beginInfo.pClearValues = nullptr;
+
 
             beginInfo.renderArea.offset = { 0, 0 };
             beginInfo.renderArea.extent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };

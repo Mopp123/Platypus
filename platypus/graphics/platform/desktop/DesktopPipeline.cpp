@@ -223,6 +223,7 @@ namespace platypus
         }
         else
         {
+            /*
             Debug::log(
                 "@Pipeline::create "
                 "Depth testing was disabled for pipeline but currently "
@@ -232,6 +233,7 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
+            */
         }
 
         // Color blending (Theres 2 ways to do blending -> "blendEnable" or "logicOpEnable")
