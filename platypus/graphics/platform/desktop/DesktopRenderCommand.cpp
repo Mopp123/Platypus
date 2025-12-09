@@ -147,7 +147,10 @@ namespace platypus
             );
         }
 
-        void end_render_pass(CommandBuffer& commandBuffer)
+        void end_render_pass(
+            CommandBuffer& commandBuffer,
+            bool transitionColorAttachmentSamplable // JUST TESTING HERE!
+        )
         {
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
             vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
@@ -189,7 +192,7 @@ namespace platypus
             // NOTE: This should be done at the end of the opaque pass!
             // At the end of the transparent pass you should transition from COLOR_ATTACHMENT_OPTIMAL to
             // SHADER_READ_ONLY_OPTIMAL!
-            if (pCmdBufferImpl->pColorAttachment)
+            if (pCmdBufferImpl->pColorAttachment && transitionColorAttachmentSamplable)
             {
                 TextureImpl* pColorTextureImpl = pCmdBufferImpl->pColorAttachment->getImpl();
 

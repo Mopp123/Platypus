@@ -28,7 +28,10 @@ namespace platypus
             bool clearDepthBuffer
         );
 
-        void end_render_pass(CommandBuffer& commandBuffer);
+        void end_render_pass(
+            CommandBuffer& commandBuffer,
+            bool transitionColorAttachmentSamplable = false // JUST TESTING HERE!
+        );
 
         void exec_secondary_command_buffers(
             const CommandBuffer& primary,

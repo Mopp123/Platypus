@@ -719,7 +719,7 @@ namespace platypus
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, transparentPassCommandBuffers);
-        render::end_render_pass(currentCommandBuffer);
+        render::end_render_pass(currentCommandBuffer, true);
         // TESTING END ^^^ -------------------------------------------
 
 
