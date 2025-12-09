@@ -129,7 +129,8 @@ void ShadowTestScene::init()
         { 0, 0 },
         { (float)tilesPerRow, (float)tilesPerRow },
         false, // cast shadows
-        true // receive shadows
+        true, // receive shadows
+        false // transparent
     );
 
     create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
@@ -289,19 +290,14 @@ void ShadowTestScene::update()
         ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
     );
 
-    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+    MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
     Texture* framebufferTexture = pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment();
     if (framebufferTexture)
-    {
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
-    }
     else
-    {
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
-    }
+
 
     if (inputManager.isKeyDown(KeyName::KEY_0))
-    {
-        Application::get_instance()->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
-    }
+        pApp->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
 }

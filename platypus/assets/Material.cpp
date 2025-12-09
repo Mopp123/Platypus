@@ -8,6 +8,7 @@
 
 namespace platypus
 {
+    // NOTE: All transparent materials use opaque pass's depth buffer as texture!
     Material::Material(
         ID_t blendmapTextureID,
         ID_t* pDiffuseTextureIDs,
@@ -22,6 +23,7 @@ namespace platypus
         const Vector2f& textureScale,
         bool castShadows,
         bool receiveShadows,
+        bool transparent,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     ) :
@@ -32,6 +34,7 @@ namespace platypus
         _normalTextureCount(normalTextureCount),
         _castShadows(castShadows),
         _receiveShadows(receiveShadows),
+        _transparent(transparent),
 
         _customVertexShaderFilename(customVertexShaderFilename),
         _customFragmentShaderFilename(customFragmentShaderFilename)

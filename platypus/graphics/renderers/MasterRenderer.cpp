@@ -42,7 +42,11 @@ namespace platypus
             RenderPassType::SHADOW_PASS,
             true
         ),
-        _shadowTextureSampler(
+        _opaquePass(
+            RenderPassType::OPAQUE_PASS,
+            true
+        ),
+        _offscreenTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             false,
@@ -52,7 +56,7 @@ namespace platypus
             _shadowPass,
             _shadowmapWidth,
             _shadowmapWidth,
-            _shadowTextureSampler,
+            _offscreenTextureSampler,
             false
         ),
         _shadowmapDescriptorSetLayout(
@@ -67,6 +71,13 @@ namespace platypus
                     }
                 }
             }
+        ),
+        _opaquePassInstance(
+            _opaquePass,
+            0,
+            0,
+            _offscreenTextureSampler,
+            true
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
@@ -84,13 +95,18 @@ namespace platypus
             ImageFormat::NONE,
             shadowmapDepthFormat
         );
-        createShadowPassResources();
+        _opaquePass.create(
+            ImageFormat::R8G8B8A8_SRGB,
+            shadowmapDepthFormat
+        );
+        createOffscreenPassResources();
     }
 
     MasterRenderer::~MasterRenderer()
     {
-        destroyShadowPassResources();
+        destroyOffscreenPassResources();
         _shadowPass.destroy();
+        _opaquePass.destroy();
         _shadowmapDescriptorSetLayout.destroy();
 
         destroyCommonShaderResources();
@@ -153,13 +169,21 @@ namespace platypus
             const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
 
             ID_t batchID = ID::hash(meshID, materialID);
-            Batch* pBatch = _batcher.getBatch(RenderPassType::SCREEN_PASS, batchID);
-            if (!pBatch)
+
+            // NOTE: This will change, JUST TESTING RENDERING TRANSPARENT IN SCREEN PASS!
+            if (pMaterial->isTransparent())
             {
-                _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
-                if (pMaterial->castsShadows())
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_shadowPass);
+                if (!_batcher.getBatch(RenderPassType::SCREEN_PASS, batchID))
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, _swapchainRef.getRenderPassPtr());
             }
+            else
+            {
+                if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_opaquePassInstance.getRenderPass()));
+            }
+
+            //if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
+            //    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
 
             if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
             {
@@ -331,28 +355,13 @@ namespace platypus
             outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
     }
 
-    void MasterRenderer::createShadowPassResources()
+    void MasterRenderer::createOffscreenPassResources()
     {
-        //_pShadowFramebufferDepthTexture = new Texture(
-        //    TextureType::DEPTH_TEXTURE,
-        //    _shadowTextureSampler,
-        //    _shadowDepthImageFormat,
-        //    _shadowmapWidth,
-        //    _shadowmapWidth
-        //);
-        //Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pShadowFramebufferDepthTexture);
-
-        //_pShadowFramebuffer = new Framebuffer(
-        //    _shadowPass,
-        //    { },
-        //    _pShadowFramebufferDepthTexture,
-        //    _shadowmapWidth,
-        //    _shadowmapWidth
-        //);
-
         _shadowPassInstance.create();
+        _opaquePassInstance.create();
 
         // Update new shadow texture for materials that receive shadows
+        // TODO: Some way to know if Material uses framebuffer attachment as texture!!
         Texture* pDepthAttachment = _shadowPassInstance.getFramebuffer(0)->getDepthAttachment();
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
@@ -363,11 +372,12 @@ namespace platypus
         }
     }
 
-    void MasterRenderer::destroyShadowPassResources()
+    void MasterRenderer::destroyOffscreenPassResources()
     {
         //Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pShadowFramebufferDepthTexture);
         //delete _pShadowFramebuffer;
         _shadowPassInstance.destroy();
+        _opaquePassInstance.destroy();
 
         //_pShadowFramebufferDepthTexture = nullptr;
         //_pShadowFramebuffer = nullptr;
@@ -604,12 +614,11 @@ namespace platypus
             currentCommandBuffer,
             _shadowPassInstance.getRenderPass(),
             pShadowFramebuffer,
-            pShadowFramebuffer->getDepthAttachment(),
             { 1, 0, 1, 1 },
             true
         );
-        std::vector<CommandBuffer> testSecondaries;
-        testSecondaries.push_back(
+        std::vector<CommandBuffer> shadowpassCommandBuffers;
+        shadowpassCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
                 _shadowPassInstance.getRenderPass(),
                 (float)pShadowFramebuffer->getWidth(),
@@ -617,18 +626,39 @@ namespace platypus
                 _batcher.getBatches(RenderPassType::SHADOW_PASS)
             )
         );
-        render::exec_secondary_command_buffers(currentCommandBuffer, testSecondaries);
+        render::exec_secondary_command_buffers(currentCommandBuffer, shadowpassCommandBuffers);
         render::end_render_pass(currentCommandBuffer);
         // TESTING END ^^^ -------------------------------------------
 
 
+        // TESTING OPAQUE PASS -----------------------------------
+        Framebuffer* pOpaqueFramebuffer = _opaquePassInstance.getFramebuffer(0);
+        render::begin_render_pass(
+            currentCommandBuffer,
+            _opaquePassInstance.getRenderPass(),
+            pOpaqueFramebuffer,
+            { 1, 0, 1, 1 },
+            true
+        );
+        std::vector<CommandBuffer> opaquePassCommandBuffers;
+        opaquePassCommandBuffers.push_back(
+            _pRenderer3D->recordCommandBuffer(
+                _opaquePassInstance.getRenderPass(),
+                (float)pOpaqueFramebuffer->getWidth(),
+                (float)pOpaqueFramebuffer->getHeight(),
+                _batcher.getBatches(RenderPassType::OPAQUE_PASS)
+            )
+        );
+        render::exec_secondary_command_buffers(currentCommandBuffer, opaquePassCommandBuffers);
+        render::end_render_pass(currentCommandBuffer);
+        // TESTING END ^^^ -------------------------------------------
 
-        const Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
+
+        Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
         render::begin_render_pass(
             currentCommandBuffer,
             _swapchainRef.getRenderPass(),
             pCurrentSwapchainFramebuffer,
-            nullptr,
             pScene->environmentProperties.clearColor,
             true
         );
@@ -696,8 +726,8 @@ namespace platypus
                 createPipelines();
 
                 createCommonShaderResources();
-                destroyShadowPassResources();
-                createShadowPassResources();
+                destroyOffscreenPassResources();
+                createOffscreenPassResources();
 
                 // NOTE: After added _receiveShadows into Material, it is required to
                 // always recreate their shader resources since the shadowmap texture
@@ -726,8 +756,8 @@ namespace platypus
                 destroyPipelines();
                 createPipelines();
 
-                destroyShadowPassResources();
-                createShadowPassResources();
+                destroyOffscreenPassResources();
+                createOffscreenPassResources();
 
                 _batcher.recreateManagedPipelines();
             }

@@ -51,14 +51,16 @@ namespace platypus
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         RenderPass _shadowPass;
+        RenderPass _opaquePass;
         // NOTE: Switched using single framebuffer and textures for testing offscreen rendering..
         //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
         //  touch these + the mem barrier in render commands
-        TextureSampler _shadowTextureSampler;
+        TextureSampler _offscreenTextureSampler;
         uint32_t _shadowmapWidth = 2048;
         RenderPassInstance _shadowPassInstance;
-
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
+
+        RenderPassInstance _opaquePassInstance;
 
         size_t _currentFrame = 0;
 
@@ -99,12 +101,13 @@ namespace platypus
         inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
 
         inline RenderPassInstance* getShadowPassInstance() { return &_shadowPassInstance; }
+        inline RenderPassInstance* getOpaquePassInstance() { return &_opaquePassInstance; }
 
         inline size_t getCurrentFrame() const { return _currentFrame; }
 
     private:
-        void createShadowPassResources();
-        void destroyShadowPassResources();
+        void createOffscreenPassResources();
+        void destroyOffscreenPassResources();
 
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();

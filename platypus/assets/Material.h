@@ -53,6 +53,7 @@ namespace platypus
 
         bool _castShadows = false;
         bool _receiveShadows = false;
+        bool _transparent = false;
         uint32_t _shadowmapDescriptorIndex = 0;
 
         std::unordered_map<MeshType, MaterialPipelineData*> _pipelines;
@@ -68,6 +69,7 @@ namespace platypus
         std::string _customFragmentShaderFilename;
 
     public:
+        // NOTE: All transparent materials use opaque pass's depth buffer as texture!
         Material(
             ID_t blendmapTextureID,
             ID_t* pDiffuseTextureIDs,
@@ -82,6 +84,7 @@ namespace platypus
             const Vector2f& textureScale = { 1, 1 },
             bool castShadows = false,
             bool receiveShadows = false,
+            bool transparent = false,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );
@@ -126,6 +129,7 @@ namespace platypus
         inline float getShininess() const { return _uniformBufferData.lightingProperties.y; }
         inline bool castsShadows() const { return _castShadows; }
         inline bool receivesShadows() const { return _receiveShadows; }
+        inline bool isTransparent() const { return _transparent; }
         inline bool isShadeless() const { return _uniformBufferData.lightingProperties.z; }
         inline Vector2f getTextureOffset() const { return { _uniformBufferData.textureProperties.x, _uniformBufferData.textureProperties.y }; }
         inline Vector2f getTextureScale() const { return { _uniformBufferData.textureProperties.z, _uniformBufferData.textureProperties.w };; }

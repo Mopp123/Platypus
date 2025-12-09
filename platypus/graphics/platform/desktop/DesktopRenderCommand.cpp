@@ -21,8 +21,7 @@ namespace platypus
         void begin_render_pass(
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            const Framebuffer* pFramebuffer,
-            Texture* pDepthAttachment,
+            Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         )
@@ -39,6 +38,7 @@ namespace platypus
             }
 
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
+            Texture* pDepthAttachment = pFramebuffer->getDepthAttachment();
             if (renderPass.isOffscreenPass() && pDepthAttachment)
             {
                 TextureImpl* pDepthTextureImpl = pDepthAttachment->getImpl();
@@ -68,13 +68,12 @@ namespace platypus
                     0, nullptr,
                     1, &barrier
                 );
+                pCmdBufferImpl->pDepthAttachment = pDepthAttachment;
             }
 
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             beginInfo.renderPass = renderPass.getImpl()->handle;
-            CommandBufferImpl* pCommandBufferImpl = commandBuffer.getImpl();
-            pCommandBufferImpl->pDepthAttachment = pDepthAttachment;
             beginInfo.framebuffer = pFramebuffer->getImpl()->handle;
 
             VkClearValue clearColorValue{};
@@ -94,7 +93,7 @@ namespace platypus
             beginInfo.renderArea.extent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
 
             vkCmdBeginRenderPass(
-                pCommandBufferImpl->handle,
+                pCmdBufferImpl->handle,
                 &beginInfo,
                 VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS
             );

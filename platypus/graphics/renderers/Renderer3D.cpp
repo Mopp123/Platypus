@@ -142,6 +142,10 @@ namespace platypus
             _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
+        _commandBuffers[RenderPassType::OPAQUE_PASS] = Device::get_command_pool()->allocCommandBuffers(
+            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
+        );
     }
 
     void Renderer3D::freeCommandBuffers()

@@ -53,6 +53,7 @@ namespace platypus
             const Vector2f& textureScale,
             bool castShadows,
             bool receiveShadows,
+            bool transparent,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );

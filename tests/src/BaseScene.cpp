@@ -170,7 +170,8 @@ Material* BaseScene::createMeshMaterial(
         { 0, 0 },
         { 1, 1 },
         castShadows, // cast shadows
-        receiveShadows // receive shadows
+        receiveShadows, // receive shadows
+        false // transparent
     );
     return pMaterial;
 }

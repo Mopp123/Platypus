@@ -9,6 +9,8 @@ private:
     platypus::CameraController _camController;
     platypus::Material* _pWaterMaterial = nullptr;
 
+    entityID_t _framebufferDebugEntity = NULL_ENTITY_ID;
+
 public:
     WaterTestScene();
     ~WaterTestScene();

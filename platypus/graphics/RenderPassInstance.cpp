@@ -18,8 +18,6 @@ namespace platypus
         _textureSampler(textureSampler),
         _useWindowDimensions(useWindowDimensions)
     {
-        if (_useWindowDimensions)
-            matchWindowDimensions();
     }
 
     RenderPassInstance::~RenderPassInstance()
@@ -124,7 +122,7 @@ namespace platypus
 
     void RenderPassInstance::matchWindowDimensions()
     {
-        Extent2D swapchainExtent = Application::get_instance()->getMasterRenderer()->getSwapchain().getExtent();
+        Extent2D swapchainExtent = Application::get_instance()->getSwapchain()->getExtent();
         _framebufferWidth = swapchainExtent.width;
         _framebufferHeight = swapchainExtent.height;
     }

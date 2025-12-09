@@ -69,6 +69,13 @@ namespace platypus
 
             return _framebuffers[_currentImageIndex];
         }
+        inline Framebuffer* getCurrentFramebuffer()
+        {
+            if (_framebuffers.empty())
+                return nullptr;
+
+            return _framebuffers[_currentImageIndex];
+        }
 
         inline uint32_t getImageCount() const { return _imageCount; }
         inline uint32_t getPreviousImageCount() const { return _previousImageCount; }

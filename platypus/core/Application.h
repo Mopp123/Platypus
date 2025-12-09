@@ -21,8 +21,8 @@ namespace platypus
         InputManager _inputManager;
         // TODO: Fix these -> not supposed to be heap allocated?
         Swapchain* _pSwapchain = nullptr;
-        MasterRenderer* _pMasterRenderer = nullptr;
         AssetManager* _pAssetManager = nullptr;
+        MasterRenderer* _pMasterRenderer = nullptr;
 
         SceneManager _sceneManager;
 
@@ -45,6 +45,7 @@ namespace platypus
         inline Window& getWindow() { return _window; }
         inline InputManager& getInputManager() { return _inputManager; }
         inline SceneManager& getSceneManager() { return _sceneManager; }
+        inline Swapchain* getSwapchain() { return _pSwapchain; }
         inline AssetManager* getAssetManager() { return _pAssetManager; }
         inline MasterRenderer* getMasterRenderer() { return _pMasterRenderer; }
     };

@@ -188,6 +188,7 @@ namespace platypus
         const Vector2f& textureScale,
         bool castShadows,
         bool receiveShadows,
+        bool transparent,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     )
@@ -233,6 +234,7 @@ namespace platypus
             textureScale,
             castShadows,
             receiveShadows,
+            transparent,
             customVertexShaderFilename,
             customFragmentShaderFilename
         );
@@ -260,6 +262,7 @@ namespace platypus
             { 1, 1 },
             false, // cast shadow
             false, // receive shadow
+            false, // transparent
             "",
             ""
         );

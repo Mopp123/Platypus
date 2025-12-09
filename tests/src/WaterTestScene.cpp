@@ -24,7 +24,7 @@ void WaterTestScene::init()
         80.0f,   // max zoom
         1.25f    // zoom speed
     );
-    _camController.setOffsetPos({ 0, 0, 0 });
+    _camController.setOffsetPos({ 20, 5, 20 });
 
     Light* pDirLight = (Light*)getComponent(
         _lightEntity,
@@ -113,7 +113,8 @@ void WaterTestScene::init()
         { 0, 0 },
         { (float)terrainTilesPerRow, (float)terrainTilesPerRow },
         false, // cast shadows
-        false // receive shadows
+        false, // receive shadows
+        false // transparent
     );
 
     create_renderable3D(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
@@ -169,6 +170,7 @@ void WaterTestScene::init()
         { 1, 1 },
         false, // cast shadows
         false, // receive shadows,
+        true, // transparent
         "water/VertexShader",
         "water/FragmentShader"
     );
@@ -195,9 +197,35 @@ void WaterTestScene::init()
         pPlaneMesh->getID(),
         pWaterMaterial->getID()
     );
+
+
+    _framebufferDebugEntity = createEntity();
+    create_gui_transform(
+        _framebufferDebugEntity,
+        { 0, 0 },
+        { 400, 256 }
+    );
+    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+    GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
+        _framebufferDebugEntity,
+        pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment()->getID()
+    );
 }
 
 void WaterTestScene::update()
 {
     _camController.update();
+    Application* pApp = Application::get_instance();
+
+    GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
+        _framebufferDebugEntity,
+        ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+    );
+
+    MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
+    Texture* framebufferTexture = pMasterRenderer->getOpaquePassInstance()->getFramebuffer(0)->getDepthAttachment();
+    if (framebufferTexture)
+        pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
+    else
+        pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
 }

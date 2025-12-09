@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...
-#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 2
+#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 3
 
 
 namespace platypus
@@ -134,7 +134,7 @@ namespace platypus
         size_t _maxSkinnedBatchLength;
         size_t _maxSkinnedMeshJoints;
 
-        static RenderPassType s_availableRenderPasses[2];
+        static RenderPassType s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES];
         static DescriptorSetLayout s_staticDescriptorSetLayout; // single transformation mat as dynamic ubo for all batch members
         static DescriptorSetLayout s_jointDescriptorSetLayout;
 

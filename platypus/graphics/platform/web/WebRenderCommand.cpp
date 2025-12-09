@@ -66,8 +66,7 @@ namespace platypus
         void begin_render_pass(
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            const Framebuffer* pFramebuffer,
-            Texture* pDepthAttachment,
+            Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
             bool clearDepthBuffer
         )
