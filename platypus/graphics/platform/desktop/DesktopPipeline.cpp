@@ -75,6 +75,7 @@ namespace platypus
         CullMode cullMode,
         FrontFace frontFace,
         bool enableDepthTest,
+        bool enableDepthWrite,
         DepthCompareOperation depthCmpOp,
         bool enableColorBlending, // TODO: more options to handle this..
         uint32_t pushConstantSize,
@@ -88,6 +89,7 @@ namespace platypus
         _cullMode(cullMode),
         _frontFace(frontFace),
         _enableDepthTest(enableDepthTest),
+        _enableDepthWrite(enableDepthWrite),
         _depthCmpOp(depthCmpOp),
         _enableColorBlending(enableColorBlending),
         _pushConstantSize(pushConstantSize),
@@ -212,9 +214,9 @@ namespace platypus
         {
             depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
             depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-            depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+            depthStencilCreateInfo.depthWriteEnable = _enableDepthWrite ? VK_TRUE : VK_FALSE;
             depthStencilCreateInfo.depthCompareOp = to_vk_depth_compare_op(_depthCmpOp);
-            depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE; // DISABLED ATM!
+            depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
             depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
             depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
             depthStencilCreateInfo.stencilTestEnable = VK_FALSE; // DISABLED ATM!
@@ -249,7 +251,7 @@ namespace platypus
             colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
             colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
             colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            colorBlendAttachment.dstAlphaBlendFactor = _enableDepthWrite ? VK_BLEND_FACTOR_ZERO : VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
             colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
         }
 

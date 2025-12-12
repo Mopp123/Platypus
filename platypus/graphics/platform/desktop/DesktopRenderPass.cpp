@@ -98,7 +98,7 @@ namespace platypus
             depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-            // TESTING! For continueing using same color attachment for transparent pass
+            // TESTING! For continueing using same depth attachment for transparent pass
             if (test)
                 depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             else

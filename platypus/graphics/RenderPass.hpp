@@ -41,6 +41,8 @@ namespace platypus
         bool _offscreen = false;
 
     public:
+        // TODO: Args how attachments will be used?
+        // Will attachments be cleared, are we continuing using some previous pass's attachments, etc?
         RenderPass(
             RenderPassType type,
             bool offscreen
@@ -52,7 +54,7 @@ namespace platypus
             ImageFormat depthFormat,
             bool clearColorAttachment = true,
             bool clearDepthAttachment = true,
-            bool test = false
+            bool test = false // TODO: Get rid of this!
         );
         void destroy();
 

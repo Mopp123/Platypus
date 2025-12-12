@@ -64,6 +64,7 @@ namespace platypus
             CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
+            true, // enable depth write
             DepthCompareOperation::COMPARE_OP_ALWAYS,
             true, // enable color blending
             sizeof(Matrix4f) + sizeof(float), // push constants size
@@ -99,6 +100,7 @@ namespace platypus
             CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // enable depth test
+            true, // enable depth write
             DepthCompareOperation::COMPARE_OP_ALWAYS,
             true, // enable color blending
             sizeof(Matrix4f) + sizeof(float), // push constants size

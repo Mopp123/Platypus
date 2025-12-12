@@ -196,6 +196,7 @@ namespace platypus
             cullMode,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
+            true, // Enable depth write
             DepthCompareOperation::COMPARE_OP_LESS,
             true, // Enable color blend
             pushConstantsSize, // Push constants size

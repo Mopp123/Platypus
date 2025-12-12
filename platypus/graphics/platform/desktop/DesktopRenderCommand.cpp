@@ -38,6 +38,8 @@ namespace platypus
                 return;
             }
 
+            // If using framebuffer attachments as "samplable" in later passes
+            //  -> transition first into "usable attachments" for this render pass
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
             Texture* pDepthAttachment = pFramebuffer->getDepthAttachment();
             if (renderPass.isOffscreenPass() && pDepthAttachment)
@@ -71,12 +73,23 @@ namespace platypus
                 );
                 pCmdBufferImpl->pDepthAttachment = pDepthAttachment;
             }
-            // QUICK HACK -> TESTING
-            Texture* pColorAttachment = nullptr;
-            if (pFramebuffer->getColorAttachments().size() > 0)
-                pColorAttachment = pFramebuffer->getColorAttachments()[0];
-            if (renderPass.isOffscreenPass() && pColorAttachment)
+
+            const std::vector<Texture*> colorAttachments = pFramebuffer->getColorAttachments();
+            if (renderPass.isOffscreenPass() && !colorAttachments.empty())
             {
+                if (colorAttachments.size() != 1)
+                {
+                    Debug::log(
+                        "@begin_render_pass "
+                        "RenderPass was offscreen pass and framebuffer was using " + std::to_string(colorAttachments.size()) + " "
+                        "color attachments. Currently allowing just a single color attachment for offscreen passes.",
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
+
+                Texture* pColorAttachment = colorAttachments[0];
                 TextureImpl* pColorTextureImpl = pColorAttachment->getImpl();
                 VkImageMemoryBarrier barrier{};
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -158,6 +171,9 @@ namespace platypus
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
             vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
 
+            // If using framebuffer attachments as "samplable" in later passes
+            // (indicated by having non nullptr in pCmdBufferImpl->pDepthAttachment and/or pColorAttachment)
+            //  -> transition into samplable
             if (pCmdBufferImpl->pDepthAttachment)
             {
                 TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pDepthAttachment->getImpl();

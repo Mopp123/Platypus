@@ -416,8 +416,8 @@ namespace platypus
 
     void MasterRenderer::destroyOffscreenPassResources()
     {
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pColorAttachment);
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pDepthAttachment);
         _pColorAttachment = nullptr;
         _pDepthAttachment = nullptr;
         delete _pOpaqueFramebuffer;
