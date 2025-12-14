@@ -32,7 +32,7 @@ namespace platypus
         ImageFormat depthFormat,
         bool clearColorAttachment,
         bool clearDepthAttachment,
-        bool test
+        bool continueAttachmentUsage
     )
     {
         _colorFormat = colorFormat;
@@ -56,16 +56,14 @@ namespace platypus
             colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-            // TESTING! For continueing using same color attachment for transparent pass
-            if (test)
+            if (continueAttachmentUsage)
                 colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             else
                 colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
             VkImageLayout colorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-            // TESTING! For continueing using same color attachment for transparent pass
-            if (test)
+            if (continueAttachmentUsage)
                 colorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             else
                 colorAttachmentDescription.finalLayout = colorImageLayout;
@@ -98,12 +96,15 @@ namespace platypus
             depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-            // TESTING! For continueing using same depth attachment for transparent pass
-            if (test)
+            //  For continuing using some previous pass's depth attachment
+            if (continueAttachmentUsage)
                 depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             else
                 depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+            // NOTE: If wanting to continue using the depth attachment in some
+            // later pass, need to change the finalLayout same way as with the
+            // colorAttachmentDescription
             depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachmentDescriptions.push_back(depthAttachmentDescription);
 

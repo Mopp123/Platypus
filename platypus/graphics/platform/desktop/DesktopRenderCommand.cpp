@@ -457,5 +457,10 @@ namespace platypus
                 0
             );
         }
+
+        void draw(const CommandBuffer& commandBuffer, uint32_t count)
+        {
+            vkCmdDraw(commandBuffer.getImpl()->handle, count, 1, 0, 0);
+        }
     }
 }

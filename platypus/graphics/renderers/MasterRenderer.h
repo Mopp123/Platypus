@@ -10,6 +10,7 @@
 #include "platypus/assets/Material.h"
 #include "GUIRenderer.h"
 #include "Renderer3D.hpp"
+#include "PostProcessingRenderer.hpp"
 #include "Batch.hpp"
 
 #include <memory>
@@ -48,6 +49,7 @@ namespace platypus
         std::vector<DescriptorSet> _scene3DDescriptorSets;
 
         std::unique_ptr<Renderer3D> _pRenderer3D;
+        std::unique_ptr<PostProcessingRenderer> _pPostProcessingRenderer;
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         RenderPass _shadowPass;

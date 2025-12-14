@@ -95,5 +95,10 @@ namespace platypus
             uint32_t count,
             uint32_t instanceCount
         );
+
+        void draw(
+            const CommandBuffer& commandBuffer,
+            uint32_t count
+        );
     }
 }

@@ -46,6 +46,7 @@ namespace platypus
         CullMode cullMode,
         FrontFace frontFace,
         bool enableDepthTest,
+        bool enableDepthWrite,
         DepthCompareOperation depthCmpOp,
         bool enableColorBlending, // TODO: more options to handle this..
         uint32_t pushConstantSize,
@@ -59,6 +60,7 @@ namespace platypus
         _cullMode(cullMode),
         _frontFace(frontFace),
         _enableDepthTest(enableDepthTest),
+        _enableDepthWrite(enableDepthWrite),
         _depthCmpOp(depthCmpOp),
         _enableColorBlending(enableColorBlending),
         _pushConstantSize(pushConstantSize),

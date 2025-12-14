@@ -78,6 +78,7 @@ namespace platypus
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
+        _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(_descriptorPool);
 
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
@@ -107,6 +108,9 @@ namespace platypus
             true
         );
         createOffscreenPassResources();
+
+        _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
+        _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
     }
 
     MasterRenderer::~MasterRenderer()
@@ -437,12 +441,14 @@ namespace platypus
 
         // TODO: Make all renderers alloc same way!
         _pRenderer3D->allocCommandBuffers();
+        _pPostProcessingRenderer->allocCommandBuffers();
         _pGUIRenderer->allocCommandBuffers(count);
     }
 
     void MasterRenderer::freeCommandBuffers()
     {
         _pGUIRenderer->freeCommandBuffers();
+        _pPostProcessingRenderer->freeCommandBuffers();
         _pRenderer3D->freeCommandBuffers();
 
         for (CommandBuffer& buffer : _primaryCommandBuffers)
@@ -454,6 +460,8 @@ namespace platypus
     void MasterRenderer::createPipelines()
     {
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
+
+        _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
 
         _pGUIRenderer->createPipeline(
             _swapchainRef.getRenderPass(),
@@ -468,6 +476,7 @@ namespace platypus
 
     void MasterRenderer::destroyPipelines()
     {
+        _pPostProcessingRenderer->destroyPipeline();
         _pGUIRenderer->destroyPipeline();
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -477,6 +486,9 @@ namespace platypus
 
     void MasterRenderer::createShaderResources()
     {
+        // NOTE: ATM JUST TESTING HERE!
+        _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
+
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->createShaderResources();
@@ -484,6 +496,8 @@ namespace platypus
 
     void MasterRenderer::destroyShaderResources()
     {
+        _pPostProcessingRenderer->destroyShaderResources();
+
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->destroyShaderResources();
@@ -733,9 +747,20 @@ namespace platypus
             true
         );
 
+        // TODO: Post processing screen pass instead of below
+
         // NOTE: We create new copies of secondary command buffers here
         // TODO: Figure out some nice way to optimize this!
         std::vector<CommandBuffer> secondaryCommandBuffers;
+        secondaryCommandBuffers.push_back(
+            _pPostProcessingRenderer->recordCommandBuffer(
+                _swapchainRef.getRenderPass(),
+                (float)swapchainExtent.width,
+                (float)swapchainExtent.height,
+                _currentFrame
+            )
+        );
+        /*
         secondaryCommandBuffers.push_back(
             _pRenderer3D->recordCommandBuffer(
                 _swapchainRef.getRenderPass(),
@@ -744,6 +769,7 @@ namespace platypus
                 _batcher.getBatches(RenderPassType::SCREEN_PASS)
             )
         );
+        */
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
         _batcher.resetForNextFrame();
@@ -814,6 +840,11 @@ namespace platypus
                 //  -> Required tho, because need to get new descriptor sets for batches!
                 _batcher.freeBatches();
                 _pGUIRenderer->freeBatches();
+
+                _pPostProcessingRenderer->destroyShaderResources();
+                _pPostProcessingRenderer->destroyPipeline();
+                _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
+                _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
             }
             else
             {
@@ -830,6 +861,9 @@ namespace platypus
                 createOffscreenPassResources();
 
                 _batcher.recreateManagedPipelines();
+
+                _pPostProcessingRenderer->destroyPipeline();
+                _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
             }
 
             _swapchainRef.resetChangedImageCount();

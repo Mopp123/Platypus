@@ -49,12 +49,15 @@ namespace platypus
         );
         ~RenderPass();
 
+        // continueAttachmentUsage is for passes that continue using some
+        // previous pass' attachments instead of having its' own dedicated
+        // attachments.
         void create(
             ImageFormat colorFormat,
             ImageFormat depthFormat,
             bool clearColorAttachment = true,
             bool clearDepthAttachment = true,
-            bool test = false // TODO: Get rid of this!
+            bool continueAttachmentUsage = false
         );
         void destroy();
 

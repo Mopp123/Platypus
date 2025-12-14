@@ -18,7 +18,10 @@ namespace platypus
 
     void RenderPass::create(
         ImageFormat colorFormat,
-        ImageFormat depthFormat
+        ImageFormat depthFormat,
+        bool clearColorAttachment,
+        bool clearDepthAttachment,
+        bool continueAttachmentUsage
     )
     {
         _colorFormat = colorFormat;

@@ -68,6 +68,7 @@ namespace platypus
             const RenderPass& renderPass,
             Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
+            bool clearColorBuffer,
             bool clearDepthBuffer
         )
         {
@@ -80,11 +81,23 @@ namespace platypus
                 GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
             }
 
-            GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
-            GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+            uint32_t clearBits = 0;
+            if (clearColorBuffer)
+            {
+                GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+                clearBits |= GL_COLOR_BUFFER_BIT;
+            }
+            if (clearDepthBuffer)
+                clearBits |= GL_DEPTH_BUFFER_BIT;
+
+            if (clearBits)
+                GL_FUNC(glClear(clearBits));
         }
 
-        void end_render_pass(CommandBuffer& commandBuffer)
+        void end_render_pass(
+            CommandBuffer& commandBuffer,
+            bool transitionColorAttachmentSamplable
+        )
         {
         }
 
@@ -604,9 +617,6 @@ namespace platypus
 
                         const Buffer* pUniformBuffer = (const Buffer*)pDescriptorSetComponent->pData;
                         uint32_t uniformBufferID = pUniformBuffer->getImpl()->id;
-                        Debug::log(
-                            "___TEST___Binding dynamic uniform block range with total size: " + std::to_string(pUniformBuffer->getTotalSize()) + "elem size: " + std::to_string(pUniformBuffer->getDataElemSize())
-                        );
 
                         // NOTE: Not sure if this breaks in some impl, if the GLintptr becomes something else
                         // than: signed long long int and GLsizeiptr becomes something else than signed long int
@@ -654,6 +664,11 @@ namespace platypus
                 0,
                 instanceCount
             ));
+        }
+
+        void draw(const CommandBuffer& commandBuffer, uint32_t count)
+        {
+            glDrawArrays(GL_TRIANGLES, 0, count);
         }
     }
 }
