@@ -70,6 +70,12 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
         render::set_scissor(currentCommandBuffer, { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight });
 
+        render::bind_descriptor_sets(
+            currentCommandBuffer,
+            { _descriptorSet[currentFrame] },
+            { }
+        );
+
         render::draw(currentCommandBuffer, 6);
 
         currentCommandBuffer.end();
@@ -95,6 +101,16 @@ namespace platypus
 
     void PostProcessingRenderer::createPipeline(const RenderPass& renderPass)
     {
+        if (_pPipeline)
+        {
+            Debug::log(
+                "@PostProcessingRenderer::createPipeline "
+                "Pipeline already exists!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
         _pPipeline = new Pipeline(
             &renderPass,
             { }, // Vertex buffer layouts
@@ -103,7 +119,7 @@ namespace platypus
             _pFragmentShader,
             CullMode::CULL_MODE_NONE,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            false, // Enable depth test
+            true, // Enable depth test
             false, // enable depth write
             DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
             false, // Enable color blend NOTE: Might actually be required atm
@@ -115,8 +131,12 @@ namespace platypus
 
     void PostProcessingRenderer::destroyPipeline()
     {
-        _pPipeline->destroy();
-        delete _pPipeline;
+        if (_pPipeline)
+        {
+            _pPipeline->destroy();
+            delete _pPipeline;
+        }
+        _pPipeline = nullptr;
     }
 
     void PostProcessingRenderer::createShaderResources(Texture* pSceneColorAttachment)
@@ -138,10 +158,7 @@ namespace platypus
 
     void PostProcessingRenderer::destroyShaderResources()
     {
-        const size_t framesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
-        for (size_t i = 0; i < framesInFlight; ++i)
-            _descriptorPoolRef.freeDescriptorSets(_descriptorSet);
-
+        _descriptorPoolRef.freeDescriptorSets(_descriptorSet);
         _descriptorSet.clear();
     }
 }

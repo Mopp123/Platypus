@@ -150,14 +150,17 @@ namespace platypus
 
         // Specify viewport
         // TODO: Allow specifying other than swapchain's extent
+        /*
         const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
         Extent2D swapchainExtent = swapchain.getExtent();
         Rect2D viewportScissor = {
             0, 0, swapchainExtent.width, swapchainExtent.height
         };
+        */
         // ----------------
         // NOTE: Flipping the viewpot height here to have y point up so
         // it's consistent with opengl and how gltf files' vertices go
+        /*
         VkViewport viewport{};
         viewport.x = 0;
         viewport.y = (float)swapchainExtent.height;
@@ -165,17 +168,13 @@ namespace platypus
         viewport.height = -((float)swapchainExtent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
-
-        VkPipelineViewportStateCreateInfo viewportCreateInfo{};
-        viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        */
+            VkPipelineViewportStateCreateInfo viewportCreateInfo{};
+            viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         viewportCreateInfo.viewportCount = 1;
-        viewportCreateInfo.pViewports = &viewport;
+        viewportCreateInfo.pViewports = nullptr;
         viewportCreateInfo.scissorCount = 1;
-        VkRect2D vkScissor{
-            { viewportScissor.offsetX, viewportScissor.offsetY },
-            { viewportScissor.width, viewportScissor.height }
-        };
-        viewportCreateInfo.pScissors = &vkScissor;
+        viewportCreateInfo.pScissors = nullptr;
 
         // Rasterization
         // -------------

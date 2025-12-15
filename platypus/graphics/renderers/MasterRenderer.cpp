@@ -109,6 +109,7 @@ namespace platypus
         );
         createOffscreenPassResources();
 
+        Debug::log("___TEST___@MasterRenderer::MasterRenderer -> init postProcessingRenderer");
         _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
         _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
     }
@@ -486,6 +487,7 @@ namespace platypus
 
     void MasterRenderer::createShaderResources()
     {
+        Debug::log("___TEST___MasterRenderer::createShaderResources");
         // NOTE: ATM JUST TESTING HERE!
         _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
 
@@ -496,6 +498,7 @@ namespace platypus
 
     void MasterRenderer::destroyShaderResources()
     {
+        Debug::log("___TEST___MasterRenderer::destroyShaderResources");
         _pPostProcessingRenderer->destroyShaderResources();
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -799,6 +802,7 @@ namespace platypus
 
     void MasterRenderer::handleWindowResize()
     {
+        Debug::log("___TEST___WINDOW RESIZE!");
         Application* pApp = Application::get_instance();
         Device::wait_for_operations();
 
@@ -862,7 +866,9 @@ namespace platypus
 
                 _batcher.recreateManagedPipelines();
 
+                _pPostProcessingRenderer->destroyShaderResources();
                 _pPostProcessingRenderer->destroyPipeline();
+                _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
                 _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
             }
 

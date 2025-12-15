@@ -109,6 +109,13 @@ namespace platypus
 
     void Application::run()
     {
+        // NOTE: HUGE ISSUE HERE!
+        //  -> calling _pMasterRenderer->createPipelines() ATM doesn't necessarely mean that
+        //  previous pipelines were really destroyed!
+        //  This was earlier fine probably because Most of the Pipelines were managed by MasterRenderer
+        //  quering all Materials pipelines! This is absolutely fucked up once again!
+        VITTUSAATANA ONGELMIA TÄÄLLÄ, KATSO YLEMPI KOMMENTTI!
+
         _pMasterRenderer->createPipelines();
         #ifdef PLATYPUS_BUILD_DESKTOP
             while (!_window.isCloseRequested())
