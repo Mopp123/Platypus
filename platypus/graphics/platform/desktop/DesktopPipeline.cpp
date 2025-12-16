@@ -149,6 +149,12 @@ namespace platypus
         inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
 
         // Specify viewport
+        // IMPORTANT::LATEST --------------------------------------------------------
+        // NOTE: UPDATE TO ALL BELOW: Using dynamic viewport stage atm
+        //  -> did this very drunk, not sure what consequences is it really
+        //  okay to flip the same way using just vkCmdViewport: WHICH I DIDN'T DO! -> FUCKING MYSTERIOUS SHIT ONCE AGAIN!
+        //  ------------------------------------------------------------------------- -> FUCKING MYSTERIOUS SHIT ONCE AGAIN!
+        //
         // TODO: Allow specifying other than swapchain's extent
         /*
         const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();

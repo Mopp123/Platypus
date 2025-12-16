@@ -9,7 +9,6 @@ WaterTestScene::~WaterTestScene() {}
 
 void WaterTestScene::init()
 {
-    Debug::log("___TEST___init WaterTestScene");
     initBase();
 
     AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
