@@ -109,9 +109,14 @@ namespace platypus
         );
         createOffscreenPassResources();
 
-        Debug::log("___TEST___@MasterRenderer::MasterRenderer -> init postProcessingRenderer");
-        _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
         _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
+
+        // NOTE: This could fuck things up if not being very careful which
+        // pipelines gets created here since this gets called in Application's
+        // constructor!
+        Debug::log("___TEST___MasterRenderer::MasterRenderer");
+        createPipelines();
+        Debug::log("___TEST___MasterRenderer::MasterRenderer Pipelines created successfully");
     }
 
     MasterRenderer::~MasterRenderer()
@@ -462,14 +467,21 @@ namespace platypus
     {
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
+        Debug::log("___TEST___MasterRenderer::createPipelines creating post processing pipeline");
         _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
 
+        Debug::log("___TEST___MasterRenderer::createPipelines creating GUIRenderer pipeline");
         _pGUIRenderer->createPipeline(
             _swapchainRef.getRenderPass(),
             swapchainExtent.width,
             swapchainExtent.height
         );
 
+        Debug::log("___TEST___MasterRenderer::createPipelines creating Material pipelines");
+
+        // NOTE: Materials' pipelines gets initially created by Batcher.
+        // If swapchain recreation occurs this makes the Materials to also recreate
+        // their pipelines according to the current situation
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
             ((Material*)pAsset)->recreateExistingPipeline();

@@ -100,10 +100,6 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
-        Extent2D swapchainExtent = swapchain.getExtent();
-        _pImpl->viewportWidth = swapchainExtent.width;
-        _pImpl->viewportHeight = swapchainExtent.height;
         OpenglShaderProgram* pShaderProgram = new OpenglShaderProgram(
             ShaderVersion::OPENGLES_GLSL_300,
             (const ShaderImpl*)_pVertexShader->_pImpl,

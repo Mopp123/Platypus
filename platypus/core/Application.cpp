@@ -112,11 +112,13 @@ namespace platypus
         // NOTE: HUGE ISSUE HERE!
         //  -> calling _pMasterRenderer->createPipelines() ATM doesn't necessarely mean that
         //  previous pipelines were really destroyed!
-        //  This was earlier fine probably because Most of the Pipelines were managed by MasterRenderer
-        //  quering all Materials pipelines! This is absolutely fucked up once again!
-        VITTUSAATANA ONGELMIA TÄÄLLÄ, KATSO YLEMPI KOMMENTTI!
+        //  This was earlier fine probably because Most of the Pipelines were managed by
+        //  Materials' which pipelines gets created "on demand" via Batcher.
+        //  This is absolutely fucked up once again!
 
-        _pMasterRenderer->createPipelines();
+        // ISSUE: MasterRenderer is creating some resources in its constructor in addition to here!
+        //  -> this doesn't make any sense!
+        //_pMasterRenderer->createPipelines();
         #ifdef PLATYPUS_BUILD_DESKTOP
             while (!_window.isCloseRequested())
             {

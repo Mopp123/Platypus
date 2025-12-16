@@ -48,6 +48,7 @@ namespace platypus
         size_t currentFrame
     )
     {
+        Debug::log("___TEST___PostProcessingRenderer::recordCommandBuffer");
         if (currentFrame >= _commandBuffers.size())
         {
             Debug::log(
@@ -111,6 +112,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
+        Debug::log("___TEST___@PostProcessingRenderer allocating pipelin");
         _pPipeline = new Pipeline(
             &renderPass,
             { }, // Vertex buffer layouts
@@ -126,6 +128,7 @@ namespace platypus
             0, // push constants size
             ShaderStageFlagBits::SHADER_STAGE_NONE // push constants stage flags
         );
+        Debug::log("___TEST___@PostProcessingRenderer creating pipeline");
         _pPipeline->create();
     }
 

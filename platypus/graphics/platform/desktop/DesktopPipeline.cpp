@@ -169,8 +169,8 @@ namespace platypus
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         */
-            VkPipelineViewportStateCreateInfo viewportCreateInfo{};
-            viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        VkPipelineViewportStateCreateInfo viewportCreateInfo{};
+        viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         viewportCreateInfo.viewportCount = 1;
         viewportCreateInfo.pViewports = nullptr;
         viewportCreateInfo.scissorCount = 1;
