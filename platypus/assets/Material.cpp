@@ -81,12 +81,7 @@ namespace platypus
 
         createDescriptorSetLayout();
 
-        // NOTE: Not sure should we create all possible pipelines here...
-        // Just go so fucking annoyed how the "dynamic pipeline creation" is handled in the Batcher so decided
-        // to just do it here, even if some of the pipelines aren't used...
-        // ALSO the pipeline creation func is fucking stupid with those bools... TODO: Make this less annoying!
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
+        // NOTE: Materials' pipelines gets created on demand via Batcher atm!
 
         createShaderResources();
 
@@ -313,8 +308,23 @@ namespace platypus
         for (size_t i = 0; i < allTextures.size(); ++i)
             textureComponents[i] = { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, allTextures[i] };
 
+        // TODO: Do something about this convoluted mess
+        if (_receiveShadows && _transparent)
+        {
+            Debug::log(
+                "@Material::createShaderResources "
+                "Material was receiving shadows and transparent which isn't currently allowed "
+                "since shadowmap and scene's depth map is considered the last descriptor of material.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         if (_receiveShadows)
             _shadowmapDescriptorIndex = textureComponents.size() - 1;
+
+        if (_transparent)
+            _sceneDepthDescriptorIndex = textureComponents.size() - 1;
 
         for (size_t i = 0; i < framesInFlight; ++i)
         {
@@ -353,6 +363,19 @@ namespace platypus
         _descriptorSets.clear();
     }
 
+    void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)
+    {
+        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
+        for (DescriptorSet& descriptorSet : _descriptorSets)
+        {
+            descriptorSet.update(
+                descriptorPool,
+                descriptorIndex,
+                { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pTexture }
+            );
+        }
+    }
+
     void Material::updateShadowmapDescriptorSet(Texture* pShadowmapTexture)
     {
         #ifdef PLATYPUS_DEBUG
@@ -367,16 +390,24 @@ namespace platypus
                 return;
             }
         #endif
+        updateDescriptorSetTexture(pShadowmapTexture, _shadowmapDescriptorIndex);
+    }
 
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
-        for (DescriptorSet& descriptorSet : _descriptorSets)
-        {
-            descriptorSet.update(
-                descriptorPool,
-                _shadowmapDescriptorIndex,
-                { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pShadowmapTexture }
-            );
-        }
+    void Material::updateSceneDepthDescriptorSet(Texture* pSceneDepthTexture)
+    {
+        #ifdef PLATYPUS_DEBUG
+            if (!_transparent)
+            {
+                Debug::log(
+                    "@Material::updateSceneDepthDescriptorSet "
+                    "Material not marked as transparent!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+        #endif
+        updateDescriptorSetTexture(pSceneDepthTexture, _sceneDepthDescriptorIndex);
     }
 
     Texture* Material::getBlendmapTexture() const
@@ -473,11 +504,28 @@ namespace platypus
         for (size_t i = 0; i < _normalTextureCount; ++i)
             textures.push_back(getNormalTexture(i));
 
+        if (_receiveShadows && _transparent)
+        {
+            Debug::log(
+                "@Material::getTextures "
+                "Material was receiving shadows and transparent. This currently isn't supported yet!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return { };
+        }
+
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         if (_receiveShadows)
         {
-            MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
             Texture* pShadowPassDepthAttachment = pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment();
             textures.push_back(pShadowPassDepthAttachment);
+        }
+
+        if (_transparent)
+        {
+            Texture* pDepthTexture = pMasterRenderer->getOpaqueFramebuffer()->getDepthAttachment();
+            textures.push_back(pDepthTexture);
         }
 
         return textures;
@@ -578,7 +626,6 @@ namespace platypus
         uint32_t textureBindingCount = getTotalTextureCount();
         for (uint32_t textureBinding = 0; textureBinding < textureBindingCount; ++textureBinding)
         {
-            Debug::log("___TEST___added texture binding: " + std::to_string(textureBinding));
             layoutBindings.push_back(
                 {
                     textureBinding,

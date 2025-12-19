@@ -128,6 +128,7 @@ namespace platypus
             emscripten_set_main_loop(update, 0, 1);
         #endif
 
+        // NOTE: Why the fuck this shit isn't done in the destructor!?!?!?
         Device::wait_for_operations();
         // NOTE: Need to destroy assets before destroying MasterRenderer because
         // some rely on descriptor pool that's living in the MasterRenderer atm!

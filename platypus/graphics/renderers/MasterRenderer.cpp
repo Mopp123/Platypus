@@ -412,8 +412,12 @@ namespace platypus
 
         _shadowPassInstance.create();
 
+        // NOTE: This is so wrong way of dealing with Materials that are relying on this kind of
+        // external stuff...
+        //
         // Update new shadow texture for materials that receive shadows
-        // TODO: Some way to know if Material uses framebuffer attachment as texture!!
+        // Update new "scene depth texture" for materials that are transparent
+        // TODO: Some way to know if Material uses framebuffer attachment as texture?
         Texture* pDepthAttachment = _shadowPassInstance.getFramebuffer(0)->getDepthAttachment();
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
@@ -421,6 +425,9 @@ namespace platypus
             Material* pMaterial = (Material*)pAsset;
             if (pMaterial->receivesShadows())
                 pMaterial->updateShadowmapDescriptorSet(pDepthAttachment);
+
+            if (pMaterial->isTransparent())
+                pMaterial->updateSceneDepthDescriptorSet(_pOpaqueFramebuffer->getDepthAttachment());
         }
     }
 

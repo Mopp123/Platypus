@@ -1,0 +1,8 @@
+
+
+Material descriptor set updating, depending on external resource (for example: Material::updateShadowmapDescriptorSet)
+is getting pretty annoying if making similar system for transparent stuff...
+
+    *shadowmap descriptor index is "regular texture indices" + 1
+        -> u could make this a rule where the depth is all above +1?
+            -> ISSUE: This just makes the Material even more convoluted mess!

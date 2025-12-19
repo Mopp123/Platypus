@@ -54,7 +54,9 @@ namespace platypus
         bool _castShadows = false;
         bool _receiveShadows = false;
         bool _transparent = false;
+        // TODO: oh my god please PLEASE MAKE THIS SHIT LESS DUMB!
         uint32_t _shadowmapDescriptorIndex = 0;
+        uint32_t _sceneDepthDescriptorIndex = 0;
 
         std::unordered_map<MeshType, MaterialPipelineData*> _pipelines;
 
@@ -102,6 +104,7 @@ namespace platypus
         void destroyShaderResources();
 
         void updateShadowmapDescriptorSet(Texture* pShadowmapTexture);
+        void updateSceneDepthDescriptorSet(Texture* pSceneDepthTexture);
 
         Texture* getBlendmapTexture() const;
         Texture* getDiffuseTexture(size_t channel) const;
@@ -140,6 +143,7 @@ namespace platypus
         void warnUnassigned(const std::string& beginStr);
 
     private:
+        void updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex);
         void validateTextureCounts();
         void createDescriptorSetLayout();
         // NOTE: This updates all uniform buffers for all possible frames in flight,
