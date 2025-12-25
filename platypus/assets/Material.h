@@ -126,7 +126,8 @@ namespace platypus
                 _specularTextureCount +
                 _normalTextureCount +
                 (_blendmapTextureID != NULL_ID ? 1 : 0) +
-                (_receiveShadows ? 1 : 0);
+                (_receiveShadows ? 1 : 0) +
+                (_transparent ? 1 : 0);
         }
         inline float getSpecularStrength() const { return _uniformBufferData.lightingProperties.x; }
         inline float getShininess() const { return _uniformBufferData.lightingProperties.y; }
