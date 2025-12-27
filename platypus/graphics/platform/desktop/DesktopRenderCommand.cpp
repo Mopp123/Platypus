@@ -18,13 +18,47 @@ namespace platypus
 {
     namespace render
     {
+        void transition_image_layout_samplable_readable_TEST(
+            CommandBuffer& commandBuffer,
+            Texture* pTexture
+        )
+        {
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            barrier.image = pTexture->getImpl()->image;
+            pTexture->getImpl()->imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount = 1;
+
+            vkCmdPipelineBarrier(
+                commandBuffer.getImpl()->handle,
+                VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1, &barrier
+            );
+        }
+
         void begin_render_pass(
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
             Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
             bool clearColorBuffer,
-            bool clearDepthBuffer
+            bool clearDepthBuffer,
+            bool ignoreDepthLayoutTransition,
+            bool ignoreColorLayoutTransition
         )
         {
             if (!pFramebuffer)
@@ -42,7 +76,7 @@ namespace platypus
             //  -> transition first into "usable attachments" for this render pass
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
             Texture* pDepthAttachment = pFramebuffer->getDepthAttachment();
-            if (renderPass.isOffscreenPass() && pDepthAttachment)
+            if (renderPass.isOffscreenPass() && pDepthAttachment && !ignoreDepthLayoutTransition)
             {
                 TextureImpl* pDepthTextureImpl = pDepthAttachment->getImpl();
                 VkImageMemoryBarrier barrier{};
@@ -75,7 +109,7 @@ namespace platypus
             }
 
             const std::vector<Texture*> colorAttachments = pFramebuffer->getColorAttachments();
-            if (renderPass.isOffscreenPass() && !colorAttachments.empty())
+            if (renderPass.isOffscreenPass() && !colorAttachments.empty() && !ignoreColorLayoutTransition)
             {
                 if (colorAttachments.size() != 1)
                 {
@@ -165,7 +199,9 @@ namespace platypus
 
         void end_render_pass(
             CommandBuffer& commandBuffer,
-            bool transitionColorAttachmentSamplable // JUST TESTING HERE!
+            bool transitionColorAttachmentSamplable, // JUST TESTING HERE!
+            bool ignoreLayoutTransition,
+            bool transitionTest
         )
         {
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
@@ -174,44 +210,50 @@ namespace platypus
             // If using framebuffer attachments as "samplable" in later passes
             // (indicated by having non nullptr in pCmdBufferImpl->pDepthAttachment and/or pColorAttachment)
             //  -> transition into samplable
-            if (pCmdBufferImpl->pDepthAttachment)
+            if (pCmdBufferImpl->pDepthAttachment && !ignoreLayoutTransition)
             {
-                TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pDepthAttachment->getImpl();
+                if (transitionTest)
+                {
+                    transition_image_layout_samplable_readable_TEST(commandBuffer, pCmdBufferImpl->pDepthAttachment);
+                }
+                else
+                {
+                    TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pDepthAttachment->getImpl();
+                    VkImageMemoryBarrier barrier{};
+                    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier.image = pDepthTextureImpl->image;
+                    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                    // (if stencil is present, you might include the stencil bit if you need to preserve it)
+                    barrier.subresourceRange.baseMipLevel = 0;
+                    barrier.subresourceRange.levelCount = 1;
+                    barrier.subresourceRange.baseArrayLayer = 0;
+                    barrier.subresourceRange.layerCount = 1;
 
-                VkImageMemoryBarrier barrier{};
-                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.image = pDepthTextureImpl->image;
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                // (if stencil is present, you might include the stencil bit if you need to preserve it)
-                barrier.subresourceRange.baseMipLevel = 0;
-                barrier.subresourceRange.levelCount = 1;
-                barrier.subresourceRange.baseArrayLayer = 0;
-                barrier.subresourceRange.layerCount = 1;
+                    barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-                barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-                vkCmdPipelineBarrier(
-                    pCmdBufferImpl->handle,
-                    VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    0,
-                    0, nullptr,
-                    0, nullptr,
-                    1, &barrier
-                );
-                pDepthTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    vkCmdPipelineBarrier(
+                        pCmdBufferImpl->handle,
+                        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &barrier
+                    );
+                    pDepthTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                }
             }
 
             // QUICK HACK -> TESTING
             // NOTE: This should be done at the end of the opaque pass!
             // At the end of the transparent pass you should transition from COLOR_ATTACHMENT_OPTIMAL to
             // SHADER_READ_ONLY_OPTIMAL!
-            if (pCmdBufferImpl->pColorAttachment && transitionColorAttachmentSamplable)
+            if (pCmdBufferImpl->pColorAttachment && transitionColorAttachmentSamplable && !ignoreLayoutTransition)
             {
                 TextureImpl* pColorTextureImpl = pCmdBufferImpl->pColorAttachment->getImpl();
 

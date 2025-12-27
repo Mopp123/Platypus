@@ -32,7 +32,8 @@ namespace platypus
         ImageFormat depthFormat,
         bool clearColorAttachment,
         bool clearDepthAttachment,
-        bool continueAttachmentUsage
+        bool continueAttachmentUsage,
+        bool continueDepthAttachmentUsage
     )
     {
         _colorFormat = colorFormat;
@@ -105,12 +106,19 @@ namespace platypus
             // NOTE: If wanting to continue using the depth attachment in some
             // later pass, need to change the finalLayout same way as with the
             // colorAttachmentDescription
-            depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            if (continueDepthAttachmentUsage)
+                depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            else
+                depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
             attachmentDescriptions.push_back(depthAttachmentDescription);
 
             // depth attachment is always the last atm...
             depthAttachmentReference.attachment = (uint32_t)colorAttachmentReferences.size();
-            depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            if (continueDepthAttachmentUsage)
+                depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            else
+                depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         }
 
         VkSubpassDescription subpassDescription{};

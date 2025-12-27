@@ -177,7 +177,12 @@ namespace platypus
             isTexture = true;
             // NOTE: Danger?
             const Texture* pTexture = (const Texture*)component.pData;
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            // NOTE: JUST TESTING ATM!
+            if (component.depthImageTEST)
+                imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            else
+                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
             imageInfo.imageView = pTexture->getImpl()->imageView;
             imageInfo.sampler = pTexture->getSamplerImpl()->handle;
         }
@@ -527,7 +532,12 @@ namespace platypus
                 isTexture = true;
                 // NOTE: Danger?
                 const Texture* pTexture = (const Texture*)components[i].pData;
-                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                // NOTE: JUST TESTING ATM!
+                if (components[i].depthImageTEST)
+                    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                else
+                    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
                 imageInfo.imageView = pTexture->getImpl()->imageView;
                 imageInfo.sampler = pTexture->getSamplerImpl()->handle;
             }

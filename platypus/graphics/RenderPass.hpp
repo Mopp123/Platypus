@@ -57,7 +57,8 @@ namespace platypus
             ImageFormat depthFormat,
             bool clearColorAttachment = true,
             bool clearDepthAttachment = true,
-            bool continueAttachmentUsage = false
+            bool continueAttachmentUsage = false,
+            bool continueDepthAttachmentUsage = false
         );
         void destroy();
 

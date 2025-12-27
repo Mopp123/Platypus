@@ -32,10 +32,12 @@ layout(location = 4) out vec3 var_lightDir;
 layout(location = 5) out vec4 var_lightColor;
 layout(location = 6) out vec4 var_ambientLightColor;
 layout(location = 7) out float var_time;
+layout(location = 8) out vec4 var_clipPos;
 
 void main() {
     vec4 translatedPos = instanceData.transformationMatrix * vec4(position, 1.0);
-    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+    var_clipPos = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+    gl_Position = var_clipPos;
     vec4 rotatedNormal = instanceData.transformationMatrix * vec4(normal, 0.0);
     var_normal = rotatedNormal.xyz;
     var_texCoord = texCoord;

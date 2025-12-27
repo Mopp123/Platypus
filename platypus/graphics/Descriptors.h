@@ -136,6 +136,7 @@ namespace platypus
     {
         DescriptorType type = DescriptorType::DESCRIPTOR_TYPE_NONE;
         const void* pData = nullptr;
+        bool depthImageTEST = false;
     };
 
 

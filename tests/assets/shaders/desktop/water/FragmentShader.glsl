@@ -8,6 +8,7 @@ layout(location = 4) in vec3 var_lightDir;
 layout(location = 5) in vec4 var_lightColor;
 layout(location = 6) in vec4 var_ambientLightColor;
 layout(location = 7) in float var_time;
+layout(location = 8) in vec4 var_clipPos;
 
 //layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 layout(set = 2, binding = 0) uniform sampler2D diffuseTextureSampler;
@@ -67,5 +68,26 @@ void main()
     vec4 finalColor = var_ambientLightColor + finalDiffuseColor + finalSpecularColor;
     finalColor.a = 1.0 - fresnelEffect;
 
-    outColor = finalColor;
+
+    // TESTING DEPTH
+    vec4 tempClip = var_clipPos;
+    tempClip.y *= -1.0;
+    vec2 ndcCoord = (tempClip.xy / tempClip.w);
+    ndcCoord = ndcCoord  / 2.0 + 0.5;
+
+    float zNear = 0.1;
+    float zFar = 100.0;
+    float depth = texture(depthMap, ndcCoord).r;
+
+    float floorDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+
+    depth = gl_FragCoord.z;
+    float waterDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+
+    float waterDepth = floorDist - waterDist;
+
+    float d = waterDepth / 50.0;
+    outColor = vec4(d, d, d, 1.0);
+
+    //outColor = finalColor;
 }

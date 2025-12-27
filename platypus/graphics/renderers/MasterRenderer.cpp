@@ -105,7 +105,8 @@ namespace platypus
             _offscreenDepthFormat,
             false,
             false,
-            true
+            true, // continue color attachment usage
+            true // continue depth attachment usage
         );
         createOffscreenPassResources();
 
@@ -720,7 +721,9 @@ namespace platypus
             _pOpaqueFramebuffer,
             { 1, 0, 1, 1 },
             true,
-            true
+            true,
+            false, // ignore depth layout transition
+            false // ignore color layout transition
         );
         std::vector<CommandBuffer> opaquePassCommandBuffers;
         opaquePassCommandBuffers.push_back(
@@ -732,9 +735,12 @@ namespace platypus
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, opaquePassCommandBuffers);
-        render::end_render_pass(currentCommandBuffer);
+        render::end_render_pass(
+            currentCommandBuffer,
+            false, // ignore layout transition
+            true // transition test
+        );
         // TESTING END ^^^ -------------------------------------------
-
 
         // TESTING TRANSPARENT PASS -----------------------------------
         render::begin_render_pass(
@@ -743,7 +749,9 @@ namespace platypus
             _pTransparentFramebuffer,
             { 1, 0, 1, 1 },
             false,
-            false
+            false,
+            true, // ignore depth layout transition
+            false // ignore color layout transition
         );
         std::vector<CommandBuffer> transparentPassCommandBuffers;
         transparentPassCommandBuffers.push_back(
@@ -755,7 +763,11 @@ namespace platypus
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, transparentPassCommandBuffers);
-        render::end_render_pass(currentCommandBuffer, true);
+        render::end_render_pass(
+            currentCommandBuffer,
+            true,
+            false // ignore layout transition
+        );
         // TESTING END ^^^ -------------------------------------------
 
 

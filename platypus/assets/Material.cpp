@@ -324,7 +324,11 @@ namespace platypus
             _shadowmapDescriptorIndex = textureComponents.size() - 1;
 
         if (_transparent)
+        {
             _sceneDepthDescriptorIndex = textureComponents.size() - 1;
+            // NOTE: ONLY TESTING ATM!
+            textureComponents[_sceneDepthDescriptorIndex].depthImageTEST = true;
+        }
 
         for (size_t i = 0; i < framesInFlight; ++i)
         {
@@ -368,10 +372,15 @@ namespace platypus
         DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
         for (DescriptorSet& descriptorSet : _descriptorSets)
         {
+            DescriptorSetComponent component{
+                DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                pTexture
+            };
+            component.depthImageTEST = _transparent && descriptorIndex == _sceneDepthDescriptorIndex;
             descriptorSet.update(
                 descriptorPool,
                 descriptorIndex,
-                { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pTexture }
+                component
             );
         }
     }
