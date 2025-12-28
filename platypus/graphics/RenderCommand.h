@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Swapchain.h"
 #include "platypus/utils/Maths.h"
 #include "CommandBuffer.h"
 #include "RenderPass.hpp"
@@ -14,8 +13,10 @@ namespace platypus
     // NOTE: Maybe some better namespace for this...
     namespace render
     {
-        void transition_image_layout_samplable_readable_TEST(
+        void transition_depth_image_layout_TEST(
             CommandBuffer& commandBuffer,
+            const RenderPass* pPreviousRenderPass,
+            const RenderPass* pCurrentRenderPass,
             Texture* pTexture
         );
 

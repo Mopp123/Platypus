@@ -189,21 +189,22 @@ namespace platypus
 
             ID_t batchID = ID::hash(meshID, materialID);
 
-            // NOTE: This will change, JUST TESTING RENDERING TRANSPARENT IN SCREEN PASS!
             if (pMaterial->isTransparent())
             {
+                // Create transparent batch (if required)
                 if (!_batcher.getBatch(RenderPassType::TRANSPARENT_PASS, batchID))
                     _batcher.createBatch(meshID, materialID, pDirectionalLight, &_transparentPass);
             }
             else
             {
+                // Create opaque batch (if required)
                 if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
                     _batcher.createBatch(meshID, materialID, pDirectionalLight, &_opaquePass);
             }
 
-            // NOTE: ATM SHADOW BATCHES ARE DISABLED!!!!
-            //if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
-            //    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
+            // Create shadow batch (if required)
+            if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
+                _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
 
             if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
             {
@@ -722,7 +723,7 @@ namespace platypus
             { 1, 0, 1, 1 },
             true,
             true,
-            false, // ignore depth layout transition
+            true, // ignore depth layout transition
             false // ignore color layout transition
         );
         std::vector<CommandBuffer> opaquePassCommandBuffers;
@@ -741,6 +742,13 @@ namespace platypus
             true // transition test
         );
         // TESTING END ^^^ -------------------------------------------
+
+        render::transition_depth_image_layout_TEST(
+            currentCommandBuffer,
+            &_opaquePass,
+            &_transparentPass,
+            _pTransparentFramebuffer->getDepthAttachment()
+        );
 
         // TESTING TRANSPARENT PASS -----------------------------------
         render::begin_render_pass(

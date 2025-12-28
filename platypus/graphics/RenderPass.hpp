@@ -30,6 +30,7 @@ namespace platypus
 
     class Swapchain;
 
+    // TODO: Get rid of this stuff and start using 1.4's dynamic rendering!
     struct RenderPassImpl;
     class RenderPass
     {

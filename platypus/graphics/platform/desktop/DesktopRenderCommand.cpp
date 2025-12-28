@@ -1,5 +1,4 @@
 #include "platypus/graphics/RenderCommand.h"
-#include "DesktopSwapchain.h"
 #include "DesktopRenderPass.h"
 #include "DesktopFramebuffer.hpp"
 #include "DesktopCommandBuffer.h"
@@ -18,21 +17,25 @@ namespace platypus
 {
     namespace render
     {
-        void transition_image_layout_samplable_readable_TEST(
+        void transition_depth_image_layout_TEST(
             CommandBuffer& commandBuffer,
+            const RenderPass* pPreviousRenderPass,
+            const RenderPass* pCurrentRenderPass,
             Texture* pTexture
         )
         {
+            TextureImpl* pTextureImpl = pTexture->getImpl();
+
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.oldLayout = pPreviousRenderPass->getImpl()->finalDepthImageLayout;
+            barrier.newLayout = pCurrentRenderPass->getImpl()->initialDepthImageLayout;
+            pTextureImpl->imageLayout = pCurrentRenderPass->getImpl()->finalDepthImageLayout;
 
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-            barrier.image = pTexture->getImpl()->image;
-            pTexture->getImpl()->imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            barrier.image = pTextureImpl->image;
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             barrier.subresourceRange.baseMipLevel = 0;
             barrier.subresourceRange.levelCount = 1;
@@ -214,7 +217,7 @@ namespace platypus
             {
                 if (transitionTest)
                 {
-                    transition_image_layout_samplable_readable_TEST(commandBuffer, pCmdBufferImpl->pDepthAttachment);
+                    //transition_image_layout_samplable_readable_TEST(commandBuffer, pCmdBufferImpl->pDepthAttachment);
                 }
                 else
                 {
