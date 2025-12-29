@@ -66,6 +66,19 @@ namespace platypus
     }
 
 
+    VkPipelineStageFlags to_vk_pipeline_stage(PipelineStage stage)
+    {
+        switch (stage)
+        {
+            case PipelineStage::FRAGMENT_SHADER_BIT: return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            case PipelineStage::LATE_FRAGMENT_TESTS_BIT: return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            case PipelineStage::COLOR_ATTACHMENT_OUTPUT_BIT: return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
+        PLATYPUS_ASSERT(false);
+        return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    }
+
+
     Pipeline::Pipeline(
         const RenderPass* pRenderPass,
         const std::vector<VertexBufferLayout>& vertexBufferLayouts,

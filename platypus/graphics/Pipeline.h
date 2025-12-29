@@ -55,6 +55,13 @@ namespace platypus
         COMPARE_OP_ALWAYS = 7,
     };
 
+    // Atm used only for figuring out img layout transitions between render passes
+    enum class PipelineStage
+    {
+        FRAGMENT_SHADER_BIT,
+        LATE_FRAGMENT_TESTS_BIT,
+        COLOR_ATTACHMENT_OUTPUT_BIT
+    };
 
     struct PipelineImpl;
     class Pipeline

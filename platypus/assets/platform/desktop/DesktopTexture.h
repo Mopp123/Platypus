@@ -10,6 +10,7 @@
 namespace platypus
 {
     VkFormat to_vk_format(ImageFormat format);
+    VkImageLayout to_vk_image_layout(ImageLayout layout);
     ImageFormat to_engine_format(VkFormat format);
 
     struct TextureSamplerImpl

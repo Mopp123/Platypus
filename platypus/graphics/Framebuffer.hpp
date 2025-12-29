@@ -1,10 +1,11 @@
 #pragma once
 
 #include "RenderPass.hpp"
-#include "platypus/assets/Texture.h"
+
 
 namespace platypus
 {
+    class Texture;
     struct FramebufferImpl;
     class Framebuffer
     {

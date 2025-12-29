@@ -3,6 +3,7 @@
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"
+#include "platypus/graphics/platform/desktop/DesktopPipeline.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
@@ -16,6 +17,69 @@
 
 namespace platypus
 {
+    void transition_image_layout(
+        CommandBuffer& commandBuffer,
+        Texture* pTexture,
+        ImageLayout newLayout,
+        PipelineStage srcStage,
+        MemoryAccessFlagBits srcAccessMask,
+        PipelineStage dstStage,
+        MemoryAccessFlagBits dstAccessMask
+    )
+    {
+        TextureImpl* pTextureImpl = pTexture->getImpl();
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = pTextureImpl->imageLayout;
+        VkImageLayout newVkImgLayout = to_vk_image_layout(newLayout);
+        barrier.newLayout = newVkImgLayout;
+        pTextureImpl->imageLayout = newVkImgLayout;
+
+        // TODO: Make it possible to use for staging image transition (Texture creation)
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.image = pTextureImpl->image;
+
+        if (is_color_format(pTexture->getImageFormat()))
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        else
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        // TODO: Make it possible to use for staging image transition (Texture creation)
+        //  -> specify mipmapping
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        // Wait for...
+        VkPipelineStageFlags srcStageMask = to_vk_pipeline_stage(srcStage);
+        barrier.srcAccessMask = srcAccessMask;
+
+        // Who'll be using this...
+        VkPipelineStageFlags dstStageMask = to_vk_pipeline_stage(dstStage);
+        barrier.dstAccessMask = dstAccessMask;
+
+        //VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        //barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        //VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        //barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+        vkCmdPipelineBarrier(
+            commandBuffer.getImpl()->handle,
+            srcStageMask,
+            dstStageMask,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
+    }
+
+    // TODO: Use the new method instead of this when it's ready
     void record_transition_image_layout(
         VkCommandBuffer cmdBufferHandle,
         TextureImpl* pTextureImpl,
@@ -138,6 +202,22 @@ namespace platypus
                 return VK_FORMAT_UNDEFINED;
             }
         }
+    }
+
+    VkImageLayout to_vk_image_layout(ImageLayout layout)
+    {
+        switch (layout)
+        {
+            case ImageLayout::UNDEFINED:            return VK_IMAGE_LAYOUT_UNDEFINED;
+            case ImageLayout::TRANSFER_DST_OPTIMAL: return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            case ImageLayout::SHADER_READ_ONLY_OPTIMAL: return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            case ImageLayout::COLOR_ATTACHMENT_OPTIMAL: return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            case ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            case ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            case ImageLayout::PRESENT_SRC_KHR: return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        }
+        PLATYPUS_ASSERT(false);
+        return VK_IMAGE_LAYOUT_UNDEFINED;
     }
 
     ImageFormat to_engine_format(VkFormat format)
@@ -450,7 +530,8 @@ namespace platypus
         uint32_t height
     ):
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pSamplerImpl(sampler.getImpl())
+        _pSamplerImpl(sampler.getImpl()),
+        _imageFormat(format)
     {
         VkFormat vkImageFormat = to_vk_format(format);
         VkImageCreateInfo createInfo{};
@@ -538,6 +619,7 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_ERROR
             );
         }
+        _imageFormat = imageFormat;
 
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(

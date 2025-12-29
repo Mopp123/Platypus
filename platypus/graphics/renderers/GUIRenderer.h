@@ -2,6 +2,7 @@
 
 
 #include "platypus/core/Scene.h"
+#include "platypus/graphics/CommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"

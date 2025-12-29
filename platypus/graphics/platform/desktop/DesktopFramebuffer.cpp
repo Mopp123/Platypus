@@ -3,6 +3,7 @@
 #include "platypus/graphics/Device.hpp"
 #include "DesktopDevice.hpp"
 #include "DesktopRenderPass.h"
+#include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include "platypus/core/Debug.h"
 

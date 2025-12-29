@@ -5,6 +5,7 @@
 #include "DesktopContext.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/core/Debug.h"
+#include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <algorithm>
 #include <vulkan/vk_enum_string_helper.h>

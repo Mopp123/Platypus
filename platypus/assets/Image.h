@@ -39,7 +39,11 @@ namespace platypus
     {
         UNDEFINED,
         TRANSFER_DST_OPTIMAL,
-        SHADER_READ_ONLY_OPTIMAL
+        SHADER_READ_ONLY_OPTIMAL,
+        COLOR_ATTACHMENT_OPTIMAL,
+        DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+        PRESENT_SRC_KHR
     };
 
     enum ImageChannelIndex
@@ -54,6 +58,7 @@ namespace platypus
     size_t get_image_format_channel_count(ImageFormat format);
     ImageFormat channel_count_to_image_format(size_t channelCount, bool sRGB);
     bool is_image_format_valid(ImageFormat format, int channels);
+    bool is_color_format(ImageFormat format);
     ImageFormat srgb_format_to_unorm(ImageFormat srgb);
 
     struct ImageImpl;

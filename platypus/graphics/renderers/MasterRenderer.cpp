@@ -711,7 +711,7 @@ namespace platypus
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, shadowpassCommandBuffers);
-        render::end_render_pass(currentCommandBuffer);
+        render::end_render_pass(currentCommandBuffer, _shadowPassInstance.getRenderPass());
         // TESTING END ^^^ -------------------------------------------
 
 
@@ -738,17 +738,29 @@ namespace platypus
         render::exec_secondary_command_buffers(currentCommandBuffer, opaquePassCommandBuffers);
         render::end_render_pass(
             currentCommandBuffer,
+            _opaquePass,
             false, // ignore layout transition
             true // transition test
         );
         // TESTING END ^^^ -------------------------------------------
 
-        render::transition_depth_image_layout_TEST(
+        //render::transition_depth_image_layout_TEST(
+        //    currentCommandBuffer,
+        //    &_opaquePass,
+        //    &_transparentPass,
+        //    _pTransparentFramebuffer->getDepthAttachment()
+        //);
+
+        transition_image_layout(
             currentCommandBuffer,
-            &_opaquePass,
-            &_transparentPass,
-            _pTransparentFramebuffer->getDepthAttachment()
+            _pTransparentFramebuffer->getDepthAttachment(),
+            ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL, // new layout
+            PipelineStage::LATE_FRAGMENT_TESTS_BIT, // src stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, // src access mask
+            PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
         );
+
 
         // TESTING TRANSPARENT PASS -----------------------------------
         render::begin_render_pass(
@@ -773,6 +785,7 @@ namespace platypus
         render::exec_secondary_command_buffers(currentCommandBuffer, transparentPassCommandBuffers);
         render::end_render_pass(
             currentCommandBuffer,
+            _transparentPass,
             true,
             false // ignore layout transition
         );
@@ -830,7 +843,7 @@ namespace platypus
 
         render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
 
-        render::end_render_pass(currentCommandBuffer);
+        render::end_render_pass(currentCommandBuffer, _swapchainRef.getRenderPass());
         currentCommandBuffer.end();
 
         size_t maxFramesInFlight = _swapchainRef.getMaxFramesInFlight();

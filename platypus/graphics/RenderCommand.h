@@ -38,6 +38,7 @@ namespace platypus
 
         void end_render_pass(
             CommandBuffer& commandBuffer,
+            const RenderPass& renderPass,
             bool transitionColorAttachmentSamplable = false, // JUST TESTING HERE!
             bool ignoreLayoutTransition = false,
             bool transitionTest = false

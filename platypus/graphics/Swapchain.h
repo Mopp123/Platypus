@@ -3,12 +3,11 @@
 #include "platypus/core/Window.hpp"
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
-#include <platypus/Common.h>
 
 
 namespace platypus
 {
-    struct SwapchainImpl;
+    class Texture;
 
     enum class SwapchainResult
     {
@@ -17,6 +16,8 @@ namespace platypus
         SUCCESS
     };
 
+
+    struct SwapchainImpl;
     class Swapchain
     {
     private:
