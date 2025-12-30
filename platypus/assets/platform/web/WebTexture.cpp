@@ -372,4 +372,16 @@ namespace platypus
             delete _pImpl;
         }
     }
+
+    void transition_image_layout(
+        CommandBuffer& commandBuffer,
+        Texture* pTexture,
+        ImageLayout newLayout,
+        PipelineStage srcStage,
+        MemoryAccessFlagBits srcAccessMask,
+        PipelineStage dstStage,
+        MemoryAccessFlagBits dstAccessMask
+    )
+    {
+    }
 }

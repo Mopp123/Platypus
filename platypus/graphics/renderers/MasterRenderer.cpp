@@ -397,6 +397,7 @@ namespace platypus
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
 
+        Debug::log("___TEST___FRAMEBUFFER create opaque");
         _pOpaqueFramebuffer = new Framebuffer(
             _opaquePass,
             { _pColorAttachment },
@@ -404,6 +405,7 @@ namespace platypus
             swapchainExtent.width,
             swapchainExtent.height
         );
+        Debug::log("___TEST___FRAMEBUFFER create transparent");
         _pTransparentFramebuffer = new Framebuffer(
             _transparentPass,
             { _pColorAttachment },
@@ -412,6 +414,7 @@ namespace platypus
             swapchainExtent.height
         );
 
+        Debug::log("___TEST___FRAMEBUFFER create shadowpass instance");
         _shadowPassInstance.create();
 
         // NOTE: This is so wrong way of dealing with Materials that are relying on this kind of
@@ -435,14 +438,15 @@ namespace platypus
 
     void MasterRenderer::destroyOffscreenPassResources()
     {
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pColorAttachment);
-        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pDepthAttachment);
-        _pColorAttachment = nullptr;
-        _pDepthAttachment = nullptr;
         delete _pOpaqueFramebuffer;
         delete _pTransparentFramebuffer;
         _pOpaqueFramebuffer = nullptr;
         _pTransparentFramebuffer = nullptr;
+
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pColorAttachment);
+        Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pDepthAttachment);
+        _pColorAttachment = nullptr;
+        _pDepthAttachment = nullptr;
 
         _shadowPassInstance.destroy();
     }
@@ -664,35 +668,20 @@ namespace platypus
         currentCommandBuffer.begin(nullptr);
 
 
-        // TESTING CUSTOM RENDER PASS SYSTEM
-        //for (RenderPassInstance* pRenderPassInstance : _renderPasses)
-        //{
-        //    RenderPass* pRenderPass = pRenderPassInstance->getRenderPass();
-        //    Framebuffer* pFramebuffer = pRenderPassInstance->getFramebuffer(_currentFrame);
-        //    render::begin_render_pass(
-        //        currentCommandBuffer,
-        //        pRenderPass,
-        //        pFramebuffer,
-        //        pFramebuffer->getDepthAttachment(),
-        //        pRenderPassInstance->getClearColor(),
-        //        true
-        //    );
-        //    std::vector<CommandBuffer> secondaryCommandBuffers;
-        //    secondaryCommandBuffers.push_back(
-        //        _pRenderer3D->recordCommandBuffer(
-        //            pRenderPass,
-        //            (float)pRenderPassInstance->getViewportWidth(),
-        //            (float)pRenderPassInstance->getViewportHeight(),
-        //            _batcher.getBatches(pRenderPassInstance->getType())
-        //        )
-        //    );
-        //    render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
-        //    render::end_render_pass(currentCommandBuffer);
-        //}
-
 
         // TESTING SHADOW PASS -----------------------------------
+        // Make sure, initially using correct img layout
         Framebuffer* pShadowFramebuffer = _shadowPassInstance.getFramebuffer(0);
+        transition_image_layout(
+            currentCommandBuffer,
+            pShadowFramebuffer->getDepthAttachment(),
+            ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL, // new layout
+            PipelineStage::LATE_FRAGMENT_TESTS_BIT, // src stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, // src access mask
+            PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
+        );
+
         render::begin_render_pass(
             currentCommandBuffer,
             _shadowPassInstance.getRenderPass(),
@@ -712,8 +701,18 @@ namespace platypus
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, shadowpassCommandBuffers);
         render::end_render_pass(currentCommandBuffer, _shadowPassInstance.getRenderPass());
-        // TESTING END ^^^ -------------------------------------------
 
+        // Set shadowmap into correct format for opaque pass to sample
+        transition_image_layout(
+            currentCommandBuffer,
+            pShadowFramebuffer->getDepthAttachment(),
+            ImageLayout::SHADER_READ_ONLY_OPTIMAL, // new layout
+            PipelineStage::LATE_FRAGMENT_TESTS_BIT, // src stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, // src access mask
+            PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
+        );
+        // TESTING END ^^^ -------------------------------------------
 
         // TESTING OPAQUE PASS -----------------------------------
         render::begin_render_pass(
@@ -722,9 +721,7 @@ namespace platypus
             _pOpaqueFramebuffer,
             { 1, 0, 1, 1 },
             true,
-            true,
-            true, // ignore depth layout transition
-            false // ignore color layout transition
+            true
         );
         std::vector<CommandBuffer> opaquePassCommandBuffers;
         opaquePassCommandBuffers.push_back(
@@ -736,21 +733,9 @@ namespace platypus
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, opaquePassCommandBuffers);
-        render::end_render_pass(
-            currentCommandBuffer,
-            _opaquePass,
-            false, // ignore layout transition
-            true // transition test
-        );
-        // TESTING END ^^^ -------------------------------------------
+        render::end_render_pass(currentCommandBuffer, _opaquePass);
 
-        //render::transition_depth_image_layout_TEST(
-        //    currentCommandBuffer,
-        //    &_opaquePass,
-        //    &_transparentPass,
-        //    _pTransparentFramebuffer->getDepthAttachment()
-        //);
-
+        // Transition the opaque pass' depthmap to samplable for transparent pass
         transition_image_layout(
             currentCommandBuffer,
             _pTransparentFramebuffer->getDepthAttachment(),
@@ -760,7 +745,7 @@ namespace platypus
             PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
             MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
         );
-
+        // TESTING END ^^^ -------------------------------------------
 
         // TESTING TRANSPARENT PASS -----------------------------------
         render::begin_render_pass(
@@ -769,9 +754,7 @@ namespace platypus
             _pTransparentFramebuffer,
             { 1, 0, 1, 1 },
             false,
-            false,
-            true, // ignore depth layout transition
-            false // ignore color layout transition
+            false
         );
         std::vector<CommandBuffer> transparentPassCommandBuffers;
         transparentPassCommandBuffers.push_back(
@@ -783,14 +766,21 @@ namespace platypus
             )
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, transparentPassCommandBuffers);
-        render::end_render_pass(
-            currentCommandBuffer,
-            _transparentPass,
-            true,
-            false // ignore layout transition
-        );
+        render::end_render_pass(currentCommandBuffer, _transparentPass);
         // TESTING END ^^^ -------------------------------------------
 
+        // Transition color attachment samplable for the post processing pass
+        transition_image_layout(
+            currentCommandBuffer,
+            _pTransparentFramebuffer->getColorAttachments()[0],
+            ImageLayout::SHADER_READ_ONLY_OPTIMAL, // new layout
+            PipelineStage::COLOR_ATTACHMENT_OUTPUT_BIT, // src stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // src access mask
+            PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
+        );
+
+        // NOTE: Not sure if should transition the transparent depth image here into something else?
 
         Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
         render::begin_render_pass(
@@ -815,16 +805,7 @@ namespace platypus
                 _currentFrame
             )
         );
-        /*
-        secondaryCommandBuffers.push_back(
-            _pRenderer3D->recordCommandBuffer(
-                _swapchainRef.getRenderPass(),
-                (float)swapchainExtent.width,
-                (float)swapchainExtent.height,
-                _batcher.getBatches(RenderPassType::SCREEN_PASS)
-            )
-        );
-        */
+
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
         _batcher.resetForNextFrame();

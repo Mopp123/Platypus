@@ -58,6 +58,7 @@ namespace platypus
     // Atm used only for figuring out img layout transitions between render passes
     enum class PipelineStage
     {
+        VERTEX_SHADER_BIT,
         FRAGMENT_SHADER_BIT,
         LATE_FRAGMENT_TESTS_BIT,
         COLOR_ATTACHMENT_OUTPUT_BIT

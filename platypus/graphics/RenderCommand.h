@@ -13,13 +13,6 @@ namespace platypus
     // NOTE: Maybe some better namespace for this...
     namespace render
     {
-        void transition_depth_image_layout_TEST(
-            CommandBuffer& commandBuffer,
-            const RenderPass* pPreviousRenderPass,
-            const RenderPass* pCurrentRenderPass,
-            Texture* pTexture
-        );
-
         // TODO: Make this replace the other begin renderpass funcs!
         // NOTE: If renderPass is offscreen pass
         //  -> desktop impl transitions the depth texture back to VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
@@ -31,17 +24,12 @@ namespace platypus
             Framebuffer* pFramebuffer,
             const Vector4f& clearColor,
             bool clearColorBuffer,
-            bool clearDepthBuffer,
-            bool ignoreDepthLayoutTransition = false,
-            bool ignoreColorLayoutTransition = false
+            bool clearDepthBuffer
         );
 
         void end_render_pass(
             CommandBuffer& commandBuffer,
-            const RenderPass& renderPass,
-            bool transitionColorAttachmentSamplable = false, // JUST TESTING HERE!
-            bool ignoreLayoutTransition = false,
-            bool transitionTest = false
+            const RenderPass& renderPass
         );
 
         void exec_secondary_command_buffers(

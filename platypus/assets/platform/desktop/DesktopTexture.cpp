@@ -17,6 +17,7 @@
 
 namespace platypus
 {
+    // TODO: Use this instead of the old thing (when creating texture using staging buffer)
     void transition_image_layout(
         CommandBuffer& commandBuffer,
         Texture* pTexture,

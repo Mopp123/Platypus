@@ -96,6 +96,7 @@ namespace platypus
     };
 
 
+    // NOTE: Should rather be member of Texture?
     void transition_image_layout(
         CommandBuffer& commandBuffer,
         Texture* pTexture,

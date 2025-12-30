@@ -1,4 +1,5 @@
 #version 300 es
+
 precision mediump float;
 
 layout(location = 0) in vec3 position;
@@ -33,10 +34,12 @@ out vec3 var_lightDir;
 out vec4 var_lightColor;
 out vec4 var_ambientLightColor;
 out float var_time;
+out vec4 var_clipPos;
 
 void main() {
     vec4 translatedPos = instanceData.transformationMatrix * vec4(position, 1.0);
-    gl_Position = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+    var_clipPos = sceneData.projectionMatrix * sceneData.viewMatrix * translatedPos;
+    gl_Position = var_clipPos;
     vec4 rotatedNormal = instanceData.transformationMatrix * vec4(normal, 0.0);
     var_normal = rotatedNormal.xyz;
     var_texCoord = texCoord;

@@ -21,7 +21,8 @@ namespace platypus
         ImageFormat depthFormat,
         bool clearColorAttachment,
         bool clearDepthAttachment,
-        bool continueAttachmentUsage
+        bool continueAttachmentUsage,
+        bool continueDepthAttachmentUsage
     )
     {
         _colorFormat = colorFormat;

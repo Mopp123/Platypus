@@ -74,7 +74,28 @@ namespace platypus
         {
             if (renderPass.isOffscreenPass() && pFramebuffer)
             {
-                GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, pFramebuffer->getImpl()->id));
+                FramebufferImpl* pFramebufferImpl = pFramebuffer->getImpl();
+                if (pFramebufferImpl->pCopyDepthAttachment)
+                {
+                    GL_FUNC(glBindFramebuffer(GL_READ_FRAMEBUFFER, pFramebufferImpl->copySourceID));
+                    GL_FUNC(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pFramebufferImpl->id));
+
+                    const int32_t framebufferWidth = (int32_t)pFramebuffer->getWidth();
+                    const int32_t framebufferHeight = (int32_t)pFramebuffer->getHeight();
+                    glBlitFramebuffer(
+                        0, 0,
+                        framebufferWidth, framebufferHeight,
+                        0, 0,
+                        framebufferWidth, framebufferHeight,
+                        GL_DEPTH_BUFFER_BIT,
+                        GL_NEAREST
+                    );
+
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                }
+
+                GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, pFramebufferImpl->id));
             }
             else
             {
@@ -96,7 +117,7 @@ namespace platypus
 
         void end_render_pass(
             CommandBuffer& commandBuffer,
-            bool transitionColorAttachmentSamplable
+            const RenderPass& renderPass
         )
         {
         }
