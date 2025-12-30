@@ -378,9 +378,10 @@ namespace platypus
         Texture* pTexture,
         ImageLayout newLayout,
         PipelineStage srcStage,
-        MemoryAccessFlagBits srcAccessMask,
+        uint32_t srcAccessMask,
         PipelineStage dstStage,
-        MemoryAccessFlagBits dstAccessMask
+        uint32_t dstAccessMask,
+        uint32_t mipLevelCount
     )
     {
     }

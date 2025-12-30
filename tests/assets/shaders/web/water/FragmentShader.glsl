@@ -71,7 +71,7 @@ void main()
 
 
     // TESTING DEPTH
-    vec2 ndcCoord = (var_clipPos.xy / var_clipPos.w) / 2.0 + 0.5;
+    vec2 ndcCoord = (var_clipPos.xy / var_clipPos.w) * 0.5 + 0.5;
 
     float zNear = 0.1;
     float zFar = 100.0;
@@ -84,8 +84,15 @@ void main()
 
     float waterDepth = floorDist - waterDist;
 
-    float d = waterDepth / 50.0;
-    outColor = vec4(d, d, d, 1.0);
+    float d = clamp(waterDepth, 0.0, 1.0);// / 50.0;
+
+    vec4 shallowColor = vec4(0.6, 0.7, 1.0, 1.0);
+    vec4 deepColor = vec4(0, 0, 0.5, 1.0);
+
+    vec4 testColor = mix(shallowColor, deepColor, d);
+    outColor = testColor;
+
+    //outColor = vec4(d, d, d, 1.0);
 
     //outColor = finalColor;
 }

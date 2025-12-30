@@ -209,6 +209,24 @@ void WaterTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getTransparentFramebuffer()->getColorAttachments()[0]->getID()
     );
+
+
+    // Put a box into the water
+    Material* pStaticMeshMaterial = createMeshMaterial(
+        pAssetManager,
+        "assets/textures/DiffuseTest.png",
+        true,
+        false, // cast shadows
+        false // receive shadows
+    );
+    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", true)->getMeshes()[0];
+    entityID_t boxEntity = createStaticMeshEntity(
+        { 35, 1.0f, 35 },
+        { { 0, 1, 0 }, 0.0f },
+        { 2, 2, 2 },
+        pStaticMesh->getID(),
+        pStaticMeshMaterial->getID()
+    );
 }
 
 void WaterTestScene::update()

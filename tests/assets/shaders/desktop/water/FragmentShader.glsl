@@ -70,15 +70,26 @@ void main()
 
 
     // TESTING DEPTH
-    vec4 tempClip = var_clipPos;
-    tempClip.y *= -1.0;
-    vec2 ndcCoord = (tempClip.xy / tempClip.w);
-    ndcCoord = ndcCoord  / 2.0 + 0.5;
-
     float zNear = 0.1;
     float zFar = 100.0;
-    float depth = texture(depthMap, ndcCoord).r;
 
+    vec4 tempClip = var_clipPos;
+    tempClip.y *= -1.0;
+    vec2 ndcCoord = (tempClip.xy / tempClip.w) * 0.5 + 0.5;
+
+    /*
+    float depthMapValue = texture(depthMap, ndcCoord).r;
+    float linearizedDepth = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depthMapValue - 1.0) * (zFar - zNear));
+
+    //vec3 toCameraWorldSpace = -(var_cameraPos - var_fragPos);
+    vec3 worldSpaceScenePos = -toCamera / var_clipPos.w * linearizedDepth + var_cameraPos;
+
+    float d = -(var_fragPos - worldSpaceScenePos).y / 10.0;
+    outColor = vec4(d, d, d, 1.0);
+    */
+
+
+    float depth = texture(depthMap, ndcCoord).r;
     float floorDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
 
     depth = gl_FragCoord.z;
@@ -86,8 +97,15 @@ void main()
 
     float waterDepth = floorDist - waterDist;
 
-    float d = waterDepth / 50.0;
-    outColor = vec4(d, d, d, 1.0);
+    float d = clamp(waterDepth, 0.0, 1.0);// / 50.0;
+
+    vec4 shallowColor = vec4(0.6, 0.7, 1.0, 1.0);
+    vec4 deepColor = vec4(0, 0, 0.5, 1.0);
+
+    vec4 testColor = mix(shallowColor, deepColor, d);
+    outColor = testColor;
+
+    //outColor = vec4(d, d, d, 1.0);
 
     //outColor = finalColor;
 }
