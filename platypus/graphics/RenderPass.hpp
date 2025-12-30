@@ -28,9 +28,23 @@ namespace platypus
     }
 
 
+    enum RenderPassAttachmentUsageFlagBits
+    {
+        RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE = 0x1,
+        RENDER_PASS_ATTACHMENT_USAGE_COLOR_CONTINUE = 0x1 << 1,
+        RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE = 0x1 << 2,
+        RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE = 0x1 << 3
+    };
+
+    enum RenderPassAttachmentClearFlagBits
+    {
+        RENDER_PASS_ATTACHMENT_CLEAR_COLOR = 0x1,
+        RENDER_PASS_ATTACHMENT_CLEAR_DEPTH = 0x1 << 1
+    };
+
     class Swapchain;
 
-    // TODO: Get rid of this stuff and start using 1.4's dynamic rendering!
+    // TODO: Get rid of this stuff and start using 1.4's dynamic rendering?
     struct RenderPassImpl;
     class RenderPass
     {
@@ -40,13 +54,18 @@ namespace platypus
         ImageFormat _colorFormat = ImageFormat::NONE;
         ImageFormat _depthFormat = ImageFormat::NONE;
         bool _offscreen = false;
+        // *Meaning does this render pass continue using previous render pass's attachments
+        uint32_t _attachmentUsageFlags = 0;
+        uint32_t _attachmentClearFlags = 0;
 
     public:
         // TODO: Args how attachments will be used?
         // Will attachments be cleared, are we continuing using some previous pass's attachments, etc?
         RenderPass(
             RenderPassType type,
-            bool offscreen
+            bool offscreen,
+            uint32_t attachmentUsageFlags,
+            uint32_t attachmentClearFlags
         );
         ~RenderPass();
 
@@ -55,11 +74,7 @@ namespace platypus
         // attachments.
         void create(
             ImageFormat colorFormat,
-            ImageFormat depthFormat,
-            bool clearColorAttachment = true,
-            bool clearDepthAttachment = true,
-            bool continueAttachmentUsage = false,
-            bool continueDepthAttachmentUsage = false
+            ImageFormat depthFormat
         );
         void destroy();
 
@@ -67,6 +82,8 @@ namespace platypus
         inline ImageFormat getColorFormat() const { return _colorFormat; }
         inline ImageFormat getDepthFormat() const { return _depthFormat; }
         inline bool isOffscreenPass() const { return _offscreen; }
+        inline uint32_t getAttachmentUsageFlags() const { return _attachmentUsageFlags; }
+        inline uint32_t getAttachmentClearFlags() const { return _attachmentClearFlags; }
         inline const RenderPassImpl* getImpl() const { return _pImpl; }
     };
 }

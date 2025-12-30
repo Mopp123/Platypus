@@ -21,9 +21,7 @@ namespace platypus
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
             Framebuffer* pFramebuffer,
-            const Vector4f& clearColor,
-            bool clearColorBuffer,
-            bool clearDepthBuffer
+            const Vector4f& clearColor
         )
         {
             if (!pFramebuffer)
@@ -91,13 +89,13 @@ namespace platypus
             VkClearValue clearValues[2];
 
             beginInfo.clearValueCount = 0;
-            if (clearColorBuffer)
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR)
             {
                 clearValues[beginInfo.clearValueCount] = clearColorValue;
                 ++beginInfo.clearValueCount;
             }
 
-            if (clearDepthBuffer)
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH)
             {
                 clearValues[beginInfo.clearValueCount] = clearDepthStencilValue;
                 ++beginInfo.clearValueCount;

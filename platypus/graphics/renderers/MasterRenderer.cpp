@@ -40,15 +40,24 @@ namespace platypus
         ),
         _shadowPass(
             RenderPassType::SHADOW_PASS,
-            true
+            true,
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
         ),
         _opaquePass(
             RenderPassType::OPAQUE_PASS,
-            true
+            true,
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE |
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR |
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
         ),
         _transparentPass(
             RenderPassType::TRANSPARENT_PASS,
-            true
+            true,
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_CONTINUE |
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE,
+            0
         ),
         _offscreenTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
@@ -102,11 +111,7 @@ namespace platypus
         );
         _transparentPass.create(
             _offscreenColorFormat,
-            _offscreenDepthFormat,
-            false,
-            false,
-            true, // continue color attachment usage
-            true // continue depth attachment usage
+            _offscreenDepthFormat
         );
         createOffscreenPassResources();
 
@@ -115,9 +120,7 @@ namespace platypus
         // NOTE: This could fuck things up if not being very careful which
         // pipelines gets created here since this gets called in Application's
         // constructor!
-        Debug::log("___TEST___MasterRenderer::MasterRenderer");
         createPipelines();
-        Debug::log("___TEST___MasterRenderer::MasterRenderer Pipelines created successfully");
     }
 
     MasterRenderer::~MasterRenderer()
@@ -686,9 +689,7 @@ namespace platypus
             currentCommandBuffer,
             _shadowPassInstance.getRenderPass(),
             pShadowFramebuffer,
-            { 1, 0, 1, 1 },
-            true,
-            true
+            { 1, 0, 1, 1 }
         );
         std::vector<CommandBuffer> shadowpassCommandBuffers;
         shadowpassCommandBuffers.push_back(
@@ -719,9 +720,7 @@ namespace platypus
             currentCommandBuffer,
             _opaquePass,
             _pOpaqueFramebuffer,
-            { 1, 0, 1, 1 },
-            true,
-            true
+            { 1, 0, 1, 1 }
         );
         std::vector<CommandBuffer> opaquePassCommandBuffers;
         opaquePassCommandBuffers.push_back(
@@ -752,9 +751,7 @@ namespace platypus
             currentCommandBuffer,
             _transparentPass,
             _pTransparentFramebuffer,
-            { 1, 0, 1, 1 },
-            false,
-            false
+            { 1, 0, 1, 1 }
         );
         std::vector<CommandBuffer> transparentPassCommandBuffers;
         transparentPassCommandBuffers.push_back(
@@ -787,9 +784,7 @@ namespace platypus
             currentCommandBuffer,
             _swapchainRef.getRenderPass(),
             pCurrentSwapchainFramebuffer,
-            pScene->environmentProperties.clearColor,
-            true,
-            true
+            pScene->environmentProperties.clearColor
         );
 
         // TODO: Post processing screen pass instead of below

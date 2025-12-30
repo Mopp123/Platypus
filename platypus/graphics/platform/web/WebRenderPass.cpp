@@ -6,9 +6,16 @@ namespace platypus
     {
     };
 
-    RenderPass::RenderPass(RenderPassType type, bool offscreen) :
+    RenderPass::RenderPass(
+        RenderPassType type,
+        bool offscreen,
+        uint32_t attachmentUsageFlags,
+        uint32_t attachmentClearFlags
+    ) :
         _type(type),
-        _offscreen(offscreen)
+        _offscreen(offscreen),
+        _attachmentUsageFlags(attachmentUsageFlags),
+        _attachmentClearFlags(attachmentClearFlags)
     {
     }
 
@@ -18,11 +25,7 @@ namespace platypus
 
     void RenderPass::create(
         ImageFormat colorFormat,
-        ImageFormat depthFormat,
-        bool clearColorAttachment,
-        bool clearDepthAttachment,
-        bool continueAttachmentUsage,
-        bool continueDepthAttachmentUsage
+        ImageFormat depthFormat
     )
     {
         _colorFormat = colorFormat;

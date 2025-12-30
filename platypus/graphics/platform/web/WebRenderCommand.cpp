@@ -67,9 +67,7 @@ namespace platypus
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
             Framebuffer* pFramebuffer,
-            const Vector4f& clearColor,
-            bool clearColorBuffer,
-            bool clearDepthBuffer
+            const Vector4f& clearColor
         )
         {
             if (renderPass.isOffscreenPass() && pFramebuffer)
@@ -103,12 +101,12 @@ namespace platypus
             }
 
             uint32_t clearBits = 0;
-            if (clearColorBuffer)
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR)
             {
                 GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
                 clearBits |= GL_COLOR_BUFFER_BIT;
             }
-            if (clearDepthBuffer)
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH)
                 clearBits |= GL_DEPTH_BUFFER_BIT;
 
             if (clearBits)

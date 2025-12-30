@@ -23,9 +23,10 @@ namespace platypus
         Texture* pTexture,
         ImageLayout newLayout,
         PipelineStage srcStage,
-        MemoryAccessFlagBits srcAccessMask,
+        uint32_t srcAccessMask,
         PipelineStage dstStage,
-        MemoryAccessFlagBits dstAccessMask
+        uint32_t dstAccessMask,
+        uint32_t mipLevelCount
     )
     {
         TextureImpl* pTextureImpl = pTexture->getImpl();
@@ -48,10 +49,8 @@ namespace platypus
         else
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-        // TODO: Make it possible to use for staging image transition (Texture creation)
-        //  -> specify mipmapping
         barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.levelCount = mipLevelCount;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
 
@@ -80,75 +79,14 @@ namespace platypus
         );
     }
 
-    // TODO: Use the new method instead of this when it's ready
-    void record_transition_image_layout(
-        VkCommandBuffer cmdBufferHandle,
-        TextureImpl* pTextureImpl,
-        VkImageLayout oldLayout,
-        VkImageLayout newLayout,
-        uint32_t mipLevelCount
-    )
-    {
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; //* We arent transitioning between any queues here...
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = pTextureImpl->image;
 
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = mipLevelCount;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-
-        VkPipelineStageFlags sourceStage;
-        VkPipelineStageFlags destinationStage;
-
-        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        {
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        }
-        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-        {
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-        else
-        {
-            Debug::log(
-                "@transition_image_layout "
-                "Illegal layout transition!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        vkCmdPipelineBarrier(
-            cmdBufferHandle,
-            sourceStage,
-            destinationStage,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-
-        pTextureImpl->imageLayout = newLayout;
-    }
-
-    void transition_image_layout_immediate(
-        TextureImpl* pTextureImpl,
-        VkImageLayout oldLayout,
-        VkImageLayout newLayout,
+    static void transition_image_layout_immediate(
+        Texture* pTexture,
+        ImageLayout newLayout,
+        PipelineStage srcStage,
+        uint32_t srcAccessMask,
+        PipelineStage dstStage,
+        uint32_t dstAccessMask,
         uint32_t mipLevelCount
     )
     {
@@ -158,16 +96,19 @@ namespace platypus
         )[0];
         commandBuffer.beginSingleUse();
 
-        record_transition_image_layout(
-            commandBuffer.getImpl()->handle,
-            pTextureImpl,
-            oldLayout,
+        transition_image_layout(
+            commandBuffer,
+            pTexture,
             newLayout,
+            srcStage,
+            srcAccessMask,
+            dstStage,
+            dstAccessMask,
             mipLevelCount
         );
-
         commandBuffer.finishSingleUse();
     }
+
 
     // NOTE: If formats' *_SRGB not supported by the device whole texture creation fails!
     // TODO: Query supported formats and handle depending on requested channels that way
@@ -723,9 +664,12 @@ namespace platypus
         _pImpl->imageLayout = imageCreateInfo.initialLayout;
 
         transition_image_layout_immediate(
-            _pImpl,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            this, // NOTE: Potential DANGER!
+            ImageLayout::TRANSFER_DST_OPTIMAL,
+            PipelineStage::TOP_OF_PIPE_BIT,
+            0,
+            PipelineStage::TRANSFER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
             mipLevelCount
         );
         copy_buffer_to_image(
@@ -737,6 +681,7 @@ namespace platypus
 
         if (mipLevelCount > 1)
         {
+            PLATYPUS_ASSERT(_pImpl->imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             generate_mipmaps(
                 imageHandle,
                 vkImageFormat,
@@ -749,10 +694,13 @@ namespace platypus
         else
         {
             transition_image_layout_immediate(
-                _pImpl,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                1 // TODO: Mipmapping
+                this, // NOTE: Potential DANGER!
+                ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                PipelineStage::TRANSFER_BIT,
+                MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
+                PipelineStage::FRAGMENT_SHADER_BIT,
+                MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
+                mipLevelCount
             );
         }
 

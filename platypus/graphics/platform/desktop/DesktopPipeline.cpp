@@ -70,6 +70,9 @@ namespace platypus
     {
         switch (stage)
         {
+            case PipelineStage::TOP_OF_PIPE_BIT: return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            case PipelineStage::TRANSFER_BIT: return VK_PIPELINE_STAGE_TRANSFER_BIT;
+
             case PipelineStage::VERTEX_SHADER_BIT: return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
             case PipelineStage::FRAGMENT_SHADER_BIT: return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             case PipelineStage::LATE_FRAGMENT_TESTS_BIT: return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;

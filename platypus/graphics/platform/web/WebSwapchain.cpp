@@ -11,7 +11,14 @@ namespace platypus
 
 
     Swapchain::Swapchain(const Window& window) :
-        _renderPass(RenderPassType::SCREEN_PASS, false)
+        _renderPass(
+            RenderPassType::SCREEN_PASS,
+            false,
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE |
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR |
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
+        )
     {
         _pImpl = new SwapchainImpl;
         create(window);
