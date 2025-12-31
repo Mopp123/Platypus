@@ -36,7 +36,6 @@ void main()
     vec2 finalTexCoord = var_texCoord * materialData.textureProperties.zw;
     finalTexCoord = finalTexCoord + materialData.textureProperties.xy;
 
-
     float specularStrength = materialData.lightingProperties.x;
     float shininess = materialData.lightingProperties.y;
     // TODO: if shadeless -> make actually shadeless!
@@ -60,39 +59,38 @@ void main()
     const float waveMultiplier = 0.5;
     float distortionSpeed = var_time * 0.01;
     vec2 distortedCoord1 = (texture(distortionTextureSampler, vec2(finalTexCoord.x + distortionSpeed, finalTexCoord.y)).rg * 2.0 - 1.0) * waveMultiplier;
-    vec2 distortedCoord2 = (texture(distortionTextureSampler, vec2(finalTexCoord.x - distortionSpeed, finalTexCoord.y + distortionSpeed)).rg * 2.0 - 1.0) * waveMultiplier;
+    vec2 distortedCoord2 = (texture(distortionTextureSampler, vec2(finalTexCoord.x, finalTexCoord.y + distortionSpeed)).rg * 2.0 - 1.0) * waveMultiplier;
     vec3 distortedColor = texture(diffuseTextureSampler, distortedCoord1 + distortedCoord2).rgb;
 
-    vec4 textureColor = vec4(distortedColor, 1.0);
+
+    // TESTING DEPTH EFFECT
+    // *Not perfect, but 'll do for now
+    float zNear = 0.1;
+    float zFar = 100.0;
+
+    vec2 ndcCoord = (var_clipPos.xy / var_clipPos.w) * 0.5 + 0.5;
+
+    float depth = texture(depthMap, ndcCoord).r;
+    float distToBottom = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+
+    depth = gl_FragCoord.z;
+    float distToSurface = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+
+    float waterDepth = distToBottom - distToSurface;
+
+    float d = clamp(waterDepth / 5.0, 0.0, 1.0);
+
+    vec4 shallowTint = vec4(0.8, 0.8, 1.0, 1.0);
+    vec4 deepTint = vec4(0.2, 0.2, 1.0, 1.0);
+    vec4 totalTint = mix(shallowTint, deepTint, d);
+
+
+    vec4 textureColor = vec4(distortedColor, 1.0) * totalTint;
     vec4 finalDiffuseColor = lightDiffuseColor * textureColor;
     vec4 finalSpecularColor = lightSpecularColor * textureColor;
     vec4 finalColor = var_ambientLightColor + finalDiffuseColor + finalSpecularColor;
-    finalColor.a = 1.0 - fresnelEffect;
+    float transparency = clamp(waterDepth, 0.0, 1.0);
+    finalColor.a = transparency;
 
-
-    // TESTING DEPTH
-    vec2 ndcCoord = (var_clipPos.xy / var_clipPos.w) * 0.5 + 0.5;
-
-    float zNear = 0.1;
-    float zFar = 100.0;
-    float depth = texture(depthMap, ndcCoord).r;
-
-    float floorDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
-
-    depth = gl_FragCoord.z;
-    float waterDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
-
-    float waterDepth = floorDist - waterDist;
-
-    float d = clamp(waterDepth, 0.0, 1.0);// / 50.0;
-
-    vec4 shallowColor = vec4(0.6, 0.7, 1.0, 1.0);
-    vec4 deepColor = vec4(0, 0, 0.5, 1.0);
-
-    vec4 testColor = mix(shallowColor, deepColor, d);
-    outColor = testColor;
-
-    //outColor = vec4(d, d, d, 1.0);
-
-    //outColor = finalColor;
+    outColor = finalColor;
 }

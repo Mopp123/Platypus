@@ -10,8 +10,7 @@ layout(location = 6) in vec4 var_ambientLightColor;
 layout(location = 7) in float var_time;
 layout(location = 8) in vec4 var_clipPos;
 
-//layout(set = 1, binding = 0) uniform sampler2D textureSampler;
-layout(set = 2, binding = 0) uniform sampler2D diffuseTextureSampler;
+layout(set = 2, binding = 0) uniform sampler2D diffuseTextureSampler; // Maybe don't use this at all?
 layout(set = 2, binding = 1) uniform sampler2D distortionTextureSampler;
 layout(set = 2, binding = 2) uniform sampler2D depthMap;
 layout(set = 2, binding = 3) uniform MaterialData
@@ -34,7 +33,6 @@ void main()
 {
     vec2 finalTexCoord = var_texCoord * materialData.textureProperties.zw;
     finalTexCoord = finalTexCoord + materialData.textureProperties.xy;
-
 
     float specularStrength = materialData.lightingProperties.x;
     float shininess = materialData.lightingProperties.y;
@@ -59,17 +57,12 @@ void main()
     const float waveMultiplier = 0.5;
     float distortionSpeed = var_time * 0.01;
     vec2 distortedCoord1 = (texture(distortionTextureSampler, vec2(finalTexCoord.x + distortionSpeed, finalTexCoord.y)).rg * 2.0 - 1.0) * waveMultiplier;
-    vec2 distortedCoord2 = (texture(distortionTextureSampler, vec2(finalTexCoord.x - distortionSpeed, finalTexCoord.y + distortionSpeed)).rg * 2.0 - 1.0) * waveMultiplier;
+    vec2 distortedCoord2 = (texture(distortionTextureSampler, vec2(finalTexCoord.x, finalTexCoord.y + distortionSpeed)).rg * 2.0 - 1.0) * waveMultiplier;
     vec3 distortedColor = texture(diffuseTextureSampler, distortedCoord1 + distortedCoord2).rgb;
 
-    vec4 textureColor = vec4(distortedColor, 1.0);
-    vec4 finalDiffuseColor = lightDiffuseColor * textureColor;
-    vec4 finalSpecularColor = lightSpecularColor * textureColor;
-    vec4 finalColor = var_ambientLightColor + finalDiffuseColor + finalSpecularColor;
-    finalColor.a = 1.0 - fresnelEffect;
 
-
-    // TESTING DEPTH
+    // TESTING DEPTH EFFECT
+    // *Not perfect, but 'll do for now
     float zNear = 0.1;
     float zFar = 100.0;
 
@@ -77,35 +70,27 @@ void main()
     tempClip.y *= -1.0;
     vec2 ndcCoord = (tempClip.xy / tempClip.w) * 0.5 + 0.5;
 
-    /*
-    float depthMapValue = texture(depthMap, ndcCoord).r;
-    float linearizedDepth = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depthMapValue - 1.0) * (zFar - zNear));
-
-    //vec3 toCameraWorldSpace = -(var_cameraPos - var_fragPos);
-    vec3 worldSpaceScenePos = -toCamera / var_clipPos.w * linearizedDepth + var_cameraPos;
-
-    float d = -(var_fragPos - worldSpaceScenePos).y / 10.0;
-    outColor = vec4(d, d, d, 1.0);
-    */
-
-
     float depth = texture(depthMap, ndcCoord).r;
-    float floorDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+    float distToBottom = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
 
     depth = gl_FragCoord.z;
-    float waterDist = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+    float distToSurface = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
 
-    float waterDepth = floorDist - waterDist;
+    float waterDepth = distToBottom - distToSurface;
 
-    float d = clamp(waterDepth, 0.0, 1.0);// / 50.0;
+    float d = clamp(waterDepth / 5.0, 0.0, 1.0);
 
-    vec4 shallowColor = vec4(0.6, 0.7, 1.0, 1.0);
-    vec4 deepColor = vec4(0, 0, 0.5, 1.0);
+    vec4 shallowTint = vec4(0.8, 0.8, 1.0, 1.0);
+    vec4 deepTint = vec4(0.2, 0.2, 1.0, 1.0);
+    vec4 totalTint = mix(shallowTint, deepTint, d);
 
-    vec4 testColor = mix(shallowColor, deepColor, d);
-    outColor = testColor;
 
-    //outColor = vec4(d, d, d, 1.0);
+    vec4 textureColor = vec4(distortedColor, 1.0) * totalTint;
+    vec4 finalDiffuseColor = lightDiffuseColor * textureColor;
+    vec4 finalSpecularColor = lightSpecularColor * textureColor;
+    vec4 finalColor = var_ambientLightColor + finalDiffuseColor + finalSpecularColor;
+    float transparency = clamp(waterDepth, 0.0, 1.0);
+    finalColor.a = transparency;
 
-    //outColor = finalColor;
+    outColor = finalColor;
 }

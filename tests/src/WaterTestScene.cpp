@@ -154,7 +154,7 @@ void WaterTestScene::init()
     );
     Texture* pWaterDistortionTexture = pAssetManager->loadTexture(
         "assets/textures/DistortionMap.png",
-        ImageFormat::R8G8B8A8_SRGB,
+        ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
 
