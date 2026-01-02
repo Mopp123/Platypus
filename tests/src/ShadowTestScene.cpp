@@ -130,7 +130,8 @@ void ShadowTestScene::init()
         { (float)tilesPerRow, (float)tilesPerRow },
         false, // cast shadows
         true, // receive shadows
-        false // transparent
+        false, // transparent
+        false // shadeless
     );
 
     create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());

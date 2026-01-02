@@ -189,6 +189,7 @@ namespace platypus
         bool castShadows,
         bool receiveShadows,
         bool transparent,
+        bool shadeless,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     )
@@ -235,6 +236,7 @@ namespace platypus
             castShadows,
             receiveShadows,
             transparent,
+            shadeless,
             customVertexShaderFilename,
             customFragmentShaderFilename
         );
@@ -263,6 +265,7 @@ namespace platypus
             false, // cast shadow
             false, // receive shadow
             false, // transparent
+            false, // shadeless
             "",
             ""
         );

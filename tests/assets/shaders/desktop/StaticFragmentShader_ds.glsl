@@ -33,27 +33,31 @@ void main()
 
     vec4 diffuseTextureColor = texture(diffuseTextureSampler, finalTexCoord);
     vec4 specularTextureColor = texture(specularTextureSampler, finalTexCoord);
+    vec4 finalColor = diffuseTextureColor;
 
-    float specularStrength = materialData.lightingProperties.x;
-    float shininess = materialData.lightingProperties.y;
     float isShadeless = materialData.lightingProperties.z;
+    if (isShadeless != 1.0)
+    {
+        float specularStrength = materialData.lightingProperties.x;
+        float shininess = materialData.lightingProperties.y;
 
-    vec3 unitLightDir = normalize(var_lightDir.xyz);
-    vec3 toLight = -unitLightDir;
-    vec3 unitNormal = normalize(var_normal);
-    vec3 toCamera = normalize(var_cameraPos - var_fragPos);
-    vec4 lightColor = vec4(var_lightColor.rgb, 1.0);
+        vec3 unitLightDir = normalize(var_lightDir.xyz);
+        vec3 toLight = -unitLightDir;
+        vec3 unitNormal = normalize(var_normal);
+        vec3 toCamera = normalize(var_cameraPos - var_fragPos);
+        vec4 lightColor = vec4(var_lightColor.rgb, 1.0);
 
-    float diffuseFactor = max(dot(toLight, unitNormal), 0.0);
-    vec4 lightDiffuseColor = diffuseFactor * lightColor;
+        float diffuseFactor = max(dot(toLight, unitNormal), 0.0);
+        vec4 lightDiffuseColor = diffuseFactor * lightColor;
 
-    //vec3 reflectedLight = normalize(reflect(unitLightDir, unitNormal));
-    vec3 halfWay = normalize(toLight + toCamera);
+        //vec3 reflectedLight = normalize(reflect(unitLightDir, unitNormal));
+        vec3 halfWay = normalize(toLight + toCamera);
 
-    float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
-    vec4 specularColor = lightColor * specularFactor * specularStrength * specularTextureColor;
+        float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
+        vec4 specularColor = lightColor * specularFactor * specularStrength * specularTextureColor;
 
-    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * diffuseTextureColor;
+        finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * diffuseTextureColor;
+    }
 
     if (diffuseTextureColor.a < 0.1)
     {

@@ -54,6 +54,7 @@ namespace platypus
         bool _castShadows = false;
         bool _receiveShadows = false;
         bool _transparent = false;
+        bool _shadeless = false;
         // TODO: oh my god please PLEASE MAKE THIS SHIT LESS DUMB!
         uint32_t _shadowmapDescriptorIndex = 0;
         uint32_t _sceneDepthDescriptorIndex = 0;
@@ -87,6 +88,7 @@ namespace platypus
             bool castShadows = false,
             bool receiveShadows = false,
             bool transparent = false,
+            bool shadeless = false,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );

@@ -113,7 +113,8 @@ void WaterTestScene::init()
         { (float)terrainTilesPerRow, (float)terrainTilesPerRow },
         false, // cast shadows
         false, // receive shadows
-        false // transparent
+        false, // transparent
+        false // shadeless
     );
 
     create_renderable3D(terrainEntity, pTerrainMesh->getID(), pTerrainMaterial->getID());
@@ -170,6 +171,7 @@ void WaterTestScene::init()
         false, // cast shadows
         false, // receive shadows,
         true, // transparent
+        false, // shadeless
         "water/VertexShader",
         "water/FragmentShader"
     );
@@ -204,7 +206,8 @@ void WaterTestScene::init()
         true,
         false, // cast shadows
         false, // receive shadows
-        false // transparent
+        false, // transparent
+        true // shadeless
     );
     Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", false)->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
@@ -217,7 +220,7 @@ void WaterTestScene::init()
     entityID_t boxEntity2 = createStaticMeshEntity(
         { 40, 1.0f, 32 },
         { { 0, 1, 0 }, 0.0f },
-        { 2, 5, 2 },
+        { 2, 2, 2 },
         pStaticMesh->getID(),
         pStaticMeshMaterial->getID()
     );

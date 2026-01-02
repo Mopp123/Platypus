@@ -143,7 +143,8 @@ Material* BaseScene::createMeshMaterial(
     bool repeatTexture,
     bool castShadows,
     bool receiveShadows,
-    bool transparent
+    bool transparent,
+    bool shadeless
 )
 {
     TextureSamplerAddressMode addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -166,13 +167,14 @@ Material* BaseScene::createMeshMaterial(
         { pTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
         { },
-        0.625f,
-        16.0f,
+        0.625f, // specular strength
+        16.0f, // shininess
         { 0, 0 },
         { 1, 1 },
-        castShadows, // cast shadows
-        receiveShadows, // receive shadows
-        transparent // transparent
+        castShadows,
+        receiveShadows,
+        transparent,
+        shadeless
     );
     return pMaterial;
 }

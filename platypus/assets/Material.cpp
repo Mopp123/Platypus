@@ -24,6 +24,7 @@ namespace platypus
         bool castShadows,
         bool receiveShadows,
         bool transparent,
+        bool shadeless,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     ) :
@@ -35,6 +36,7 @@ namespace platypus
         _castShadows(castShadows),
         _receiveShadows(receiveShadows),
         _transparent(transparent),
+        _shadeless(shadeless),
 
         _customVertexShaderFilename(customVertexShaderFilename),
         _customFragmentShaderFilename(customFragmentShaderFilename)
@@ -51,7 +53,7 @@ namespace platypus
 
         _uniformBufferData.lightingProperties.x = specularStrength;
         _uniformBufferData.lightingProperties.y = shininess;
-        _uniformBufferData.lightingProperties.z = 0; // Was originally having this as indicator is this using any kind of lighting/shading at all (shadeless)
+        _uniformBufferData.lightingProperties.z = _shadeless ? 1.0 : 0.0;
         _uniformBufferData.lightingProperties.w = 0.0f;
         _uniformBufferData.textureProperties.x = textureOffset.x;
         _uniformBufferData.textureProperties.y = textureOffset.y;

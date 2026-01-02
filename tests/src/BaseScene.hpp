@@ -43,7 +43,8 @@ public:
         bool repeatTexture = false,
         bool castShadows = false,
         bool receiveShadows = false,
-        bool transparent = false
+        bool transparent = false,
+        bool shadeless = false
     );
 
     entityID_t createStaticMeshEntity(
