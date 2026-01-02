@@ -20,7 +20,7 @@ namespace platypus
         _persistentAssets[pBlackImage->getID()] = pBlackImage;
 
         PE_ubyte zeroPixels[4] = { 0, 0, 0, 0 };
-        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
+        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
         _persistentAssets[pZeroImage->getID()] = pZeroImage;
 
         TextureSampler defaultTextureSampler(
@@ -186,8 +186,11 @@ namespace platypus
         float shininess,
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
+        bool castShadows,
         bool receiveShadows,
-        bool shadeless
+        bool transparent,
+        const std::string& customVertexShaderFilename,
+        const std::string& customFragmentShaderFilename
     )
     {
         // At least a single diffuse texture is required.
@@ -229,8 +232,11 @@ namespace platypus
             shininess,
             textureOffset,
             textureScale,
+            castShadows,
             receiveShadows,
-            shadeless
+            transparent,
+            customVertexShaderFilename,
+            customFragmentShaderFilename
         );
         _assets[pMaterial->getID()] = pMaterial;
         return pMaterial;
@@ -242,8 +248,7 @@ namespace platypus
         std::vector<ID_t> specularTextureIDs,
         std::vector<ID_t> normalTextureIDs,
         float specularStrength,
-        float shininess,
-        bool shadeless
+        float shininess
     )
     {
         return createMaterial(
@@ -255,15 +260,19 @@ namespace platypus
             shininess,
             { 0, 0 },
             { 1, 1 },
-            false,
-            shadeless
+            false, // cast shadow
+            false, // receive shadow
+            false, // transparent
+            "",
+            ""
         );
     }
 
     Mesh* AssetManager::createMesh(
         const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
-        const std::vector<uint32_t>& indexData
+        const std::vector<uint32_t>& indexData,
+        MeshType meshType
     )
     {
         Buffer* pVertexBuffer = new Buffer(
@@ -283,7 +292,7 @@ namespace platypus
             false
         );
         Mesh* pMesh = new Mesh(
-            MeshType::MESH_TYPE_STATIC_INSTANCED,
+            meshType,
             vertexBufferLayout,
             pVertexBuffer,
             pIndexBuffer,

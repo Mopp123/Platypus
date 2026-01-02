@@ -3,7 +3,7 @@
 #include "Asset.h"
 #include "platypus/assets/Image.h"
 #include "platypus/graphics/CommandBuffer.h"
-#include <string>
+#include "platypus/graphics/Pipeline.h"
 #include <memory>
 
 
@@ -65,6 +65,7 @@ namespace platypus
         const Image* _pImage = nullptr;
         std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
         uint32_t _atlasRowCount = 1;
+        ImageFormat _imageFormat = ImageFormat::NONE;
 
     public:
         // Needed for Vulkan swapchain's color and depth textures. ...fucking dumb
@@ -91,5 +92,19 @@ namespace platypus
         inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
         inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
         inline const Image* getImage() const { return _pImage; }
+        inline ImageFormat getImageFormat() const { return _imageFormat; }
     };
+
+
+    // NOTE: Should rather be member of Texture?
+    void transition_image_layout(
+        CommandBuffer& commandBuffer,
+        Texture* pTexture,
+        ImageLayout newLayout,
+        PipelineStage srcStage,
+        uint32_t srcAccessMask,
+        PipelineStage dstStage,
+        uint32_t dstAccessMask,
+        uint32_t mipLevelCount = 1
+    );
 }

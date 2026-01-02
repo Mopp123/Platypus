@@ -6,8 +6,10 @@
 namespace platypus
 {
     RenderPassType Batcher::s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES] = {
-        RenderPassType::SCENE_PASS,
-        RenderPassType::SHADOW_PASS
+        RenderPassType::SHADOW_PASS,
+        RenderPassType::OPAQUE_PASS,
+        RenderPassType::TRANSPARENT_PASS,
+        RenderPassType::SCREEN_PASS
     };
 
     DescriptorSetLayout Batcher::s_staticDescriptorSetLayout;
@@ -194,6 +196,7 @@ namespace platypus
             cullMode,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
+            true, // Enable depth write
             DepthCompareOperation::COMPARE_OP_LESS,
             true, // Enable color blend
             pushConstantsSize, // Push constants size

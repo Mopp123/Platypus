@@ -113,12 +113,37 @@ void BaseScene::initBase()
 void BaseScene::updateBase()
 {}
 
+std::vector<ID_t> BaseScene::loadTextures(
+    AssetManager* pAssetManager,
+    ImageFormat imageFormat,
+    TextureSampler sampler,
+    std::vector<std::string> filepaths
+)
+{
+    std::vector<ID_t> textures;
+    for (const std::string& path : filepaths)
+    {
+        ID_t textureID = pAssetManager->getZeroTexture()->getID();
+        if (!path.empty())
+        {
+            textureID = pAssetManager->loadTexture(
+                path,
+                imageFormat,
+                sampler
+            )->getID();
+        }
+        textures.push_back(textureID);
+    }
+    return textures;
+}
 
 Material* BaseScene::createMeshMaterial(
     AssetManager* pAssetManager,
     std::string textureFilepath,
     bool repeatTexture,
-    bool receiveShadows
+    bool castShadows,
+    bool receiveShadows,
+    bool transparent
 )
 {
     TextureSamplerAddressMode addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -145,8 +170,9 @@ Material* BaseScene::createMeshMaterial(
         16.0f,
         { 0, 0 },
         { 1, 1 },
-        receiveShadows,
-        false // is shadeless?
+        castShadows, // cast shadows
+        receiveShadows, // receive shadows
+        transparent // transparent
     );
     return pMaterial;
 }
@@ -213,4 +239,27 @@ entityID_t BaseScene::createSkinnedMeshEntity(
     add_child(entity, rootJointEntity);
 
     return entity;
+}
+
+std::vector<float> BaseScene::generateHeightmap(
+    platypus::AssetManager* pAssetManager,
+    const std::string& filepath,
+    float heightMultiplier
+)
+{
+    Image* pImage = (Image*)pAssetManager->loadImage(filepath,ImageFormat::R8G8B8A8_UNORM);
+    std::vector<float> heightmap(pImage->getWidth() * pImage->getWidth());
+    for (int y = 0; y < pImage->getHeight(); ++y)
+    {
+        for (int x = 0; x < pImage->getWidth(); ++x)
+        {
+            float r = ((float)pImage->getColorChannelValue(x, y, 0)) / 255;
+            float g = ((float)pImage->getColorChannelValue(x, y, 0)) / 255;
+            float b = ((float)pImage->getColorChannelValue(x, y, 0)) / 255;
+            float a = ((float)pImage->getColorChannelValue(x, y, 0)) / 255;
+            float brightness = (r + g + b + a) / 4.0f;
+            heightmap[x + y * pImage->getWidth()] = brightness * heightMultiplier;
+        }
+    }
+    return heightmap;
 }

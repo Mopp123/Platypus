@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Swapchain.h"
 #include "platypus/utils/Maths.h"
 #include "CommandBuffer.h"
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 #include "Framebuffer.hpp"
 #include "Pipeline.h"
 #include "Descriptors.h"
@@ -22,13 +21,14 @@ namespace platypus
         void begin_render_pass(
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            const Framebuffer* pFramebuffer,
-            Texture* pDepthAttachment,
-            const Vector4f& clearColor,
-            bool clearDepthBuffer
+            Framebuffer* pFramebuffer,
+            const Vector4f& clearColor
         );
 
-        void end_render_pass(CommandBuffer& commandBuffer);
+        void end_render_pass(
+            CommandBuffer& commandBuffer,
+            const RenderPass& renderPass
+        );
 
         void exec_secondary_command_buffers(
             const CommandBuffer& primary,
@@ -91,6 +91,11 @@ namespace platypus
             const CommandBuffer& commandBuffer,
             uint32_t count,
             uint32_t instanceCount
+        );
+
+        void draw(
+            const CommandBuffer& commandBuffer,
+            uint32_t count
         );
     }
 }

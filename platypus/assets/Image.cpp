@@ -123,6 +123,13 @@ namespace platypus
         }
     }
 
+    bool is_color_format(ImageFormat format)
+    {
+        ImageFormat firstDepthFormat = ImageFormat::D16_UNORM;
+        ImageFormat lastDepthFormat = ImageFormat::D32_SFLOAT_S8_UINT;
+        return format < firstDepthFormat || format > lastDepthFormat;
+    }
+
     ImageFormat srgb_format_to_unorm(ImageFormat srgb)
     {
         switch (srgb)
@@ -195,7 +202,6 @@ namespace platypus
     }
 
     int Image::getColorChannelValue(
-        const Image * const pImage,
         uint32_t x,
         uint32_t y,
         uint32_t channelIndex

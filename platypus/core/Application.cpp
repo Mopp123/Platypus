@@ -82,7 +82,16 @@ namespace platypus
         // NOTE: HUGE ISSUE:
         _pAssetManager = new AssetManager;
         _pSwapchain = new Swapchain(_window);
-        _pMasterRenderer = new MasterRenderer(*_pSwapchain);
+
+        // NOTE: Only temporarely figuring shadowmap depth format here!
+        // +Not sure if this fallback is enough if D32_SFLOAT not available...
+        ImageFormat shadowmapDepthFormat = ImageFormat::NONE;
+        if (Device::is_depth_format_supported(ImageFormat::D32_SFLOAT))
+            shadowmapDepthFormat = ImageFormat::D32_SFLOAT;
+        else
+            shadowmapDepthFormat = Device::get_first_supported_depth_format();
+
+        _pMasterRenderer = new MasterRenderer(*_pSwapchain, shadowmapDepthFormat);
 
         #ifdef PLATYPUS_DEBUG
             Debug::log(
@@ -100,7 +109,16 @@ namespace platypus
 
     void Application::run()
     {
-        _pMasterRenderer->createPipelines();
+        // NOTE: HUGE ISSUE HERE!
+        //  -> calling _pMasterRenderer->createPipelines() ATM doesn't necessarely mean that
+        //  previous pipelines were really destroyed!
+        //  This was earlier fine probably because Most of the Pipelines were managed by
+        //  Materials' which pipelines gets created "on demand" via Batcher.
+        //  This is absolutely fucked up once again!
+
+        // ISSUE: MasterRenderer is creating some resources in its constructor in addition to here!
+        //  -> this doesn't make any sense!
+        //_pMasterRenderer->createPipelines();
         #ifdef PLATYPUS_BUILD_DESKTOP
             while (!_window.isCloseRequested())
             {
@@ -110,6 +128,7 @@ namespace platypus
             emscripten_set_main_loop(update, 0, 1);
         #endif
 
+        // NOTE: Why the fuck this shit isn't done in the destructor!?!?!?
         Device::wait_for_operations();
         // NOTE: Need to destroy assets before destroying MasterRenderer because
         // some rely on descriptor pool that's living in the MasterRenderer atm!

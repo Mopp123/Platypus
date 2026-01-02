@@ -1,6 +1,4 @@
 #include "platypus/graphics/RenderCommand.h"
-#include "DesktopSwapchain.h"
-#include "platypus/graphics/RenderPass.h"
 #include "DesktopRenderPass.h"
 #include "DesktopFramebuffer.hpp"
 #include "DesktopCommandBuffer.h"
@@ -22,10 +20,8 @@ namespace platypus
         void begin_render_pass(
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            const Framebuffer* pFramebuffer,
-            Texture* pDepthAttachment,
-            const Vector4f& clearColor,
-            bool clearDepthBuffer
+            Framebuffer* pFramebuffer,
+            const Vector4f& clearColor
         )
         {
             if (!pFramebuffer)
@@ -39,69 +35,92 @@ namespace platypus
                 return;
             }
 
+            // If using framebuffer attachments as "samplable" in later passes
+            //  -> keep track of the "intended image layouts".
+            //  This is to transition img layouts later without having to explicitly
+            //  specify the old layout.
+            //  NOTE: This might fuck shit up in the future tho!
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
+            Texture* pDepthAttachment = pFramebuffer->getDepthAttachment();
             if (renderPass.isOffscreenPass() && pDepthAttachment)
             {
                 TextureImpl* pDepthTextureImpl = pDepthAttachment->getImpl();
-                VkImageMemoryBarrier barrier{};
-                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                barrier.oldLayout = pDepthTextureImpl->imageLayout;
-                barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.image = pDepthTextureImpl->image;
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                pDepthTextureImpl->imageLayout = renderPass.getImpl()->initialDepthImageLayout;
+                pCmdBufferImpl->pDepthAttachment = pDepthAttachment;
+            }
 
-                barrier.subresourceRange.baseMipLevel = 0;
-                barrier.subresourceRange.levelCount = 1;
-                barrier.subresourceRange.baseArrayLayer = 0;
-                barrier.subresourceRange.layerCount = 1;
-
-                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-
-                vkCmdPipelineBarrier(
-                    pCmdBufferImpl->handle,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                    0,
-                    0, nullptr,
-                    0, nullptr,
-                    1, &barrier
-                );
+            const std::vector<Texture*> colorAttachments = pFramebuffer->getColorAttachments();
+            if (renderPass.isOffscreenPass() && !colorAttachments.empty())
+            {
+                // NOTE: Atm always using just a single color attachment if using it as samplable
+                // in later passes
+                #ifdef PLATYPUS_DEBUG
+                    if (colorAttachments.size() > 1)
+                    {
+                        Debug::log(
+                            "@begin_render_pass "
+                            "Render pass was offscreen pass and it has " + std::to_string(colorAttachments.size()) + " "
+                            "color attachments. Currently allowing only a single color attachments "
+                            "for offscreen passes!",
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
+                        return;
+                    }
+                #endif
+                Texture* pColorAttachment = colorAttachments[0];
+                TextureImpl* pColorTextureImpl = pColorAttachment->getImpl();
+                pColorTextureImpl->imageLayout = renderPass.getImpl()->initialColorImageLayout;
+                pCmdBufferImpl->pColorAttachment = pColorAttachment;
             }
 
             VkRenderPassBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             beginInfo.renderPass = renderPass.getImpl()->handle;
-            CommandBufferImpl* pCommandBufferImpl = commandBuffer.getImpl();
-            pCommandBufferImpl->pDepthAttachment = pDepthAttachment;
             beginInfo.framebuffer = pFramebuffer->getImpl()->handle;
 
+            // NOTE: Below very dumb.. just didn't want to use something like std::vector here... :D
             VkClearValue clearColorValue{};
             clearColorValue.color = {{ clearColor.r, clearColor.g, clearColor.b, clearColor.a }};
+
             VkClearValue clearDepthStencilValue{};
             clearDepthStencilValue.depthStencil = { 1.0f, 0 };
-            VkClearValue clearValues[2] = { clearColorValue, clearDepthStencilValue };
 
-            if (clearDepthBuffer)
-                beginInfo.clearValueCount = 2;
+            VkClearValue clearValues[2];
+
+            beginInfo.clearValueCount = 0;
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR)
+            {
+                clearValues[beginInfo.clearValueCount] = clearColorValue;
+                ++beginInfo.clearValueCount;
+            }
+
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH)
+            {
+                clearValues[beginInfo.clearValueCount] = clearDepthStencilValue;
+                ++beginInfo.clearValueCount;
+            }
+
+            if (beginInfo.clearValueCount > 0)
+                beginInfo.pClearValues = clearValues;
             else
-                beginInfo.clearValueCount = 1;
+                beginInfo.pClearValues = nullptr;
 
-            beginInfo.pClearValues = clearValues;
 
             beginInfo.renderArea.offset = { 0, 0 };
             beginInfo.renderArea.extent = { pFramebuffer->getWidth(), pFramebuffer->getHeight() };
 
             vkCmdBeginRenderPass(
-                pCommandBufferImpl->handle,
+                pCmdBufferImpl->handle,
                 &beginInfo,
                 VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS
             );
         }
 
-        void end_render_pass(CommandBuffer& commandBuffer)
+        void end_render_pass(
+            CommandBuffer& commandBuffer,
+            const RenderPass& renderPass
+        )
         {
             CommandBufferImpl* pCmdBufferImpl = commandBuffer.getImpl();
             vkCmdEndRenderPass(commandBuffer.getImpl()->handle);
@@ -109,36 +128,16 @@ namespace platypus
             if (pCmdBufferImpl->pDepthAttachment)
             {
                 TextureImpl* pDepthTextureImpl = pCmdBufferImpl->pDepthAttachment->getImpl();
-
-                VkImageMemoryBarrier barrier{};
-                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.image = pDepthTextureImpl->image;
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                // (if stencil is present, you might include the stencil bit if you need to preserve it)
-                barrier.subresourceRange.baseMipLevel = 0;
-                barrier.subresourceRange.levelCount = 1;
-                barrier.subresourceRange.baseArrayLayer = 0;
-                barrier.subresourceRange.layerCount = 1;
-
-                barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-                vkCmdPipelineBarrier(
-                    pCmdBufferImpl->handle,
-                    VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    0,
-                    0, nullptr,
-                    0, nullptr,
-                    1, &barrier
-                );
-                pDepthTextureImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                pDepthTextureImpl->imageLayout = renderPass.getImpl()->finalDepthImageLayout;
             }
 
+            if (pCmdBufferImpl->pColorAttachment)
+            {
+                TextureImpl* pColorTextureImpl = pCmdBufferImpl->pColorAttachment->getImpl();
+                pColorTextureImpl->imageLayout = renderPass.getImpl()->finalColorImageLayout;
+            }
+
+            commandBuffer.getImpl()->pColorAttachment = nullptr;
             commandBuffer.getImpl()->pDepthAttachment = nullptr;
         }
 
@@ -350,6 +349,11 @@ namespace platypus
                 0,
                 0
             );
+        }
+
+        void draw(const CommandBuffer& commandBuffer, uint32_t count)
+        {
+            vkCmdDraw(commandBuffer.getImpl()->handle, count, 1, 0, 0);
         }
     }
 }

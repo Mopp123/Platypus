@@ -7,26 +7,6 @@
 
 using namespace platypus;
 
-static std::vector<ID_t> load_textures(
-    AssetManager* pAssetManager,
-    ImageFormat imageFormat,
-    TextureSampler sampler,
-    std::vector<std::string> filepaths
-)
-{
-    std::vector<ID_t> textures;
-    for (const std::string& path : filepaths)
-    {
-        textures.push_back(
-            pAssetManager->loadTexture(
-                path,
-                imageFormat,
-                sampler
-            )->getID()
-        );
-    }
-    return textures;
-}
 
 ShadowTestScene::ShadowTestScene()
 {
@@ -120,19 +100,19 @@ void ShadowTestScene::init()
         "assets/textures/terrain/jungle_mntn2_n.png"
     };
 
-    std::vector<ID_t> diffuseTextures = load_textures(
+    std::vector<ID_t> diffuseTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         textureSampler,
         diffuseTexturePaths
     );
-    std::vector<ID_t> specularTextures = load_textures(
+    std::vector<ID_t> specularTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         textureSampler,
         specularTexturePaths
     );
-    std::vector<ID_t> normalTextures = load_textures(
+    std::vector<ID_t> normalTextures = loadTextures(
         pAssetManager,
         ImageFormat::R8G8B8A8_UNORM,
         textureSampler,
@@ -148,8 +128,9 @@ void ShadowTestScene::init()
         32.0f,
         { 0, 0 },
         { (float)tilesPerRow, (float)tilesPerRow },
+        false, // cast shadows
         true, // receive shadows
-        false
+        false // transparent
     );
 
     create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
@@ -159,13 +140,15 @@ void ShadowTestScene::init()
         pAssetManager,
         "assets/textures/DiffuseTest.png",
         true,
-        true // receive shadows?
+        true, // cast shadows
+        true // receive shadows
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
         "assets/textures/characterTest.png",
         false,
-        true  // receive shadows?
+        true, // cast shadows
+        true // receive shadows
     );
 
     Mesh* pStaticInstancedMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", true)->getMeshes()[0];
@@ -247,7 +230,7 @@ void ShadowTestScene::init()
     MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
     GUIRenderable* pFramebufferDebugRenderable = create_gui_renderable(
         _framebufferDebugEntity,
-        pMasterRenderer->getShadowFramebufferDepthTexture()->getID()
+        pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment()->getID()
     );
 }
 
@@ -307,19 +290,14 @@ void ShadowTestScene::update()
         ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
     );
 
-    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-    Texture* framebufferTexture = pMasterRenderer->getShadowFramebufferDepthTexture();
+    MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
+    Texture* framebufferTexture = pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment();
     if (framebufferTexture)
-    {
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
-    }
     else
-    {
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
-    }
+
 
     if (inputManager.isKeyDown(KeyName::KEY_0))
-    {
-        Application::get_instance()->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
-    }
+        pApp->getSceneManager().assignNextScene(new SkinnedMeshTestScene);
 }

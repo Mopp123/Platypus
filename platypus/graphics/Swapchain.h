@@ -1,14 +1,13 @@
 #pragma once
 
 #include "platypus/core/Window.hpp"
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 #include "Framebuffer.hpp"
-#include <platypus/Common.h>
 
 
 namespace platypus
 {
-    struct SwapchainImpl;
+    class Texture;
 
     enum class SwapchainResult
     {
@@ -17,6 +16,8 @@ namespace platypus
         SUCCESS
     };
 
+
+    struct SwapchainImpl;
     class Swapchain
     {
     private:
@@ -26,6 +27,7 @@ namespace platypus
         RenderPass _renderPass;
         std::vector<Image*> _colorImages;
         std::vector<Texture*> _colorTextures;
+
         Image* _pDepthImage;
         Texture* _pDepthTexture;
         std::vector<Framebuffer*> _framebuffers;
@@ -62,6 +64,13 @@ namespace platypus
         inline const std::vector<Framebuffer*>& getFramebuffers() const { return _framebuffers; }
         inline std::vector<Framebuffer*>& getFramebuffers() { return _framebuffers; }
         inline const Framebuffer* getCurrentFramebuffer() const
+        {
+            if (_framebuffers.empty())
+                return nullptr;
+
+            return _framebuffers[_currentImageIndex];
+        }
+        inline Framebuffer* getCurrentFramebuffer()
         {
             if (_framebuffers.empty())
                 return nullptr;

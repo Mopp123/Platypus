@@ -30,11 +30,20 @@ public:
     void initBase();
     void updateBase();
 
+    std::vector<ID_t> loadTextures(
+        platypus::AssetManager* pAssetManager,
+        platypus::ImageFormat imageFormat,
+        platypus::TextureSampler sampler,
+        std::vector<std::string> filepaths
+    );
+
     platypus::Material* createMeshMaterial(
         platypus::AssetManager* pAssetManager,
         std::string textureFilepath,
         bool repeatTexture = false,
-        bool receiveShadows = false
+        bool castShadows = false,
+        bool receiveShadows = false,
+        bool transparent = false
     );
 
     entityID_t createStaticMeshEntity(
@@ -53,5 +62,11 @@ public:
         platypus::SkeletalAnimationData* pAnimationAsset,
         ID_t materialAssetID,
         std::vector<entityID_t>& outJointEntities
+    );
+
+    std::vector<float> generateHeightmap(
+        platypus::AssetManager* pAssetManager,
+        const std::string& filepath,
+        float heightMultiplier
     );
 };

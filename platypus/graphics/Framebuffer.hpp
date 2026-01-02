@@ -1,10 +1,11 @@
 #pragma once
 
-#include "RenderPass.h"
-#include "platypus/assets/Texture.h"
+#include "RenderPass.hpp"
+
 
 namespace platypus
 {
+    class Texture;
     struct FramebufferImpl;
     class Framebuffer
     {
@@ -16,6 +17,7 @@ namespace platypus
         Texture* _pDepthAttachment;
 
     public:
+        // NOTE: attachment ownership doesn't get transferred here!
         Framebuffer(
             const RenderPass& renderPass,
             const std::vector<Texture*>& colorAttachments,

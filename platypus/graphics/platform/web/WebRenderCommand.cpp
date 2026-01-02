@@ -66,26 +66,57 @@ namespace platypus
         void begin_render_pass(
             CommandBuffer& commandBuffer,
             const RenderPass& renderPass,
-            const Framebuffer* pFramebuffer,
-            Texture* pDepthAttachment,
-            const Vector4f& clearColor,
-            bool clearDepthBuffer
+            Framebuffer* pFramebuffer,
+            const Vector4f& clearColor
         )
         {
             if (renderPass.isOffscreenPass() && pFramebuffer)
             {
-                GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, pFramebuffer->getImpl()->id));
+                FramebufferImpl* pFramebufferImpl = pFramebuffer->getImpl();
+                if (pFramebufferImpl->pCopyDepthAttachment)
+                {
+                    GL_FUNC(glBindFramebuffer(GL_READ_FRAMEBUFFER, pFramebufferImpl->copySourceID));
+                    GL_FUNC(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pFramebufferImpl->id));
+
+                    const int32_t framebufferWidth = (int32_t)pFramebuffer->getWidth();
+                    const int32_t framebufferHeight = (int32_t)pFramebuffer->getHeight();
+                    glBlitFramebuffer(
+                        0, 0,
+                        framebufferWidth, framebufferHeight,
+                        0, 0,
+                        framebufferWidth, framebufferHeight,
+                        GL_DEPTH_BUFFER_BIT,
+                        GL_NEAREST
+                    );
+
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                }
+
+                GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, pFramebufferImpl->id));
             }
             else
             {
                 GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
             }
 
-            GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
-            GL_FUNC(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+            uint32_t clearBits = 0;
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR)
+            {
+                GL_FUNC(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+                clearBits |= GL_COLOR_BUFFER_BIT;
+            }
+            if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH)
+                clearBits |= GL_DEPTH_BUFFER_BIT;
+
+            if (clearBits)
+                GL_FUNC(glClear(clearBits));
         }
 
-        void end_render_pass(CommandBuffer& commandBuffer)
+        void end_render_pass(
+            CommandBuffer& commandBuffer,
+            const RenderPass& renderPass
+        )
         {
         }
 
@@ -121,6 +152,15 @@ namespace platypus
             else
             {
                 GL_FUNC(glDisable(GL_DEPTH_TEST));
+            }
+
+            if (pipeline.isDepthWriteEnabled())
+            {
+                GL_FUNC(glDepthMask(GL_TRUE));
+            }
+            else
+            {
+                GL_FUNC(glDepthMask(GL_FALSE));
             }
 
             switch(pipeline.getDepthCompareOperation())
@@ -652,6 +692,11 @@ namespace platypus
                 0,
                 instanceCount
             ));
+        }
+
+        void draw(const CommandBuffer& commandBuffer, uint32_t count)
+        {
+            glDrawArrays(GL_TRIANGLES, 0, count);
         }
     }
 }

@@ -66,6 +66,23 @@ namespace platypus
     }
 
 
+    VkPipelineStageFlags to_vk_pipeline_stage(PipelineStage stage)
+    {
+        switch (stage)
+        {
+            case PipelineStage::TOP_OF_PIPE_BIT: return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            case PipelineStage::TRANSFER_BIT: return VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+            case PipelineStage::VERTEX_SHADER_BIT: return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            case PipelineStage::FRAGMENT_SHADER_BIT: return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            case PipelineStage::LATE_FRAGMENT_TESTS_BIT: return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            case PipelineStage::COLOR_ATTACHMENT_OUTPUT_BIT: return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
+        PLATYPUS_ASSERT(false);
+        return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    }
+
+
     Pipeline::Pipeline(
         const RenderPass* pRenderPass,
         const std::vector<VertexBufferLayout>& vertexBufferLayouts,
@@ -75,6 +92,7 @@ namespace platypus
         CullMode cullMode,
         FrontFace frontFace,
         bool enableDepthTest,
+        bool enableDepthWrite,
         DepthCompareOperation depthCmpOp,
         bool enableColorBlending, // TODO: more options to handle this..
         uint32_t pushConstantSize,
@@ -88,6 +106,7 @@ namespace platypus
         _cullMode(cullMode),
         _frontFace(frontFace),
         _enableDepthTest(enableDepthTest),
+        _enableDepthWrite(enableDepthWrite),
         _depthCmpOp(depthCmpOp),
         _enableColorBlending(enableColorBlending),
         _pushConstantSize(pushConstantSize),
@@ -147,15 +166,24 @@ namespace platypus
         inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
 
         // Specify viewport
+        // IMPORTANT::LATEST --------------------------------------------------------
+        // NOTE: UPDATE TO ALL BELOW: Using dynamic viewport stage atm
+        //  -> did this very drunk, not sure what consequences is it really
+        //  okay to flip the same way using just vkCmdViewport: WHICH I DIDN'T DO! -> FUCKING MYSTERIOUS SHIT ONCE AGAIN!
+        //  ------------------------------------------------------------------------- -> FUCKING MYSTERIOUS SHIT ONCE AGAIN!
+        //
         // TODO: Allow specifying other than swapchain's extent
+        /*
         const Swapchain& swapchain = Application::get_instance()->getMasterRenderer()->getSwapchain();
         Extent2D swapchainExtent = swapchain.getExtent();
         Rect2D viewportScissor = {
             0, 0, swapchainExtent.width, swapchainExtent.height
         };
+        */
         // ----------------
         // NOTE: Flipping the viewpot height here to have y point up so
         // it's consistent with opengl and how gltf files' vertices go
+        /*
         VkViewport viewport{};
         viewport.x = 0;
         viewport.y = (float)swapchainExtent.height;
@@ -163,17 +191,13 @@ namespace platypus
         viewport.height = -((float)swapchainExtent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
-
+        */
         VkPipelineViewportStateCreateInfo viewportCreateInfo{};
         viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         viewportCreateInfo.viewportCount = 1;
-        viewportCreateInfo.pViewports = &viewport;
+        viewportCreateInfo.pViewports = nullptr;
         viewportCreateInfo.scissorCount = 1;
-        VkRect2D vkScissor{
-            { viewportScissor.offsetX, viewportScissor.offsetY },
-            { viewportScissor.width, viewportScissor.height }
-        };
-        viewportCreateInfo.pScissors = &vkScissor;
+        viewportCreateInfo.pScissors = nullptr;
 
         // Rasterization
         // -------------
@@ -212,9 +236,9 @@ namespace platypus
         {
             depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
             depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-            depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+            depthStencilCreateInfo.depthWriteEnable = _enableDepthWrite ? VK_TRUE : VK_FALSE;
             depthStencilCreateInfo.depthCompareOp = to_vk_depth_compare_op(_depthCmpOp);
-            depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE; // DISABLED ATM!
+            depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
             depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
             depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
             depthStencilCreateInfo.stencilTestEnable = VK_FALSE; // DISABLED ATM!
@@ -223,6 +247,7 @@ namespace platypus
         }
         else
         {
+            /*
             Debug::log(
                 "@Pipeline::create "
                 "Depth testing was disabled for pipeline but currently "
@@ -232,6 +257,7 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
+            */
         }
 
         // Color blending (Theres 2 ways to do blending -> "blendEnable" or "logicOpEnable")
@@ -247,7 +273,7 @@ namespace platypus
             colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
             colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
             colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            colorBlendAttachment.dstAlphaBlendFactor = _enableDepthWrite ? VK_BLEND_FACTOR_ZERO : VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
             colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
         }
 

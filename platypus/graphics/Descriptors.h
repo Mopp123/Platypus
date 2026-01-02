@@ -2,7 +2,6 @@
 
 #include "Buffers.h"
 #include "Swapchain.h"
-#include "platypus/assets/Texture.h"
 #include <memory>
 
 
@@ -136,6 +135,7 @@ namespace platypus
     {
         DescriptorType type = DescriptorType::DESCRIPTOR_TYPE_NONE;
         const void* pData = nullptr;
+        bool depthImageTEST = false;
     };
 
 

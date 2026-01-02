@@ -20,6 +20,22 @@ namespace platypus
 
     std::string asset_type_to_string(AssetType type);
 
+
+    // NOTE: Atm these follows Vulkan's VkAccessFlagBits
+    enum MemoryAccessFlagBits
+    {
+        MEMORY_ACCESS_SHADER_READ_BIT = 0x00000020,
+
+        MEMORY_ACCESS_COLOR_ATTACHMENT_READ_BIT = 0x00000080,
+        MEMORY_ACCESS_COLOR_ATTACHMENT_WRITE_BIT = 0x00000100,
+
+        MEMORY_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT = 0x00000200,
+        MEMORY_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT = 0x00000400,
+
+        MEMORY_ACCESS_TRANSFER_WRITE_BIT = 0x00001000
+    };
+
+
     class Asset
     {
     private:

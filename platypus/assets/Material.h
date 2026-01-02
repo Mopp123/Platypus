@@ -51,8 +51,12 @@ namespace platypus
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
 
+        bool _castShadows = false;
         bool _receiveShadows = false;
+        bool _transparent = false;
+        // TODO: oh my god please PLEASE MAKE THIS SHIT LESS DUMB!
         uint32_t _shadowmapDescriptorIndex = 0;
+        uint32_t _sceneDepthDescriptorIndex = 0;
 
         std::unordered_map<MeshType, MaterialPipelineData*> _pipelines;
 
@@ -63,7 +67,11 @@ namespace platypus
         std::vector<Buffer*> _uniformBuffers;
         std::vector<DescriptorSet> _descriptorSets;
 
+        std::string _customVertexShaderFilename;
+        std::string _customFragmentShaderFilename;
+
     public:
+        // NOTE: All transparent materials use opaque pass's depth buffer as texture!
         Material(
             ID_t blendmapTextureID,
             ID_t* pDiffuseTextureIDs,
@@ -76,8 +84,11 @@ namespace platypus
             float shininess,
             const Vector2f& textureOffset = { 0, 0 },
             const Vector2f& textureScale = { 1, 1 },
+            bool castShadows = false,
             bool receiveShadows = false,
-            bool shadeless = false // NOTE: This doesn't do anything atm!?
+            bool transparent = false,
+            const std::string& customVertexShaderFilename = "",
+            const std::string& customFragmentShaderFilename = ""
         );
         ~Material();
 
@@ -93,6 +104,7 @@ namespace platypus
         void destroyShaderResources();
 
         void updateShadowmapDescriptorSet(Texture* pShadowmapTexture);
+        void updateSceneDepthDescriptorSet(Texture* pSceneDepthTexture);
 
         Texture* getBlendmapTexture() const;
         Texture* getDiffuseTexture(size_t channel) const;
@@ -114,11 +126,14 @@ namespace platypus
                 _specularTextureCount +
                 _normalTextureCount +
                 (_blendmapTextureID != NULL_ID ? 1 : 0) +
-                (_receiveShadows ? 1 : 0);
+                (_receiveShadows ? 1 : 0) +
+                (_transparent ? 1 : 0);
         }
         inline float getSpecularStrength() const { return _uniformBufferData.lightingProperties.x; }
         inline float getShininess() const { return _uniformBufferData.lightingProperties.y; }
+        inline bool castsShadows() const { return _castShadows; }
         inline bool receivesShadows() const { return _receiveShadows; }
+        inline bool isTransparent() const { return _transparent; }
         inline bool isShadeless() const { return _uniformBufferData.lightingProperties.z; }
         inline Vector2f getTextureOffset() const { return { _uniformBufferData.textureProperties.x, _uniformBufferData.textureProperties.y }; }
         inline Vector2f getTextureScale() const { return { _uniformBufferData.textureProperties.z, _uniformBufferData.textureProperties.w };; }
@@ -129,6 +144,7 @@ namespace platypus
         void warnUnassigned(const std::string& beginStr);
 
     private:
+        void updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex);
         void validateTextureCounts();
         void createDescriptorSetLayout();
         // NOTE: This updates all uniform buffers for all possible frames in flight,

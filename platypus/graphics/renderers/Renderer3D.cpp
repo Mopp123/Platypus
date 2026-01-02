@@ -134,11 +134,19 @@ namespace platypus
 
     void Renderer3D::allocCommandBuffers()
     {
-        _commandBuffers[RenderPassType::SCENE_PASS] = Device::get_command_pool()->allocCommandBuffers(
+        _commandBuffers[RenderPassType::SCREEN_PASS] = Device::get_command_pool()->allocCommandBuffers(
             _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
         _commandBuffers[RenderPassType::SHADOW_PASS] = Device::get_command_pool()->allocCommandBuffers(
+            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
+        );
+        _commandBuffers[RenderPassType::OPAQUE_PASS] = Device::get_command_pool()->allocCommandBuffers(
+            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
+        );
+        _commandBuffers[RenderPassType::TRANSPARENT_PASS] = Device::get_command_pool()->allocCommandBuffers(
             _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );

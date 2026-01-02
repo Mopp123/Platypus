@@ -2,11 +2,13 @@
 #include "AssetManager.h"
 #include "platypus/core/Application.h"
 #include "platypus/core/Debug.h"
+#include "platypus/graphics/Device.hpp"
 #include <vector>
 
 
 namespace platypus
 {
+    // NOTE: All transparent materials use opaque pass's depth buffer as texture!
     Material::Material(
         ID_t blendmapTextureID,
         ID_t* pDiffuseTextureIDs,
@@ -19,15 +21,23 @@ namespace platypus
         float shininess,
         const Vector2f& textureOffset,
         const Vector2f& textureScale,
+        bool castShadows,
         bool receiveShadows,
-        bool shadeless // NOTE: This doesn't do anything atm!?
+        bool transparent,
+        const std::string& customVertexShaderFilename,
+        const std::string& customFragmentShaderFilename
     ) :
         Asset(AssetType::ASSET_TYPE_MATERIAL),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
         _normalTextureCount(normalTextureCount),
-        _receiveShadows(receiveShadows)
+        _castShadows(castShadows),
+        _receiveShadows(receiveShadows),
+        _transparent(transparent),
+
+        _customVertexShaderFilename(customVertexShaderFilename),
+        _customFragmentShaderFilename(customFragmentShaderFilename)
     {
         validateTextureCounts();
 
@@ -41,7 +51,7 @@ namespace platypus
 
         _uniformBufferData.lightingProperties.x = specularStrength;
         _uniformBufferData.lightingProperties.y = shininess;
-        _uniformBufferData.lightingProperties.z = shadeless;
+        _uniformBufferData.lightingProperties.z = 0; // Was originally having this as indicator is this using any kind of lighting/shading at all (shadeless)
         _uniformBufferData.lightingProperties.w = 0.0f;
         _uniformBufferData.textureProperties.x = textureOffset.x;
         _uniformBufferData.textureProperties.y = textureOffset.y;
@@ -71,48 +81,7 @@ namespace platypus
 
         createDescriptorSetLayout();
 
-        // NOTE: Not sure should we create all possible pipelines here...
-        // Just go so fucking annoyed how the "dynamic pipeline creation" is handled in the Batcher so decided
-        // to just do it here, even if some of the pipelines aren't used...
-        // ALSO the pipeline creation func is fucking stupid with those bools... TODO: Make this less annoying!
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        const RenderPass* pSceneRenderPass = pMasterRenderer->getSwapchain().getRenderPassPtr();
-
-        // NOTE: ONLY TEMPORARY ATM!
-        /*
-        if (_blendmapTextureID == NULL_ID)
-        {
-            createPipeline(
-                pSceneRenderPass,
-                MeshType::MESH_TYPE_STATIC_INSTANCED
-            );
-
-            if (_normalTextureCount == 0)
-            {
-                createPipeline(
-                    pSceneRenderPass,
-                    MeshType::MESH_TYPE_SKINNED
-                );
-            }
-            else
-            {
-                Debug::log(
-                    "@Material::Material "
-                    "Created material with normal texture! "
-                    "Currently skinned meshes don't support this so "
-                    "make sure you don't use this material for skinned meshes!",
-                    Debug::MessageType::PLATYPUS_WARNING
-                );
-            }
-        }
-        else
-        {
-            createPipeline(
-                pSceneRenderPass,
-                MeshType::MESH_TYPE_TERRAIN
-            );
-        }
-        */
+        // NOTE: Materials' pipelines gets created on demand via Batcher atm!
 
         createShaderResources();
 
@@ -142,14 +111,22 @@ namespace platypus
         MeshType meshType
     )
     {
-        const std::string vertexShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-            meshType
-        );
-        const std::string fragmentShaderFilename = getShaderFilename(
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-            meshType
-        );
+        std::string vertexShaderFilename = _customVertexShaderFilename;
+        if (vertexShaderFilename.empty())
+        {
+            vertexShaderFilename = getShaderFilename(
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                meshType
+            );
+        }
+        std::string fragmentShaderFilename = _customFragmentShaderFilename;
+        if (fragmentShaderFilename.empty())
+        {
+            fragmentShaderFilename = getShaderFilename(
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                meshType
+            );
+        }
         Debug::log(
             "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
         );
@@ -243,7 +220,8 @@ namespace platypus
             CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
             true, // Enable depth test
-            DepthCompareOperation::COMPARE_OP_LESS,
+            !_transparent, // Enable depth write
+            _transparent ? DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL : DepthCompareOperation::COMPARE_OP_LESS,
             true, // Enable color blend
             pushConstantsSize, // Push constants size
             pushConstantsStage // Push constants' stage flags
@@ -330,8 +308,27 @@ namespace platypus
         for (size_t i = 0; i < allTextures.size(); ++i)
             textureComponents[i] = { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, allTextures[i] };
 
+        // TODO: Do something about this convoluted mess
+        if (_receiveShadows && _transparent)
+        {
+            Debug::log(
+                "@Material::createShaderResources "
+                "Material was receiving shadows and transparent which isn't currently allowed "
+                "since shadowmap and scene's depth map is considered the last descriptor of material.",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         if (_receiveShadows)
             _shadowmapDescriptorIndex = textureComponents.size() - 1;
+
+        if (_transparent)
+        {
+            _sceneDepthDescriptorIndex = textureComponents.size() - 1;
+            // NOTE: ONLY TESTING ATM!
+            textureComponents[_sceneDepthDescriptorIndex].depthImageTEST = true;
+        }
 
         for (size_t i = 0; i < framesInFlight; ++i)
         {
@@ -370,6 +367,24 @@ namespace platypus
         _descriptorSets.clear();
     }
 
+    void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)
+    {
+        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
+        for (DescriptorSet& descriptorSet : _descriptorSets)
+        {
+            DescriptorSetComponent component{
+                DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                pTexture
+            };
+            component.depthImageTEST = _transparent && descriptorIndex == _sceneDepthDescriptorIndex;
+            descriptorSet.update(
+                descriptorPool,
+                descriptorIndex,
+                component
+            );
+        }
+    }
+
     void Material::updateShadowmapDescriptorSet(Texture* pShadowmapTexture)
     {
         #ifdef PLATYPUS_DEBUG
@@ -384,16 +399,24 @@ namespace platypus
                 return;
             }
         #endif
+        updateDescriptorSetTexture(pShadowmapTexture, _shadowmapDescriptorIndex);
+    }
 
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
-        for (DescriptorSet& descriptorSet : _descriptorSets)
-        {
-            descriptorSet.update(
-                descriptorPool,
-                _shadowmapDescriptorIndex,
-                { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pShadowmapTexture }
-            );
-        }
+    void Material::updateSceneDepthDescriptorSet(Texture* pSceneDepthTexture)
+    {
+        #ifdef PLATYPUS_DEBUG
+            if (!_transparent)
+            {
+                Debug::log(
+                    "@Material::updateSceneDepthDescriptorSet "
+                    "Material not marked as transparent!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+        #endif
+        updateDescriptorSetTexture(pSceneDepthTexture, _sceneDepthDescriptorIndex);
     }
 
     Texture* Material::getBlendmapTexture() const
@@ -490,10 +513,28 @@ namespace platypus
         for (size_t i = 0; i < _normalTextureCount; ++i)
             textures.push_back(getNormalTexture(i));
 
+        if (_receiveShadows && _transparent)
+        {
+            Debug::log(
+                "@Material::getTextures "
+                "Material was receiving shadows and transparent. This currently isn't supported yet!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return { };
+        }
+
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         if (_receiveShadows)
         {
-            MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-            textures.push_back(pMasterRenderer->getShadowFramebufferDepthTexture());
+            Texture* pShadowPassDepthAttachment = pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment();
+            textures.push_back(pShadowPassDepthAttachment);
+        }
+
+        if (_transparent)
+        {
+            Texture* pDepthTexture = pMasterRenderer->getOpaqueFramebuffer()->getDepthAttachment();
+            textures.push_back(pDepthTexture);
         }
 
         return textures;
@@ -514,8 +555,12 @@ namespace platypus
         _uniformBufferData.textureProperties.y = textureOffset.y;
         _uniformBufferData.textureProperties.z = textureScale.x;
         _uniformBufferData.textureProperties.w = textureScale.y;
-        const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
-        updateUniformBuffers(currentFrame);
+        //const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
+        //updateUniformBuffers(currentFrame);
+        const size_t framesInFlight = Application::get_instance()->getMasterRenderer()->getSwapchain().getMaxFramesInFlight();
+        Device::wait_for_operations();
+        for (size_t i = 0; i < framesInFlight; ++i)
+            updateUniformBuffers(i);
     }
 
     Pipeline* Material::getPipeline(MeshType meshType)
@@ -590,7 +635,6 @@ namespace platypus
         uint32_t textureBindingCount = getTotalTextureCount();
         for (uint32_t textureBinding = 0; textureBinding < textureBindingCount; ++textureBinding)
         {
-            Debug::log("___TEST___added texture binding: " + std::to_string(textureBinding));
             layoutBindings.push_back(
                 {
                     textureBinding,
@@ -647,6 +691,17 @@ namespace platypus
     // TODO: Make this convoluted mess cleaner!
     std::string Material::getShaderFilename(uint32_t shaderStage, MeshType meshType)
     {
+        // Vertex shader "name flags":
+        //  t = use tangent input
+        //  i = use instanced transforms input
+        //
+        // Fragment shader "name flags":
+        //  b = use blendmap
+        //  d = use diffuse map
+        //  s = use specular map
+        //  n = use normal map
+        //  a = use depth map (a stands for "alpha", transparent pass)
+
         // Example shader names:
         // vertex shader: "StaticVertexShader", "StaticVertexShader_t", "StaticVertexShader_ti"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
@@ -712,6 +767,8 @@ namespace platypus
                 shaderName += "s";
             if (_normalTextureCount > 0)
                 shaderName += "n";
+            if (_transparent)
+                shaderName += "a";
         }
 
         return shaderName;

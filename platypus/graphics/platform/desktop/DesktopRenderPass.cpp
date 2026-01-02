@@ -1,4 +1,4 @@
-#include "platypus/graphics/RenderPass.h"
+#include "platypus/graphics/RenderPass.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include "DesktopDevice.hpp"
@@ -9,9 +9,16 @@
 
 namespace platypus
 {
-    RenderPass::RenderPass(RenderPassType type, bool offscreen) :
+    RenderPass::RenderPass(
+        RenderPassType type,
+        bool offscreen,
+        uint32_t attachmentUsageFlags,
+        uint32_t attachmentClearFlags
+    ) :
         _type(type),
-        _offscreen(offscreen)
+        _offscreen(offscreen),
+        _attachmentUsageFlags(attachmentUsageFlags),
+        _attachmentClearFlags(attachmentClearFlags)
     {
         _pImpl = new RenderPassImpl;
     }
@@ -29,21 +36,41 @@ namespace platypus
         ImageFormat depthFormat
     )
     {
+        _colorFormat = colorFormat;
+        _depthFormat = depthFormat;
+
         std::vector<VkAttachmentDescription> attachmentDescriptions;
         std::vector<VkAttachmentReference> colorAttachmentReferences;
         VkAttachmentReference depthAttachmentReference{};
-        if (colorFormat != ImageFormat::NONE)
+        VkImageLayout initialColorImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        VkImageLayout initialDepthImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        VkImageLayout finalColorImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        VkImageLayout finalDepthImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        if (_colorFormat != ImageFormat::NONE)
         {
             VkAttachmentDescription colorAttachmentDescription{};
-            colorAttachmentDescription.format = to_vk_format(colorFormat);
+            colorAttachmentDescription.format = to_vk_format(_colorFormat);
             colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-            colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+            if (_attachmentClearFlags & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR)
+                colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            else
+                colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
             colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            VkImageLayout colorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            colorAttachmentDescription.finalLayout = colorImageLayout;
+
+            finalColorImageLayout = _offscreen ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            if (_attachmentUsageFlags & RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_CONTINUE)
+            {
+                initialColorImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                //finalColorImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            }
+
+            colorAttachmentDescription.initialLayout = initialColorImageLayout;
+            colorAttachmentDescription.finalLayout = finalColorImageLayout;
             attachmentDescriptions.push_back(colorAttachmentDescription);
 
             VkAttachmentReference colorAttachmentRef{};
@@ -57,29 +84,46 @@ namespace platypus
         }
 
 
-        if (depthFormat != ImageFormat::NONE)
+        if (_depthFormat != ImageFormat::NONE)
         {
             VkAttachmentDescription depthAttachmentDescription{};
-            depthAttachmentDescription.format = to_vk_format(depthFormat);
+            depthAttachmentDescription.format = to_vk_format(_depthFormat);
             depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-            depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+            if (_attachmentClearFlags & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH)
+                depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            else
+                depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
             depthAttachmentDescription.storeOp = _offscreen ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
             depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             depthAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+            //  For continuing using some previous pass's depth attachment
+            if (_attachmentUsageFlags & RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE)
+            {
+                initialDepthImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                finalDepthImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            }
+            else
+            {
+                finalDepthImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
+
+            depthAttachmentDescription.initialLayout = initialDepthImageLayout;
+            depthAttachmentDescription.finalLayout = finalDepthImageLayout;
             attachmentDescriptions.push_back(depthAttachmentDescription);
 
             // depth attachment is always the last atm...
             depthAttachmentReference.attachment = (uint32_t)colorAttachmentReferences.size();
-            depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            depthAttachmentReference.layout = finalDepthImageLayout;
         }
 
         VkSubpassDescription subpassDescription{};
         subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpassDescription.colorAttachmentCount = (uint32_t)colorAttachmentReferences.size();
-        subpassDescription.pColorAttachments = colorFormat != ImageFormat::NONE ? colorAttachmentReferences.data() : nullptr;
-        subpassDescription.pDepthStencilAttachment = depthFormat != ImageFormat::NONE ? &depthAttachmentReference : nullptr;
+        subpassDescription.pColorAttachments = _colorFormat != ImageFormat::NONE ? colorAttachmentReferences.data() : nullptr;
+        subpassDescription.pDepthStencilAttachment = _depthFormat != ImageFormat::NONE ? &depthAttachmentReference : nullptr;
 
         VkSubpassDependency subpassDependency{};
         subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -149,6 +193,10 @@ namespace platypus
         }
 
         _pImpl->handle = renderPass;
+        _pImpl->initialColorImageLayout = initialColorImageLayout;
+        _pImpl->initialDepthImageLayout = initialDepthImageLayout;
+        _pImpl->finalColorImageLayout = finalColorImageLayout;
+        _pImpl->finalDepthImageLayout = finalDepthImageLayout;
 
         Debug::log("RenderPass created");
     }

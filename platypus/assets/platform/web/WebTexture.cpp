@@ -260,28 +260,10 @@ namespace platypus
             return;
         }
 
-        GLint glFormat = 0;
-        const int channels = pImage->getChannels();
+        GLint glFormat = to_gl_format(imageFormat);
+        GLint glInternalFormat = to_gl_internal_format(imageFormat);
         const int width = pImage->getWidth();
         const int height = pImage->getHeight();
-
-        switch (channels)
-        {
-            // NOTE: webgl seems to have GL_ALPHA but on modern opengl it doesn't exist
-            // -> "desktop opengl" needs to convert this to single red channel
-            case 1: glFormat = GL_ALPHA; break;
-            case 3: glFormat = GL_RGB; break;
-            case 4: glFormat = GL_RGBA; break;
-            default:
-                Debug::log(
-                    "@Texture::Texture "
-                    "Invalid color channel count: " + std::to_string(channels) + " "
-                    "Currently 4 channels are required (for some reason doesn't work on web if no 4 channels)",
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                break;
-        }
 
         uint32_t id = 0;
         GL_FUNC(glGenTextures(1, &id));
@@ -289,7 +271,7 @@ namespace platypus
         GL_FUNC(glTexImage2D(
             GL_TEXTURE_2D,
             0,
-            glFormat,
+            glInternalFormat,
             width,
             height,
             0,
@@ -371,5 +353,18 @@ namespace platypus
             glDeleteTextures(1, &_pImpl->id);
             delete _pImpl;
         }
+    }
+
+    void transition_image_layout(
+        CommandBuffer& commandBuffer,
+        Texture* pTexture,
+        ImageLayout newLayout,
+        PipelineStage srcStage,
+        uint32_t srcAccessMask,
+        PipelineStage dstStage,
+        uint32_t dstAccessMask,
+        uint32_t mipLevelCount
+    )
+    {
     }
 }

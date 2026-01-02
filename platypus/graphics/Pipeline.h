@@ -4,7 +4,7 @@
 #include <vector>
 #include "Shader.h"
 #include "Buffers.h"
-#include "RenderPass.h"
+#include "RenderPass.hpp"
 #include "Descriptors.h"
 
 
@@ -55,6 +55,17 @@ namespace platypus
         COMPARE_OP_ALWAYS = 7,
     };
 
+    // Atm used only for figuring out img layout transitions between render passes
+    enum class PipelineStage
+    {
+        TOP_OF_PIPE_BIT,
+        TRANSFER_BIT,
+
+        VERTEX_SHADER_BIT,
+        FRAGMENT_SHADER_BIT,
+        LATE_FRAGMENT_TESTS_BIT,
+        COLOR_ATTACHMENT_OUTPUT_BIT
+    };
 
     struct PipelineImpl;
     class Pipeline
@@ -70,6 +81,7 @@ namespace platypus
         CullMode _cullMode;
         FrontFace _frontFace;
         bool _enableDepthTest = false;
+        bool _enableDepthWrite = false;
         DepthCompareOperation _depthCmpOp;
         bool _enableColorBlending = false;
         uint32_t _pushConstantSize = 0;
@@ -86,6 +98,7 @@ namespace platypus
             CullMode cullMode,
             FrontFace frontFace,
             bool enableDepthTest,
+            bool enableDepthWrite,
             DepthCompareOperation depthCmpOp,
             bool enableColorBlending, // TODO: more options to handle this..
             uint32_t pushConstantSize,
@@ -103,6 +116,7 @@ namespace platypus
         inline CullMode getCullMode() const { return _cullMode; }
         inline FrontFace getFaceWindingOrder() const { return _frontFace; }
         inline bool isDepthTestEnabled() const { return _enableDepthTest; }
+        inline bool isDepthWriteEnabled() const { return _enableDepthWrite; }
         inline DepthCompareOperation getDepthCompareOperation() const { return _depthCmpOp; }
         inline bool isColorBlendEnabled() const { return _enableColorBlending; }
         inline uint32_t getPushConstantsSize() const { return _pushConstantSize; }

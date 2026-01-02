@@ -4,10 +4,13 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Framebuffer.hpp"
+#include "platypus/graphics/RenderPass.hpp"
+#include "platypus/graphics/RenderPassInstance.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/assets/Material.h"
 #include "GUIRenderer.h"
 #include "Renderer3D.hpp"
+#include "PostProcessingRenderer.hpp"
 #include "Batch.hpp"
 
 #include <memory>
@@ -26,6 +29,9 @@ namespace platypus
         Vector4f lightColor = Vector4f(1, 1, 1, 1);
         // x = shadowmap width, y = pcf sample radius, z = shadow strength, w = undetermined atm
         Vector4f shadowProperties;
+
+        // NOTE: Danger if adding anything after this, since the layout has to be taken into account!
+        alignas(16) float time = 0.0f;
     };
 
     class MasterRenderer
@@ -43,25 +49,32 @@ namespace platypus
         std::vector<DescriptorSet> _scene3DDescriptorSets;
 
         std::unique_ptr<Renderer3D> _pRenderer3D;
+        std::unique_ptr<PostProcessingRenderer> _pPostProcessingRenderer;
         std::unique_ptr<GUIRenderer> _pGUIRenderer;
 
         RenderPass _shadowPass;
+        RenderPass _opaquePass;
+        RenderPass _transparentPass;
         // NOTE: Switched using single framebuffer and textures for testing offscreen rendering..
         //  -> This should be fine since these are produced and consumed by GPU and CPU doesn't
         //  touch these + the mem barrier in render commands
-        ImageFormat _shadowDepthImageFormat;
-        Framebuffer* _pShadowFramebuffer;
-        TextureSampler _shadowTextureSampler;
-        Texture* _pShadowFramebufferDepthTexture;
-        uint32_t _shadowmapWidth = 2048;
+        Texture* _pDepthAttachment = nullptr;
+        Texture* _pColorAttachment = nullptr;
+        ImageFormat _offscreenColorFormat = ImageFormat::NONE;
+        ImageFormat _offscreenDepthFormat = ImageFormat::NONE;
+        TextureSampler _offscreenTextureSampler;
+        Framebuffer* _pOpaqueFramebuffer = nullptr;
+        Framebuffer* _pTransparentFramebuffer = nullptr;
 
+        uint32_t _shadowmapWidth = 2048;
+        RenderPassInstance _shadowPassInstance;
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
 
         size_t _currentFrame = 0;
 
     public:
         // NOTE: CommandPool and Device must exist when creating this
-        MasterRenderer(Swapchain& swapchain);
+        MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat);
         ~MasterRenderer();
         void createPipelines();
 
@@ -86,7 +99,6 @@ namespace platypus
         ) const;
 
         inline const RenderPass& getShadowPass() const { return _shadowPass; }
-        inline Texture* getShadowFramebufferDepthTexture() { return _pShadowFramebufferDepthTexture; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }
         inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
@@ -96,11 +108,15 @@ namespace platypus
 
         inline const std::vector<DescriptorSet>& getScene3DDataDescriptorSets() const { return _scene3DDescriptorSets; }
 
+        inline RenderPassInstance* getShadowPassInstance() { return &_shadowPassInstance; }
+        inline Framebuffer* getOpaqueFramebuffer() { return _pOpaqueFramebuffer; }
+        inline Framebuffer* getTransparentFramebuffer() { return _pTransparentFramebuffer; }
+
         inline size_t getCurrentFrame() const { return _currentFrame; }
 
     private:
-        void createShadowPassResources();
-        void destroyShadowPassResources();
+        void createOffscreenPassResources();
+        void destroyOffscreenPassResources();
 
         void allocCommandBuffers(uint32_t count);
         void freeCommandBuffers();

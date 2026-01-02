@@ -3,13 +3,13 @@
 #include "platypus/graphics/Pipeline.h"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/RenderPass.h"
+#include "platypus/graphics/RenderPass.hpp"
 #include "platypus/assets/Mesh.h"
 #include "platypus/ecs/components/Lights.h"
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...
-#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 2
+#define PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES 4
 
 
 namespace platypus
@@ -134,7 +134,7 @@ namespace platypus
         size_t _maxSkinnedBatchLength;
         size_t _maxSkinnedMeshJoints;
 
-        static RenderPassType s_availableRenderPasses[2];
+        static RenderPassType s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES];
         static DescriptorSetLayout s_staticDescriptorSetLayout; // single transformation mat as dynamic ubo for all batch members
         static DescriptorSetLayout s_jointDescriptorSetLayout;
 

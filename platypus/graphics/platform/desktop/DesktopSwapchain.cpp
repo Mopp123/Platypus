@@ -5,6 +5,7 @@
 #include "DesktopContext.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/core/Debug.h"
+#include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <algorithm>
 #include <vulkan/vk_enum_string_helper.h>
@@ -313,7 +314,14 @@ namespace platypus
 
 
     Swapchain::Swapchain(const Window& window) :
-        _renderPass(RenderPassType::SCENE_PASS, false)
+        _renderPass(
+            RenderPassType::SCREEN_PASS,
+            false,
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE |
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR |
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
+        )
     {
         _pImpl = new SwapchainImpl;
         create(window);
