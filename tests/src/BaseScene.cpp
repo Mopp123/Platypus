@@ -142,7 +142,8 @@ Material* BaseScene::createMeshMaterial(
     std::string textureFilepath,
     bool repeatTexture,
     bool castShadows,
-    bool receiveShadows
+    bool receiveShadows,
+    bool transparent
 )
 {
     TextureSamplerAddressMode addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -171,7 +172,7 @@ Material* BaseScene::createMeshMaterial(
         { 1, 1 },
         castShadows, // cast shadows
         receiveShadows, // receive shadows
-        false // transparent
+        transparent // transparent
     );
     return pMaterial;
 }

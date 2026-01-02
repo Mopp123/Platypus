@@ -42,7 +42,8 @@ public:
         std::string textureFilepath,
         bool repeatTexture = false,
         bool castShadows = false,
-        bool receiveShadows = false
+        bool receiveShadows = false,
+        bool transparent = false
     );
 
     entityID_t createStaticMeshEntity(

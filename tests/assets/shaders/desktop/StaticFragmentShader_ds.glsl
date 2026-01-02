@@ -8,10 +8,9 @@ layout(location = 4) in vec3 var_lightDir;
 layout(location = 5) in vec4 var_lightColor;
 layout(location = 6) in vec4 var_ambientLightColor;
 
-//layout(set = 1, binding = 0) uniform sampler2D textureSampler;
-layout(set = 1, binding = 0) uniform sampler2D diffuseTextureSampler;
-layout(set = 1, binding = 1) uniform sampler2D specularTextureSampler;
-layout(set = 1, binding = 2) uniform MaterialData
+layout(set = 2, binding = 0) uniform sampler2D diffuseTextureSampler;
+layout(set = 2, binding = 1) uniform sampler2D specularTextureSampler;
+layout(set = 2, binding = 2) uniform MaterialData
 {
     // x = specular strength
     // y = shininess

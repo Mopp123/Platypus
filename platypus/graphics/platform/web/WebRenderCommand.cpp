@@ -154,6 +154,15 @@ namespace platypus
                 GL_FUNC(glDisable(GL_DEPTH_TEST));
             }
 
+            if (pipeline.isDepthWriteEnabled())
+            {
+                GL_FUNC(glDepthMask(GL_TRUE));
+            }
+            else
+            {
+                GL_FUNC(glDepthMask(GL_FALSE));
+            }
+
             switch(pipeline.getDepthCompareOperation())
             {
                 case DepthCompareOperation::COMPARE_OP_NEVER:

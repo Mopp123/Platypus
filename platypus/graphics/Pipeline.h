@@ -116,6 +116,7 @@ namespace platypus
         inline CullMode getCullMode() const { return _cullMode; }
         inline FrontFace getFaceWindingOrder() const { return _frontFace; }
         inline bool isDepthTestEnabled() const { return _enableDepthTest; }
+        inline bool isDepthWriteEnabled() const { return _enableDepthWrite; }
         inline DepthCompareOperation getDepthCompareOperation() const { return _depthCmpOp; }
         inline bool isColorBlendEnabled() const { return _enableColorBlending; }
         inline uint32_t getPushConstantsSize() const { return _pushConstantSize; }

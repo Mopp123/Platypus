@@ -691,6 +691,17 @@ namespace platypus
     // TODO: Make this convoluted mess cleaner!
     std::string Material::getShaderFilename(uint32_t shaderStage, MeshType meshType)
     {
+        // Vertex shader "name flags":
+        //  t = use tangent input
+        //  i = use instanced transforms input
+        //
+        // Fragment shader "name flags":
+        //  b = use blendmap
+        //  d = use diffuse map
+        //  s = use specular map
+        //  n = use normal map
+        //  a = use depth map (a stands for "alpha", transparent pass)
+
         // Example shader names:
         // vertex shader: "StaticVertexShader", "StaticVertexShader_t", "StaticVertexShader_ti"
         // fragment shader: "StaticFragmentShader_d", "StaticFragmentShader_ds", "SkinnedFragmentShader_dsn"
@@ -756,6 +767,8 @@ namespace platypus
                 shaderName += "s";
             if (_normalTextureCount > 0)
                 shaderName += "n";
+            if (_transparent)
+                shaderName += "a";
         }
 
         return shaderName;

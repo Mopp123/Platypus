@@ -56,7 +56,7 @@ void main()
 
     float fresnelEffect = dot(toCamera, unitNormal);
 
-    const float waveMultiplier = 0.5;
+    const float waveMultiplier = 0.25;
     float distortionSpeed = var_time * 0.01;
     vec2 distortedCoord1 = (texture(distortionTextureSampler, vec2(finalTexCoord.x + distortionSpeed, finalTexCoord.y)).rg * 2.0 - 1.0) * waveMultiplier;
     vec2 distortedCoord2 = (texture(distortionTextureSampler, vec2(finalTexCoord.x, finalTexCoord.y + distortionSpeed)).rg * 2.0 - 1.0) * waveMultiplier;
@@ -78,18 +78,19 @@ void main()
 
     float waterDepth = distToBottom - distToSurface;
 
-    float d = clamp(waterDepth / 5.0, 0.0, 1.0);
+    float d = clamp(waterDepth / 2.0, 0.0, 1.0);
 
-    vec4 shallowTint = vec4(0.8, 0.8, 1.0, 1.0);
-    vec4 deepTint = vec4(0.2, 0.2, 1.0, 1.0);
+    vec4 shallowTint = vec4(0.6, 0.6, 1.0, 1.0);
+    vec4 deepTint = vec4(0.2, 0.2, 0.8, 1.0);
     vec4 totalTint = mix(shallowTint, deepTint, d);
 
+    //vec4 textureColor = vec4(distortedColor, 1.0);
+    vec4 textureColor = mix(vec4(distortedColor, 1.0), totalTint, 0.25);
 
-    vec4 textureColor = vec4(distortedColor, 1.0) * totalTint;
     vec4 finalDiffuseColor = lightDiffuseColor * textureColor;
     vec4 finalSpecularColor = lightSpecularColor * textureColor;
     vec4 finalColor = var_ambientLightColor + finalDiffuseColor + finalSpecularColor;
-    float transparency = clamp(waterDepth, 0.0, 1.0);
+    float transparency = mix(clamp(waterDepth, 0.0, 1.0), clamp(1.0 - fresnelEffect, 0.0, 1.0), 0.3);
     finalColor.a = transparency;
 
     outColor = finalColor;
