@@ -6,7 +6,39 @@
 
 namespace platypus
 {
-    PostProcessingRenderer::PostProcessingRenderer(DescriptorPool& descriptorPool) :
+    static std::string get_post_processing_stage_shader_name(
+        PostProcessingStage postProcessingStage,
+        ShaderStageFlagBits shaderStage
+    )
+    {
+        std::string shaderName;
+        if (postProcessingStage == PostProcessingStage::COLOR_PASS)
+            shaderName += "Color";
+        else if (postProcessingStage == PostProcessingStage::SCREEN_PASS)
+            shaderName += "Screen";
+
+        if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
+            shaderName += "VertexShader";
+        else if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT)
+            shaderName += "FragmentShader";
+
+        return shaderName;
+    }
+
+    std::string post_processing_pass_to_string(PostProcessingStage stage)
+    {
+        switch (stage)
+        {
+            case PostProcessingStage::COLOR_PASS: return "COLOR_PASS";
+            case PostProcessingStage::SCREEN_PASS: return "SCREEN_PASS";
+        }
+    }
+
+
+    PostProcessingRenderer::PostProcessingRenderer(
+        DescriptorPool& descriptorPool,
+        RenderPass* pScreenPass
+    ) :
         _descriptorPoolRef(descriptorPool),
         _colorPass(
             RenderPassType::POST_PROCESSING_COLOR_PASS,
@@ -34,26 +66,12 @@ namespace platypus
             }
         )
     {
-        _pColorVertexShader = new Shader(
-            "postProcessing/ColorVertexShader",
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
-        );
-        _pColorFragmentShader = new Shader(
-            "postProcessing/ColorFragmentShader",
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-        );
-
-        _pScreenVertexShader = new Shader(
-            "postProcessing/ScreenVertexShader",
-            ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
-        );
-        _pScreenFragmentShader = new Shader(
-            "postProcessing/ScreenFragmentShader",
-            ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
-        );
-
         _colorImageFormat = ImageFormat::R8G8B8A8_SRGB;
         _colorPass.create(_colorImageFormat, ImageFormat::NONE);
+        _stageRenderPasses[PostProcessingStage::COLOR_PASS] = &_colorPass;
+        _stageRenderPasses[PostProcessingStage::SCREEN_PASS] = pScreenPass;
+
+        createStageData();
     }
 
     PostProcessingRenderer::~PostProcessingRenderer()
@@ -63,10 +81,7 @@ namespace platypus
         destroyFramebuffers();
         _colorPass.destroy();
 
-        delete _pColorVertexShader;
-        delete _pColorFragmentShader;
-        delete _pScreenVertexShader;
-        delete _pScreenFragmentShader;
+        destroyStageData();
 
         _descriptorSetLayout.destroy();
         freeCommandBuffers();
@@ -219,31 +234,36 @@ namespace platypus
     void PostProcessingRenderer::allocCommandBuffers()
     {
         size_t framesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
-        _colorCommandBuffers = Device::get_command_pool()->allocCommandBuffers(
-            framesInFlight,
-            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
-        );
-        _screenCommandBuffers = Device::get_command_pool()->allocCommandBuffers(
-            framesInFlight,
-            CommandBufferLevel::SECONDARY_COMMAND_BUFFER
-        );
+        for (PostProcessingStage stage : _stageTypes)
+        {
+            _commandBuffers[stage] = Device::get_command_pool()->allocCommandBuffers(
+                framesInFlight,
+                CommandBufferLevel::SECONDARY_COMMAND_BUFFER
+            );
+        }
     }
 
     void PostProcessingRenderer::freeCommandBuffers()
     {
-        for (CommandBuffer& commandBuffer : _colorCommandBuffers)
-            commandBuffer.free();
-        for (CommandBuffer& commandBuffer : _screenCommandBuffers)
-            commandBuffer.free();
+        std::map<PostProcessingStage, std::vector<CommandBuffer>>::iterator it;
+        for (it = _commandBuffers.begin(); it != _commandBuffers.end(); ++it)
+        {
+            for (CommandBuffer& commandBuffer : it->second)
+                commandBuffer.free();
 
-        _colorCommandBuffers.clear();
-        _screenCommandBuffers.clear();
+            // unnecessary...
+            it->second.clear();
+        }
+        _commandBuffers.clear();
     }
 
     void PostProcessingRenderer::createFramebuffers()
     {
         const Extent2D swapchainExtent = Application::get_instance()->getSwapchain()->getExtent();
-        _pColorFramebufferAttachment = new Texture(
+        if (!validateStagesExist("PostProcessingRenderer::createFramebuffers"))
+            return;
+
+        Texture* pColorStageAttachment = new Texture(
             TextureType::COLOR_TEXTURE,
             _textureSampler,
             _colorImageFormat,
@@ -251,154 +271,244 @@ namespace platypus
             swapchainExtent.height
         );
 
-        _pColorFramebuffer = new Framebuffer(
+        Framebuffer* pColorStageFramebuffer = new Framebuffer(
             _colorPass,
-            { _pColorFramebufferAttachment },
+            { pColorStageAttachment },
             nullptr,
             swapchainExtent.width,
             swapchainExtent.height
         );
+
+        _stageData[PostProcessingStage::COLOR_PASS].pFramebufferAttachment = pColorStageAttachment;
+        _stageData[PostProcessingStage::COLOR_PASS].pFramebuffer = pColorStageFramebuffer;
     }
 
     void PostProcessingRenderer::destroyFramebuffers()
     {
-        delete _pColorFramebufferAttachment;
-        _pColorFramebufferAttachment = nullptr;
-
-        delete _pColorFramebuffer;
-        _pColorFramebuffer = nullptr;
+        std::map<PostProcessingStage, PostProcessingStageData>::iterator it;
+        for (it = _stageData.begin(); it != _stageData.end(); ++it)
+        {
+            PostProcessingStageData& stageData = it->second;
+            if (stageData.pFramebufferAttachment)
+            {
+                delete stageData.pFramebufferAttachment;
+                stageData.pFramebufferAttachment = nullptr;
+            }
+            if (stageData.pFramebuffer)
+            {
+                delete stageData.pFramebuffer;
+                stageData.pFramebuffer = nullptr;
+            }
+        }
     }
 
     void PostProcessingRenderer::createPipelines(const RenderPass& screenPass)
     {
-        if (_pColorPipeline)
-        {
-            Debug::log(
-                "@PostProcessingRenderer::createPipeline "
-                "Color pipeline already exists!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
+        if (!validateStagesExist("PostProcessingRenderer::createPipelines"))
             return;
-        }
-        if (_pScreenPipeline)
+
+        for (PostProcessingStage stage : _stageTypes)
         {
-            Debug::log(
-                "@PostProcessingRenderer::createPipeline "
-                "Screen pipeline already exists!",
-                Debug::MessageType::PLATYPUS_ERROR
+            if (_stageData[stage].pPipeline)
+            {
+                Debug::log(
+                    "@PostProcessingRenderer::createPipeline "
+                    "Pipeline already exists for post processing stage: " + post_processing_pass_to_string(stage),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+            PostProcessingStageData& stageData = _stageData[stage];
+
+            std::map<PostProcessingStage, RenderPass*>::iterator passIt = _stageRenderPasses.find(stage);
+            if (passIt == _stageRenderPasses.end())
+            {
+                Debug::log(
+                    "@PostProcessingRenderer::createPipeline "
+                    "No render pass found for post processing stage: " + post_processing_pass_to_string(stage),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            // TODO: Don't recrete pipelines on window resize
+            // -> unnecessary since using dynamic viewport atm!
+            stageData.pPipeline = new Pipeline(
+                passIt->second,
+                { }, // Vertex buffer layouts
+                { _descriptorSetLayout },
+                stageData.pVertexShader,
+                stageData.pFragmentShader,
+                CullMode::CULL_MODE_NONE, // TODO: Cull plz?
+                FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
+                true, // Enable depth test
+                false, // enable depth write
+                DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
+                false, // Enable color blend NOTE: Might actually be required atm
+                0, // push constants size
+                ShaderStageFlagBits::SHADER_STAGE_NONE // push constants stage flags
             );
-            PLATYPUS_ASSERT(false);
-            return;
+            stageData.pPipeline->create();
         }
-
-        // TODO: Don't recrete pipelines on window resize
-        // -> unnecessary since using dynamic viewport atm!
-        _pColorPipeline = new Pipeline(
-            &_colorPass,
-            { }, // Vertex buffer layouts
-            { _descriptorSetLayout },
-            _pColorVertexShader,
-            _pColorFragmentShader,
-            CullMode::CULL_MODE_NONE, // TODO: Cull plz?
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // Enable depth test
-            false, // enable depth write
-            DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
-            false, // Enable color blend NOTE: Might actually be required atm
-            0, // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_NONE // push constants stage flags
-        );
-        _pColorPipeline->create();
-
-        _pScreenPipeline = new Pipeline(
-            &screenPass,
-            { }, // Vertex buffer layouts
-            { _descriptorSetLayout },
-            _pScreenVertexShader,
-            _pScreenFragmentShader,
-            CullMode::CULL_MODE_NONE, // TODO: Cull plz?
-            FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // Enable depth test
-            false, // enable depth write
-            DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
-            false, // Enable color blend NOTE: Might actually be required atm
-            0, // push constants size
-            ShaderStageFlagBits::SHADER_STAGE_NONE // push constants stage flags
-        );
-        _pScreenPipeline->create();
     }
 
     void PostProcessingRenderer::destroyPipelines()
     {
-        if (_pColorPipeline)
+        std::map<PostProcessingStage, PostProcessingStageData>::iterator it;
+        for (it = _stageData.begin(); it != _stageData.end(); ++it)
         {
-            _pColorPipeline->destroy();
-            delete _pColorPipeline;
-            _pColorPipeline = nullptr;
-        }
-
-        if (_pScreenPipeline)
-        {
-            _pScreenPipeline->destroy();
-            delete _pScreenPipeline;
-            _pScreenPipeline = nullptr;
+            PostProcessingStageData& stageData = it->second;
+            if (stageData.pPipeline)
+            {
+                // NOTE: Don't delete pPipeline here?
+                // -> u could just use the destroy() and create()
+                //  -> which also shouldn't be required anymore since using pipeline's
+                //  dynamic viewport stage
+                stageData.pPipeline->destroy();
+                delete stageData.pPipeline;
+                stageData.pPipeline = nullptr;
+            }
         }
     }
 
     void PostProcessingRenderer::createShaderResources(Texture* pSceneColorAttachment)
     {
-        if (!_pColorFramebuffer)
-        {
-            Debug::log(
-                "@PostProcessingRenderer::createShaderResources "
-                "Color framebuffer was nullptr. Color framebuffer is required to create "
-                "post processing shader resources!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-        if (_pColorFramebuffer->getColorAttachments().empty())
-        {
-            Debug::log(
-                "@PostProcessingRenderer::createShaderResources "
-                "Color framebuffer's color attachments were empty!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
         // NOTE: Not sure should we even have for each frame in flight here...?
         const size_t framesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
-        for (size_t i = 0; i < framesInFlight; ++i)
+        std::map<PostProcessingStage, PostProcessingStageData>::iterator it;
+        for (it = _stageData.begin(); it != _stageData.end(); ++it)
         {
-            _colorDescriptorSet.push_back(
-                _descriptorPoolRef.createDescriptorSet(
-                    _descriptorSetLayout,
-                    {
-                        { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pSceneColorAttachment }
-                    }
-                )
-            );
+            PostProcessingStageData& stageData = it->second;
+            Texture* pDescriptorSetTexture = nullptr;
+            if (it->first == PostProcessingStage::COLOR_PASS)
+            {
+                pDescriptorSetTexture = pSceneColorAttachment;
+            }
+            else if (it->first == PostProcessingStage::COLOR_PASS)
+            {
+                // IMPORTANT! TESTING ONLY!
+                //  -> Eventually next post processing stage should take the previous one's
+                //  attachment in its descriptor set
+                pDescriptorSetTexture = _stageData[PostProcessingStage::COLOR_PASS].pFramebufferAttachment;
+            }
 
-            _screenDescriptorSet.push_back(
-                _descriptorPoolRef.createDescriptorSet(
-                    _descriptorSetLayout,
-                    {
-                        { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _pColorFramebufferAttachment }
-                    }
-                )
-            );
+            for (size_t i = 0; i < framesInFlight; ++i)
+            {
+                stageData.descriptorSet.push_back(
+                    _descriptorPoolRef.createDescriptorSet(
+                        _descriptorSetLayout,
+                        {
+                            { DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, pDescriptorSetTexture }
+                        }
+                    )
+                );
+            }
         }
     }
 
     void PostProcessingRenderer::destroyShaderResources()
     {
-        _descriptorPoolRef.freeDescriptorSets(_colorDescriptorSet);
-        _descriptorPoolRef.freeDescriptorSets(_screenDescriptorSet);
-        _colorDescriptorSet.clear();
-        _screenDescriptorSet.clear();
+        std::map<PostProcessingStage, PostProcessingStageData>::iterator it;
+        for (it = _stageData.begin(); it != _stageData.end(); ++it)
+        {
+            PostProcessingStageData& stageData = it->second;
+            _descriptorPoolRef.freeDescriptorSets(stageData.descriptorSet);
+            stageData.descriptorSet.clear();
+        }
+    }
+
+    CommandBuffer& PostProcessingRenderer::recordCommandBuffer(
+        PostProcessingStage stage,
+        float viewportWidth,
+        float viewportHeight,
+        size_t currentFrame
+    )
+    {
+        // TODO: continue here!
+    }
+
+    void PostProcessingRenderer::createStageData()
+    {
+        _stageData[PostProcessingStage::COLOR_PASS] = {
+            new Shader(
+                get_post_processing_stage_shader_name(PostProcessingStage::COLOR_PASS, ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
+            ),
+            new Shader(
+                get_post_processing_stage_shader_name(PostProcessingStage::COLOR_PASS, ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
+            )
+        };
+
+
+        _stageData[PostProcessingStage::SCREEN_PASS] = {
+            new Shader(
+                get_post_processing_stage_shader_name(PostProcessingStage::SCREEN_PASS, ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT),
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT
+            ),
+            new Shader(
+                get_post_processing_stage_shader_name(PostProcessingStage::SCREEN_PASS, ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT),
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT
+            )
+        };
+    }
+
+    // Would be nice if PostProcessingStageData's destructor handled this?
+    void PostProcessingRenderer::destroyStageData()
+    {
+        std::map<PostProcessingStage, PostProcessingStageData>::iterator it;
+        for (it = _stageData.begin(); it != _stageData.end(); ++it)
+        {
+            PostProcessingStageData& stageData = it->second;
+            if (stageData.pVertexShader)
+                delete stageData.pVertexShader;
+            if (stageData.pFragmentShader)
+                delete stageData.pFragmentShader;
+
+            if (stageData.pPipeline)
+            {
+                stageData.pPipeline->destroy();
+                delete stageData.pPipeline;
+            }
+            if (stageData.pFramebufferAttachment)
+                delete stageData.pFramebufferAttachment;
+
+            if (stageData.pFramebuffer)
+                delete stageData.pFramebuffer;
+
+            if (!stageData.descriptorSet.empty())
+            {
+                _descriptorPoolRef.freeDescriptorSets(stageData.descriptorSet);
+                stageData.descriptorSet.clear();
+            }
+
+        }
+    }
+
+    bool PostProcessingRenderer::validateStagesExist(
+        const char* callLocation
+    ) const
+    {
+        const std::string locationStr(callLocation);
+        std::map<PostProcessingStage, PostProcessingStageData>::iterator it;
+        bool stagesExist = true;
+        for (PostProcessingStage stage : _stageTypes)
+        {
+            if (_stageData.find(stage) == _stageData.end())
+            {
+                Debug::log(
+                    "@" + locationStr + " "
+                    "No PostProcessingStageData exits for post processing stage: " + post_processing_pass_to_string(stage),
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                stagesExist = false;
+            }
+        }
+        if (!stagesExist)
+            PLATYPUS_ASSERT(false);
+
+        return stagesExist;
     }
 }
