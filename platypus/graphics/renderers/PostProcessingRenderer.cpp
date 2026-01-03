@@ -155,6 +155,67 @@ namespace platypus
         return currentCommandBuffer;
     }
 
+    CommandBuffer& PostProcessingRenderer::recordCommandBuffer(
+        CommandBuffer& primaryCommandBuffer,
+        const RenderPass& screenPass,
+        Framebuffer* pScreenFramebuffer,
+        float viewportWidth,
+        float viewportHeight,
+        size_t currentFrame
+    )
+    {
+        const Vector4f clearColor(1, 1, 0, 1);
+
+        render::begin_render_pass(
+            primaryCommandBuffer,
+            _colorPass,
+            _pColorFramebuffer,
+            clearColor
+        );
+        std::vector<CommandBuffer> colorPassCommandBuffers;
+        colorPassCommandBuffers.push_back(
+            recordColorPass(
+                viewportWidth,
+                viewportHeight,
+                currentFrame
+            )
+        );
+        render::exec_secondary_command_buffers(
+            primaryCommandBuffer,
+            colorPassCommandBuffers
+        );
+        render::end_render_pass(
+            primaryCommandBuffer,
+            _colorPass
+        );
+
+        // transition color pass output for screen pass
+        transition_image_layout(
+            primaryCommandBuffer,
+            _pColorFramebufferAttachment,
+            ImageLayout::SHADER_READ_ONLY_OPTIMAL, // new layout
+            PipelineStage::COLOR_ATTACHMENT_OUTPUT_BIT, // src stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // src access mask
+            PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
+        );
+
+
+        render::begin_render_pass(
+            primaryCommandBuffer,
+            screenPass,
+            pScreenFramebuffer,
+            clearColor
+        );
+
+        return recordScreenPass(
+            screenPass,
+            viewportWidth,
+            viewportHeight,
+            currentFrame
+        );
+    }
+
     void PostProcessingRenderer::allocCommandBuffers()
     {
         size_t framesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();

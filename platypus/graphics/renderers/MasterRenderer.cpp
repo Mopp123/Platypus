@@ -802,46 +802,13 @@ namespace platypus
         //    )
         //);
 
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _pPostProcessingRenderer->getColorPass(),
-            _pPostProcessingRenderer->getColorFramebuffer(),
-            pScene->environmentProperties.clearColor
-        );
-        postProcessColorCommandBuffers.push_back(
-            _pPostProcessingRenderer->recordColorPass(
-                (float)swapchainExtent.width,
-                (float)swapchainExtent.height,
-                _currentFrame
-            )
-        );
-        render::exec_secondary_command_buffers(currentCommandBuffer, postProcessColorCommandBuffers);
-        render::end_render_pass(currentCommandBuffer, _pPostProcessingRenderer->getColorPass());
-
-        // transition image for screen pass
-        transition_image_layout(
-            currentCommandBuffer,
-            _pPostProcessingRenderer->getColorFramebuffer()->getColorAttachments()[0],
-            ImageLayout::SHADER_READ_ONLY_OPTIMAL, // new layout
-            PipelineStage::COLOR_ATTACHMENT_OUTPUT_BIT, // src stage
-            MemoryAccessFlagBits::MEMORY_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // src access mask
-            PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
-            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
-        );
-
-
-        Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _swapchainRef.getRenderPass(),
-            pCurrentSwapchainFramebuffer,
-            pScene->environmentProperties.clearColor
-        );
 
         std::vector<CommandBuffer> screenPassCommandBuffers;
         screenPassCommandBuffers.push_back(
-            _pPostProcessingRenderer->recordScreenPass(
+            _pPostProcessingRenderer->recordCommandBuffer(
+                currentCommandBuffer,
                 _swapchainRef.getRenderPass(),
+                _swapchainRef.getCurrentFramebuffer(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
                 _currentFrame

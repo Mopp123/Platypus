@@ -53,6 +53,20 @@ namespace platypus
             size_t currentFrame
         );
 
+        // Records the complete post processing pipeline into primary command buffer.
+        //
+        // Returns recorded screen pass command buffers
+        //  -> we might want to add more stuff to those after post processing
+        //  (GUI rendering for example)
+        CommandBuffer& recordCommandBuffer(
+            CommandBuffer& primaryCommandBuffer,
+            const RenderPass& screenPass,
+            Framebuffer* pScreenFramebuffer,
+            float viewportWidth,
+            float viewportHeight,
+            size_t currentFrame
+        );
+
         void allocCommandBuffers();
         void freeCommandBuffers();
 
