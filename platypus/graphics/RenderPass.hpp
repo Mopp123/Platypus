@@ -7,11 +7,13 @@
 
 namespace platypus
 {
+    // NOTE: Only 3D passes care about RenderPassTypes via Batcher
     enum class RenderPassType
     {
         SHADOW_PASS,
         OPAQUE_PASS,
         TRANSPARENT_PASS,
+        POST_PROCESSING_COLOR_PASS,
         SCREEN_PASS
     };
 
@@ -19,11 +21,12 @@ namespace platypus
     {
         switch (type)
         {
-            case RenderPassType::SHADOW_PASS:    return "SHADOW_PASS";
-            case RenderPassType::OPAQUE_PASS:   return "OPAQUE_PASS";
-            case RenderPassType::TRANSPARENT_PASS:   return "TRANSPARENT_PASS";
-            case RenderPassType::SCREEN_PASS:   return "SCREEN_PASS";
-            default:                            return "<Invalid RenderPassType>";
+            case RenderPassType::SHADOW_PASS:                   return "SHADOW_PASS";
+            case RenderPassType::OPAQUE_PASS:                   return "OPAQUE_PASS";
+            case RenderPassType::TRANSPARENT_PASS:              return "TRANSPARENT_PASS";
+            case RenderPassType::POST_PROCESSING_COLOR_PASS:    return "POST_PROCESSING_COLOR_PASS";
+            case RenderPassType::SCREEN_PASS:                   return "SCREEN_PASS";
+            default:                                            return "<Invalid RenderPassType>";
         }
     }
 

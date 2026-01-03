@@ -16,22 +16,38 @@ namespace platypus
 
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
-        std::vector<CommandBuffer> _commandBuffers;
+        std::vector<CommandBuffer> _colorCommandBuffers;
+        std::vector<CommandBuffer> _screenCommandBuffers;
 
-        Shader* _pVertexShader = nullptr;
-        Shader* _pFragmentShader = nullptr;
-        Pipeline* _pPipeline = nullptr;
+        Shader* _pColorVertexShader = nullptr;
+        Shader* _pColorFragmentShader = nullptr;
+        Shader* _pScreenVertexShader = nullptr;
+        Shader* _pScreenFragmentShader = nullptr;
+
+        ImageFormat _colorImageFormat;
+        RenderPass _colorPass;
+        TextureSampler _textureSampler;
+        Texture* _pColorFramebufferAttachment = nullptr;
+        Framebuffer* _pColorFramebuffer = nullptr;
+
+        Pipeline* _pColorPipeline = nullptr;
+        Pipeline* _pScreenPipeline = nullptr;
 
         DescriptorSetLayout _descriptorSetLayout;
-        std::vector<DescriptorSet> _descriptorSet;
+        std::vector<DescriptorSet> _colorDescriptorSet;
+        std::vector<DescriptorSet> _screenDescriptorSet;
 
     public:
         PostProcessingRenderer(DescriptorPool& descriptorPool);
         ~PostProcessingRenderer();
 
-        // TODO: This should probably own its' render pass?
-        CommandBuffer& recordCommandBuffer(
-            const RenderPass& renderPass,
+        CommandBuffer& recordColorPass(
+            float viewportWidth,
+            float viewportHeight,
+            size_t currentFrame
+        );
+        CommandBuffer& recordScreenPass(
+            const RenderPass& screenPass,
             float viewportWidth,
             float viewportHeight,
             size_t currentFrame
@@ -40,10 +56,16 @@ namespace platypus
         void allocCommandBuffers();
         void freeCommandBuffers();
 
-        void createPipeline(const RenderPass& renderPass);
-        void destroyPipeline();
+        void createFramebuffers();
+        void destroyFramebuffers();
+
+        void createPipelines(const RenderPass& screenPass);
+        void destroyPipelines();
 
         void createShaderResources(Texture* pSceneColorAttachment);
         void destroyShaderResources();
+
+        inline RenderPass& getColorPass() { return _colorPass; }
+        inline Framebuffer* getColorFramebuffer() { return _pColorFramebuffer; }
     };
 }
