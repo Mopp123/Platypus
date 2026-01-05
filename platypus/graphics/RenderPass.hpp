@@ -14,6 +14,8 @@ namespace platypus
         OPAQUE_PASS,
         TRANSPARENT_PASS,
         POST_PROCESSING_COLOR_PASS,
+        POST_PROCESSING_HORIZONTAL_BLUR_PASS,
+        POST_PROCESSING_VERTICAL_BLUR_PASS,
         SCREEN_PASS
     };
 
@@ -25,6 +27,8 @@ namespace platypus
             case RenderPassType::OPAQUE_PASS:                   return "OPAQUE_PASS";
             case RenderPassType::TRANSPARENT_PASS:              return "TRANSPARENT_PASS";
             case RenderPassType::POST_PROCESSING_COLOR_PASS:    return "POST_PROCESSING_COLOR_PASS";
+            case RenderPassType::POST_PROCESSING_HORIZONTAL_BLUR_PASS:  return "POST_PROCESSING_HORIZONTAL_BLUR_PASS";
+            case RenderPassType::POST_PROCESSING_VERTICAL_BLUR_PASS:    return "POST_PROCESSING_VERTICAL_BLUR_PASS";
             case RenderPassType::SCREEN_PASS:                   return "SCREEN_PASS";
             default:                                            return "<Invalid RenderPassType>";
         }

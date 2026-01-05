@@ -13,16 +13,15 @@ namespace platypus
     enum class PostProcessingStage
     {
         COLOR_PASS,
+        HORIZONRAL_BLUR_PASS,
+        VERTICAL_BLUR_PASS,
         SCREEN_PASS
     };
 
-    std::string post_processing_pass_to_string(PostProcessingStage stage);
-
+    std::string post_processing_stage_to_string(PostProcessingStage stage);
 
     struct PostProcessingStageData
     {
-        Shader* pVertexShader = nullptr;
-        Shader* pFragmentShader = nullptr;
         Pipeline* pPipeline = nullptr;
         Texture* pFramebufferAttachment = nullptr;
         Framebuffer* pFramebuffer = nullptr;
@@ -37,40 +36,42 @@ namespace platypus
         DescriptorPool& _descriptorPoolRef;
         const std::set<PostProcessingStage> _stageTypes = {
             PostProcessingStage::COLOR_PASS,
+            PostProcessingStage::HORIZONRAL_BLUR_PASS,
+            PostProcessingStage::VERTICAL_BLUR_PASS,
             PostProcessingStage::SCREEN_PASS
         };
 
         std::map<PostProcessingStage, std::vector<CommandBuffer>> _commandBuffers;
 
         ImageFormat _colorImageFormat;
-        RenderPass _colorPass;
-        std::map<PostProcessingStage, RenderPass*> _stageRenderPasses;
+        RenderPass _intermediatePass;
+        std::map<PostProcessingStage, const RenderPass*> _stageRenderPasses;
+
+        std::map<PostProcessingStage, std::pair<Shader*, Shader*>> _stageShaders;
 
         // * Stage data objects remain alive throughout the lifetime of application
         // -> some members of the stage data objects gets destroyed and recreated!
         std::map<PostProcessingStage, PostProcessingStageData> _stageData;
 
         TextureSampler _textureSampler;
-        DescriptorSetLayout _descriptorSetLayout;
+        std::map<PostProcessingStage, DescriptorSetLayout> _stageDescriptorSetLayouts;
 
     public:
         PostProcessingRenderer(
             DescriptorPool& descriptorPool,
-            RenderPass* pScreenPass
+            const RenderPass* pScreenPass
         );
         ~PostProcessingRenderer();
 
-        CommandBuffer& recordColorPass(
+        CommandBuffer& recordStagePass(
+            CommandBuffer& primaryCommandBuffer,
+            PostProcessingStage stageType,
+            Framebuffer* pFramebuffer,
             float viewportWidth,
             float viewportHeight,
             size_t currentFrame
         );
-        CommandBuffer& recordScreenPass(
-            const RenderPass& screenPass,
-            float viewportWidth,
-            float viewportHeight,
-            size_t currentFrame
-        );
+
 
         // Records the complete post processing pipeline into primary command buffer.
         //
@@ -79,7 +80,6 @@ namespace platypus
         //  (GUI rendering for example)
         CommandBuffer& recordCommandBuffer(
             CommandBuffer& primaryCommandBuffer,
-            const RenderPass& screenPass,
             Framebuffer* pScreenFramebuffer,
             float viewportWidth,
             float viewportHeight,
@@ -98,23 +98,21 @@ namespace platypus
         void createShaderResources(Texture* pSceneColorAttachment);
         void destroyShaderResources();
 
-        inline RenderPass& getColorPass() { return _colorPass; }
-
     private:
-        CommandBuffer& recordCommandBuffer(
-            PostProcessingStage stage,
-            float viewportWidth,
-            float viewportHeight,
-            size_t currentFrame
-        );
+        void loadShaders();
+        void destroyShaders();
 
-        void createStageData();
-
-        // Would be nice if PostProcessingStageData's destructor handled this?
-        void destroyStageData();
+        void createDescriptorSetLayouts();
+        void destroyDescriptorSetLayouts();
 
         bool validateStagesExist(
             const char* callLocation
         ) const;
+
+
+        bool validateStageDataComplete(
+            PostProcessingStage stage,
+            std::string& outErrors
+        );
     };
 }

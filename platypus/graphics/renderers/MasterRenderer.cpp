@@ -87,7 +87,10 @@ namespace platypus
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
-        _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(_descriptorPool);
+        _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(
+            _descriptorPool,
+            _swapchainRef.getRenderPassPtr()
+        );
 
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
@@ -103,7 +106,7 @@ namespace platypus
             shadowmapDepthFormat
         );
         // TODO: Query which color and depth formats actually available!
-        _offscreenColorFormat = ImageFormat::R8G8B8A8_SRGB;
+        _offscreenColorFormat = ImageFormat::R8G8B8A8_UNORM;
         _offscreenDepthFormat = ImageFormat::D32_SFLOAT;
         _opaquePass.create(
             _offscreenColorFormat,
@@ -792,7 +795,7 @@ namespace platypus
 
         // NOTE: We create new copies of secondary command buffers here
         // TODO: Figure out some nice way to optimize this!
-        std::vector<CommandBuffer> postProcessColorCommandBuffers;
+        //std::vector<CommandBuffer> postProcessColorCommandBuffers;
         //secondaryCommandBuffers.push_back(
         //    _pPostProcessingRenderer->recordCommandBuffer(
         //        _swapchainRef.getRenderPass(),
@@ -807,7 +810,6 @@ namespace platypus
         screenPassCommandBuffers.push_back(
             _pPostProcessingRenderer->recordCommandBuffer(
                 currentCommandBuffer,
-                _swapchainRef.getRenderPass(),
                 _swapchainRef.getCurrentFramebuffer(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,

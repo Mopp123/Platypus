@@ -159,7 +159,7 @@ Material* BaseScene::createMeshMaterial(
     );
     Texture* pTexture = pAssetManager->loadTexture(
         textureFilepath,
-        ImageFormat::R8G8B8A8_SRGB,
+        ImageFormat::R8G8B8A8_UNORM,
         textureSampler
     );
     Material* pMaterial = pAssetManager->createMaterial(
