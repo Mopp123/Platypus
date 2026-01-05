@@ -26,6 +26,7 @@ void main()
 {
     vec2 vertexPos = positions[gl_VertexIndex];
     gl_Position = vec4(vertexPos, 0.0, 1.0);
-
-    var_texCoord = uv[gl_VertexIndex];
+    var_texCoord = vertexPos * 0.5 + 0.5;
+    var_texCoord.y = 1.0 - var_texCoord.y;
+    //var_texCoord = uv[gl_VertexIndex];
 }

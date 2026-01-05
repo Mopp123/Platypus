@@ -1,16 +1,21 @@
 #version 300 es
 precision mediump float;
 
- in vec2 var_texCoord;
+in vec2 var_texCoord;
 
-uniform sampler2D horizontalBlurTexture;
+// NOTE: vertical blur texture has already horizontal blur in it!
+uniform sampler2D verticalBlurTexture;
 uniform sampler2D sceneTexture;
 
 layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    vec4 horizontalBlurColor = texture(horizontalBlurTexture, var_texCoord);
+    vec4 verticalBlurColor = texture(verticalBlurTexture, var_texCoord);
     vec4 sceneTextureColor = texture(sceneTexture, var_texCoord);
-    outColor = horizontalBlurColor;
+    vec4 totalColor = sceneTextureColor + verticalBlurColor;
+
+    float gamma = 2.2;
+    vec4 applyGamma = vec4(gamma, gamma, gamma, 1.0);
+    outColor = pow(totalColor, 1.0 / applyGamma);
 }

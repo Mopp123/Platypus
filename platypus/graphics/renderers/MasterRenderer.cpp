@@ -106,7 +106,7 @@ namespace platypus
             shadowmapDepthFormat
         );
         // TODO: Query which color and depth formats actually available!
-        _offscreenColorFormat = ImageFormat::R8G8B8A8_UNORM;
+        _offscreenColorFormat = ImageFormat::R8G8B8A8_SRGB;
         _offscreenDepthFormat = ImageFormat::D32_SFLOAT;
         _opaquePass.create(
             _offscreenColorFormat,

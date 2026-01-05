@@ -37,7 +37,7 @@ namespace platypus
             0
         )
     {
-        _colorImageFormat = ImageFormat::R8G8B8A8_UNORM;
+        _colorImageFormat = ImageFormat::R8G8B8A8_SRGB;
         _intermediatePass.create(_colorImageFormat, ImageFormat::NONE);
         _stageRenderPasses[PostProcessingStage::COLOR_PASS] = &_intermediatePass;
         _stageRenderPasses[PostProcessingStage::HORIZONRAL_BLUR_PASS] = &_intermediatePass;
