@@ -105,6 +105,16 @@ void UITestScene::init()
     );
 
 
+    // Testing creating some text box thing
+    ui::Layout textBoxLayout {
+        { 0, 0 }, // pos
+        { 500, 200 }, // scale
+        { 0.2f, 0.2f, 0.2f, 1.0f } // color
+    };
+    textBoxLayout.horizontalAlignment = ui::HorizontalAlignment::CENTER;
+    textBoxLayout.verticalAlignment = ui::VerticalAlignment::BOTTOM;
+
+    ui::UIElement* pTextBox = ui::add_container(_ui, nullptr, textBoxLayout, true);
 
     /*
     TODO: Make the shit work rather like below!

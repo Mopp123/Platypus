@@ -415,7 +415,7 @@ namespace platypus
                 { _stageDescriptorSetLayouts[stage] },
                 pVertexShader,
                 pFragmentShader,
-                CullMode::CULL_MODE_NONE, // TODO: Cull plz?
+                CullMode::CULL_MODE_BACK, // TODO: Cull plz?
                 FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
                 true, // Enable depth test
                 false, // enable depth write
