@@ -22,7 +22,7 @@ namespace platypus
             case ImageFormat::B8G8R8A8_SRGB: return GL_RGBA;
             case ImageFormat::B8G8R8_SRGB: return GL_RGB;
 
-            case ImageFormat::R8_UNORM: return GL_RED;
+            case ImageFormat::R8_UNORM: return GL_R8;
             case ImageFormat::R8G8B8_UNORM: return GL_RGB;
             case ImageFormat::R8G8B8A8_UNORM: return GL_RGBA;
 
@@ -260,8 +260,13 @@ namespace platypus
             return;
         }
 
+        // NOTE: webgl seems to have GL_ALPHA but on modern opengl it doesn't exist
+        // -> "desktop opengl" needs to convert this to single red channel
+        // UPDATE: This was problem at some point, but might have been fixed by swithcing to
+        // WebGL2 (GLES3)?
         GLint glFormat = to_gl_format(imageFormat);
         GLint glInternalFormat = to_gl_internal_format(imageFormat);
+
         const int width = pImage->getWidth();
         const int height = pImage->getHeight();
 

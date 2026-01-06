@@ -56,6 +56,12 @@ namespace platypus
             BOTTOM
         };
 
+        enum class WordWrap
+        {
+            NONE,
+            NORMAL
+        };
+
         struct Layout
         {
             Vector2f position;
@@ -75,6 +81,8 @@ namespace platypus
             ValueType elementGapType = ValueType::PIXEL;
             uint32_t layer = 0;
             std::vector<Layout> children;
+
+            WordWrap wordWrap = WordWrap::NONE;
         };
 
         class LayoutUI;
@@ -148,6 +156,7 @@ namespace platypus
 
             entityID_t _entityID = NULL_ENTITY_ID;
             Layout _layout;
+            const Font* _pFont = nullptr;
             std::vector<UIElement*> _children;
 
             bool _isMouseOver = false;
@@ -155,7 +164,8 @@ namespace platypus
         public:
             UIElement(
                 entityID_t entityID,
-                Layout layout
+                Layout layout,
+                const Font* pFont
             );
             ~UIElement();
 
@@ -165,8 +175,11 @@ namespace platypus
                 const Vector2f& childScale
             );
 
+            void setScale(const Vector2f& scale);
+
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }
+            inline const Font* getFont() const { return _pFont; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
         };
 
@@ -176,7 +189,8 @@ namespace platypus
             UIElement* pParent,
             const Layout& layout,
             bool createRenderable,
-            ID_t textureID = NULL_ID
+            ID_t textureID = NULL_ID,
+            const Font* pFont = nullptr
         );
     }
 }

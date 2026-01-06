@@ -97,16 +97,18 @@ namespace platypus
         pRenderable->color = color;
         pRenderable->textureOffset = textureOffset;
         pRenderable->layer = layer;
-        // NOTE: Not sure if this is an issue
-        if (!text.empty())
-        {
-            if (text.size() <= 32)
-                pRenderable->text.resize(32);
-            else
-                pRenderable->text.resize(text.size());
 
-            pRenderable->text = text;
-        }
+        // NOTE: pRenderable was zero initialized
+        // -> need some way to "allocate" the text
+        // THIS IS CURRENTLY UNDEFINED BEHAVIOUR even it seems to work.
+        // TODO: Some StringPool system for components to use that needs strings!
+        if (text.size() <= 3)
+            pRenderable->text.resize(3);
+        else
+            pRenderable->text.resize(text.size());
+
+        pRenderable->text = text;
+
 
         return pRenderable;
     }

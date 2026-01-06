@@ -4,8 +4,35 @@
 #include "platypus/ui/Button.h"
 #include "MaterialTestScene.hpp"
 
+#include <iostream>
+
 
 using namespace platypus;
+
+
+class TestCharInputEvent : public CharInputEvent
+{
+public:
+    std::wstring& inputStrRef;
+    ui::UIElement* pInputElement = nullptr;
+    ui::UIElement* pInputParentElement = nullptr;
+
+    TestCharInputEvent(
+        std::wstring& inputStrRef,
+        ui::UIElement* pInputElement,
+        ui::UIElement* pInputParentElement
+    ) :
+        inputStrRef(inputStrRef),
+        pInputElement(pInputElement),
+        pInputParentElement(pInputParentElement)
+    {}
+
+    virtual void func(unsigned int codepoint)
+    {
+        inputStrRef += (wchar_t)codepoint;
+        ui::set_text(pInputElement, pInputParentElement, inputStrRef);
+    }
+};
 
 
 class MouseEnterTest : public ui::UIElement::MouseEnterEvent
@@ -70,6 +97,7 @@ void UITestScene::init()
     _ui.init(this, inputManager);
 
     // TODO: Some kind of "user id" thing to access created "container" afterwards
+    /*
     ui::Layout layout {
         { 0, 0 }, // pos
         { 400, 200 }, // scale
@@ -103,19 +131,36 @@ void UITestScene::init()
         L"Öääö scand test",
         pFont
     );
+    */
 
 
     // Testing creating some text box thing
     ui::Layout textBoxLayout {
         { 0, 0 }, // pos
-        { 500, 200 }, // scale
+        { 400, 200 }, // scale
         { 0.2f, 0.2f, 0.2f, 1.0f } // color
     };
     textBoxLayout.horizontalAlignment = ui::HorizontalAlignment::CENTER;
     textBoxLayout.verticalAlignment = ui::VerticalAlignment::BOTTOM;
+    textBoxLayout.padding = { 10, 10 };
+    textBoxLayout.wordWrap = ui::WordWrap::NORMAL;
 
-    ui::UIElement* pTextBox = ui::add_container(_ui, nullptr, textBoxLayout, true);
+    _pInputBoxElement = ui::add_container(_ui, nullptr, textBoxLayout, true);
+    _pInputTextElement = ui::add_text_element(
+        _ui,
+        _pInputBoxElement,
+        L"",
+        { 1, 1, 1, 1 },
+        pFont
+    );
 
+    inputManager.addCharInputEvent(
+        new TestCharInputEvent(
+            _inputStr,
+            _pInputTextElement,
+            _pInputBoxElement
+        )
+    );
     /*
     TODO: Make the shit work rather like below!
 
@@ -133,9 +178,26 @@ void UITestScene::init()
     Debug::log("___TEST___GUI TEST INIT! Created " + std::to_string(getEntities().size()) + " entities.");
 }
 
+
+static int s_TEST_backspaceState = 0;
 void UITestScene::update()
 {
     updateBase();
+
+    InputManager& inputManager = Application::get_instance()->getInputManager();
+    if (inputManager.isKeyDown(KeyName::KEY_BACKSPACE))
+        s_TEST_backspaceState += 1;
+    else
+        s_TEST_backspaceState = 0;
+
+    if (s_TEST_backspaceState == 1)
+    {
+        if (!_inputStr.empty())
+        {
+            _inputStr.pop_back();
+            ui::set_text(_pInputTextElement, _pInputBoxElement, _inputStr);
+        }
+    }
 }
 
 void UITestScene::createBox(

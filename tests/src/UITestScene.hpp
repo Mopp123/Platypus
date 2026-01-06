@@ -7,6 +7,10 @@ class UITestScene : public BaseScene
 private:
     platypus::ui::LayoutUI _ui;
 
+    std::wstring _inputStr;
+    platypus::ui::UIElement* _pInputBoxElement = nullptr; // parent of _pInputTextElement
+    platypus::ui::UIElement* _pInputTextElement = nullptr;
+
 public:
     UITestScene();
     ~UITestScene();

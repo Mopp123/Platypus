@@ -60,10 +60,12 @@ namespace platypus
 
         UIElement::UIElement(
             entityID_t entityID,
-            Layout layout
+            Layout layout,
+            const Font* pFont
         ) :
             _entityID(entityID),
-            _layout(layout)
+            _layout(layout),
+            _pFont(pFont)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
@@ -102,13 +104,28 @@ namespace platypus
             _previousItemScale = childScale;
         }
 
+        void UIElement::setScale(const Vector2f& scale)
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+            );
+            if (pTransform)
+            {
+                pTransform->scale = scale;
+            }
+            _layout.scale = scale;
+        }
+
 
         UIElement* add_container(
             LayoutUI& ui,
             UIElement* pParent,
             const Layout& layout,
             bool createRenderable,
-            ID_t textureID
+            ID_t textureID,
+            const Font* pFont
         )
         {
             Vector2f scale = layout.scale;
@@ -148,7 +165,8 @@ namespace platypus
 
             UIElement* pElement = new UIElement(
                 entity,
-                layout
+                layout,
+                pFont
             );
 
             if (pParent)

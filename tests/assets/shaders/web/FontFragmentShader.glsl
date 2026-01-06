@@ -10,8 +10,11 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec4 textureColor = texture(textureSampler, var_texCoord);
-    float intensity = textureColor.a;
+    float intensity = textureColor.r;
 
     vec4 totalColor = vec4(var_color.rgb, intensity);
-    outColor = totalColor;
+
+    float gamma = 2.2;
+    vec4 applyGamma = vec4(gamma, gamma, gamma, 1.0);
+    outColor = pow(totalColor, 1.0 / applyGamma);
 }

@@ -10,5 +10,8 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec4 textureColor = texture(textureSampler, var_texCoord) * var_color;
-    outColor = textureColor;
+
+    float gamma = 2.2;
+    vec4 applyGamma = vec4(gamma, gamma, gamma, 1.0);
+    outColor = pow(textureColor, 1.0 / applyGamma);
 }
