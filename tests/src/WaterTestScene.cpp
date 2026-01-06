@@ -202,7 +202,7 @@ void WaterTestScene::init()
     // Put a box into the water
     Material* pStaticMeshMaterial = createMeshMaterial(
         pAssetManager,
-        "assets/textures/DiffuseTest.png",
+        "assets/textures/BloomTest.png",
         true,
         false, // cast shadows
         false, // receive shadows

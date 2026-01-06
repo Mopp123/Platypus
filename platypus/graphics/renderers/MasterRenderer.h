@@ -98,6 +98,8 @@ namespace platypus
             std::vector<DescriptorSetLayout>& outDescriptorSetLayouts
         ) const;
 
+        void setPostProcessingProperties(float bloomIntensity);
+
         inline const RenderPass& getShadowPass() const { return _shadowPass; }
 
         inline const Swapchain& getSwapchain() const { return _swapchainRef; }

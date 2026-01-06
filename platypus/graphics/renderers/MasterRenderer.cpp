@@ -87,7 +87,10 @@ namespace platypus
         )
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
-        _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(_descriptorPool);
+        _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(
+            _descriptorPool,
+            _swapchainRef.getRenderPassPtr()
+        );
 
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
@@ -115,6 +118,7 @@ namespace platypus
         );
         createOffscreenPassResources();
 
+        _pPostProcessingRenderer->createFramebuffers();
         _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
 
         // NOTE: This could fuck things up if not being very careful which
@@ -379,6 +383,11 @@ namespace platypus
             outDescriptorSetLayouts.push_back(pMaterial->getDescriptorSetLayout());
     }
 
+    void MasterRenderer::setPostProcessingProperties(float bloomIntensity)
+    {
+        _pPostProcessingRenderer->setBloomIntensity(bloomIntensity);
+    }
+
     void MasterRenderer::createOffscreenPassResources()
     {
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
@@ -484,7 +493,7 @@ namespace platypus
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
         Debug::log("___TEST___MasterRenderer::createPipelines creating post processing pipeline");
-        _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
+        _pPostProcessingRenderer->createPipelines(_swapchainRef.getRenderPass());
 
         Debug::log("___TEST___MasterRenderer::createPipelines creating GUIRenderer pipeline");
         _pGUIRenderer->createPipeline(
@@ -505,7 +514,7 @@ namespace platypus
 
     void MasterRenderer::destroyPipelines()
     {
-        _pPostProcessingRenderer->destroyPipeline();
+        _pPostProcessingRenderer->destroyPipelines();
         _pGUIRenderer->destroyPipeline();
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -671,8 +680,10 @@ namespace platypus
         currentCommandBuffer.begin(nullptr);
 
 
+        // TODO: Put all 3D forward rendering stuff in a single system same way
+        // the post processing stuff works!
 
-        // TESTING SHADOW PASS -----------------------------------
+        // SHADOW PASS -----------------------------------
         // Make sure, initially using correct img layout
         Framebuffer* pShadowFramebuffer = _shadowPassInstance.getFramebuffer(0);
         transition_image_layout(
@@ -703,7 +714,7 @@ namespace platypus
         render::exec_secondary_command_buffers(currentCommandBuffer, shadowpassCommandBuffers);
         render::end_render_pass(currentCommandBuffer, _shadowPassInstance.getRenderPass());
 
-        // Set shadowmap into correct format for opaque pass to sample
+        // Transition shadowmap into correct format for opaque pass to sample
         transition_image_layout(
             currentCommandBuffer,
             pShadowFramebuffer->getDepthAttachment(),
@@ -713,9 +724,9 @@ namespace platypus
             PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
             MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
         );
-        // TESTING END ^^^ -------------------------------------------
+        // SHADOWPASS END ^^^ ----------------------------
 
-        // TESTING OPAQUE PASS -----------------------------------
+        // OPAQUE PASS -----------------------------------
         render::begin_render_pass(
             currentCommandBuffer,
             _opaquePass,
@@ -734,7 +745,7 @@ namespace platypus
         render::exec_secondary_command_buffers(currentCommandBuffer, opaquePassCommandBuffers);
         render::end_render_pass(currentCommandBuffer, _opaquePass);
 
-        // Transition the opaque pass' depthmap to samplable for transparent pass
+        // Transition opaque pass' depthmap to samplable for transparent pass
         transition_image_layout(
             currentCommandBuffer,
             _pTransparentFramebuffer->getDepthAttachment(),
@@ -744,9 +755,9 @@ namespace platypus
             PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
             MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
         );
-        // TESTING END ^^^ -------------------------------------------
+        // OPAQUE PASS END ^^^ --------------------------------
 
-        // TESTING TRANSPARENT PASS -----------------------------------
+        // TRANSPARENT PASS -----------------------------------
         render::begin_render_pass(
             currentCommandBuffer,
             _transparentPass,
@@ -764,7 +775,6 @@ namespace platypus
         );
         render::exec_secondary_command_buffers(currentCommandBuffer, transparentPassCommandBuffers);
         render::end_render_pass(currentCommandBuffer, _transparentPass);
-        // TESTING END ^^^ -------------------------------------------
 
         // Transition color attachment samplable for the post processing pass
         transition_image_layout(
@@ -776,25 +786,14 @@ namespace platypus
             PipelineStage::FRAGMENT_SHADER_BIT, // dst stage
             MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT // dst access mask
         );
+        // NOTE: Not sure if should also transition the transparent depth image here into something else?
+        // TRANSPARENT PASS END ^^^ -------------------------------------------
 
-        // NOTE: Not sure if should transition the transparent depth image here into something else?
-
-        Framebuffer* pCurrentSwapchainFramebuffer = _swapchainRef.getCurrentFramebuffer();
-        render::begin_render_pass(
-            currentCommandBuffer,
-            _swapchainRef.getRenderPass(),
-            pCurrentSwapchainFramebuffer,
-            pScene->environmentProperties.clearColor
-        );
-
-        // TODO: Post processing screen pass instead of below
-
-        // NOTE: We create new copies of secondary command buffers here
-        // TODO: Figure out some nice way to optimize this!
-        std::vector<CommandBuffer> secondaryCommandBuffers;
-        secondaryCommandBuffers.push_back(
+        std::vector<CommandBuffer> screenPassCommandBuffers;
+        screenPassCommandBuffers.push_back(
             _pPostProcessingRenderer->recordCommandBuffer(
-                _swapchainRef.getRenderPass(),
+                currentCommandBuffer,
+                _swapchainRef.getCurrentFramebuffer(),
                 (float)swapchainExtent.width,
                 (float)swapchainExtent.height,
                 _currentFrame
@@ -807,7 +806,7 @@ namespace platypus
 
         _pRenderer3D->advanceFrame();
 
-        secondaryCommandBuffers.push_back(
+        screenPassCommandBuffers.push_back(
             _pGUIRenderer->recordCommandBuffer(
                 _swapchainRef.getRenderPass(),
                 swapchainExtent.width,
@@ -817,9 +816,9 @@ namespace platypus
             )
         );
 
-        render::exec_secondary_command_buffers(currentCommandBuffer, secondaryCommandBuffers);
-
+        render::exec_secondary_command_buffers(currentCommandBuffer, screenPassCommandBuffers);
         render::end_render_pass(currentCommandBuffer, _swapchainRef.getRenderPass());
+
         currentCommandBuffer.end();
 
         size_t maxFramesInFlight = _swapchainRef.getMaxFramesInFlight();
@@ -873,10 +872,14 @@ namespace platypus
                 _batcher.freeBatches();
                 _pGUIRenderer->freeBatches();
 
+
                 _pPostProcessingRenderer->destroyShaderResources();
-                _pPostProcessingRenderer->destroyPipeline();
+                _pPostProcessingRenderer->destroyPipelines();
+                _pPostProcessingRenderer->destroyFramebuffers();
+
+                _pPostProcessingRenderer->createFramebuffers();
                 _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
-                _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
+                _pPostProcessingRenderer->createPipelines(_swapchainRef.getRenderPass());
             }
             else
             {
@@ -895,9 +898,12 @@ namespace platypus
                 _batcher.recreateManagedPipelines();
 
                 _pPostProcessingRenderer->destroyShaderResources();
-                _pPostProcessingRenderer->destroyPipeline();
+                _pPostProcessingRenderer->destroyPipelines();
+                _pPostProcessingRenderer->destroyFramebuffers();
+
+                _pPostProcessingRenderer->createFramebuffers();
                 _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
-                _pPostProcessingRenderer->createPipeline(_swapchainRef.getRenderPass());
+                _pPostProcessingRenderer->createPipelines(_swapchainRef.getRenderPass());
             }
 
             _swapchainRef.resetChangedImageCount();
