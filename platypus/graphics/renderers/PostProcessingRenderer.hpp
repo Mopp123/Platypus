@@ -56,6 +56,8 @@ namespace platypus
         TextureSampler _textureSampler;
         std::map<PostProcessingStage, DescriptorSetLayout> _stageDescriptorSetLayouts;
 
+        float _bloomIntensity = 1.0f;
+
     public:
         PostProcessingRenderer(
             DescriptorPool& descriptorPool,
@@ -97,6 +99,8 @@ namespace platypus
 
         void createShaderResources(Texture* pSceneColorAttachment);
         void destroyShaderResources();
+
+        inline void setBloomIntensity(float intensity) { _bloomIntensity = intensity; }
 
     private:
         void loadShaders();

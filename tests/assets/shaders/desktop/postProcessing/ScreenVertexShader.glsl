@@ -10,7 +10,13 @@ vec2 positions[6] = vec2[](
     vec2(-1.0, -1.0)
 );
 
+layout(push_constant) uniform PushConstants
+{
+    float bloomIntensity;
+} pushConstants;
+
 layout(location = 0) out vec2 var_texCoord;
+layout(location = 1) out float var_bloomIntensity;
 
 void main()
 {
@@ -19,4 +25,6 @@ void main()
 
     var_texCoord = vertexPos * 0.5 + 0.5;
     var_texCoord.y = 1.0 - var_texCoord.y;
+
+    var_bloomIntensity = pushConstants.bloomIntensity;
 }

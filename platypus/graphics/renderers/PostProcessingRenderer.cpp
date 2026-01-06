@@ -122,17 +122,28 @@ namespace platypus
         render::set_viewport(currentCommandBuffer, 0, 0, viewportWidth, viewportHeight, 0.0f, 1.0f);
         render::set_scissor(currentCommandBuffer, { 0, 0, (uint32_t)viewportWidth, (uint32_t)viewportHeight });
 
-        // Send framebuffer width or height as push constants for blur passes
-        if (stageType == PostProcessingStage::HORIZONRAL_BLUR_PASS || stageType == PostProcessingStage::VERTICAL_BLUR_PASS)
+        // Provide framebuffer's width or height for blur passes
+        // Provide bloom intensity for screen pass
+        // *All these are a single float
+        if (stageType == PostProcessingStage::HORIZONRAL_BLUR_PASS ||
+            stageType == PostProcessingStage::VERTICAL_BLUR_PASS ||
+            stageType == PostProcessingStage::SCREEN_PASS)
         {
             // NOTE: Not sure if pPushConstantsData "lifetime" issue here...
-            float framebufferSize = stageType == PostProcessingStage::HORIZONRAL_BLUR_PASS ? (float)pFramebuffer->getWidth() : (float)pFramebuffer->getHeight();
+            float pushConstantValue = 0;
+            if (stageType == PostProcessingStage::HORIZONRAL_BLUR_PASS)
+                pushConstantValue = pFramebuffer->getWidth();
+            else if (stageType == PostProcessingStage::VERTICAL_BLUR_PASS)
+                pushConstantValue = pFramebuffer->getHeight();
+            else if (stageType == PostProcessingStage::SCREEN_PASS)
+                pushConstantValue = _bloomIntensity;
+
             render::push_constants(
                 currentCommandBuffer,
                 ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
                 0,
                 sizeof(float),
-                &framebufferSize,
+                &pushConstantValue,
                 { { ShaderDataType::Float} }
             );
         }
@@ -384,9 +395,13 @@ namespace platypus
             Shader* pFragmentShader = shadersIt->second.second;
 
             // Provide framebuffer's width or height for blur passes
+            // Provide bloom intensity for screen pass
+            // *All these are a single float
             size_t pushConstantsSize = 0;
             ShaderStageFlagBits pushConstantShaderStage = ShaderStageFlagBits::SHADER_STAGE_NONE;
-            if (stage == PostProcessingStage::HORIZONRAL_BLUR_PASS || stage == PostProcessingStage::VERTICAL_BLUR_PASS)
+            if (stage == PostProcessingStage::HORIZONRAL_BLUR_PASS ||
+                stage == PostProcessingStage::VERTICAL_BLUR_PASS ||
+                stage == PostProcessingStage::SCREEN_PASS)
             {
                 pushConstantsSize = sizeof(float);
                 pushConstantShaderStage = ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT;
