@@ -6,6 +6,7 @@
 #include "platypus/core/Debug.h"
 #include <cstring>
 #include <stdexcept>
+#include <utf8.h>
 
 
 namespace platypus
@@ -492,7 +493,7 @@ namespace platypus
     {
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         const Font* pFont = (const Font*)pAssetManager->getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
-        const std::unordered_map<wchar_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
+        const std::unordered_map<uint32_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
 
         const float originalX = pTransform->position.x;
         float posX = originalX;
@@ -505,28 +506,35 @@ namespace platypus
         float charWidth = pFont->getTilePixelWidth() * scaleFactorX;
         float charHeight = pFont->getMaxCharHeight() * scaleFactorY;
 
-        for (wchar_t c : pRenderable->text)
+        // TODO: Optimize -> fucked up to copy the string here!
+        // (can't use const_iterator here to use the utf8::next)
+        std::string tmpStr = pRenderable->text;
+        std::string::iterator charIterator = tmpStr.begin();
+        while (charIterator != tmpStr.end())
         {
-            // Check, do we want to change line?
-            if (c == '\n')
+            uint32_t codepoint = (uint32_t)utf8::next(charIterator, tmpStr.end());
+
+            // Check, do we want to change line? (0xA = '\n')
+            if (codepoint == 0xA)
             {
                 posY += charHeight;
                 posX = originalX;
                 continue;
             }
-            // Empty space uses font specific details so no any special cases here..
-            else if (c == ' ')
+            // Empty space currently uses font specific details so no any special cases here..
+            // NOTE: Quite dumb to have texture for empty space in font...
+            else if (codepoint == 0x20) // 0x20 = ' '
             {
             }
             // Make sure not draw nulldtm chars accidentally..
-            else if (c == 0)
+            else if (codepoint == 0)
             {
                 break;
             }
 
             try
             {
-                const FontGlyphData& glyphData = glyphMapping.at(c);
+                const FontGlyphData& glyphData = glyphMapping.at(codepoint);
 
                 float x = (posX + (float)glyphData.bearingX);
                 // - ch because we want origin to be at 0,0 but we also need to add the bearingY so.. gets fucked without this..
@@ -554,7 +562,7 @@ namespace platypus
             {
                 Debug::log(
                     "@GUIRenderer::addToFontBatch "
-                    "No glyph data found for character: " + std::string(c, 1) + " (value: " + std::to_string(c) + ")",
+                    "No glyph data found for codepoint: " + std::to_string(codepoint),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
             }

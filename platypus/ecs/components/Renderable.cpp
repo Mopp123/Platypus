@@ -69,7 +69,7 @@ namespace platypus
         Vector4f color,
         Vector2f textureOffset,
         uint32_t layer,
-        std::wstring text
+        std::string text
     )
     {
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -102,8 +102,8 @@ namespace platypus
         // -> need some way to "allocate" the text
         // THIS IS CURRENTLY UNDEFINED BEHAVIOUR even it seems to work.
         // TODO: Some StringPool system for components to use that needs strings!
-        if (text.size() <= 3)
-            pRenderable->text.resize(3);
+        if (text.size() <= 32)
+            pRenderable->text.resize(32);
         else
             pRenderable->text.resize(text.size());
 
@@ -125,7 +125,7 @@ namespace platypus
             color,
             { 0, 0 },
             0,
-            L""
+            ""
         );
     }
 
@@ -141,7 +141,7 @@ namespace platypus
             { 1, 1, 1, 1 },
             { 0, 0 },
             0,
-            L""
+            ""
         );
     }
 }

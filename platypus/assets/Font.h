@@ -2,6 +2,7 @@
 
 #include "Asset.h"
 #include "Texture.h"
+#include <string>
 #include <unordered_map>
 
 
@@ -38,7 +39,7 @@ namespace platypus
         // Max height of a character
         int _charHeight = 1;
 
-        std::unordered_map<wchar_t, FontGlyphData> _glyphMapping;
+        std::unordered_map<uint32_t, FontGlyphData> _glyphMapping;
 
     public:
         Font();
@@ -51,16 +52,16 @@ namespace platypus
 
         const Texture* getTexture() const;
 
-        const FontGlyphData * const getGlyph(wchar_t c) const;
+        const FontGlyphData * const getGlyph(uint32_t codepoint) const;
         inline const unsigned int getPixelSize() const { return _pixelSize; }
-        inline std::unordered_map<wchar_t, FontGlyphData>& getGlyphMapping() { return _glyphMapping; }
-        inline const std::unordered_map<wchar_t, FontGlyphData>& getGlyphMapping() const { return _glyphMapping; }
+        inline std::unordered_map<uint32_t, FontGlyphData>& getGlyphMapping() { return _glyphMapping; }
+        inline const std::unordered_map<uint32_t, FontGlyphData>& getGlyphMapping() const { return _glyphMapping; }
         inline int getTextureAtlasRowCount() const { return _textureAtlasRowCount; }
         inline int getTilePixelWidth() const { return _textureAtlasTileWidth; }
         inline int getMaxCharHeight() const { return _charHeight; }
         inline ID_t getTextureID() const { return _textureID; }
 
     private:
-        bool createFont(const std::string& filepath, const std::wstring& charsToLoad);
+        bool createFont(const std::string& filepath, std::string charsToLoad);
     };
 }

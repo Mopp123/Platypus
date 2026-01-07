@@ -8,16 +8,17 @@ namespace platypus
 {
     namespace ui
     {
+        // TODO: Make sure string is valid utf8!!!
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const std::wstring& text,
+            const std::string& text,
             const Vector4f& color,
             const Font* pFont
         );
 
-        std::wstring wrap_text(
-            const std::wstring& text,
+        std::string wrap_text(
+            const std::string& text,
             const Font* pFont,
             const UIElement* pParentElement,
             float& outMaxLineWidth,
@@ -27,9 +28,9 @@ namespace platypus
         void set_text(
             UIElement* pTextElement,
             UIElement* pParentElement,
-            const std::wstring& text
+            const std::string& text
         );
 
-        Vector2f get_text_scale(const std::wstring& text, const Font* pFont);
+        Vector2f get_text_scale(const std::string& text, const Font* pFont);
     }
 }

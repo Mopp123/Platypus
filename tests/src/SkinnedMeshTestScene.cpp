@@ -1,7 +1,6 @@
 #include "SkinnedMeshTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
-#include "MaterialTestScene.hpp"
 #include <string>
 
 
@@ -242,8 +241,6 @@ void SkinnedMeshTestScene::update()
     _camController.update();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
-    if (inputManager.isKeyDown(KeyName::KEY_0))
-        Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
 
     if (inputManager.isKeyDown(KeyName::KEY_R))
         change_animation(this, _rootJointEntities, _pRunAnimationAsset);

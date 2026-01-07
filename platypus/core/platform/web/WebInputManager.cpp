@@ -1,6 +1,7 @@
 #include "platypus/core/InputEvent.h"
 #include "platypus/core/InputManager.h"
 #include "platypus/core/Application.h"
+#include "platypus/utils/StringUtils.hpp"
 #include "platypus/core/Debug.h"
 
 #include <emscripten.h>
@@ -80,6 +81,44 @@ namespace platypus
         { "Escape",      KeyName::KEY_ESCAPE    }
     };
 
+    static std::set<std::string> s_emscSpecialKeys{
+        { "F1" },
+        { "F2" },
+        { "F3" },
+        { "F4" },
+        { "F5" },
+        { "F6" },
+        { "F7" },
+        { "F8" },
+        { "F9" },
+        { "F10"  },
+        { "F11"  },
+        { "F12"  },
+
+        { "ArrowUp" },
+        { "ArrowDown" },
+        { "ArrowLeft" },
+        { "ArrowRight" },
+
+        { "Backspace" },
+        { "Enter" },
+        { "Control" },
+        { "Shift" },
+        { "Alt" },
+        { "AltGraph" },
+        { "Tab" },
+        { "Escape" },
+
+        { "Meta" },
+        { "Home" },
+        { "PageUp" },
+        { "PageDown" },
+        { "End" },
+        { "Delete" },
+        { "PrintScreen" },
+        { "Pause" }
+    };
+
 
     static const std::unordered_map<unsigned short, MouseButtonName> s_emscToMouseButtonMapping
     {
@@ -91,13 +130,7 @@ namespace platypus
 
     static bool is_character(const char* keyname)
     {
-        auto iter = s_emscToKeyMapping.find(keyname);
-        if (iter != s_emscToKeyMapping.end())
-        {
-            const KeyName& k = iter->second;
-            return k != KeyName::KEY_BACKSPACE && k != KeyName::KEY_ENTER && k != KeyName::KEY_SHIFT && k != KeyName::KEY_LCTRL;
-        }
-        return true;
+        return s_emscSpecialKeys.find(keyname) == s_emscSpecialKeys.end();
     }
 
 
@@ -121,14 +154,25 @@ namespace platypus
     static EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent* keyEvent, void* userData)
     {
         InputManager* pInputManager = (InputManager*)userData;
+
+        // Process char input events (atm done first since we don't care if the fucked up
+        // s_emscToKeyMapping has that key, we care only about the codepoint)
+        if (is_character(keyEvent->key))
+        {
+            uint32_t codepoint = util::str::get_first_codepoint(keyEvent->key, 32);
+            pInputManager->processCharInputEvents(codepoint);
+        }
+
         std::unordered_map<std::string, KeyName>::const_iterator keyIt = s_emscToKeyMapping.find(keyEvent->key);
         if (keyIt == s_emscToKeyMapping.end())
         {
+            #ifdef PLATYPUS_DEBUG
             Debug::log(
                 "@keydown_callback "
                 "Failed to find key: " + std::string(keyEvent->key),
-                Debug::MessageType::PLATYPUS_ERROR
+                Debug::MessageType::PLATYPUS_WARNING
             );
+            #endif
             return EMSCRIPTEN_RESULT_SUCCESS;
         }
 
@@ -139,19 +183,6 @@ namespace platypus
         int mods = 0;
         pInputManager->processKeyEvents(keyName, scancode, InputAction::PRESS, mods);
 
-        // check is this just a 'char' -> process char input events
-        if (is_character(keyEvent->key))
-        {
-            unsigned char b1 = keyEvent->key[0];
-            //unsigned char b2 = keyEvent->key[1];
-            //unsigned int codepoint = inputManager->parseSpecialCharCodepoint(b2 == 0 ? (unsigned int)b1 : (unsigned int)b2);
-
-            // Extended chars are disabled atm!
-            unsigned int codepoint = b1;
-
-            pInputManager->processCharInputEvents(codepoint);
-        }
-
         return EMSCRIPTEN_RESULT_SUCCESS;
     }
 
@@ -161,11 +192,13 @@ namespace platypus
         std::unordered_map<std::string, KeyName>::const_iterator keyIt = s_emscToKeyMapping.find(keyEvent->key);
         if (keyIt == s_emscToKeyMapping.end())
         {
+            #ifdef PLATYPUS_DEBUG
             Debug::log(
                 "@keyup_callback "
                 "Failed to find key: " + std::string(keyEvent->key),
-                Debug::MessageType::PLATYPUS_ERROR
+                Debug::MessageType::PLATYPUS_WARNING
             );
+            #endif
             return 0;
         }
 

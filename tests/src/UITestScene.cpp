@@ -2,7 +2,6 @@
 #include "platypus/ui/LayoutUI.h"
 #include "platypus/ui/Text.h"
 #include "platypus/ui/Button.h"
-#include "MaterialTestScene.hpp"
 
 #include <iostream>
 
@@ -13,12 +12,12 @@ using namespace platypus;
 class TestCharInputEvent : public CharInputEvent
 {
 public:
-    std::wstring& inputStrRef;
+    std::string& inputStrRef;
     ui::UIElement* pInputElement = nullptr;
     ui::UIElement* pInputParentElement = nullptr;
 
     TestCharInputEvent(
-        std::wstring& inputStrRef,
+        std::string& inputStrRef,
         ui::UIElement* pInputElement,
         ui::UIElement* pInputParentElement
     ) :
@@ -29,7 +28,8 @@ public:
 
     virtual void func(unsigned int codepoint)
     {
-        inputStrRef += (wchar_t)codepoint;
+        //inputStrRef += (wchar_t)codepoint;
+        util::str::append_utf8((uint32_t)codepoint, inputStrRef);
         ui::set_text(pInputElement, pInputParentElement, inputStrRef);
     }
 };
@@ -71,7 +71,6 @@ public:
     {
         if (action != InputAction::RELEASE)
         {
-            Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
             Debug::log("___TEST___ON CLICK: " + std::to_string(index));
         }
     }
@@ -149,7 +148,7 @@ void UITestScene::init()
     _pInputTextElement = ui::add_text_element(
         _ui,
         _pInputBoxElement,
-        L"",
+        "",
         { 1, 1, 1, 1 },
         pFont
     );
@@ -175,7 +174,6 @@ void UITestScene::init()
     UIElement panel1Child2 = panel1.addContainer(layout3);
     UIElement image = panel1Child2.addImage(pTestTexture);
     */
-    Debug::log("___TEST___GUI TEST INIT! Created " + std::to_string(getEntities().size()) + " entities.");
 }
 
 
@@ -194,7 +192,7 @@ void UITestScene::update()
     {
         if (!_inputStr.empty())
         {
-            _inputStr.pop_back();
+            util::str::pop_back_utf8(_inputStr);
             ui::set_text(_pInputTextElement, _pInputBoxElement, _inputStr);
         }
     }
@@ -221,7 +219,7 @@ void UITestScene::createBox(
 }
 
 void UITestScene::createTextBox(
-    const std::wstring& txt,
+    const std::string& txt,
     const Vector2f& pos,
     const Vector2f& scale,
     const Vector4f& color,

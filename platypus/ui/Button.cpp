@@ -45,7 +45,7 @@ namespace platypus
         UIElement* add_button_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const std::wstring& text,
+            const std::string& text,
             const Font* pFont
         )
         {

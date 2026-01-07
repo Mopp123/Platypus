@@ -1,23 +1,33 @@
 # Platypus
 
+*Clone the repo using `--recurse-submodules`
+
 Goal eventually: <br/>
 Game engine system things + editor used more like "power user way"..
 * Less mouse usage (which is still supported tho) -> hotkeys, vim motions, etc. <br/>
 * Minimalistic -> enable/use only stuff you need.
 * Extendable/expandable, easily configurable.
 
-## To build for desktop
 **Dependencies**
-* glfw https://github.com/glfw/glfw/tree/master <br/>
-* Vulkan Memory Allocator https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/tree/master <br/>
 * stb_image.h
 * stb_image_write.h
 * json.hpp
 * tiny_gltf.h
+* utfcpp https://github.com/nemtrif/utfcpp
+
+Desktop:
+* glfw https://github.com/glfw/glfw/tree/master <br/>
+* Vulkan Memory Allocator https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/tree/master <br/>
 * Freetype https://github.com/freetype/freetype
 * Harfbuzz https://github.com/harfbuzz/harfbuzz/tree/main (Actually not used atm...)
 
-Clone the repo using `--recurse-submodules`
+Web:
+* Emscripten
+
+
+## How to build ##
+**TODO: redo the whole build instructions'n stuff**
+
 
 ### Install Vulkan dev tools
 
@@ -43,7 +53,3 @@ Copy the file bin/glslc into /usr/local/bin (Not sure do you need other files fo
 ```
 sudo pacman -S vulkan-devel
 ```
-
-## To build for web
-**Dependencies**
-* Emscripten

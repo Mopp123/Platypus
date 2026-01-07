@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+#include <utf8.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -27,12 +29,12 @@ namespace platypus
         // TODO: Figure out a better way!
         return createFont(
             filepath,
-            L" qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|ÖöÄä"
+            " qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|ÖöÄä"
         );
     }
 
     // TODO: Put into constructor -> doesnt need to be own func anymore?
-    bool Font::createFont(const std::string& filepath, const std::wstring& charsToLoad)
+    bool Font::createFont(const std::string& filepath, std::string charsToLoad)
     {
         FT_Library freetypeLib;
         if (FT_Init_FreeType(&freetypeLib))
@@ -83,18 +85,20 @@ namespace platypus
 
         FT_Select_Charmap(fontFace, FT_ENCODING_UNICODE);
 
+
+        std::string::iterator charIterator = charsToLoad.begin();
         // NOTE: Originally the pair's first was ptr to heap allocated bitmap data
         // -> sanitizer complained about it so switched to vector for now...
         std::vector<std::pair<std::vector<unsigned char>, FontGlyphData>> loadedGlyphs;
-        for (int i = 0; i < charsToLoad.size(); ++i)
+        while (charIterator != charsToLoad.end())
         {
-            wchar_t c = charsToLoad[i];
+            uint32_t codepoint = (uint32_t)utf8::next(charIterator, charsToLoad.end());
 
-            if (FT_Load_Char(fontFace, c, FT_LOAD_RENDER))
+            if (FT_Load_Char(fontFace, codepoint, FT_LOAD_RENDER))
             {
                 Debug::log(
                     "@Font::createFont "
-                    "Failed to load character '" + std::to_string(c) + "' from file " + filepath,
+                    "Failed to load codepoint '" + std::to_string(codepoint) + "' from file " + filepath,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -125,7 +129,8 @@ namespace platypus
             const int glyphBitmapSize = currentGlyphWidth * currentGlyphHeight;
             std::vector<unsigned char> bitmap(glyphBitmapSize);
             // If empty space -> make some empty tile, otherwise get the glyph bitmap
-            if (c == ' ')
+            // (0x20 = space)
+            if (codepoint == 0x20)
                 memset(bitmap.data(), 0, glyphBitmapSize);
             else
                 memcpy(bitmap.data(), ftGlyph->bitmap.buffer, sizeof(unsigned char) * glyphBitmapSize);
@@ -138,7 +143,7 @@ namespace platypus
                 textureOffsetX = 0;
                 textureOffsetY++;
             }
-            _glyphMapping.insert(std::make_pair(c, gd));
+            _glyphMapping.insert(std::make_pair(codepoint, gd));
         }
         // We want each glyph in the texture atlas to have perfect square space, for simplicity's sake..
         // (This results in many unused pixels tho..)
@@ -232,9 +237,9 @@ namespace platypus
         return (const Texture*)Application::get_instance()->getAssetManager()->getAsset(_textureID, AssetType::ASSET_TYPE_TEXTURE);
     }
 
-    const FontGlyphData * const Font::getGlyph(wchar_t c) const
+    const FontGlyphData * const Font::getGlyph(uint32_t codepoint) const
     {
-        std::unordered_map<wchar_t, FontGlyphData>::const_iterator it = _glyphMapping.find(c);
+        std::unordered_map<uint32_t, FontGlyphData>::const_iterator it = _glyphMapping.find(codepoint);
         if (it != _glyphMapping.end())
             return &it->second;
         return nullptr;

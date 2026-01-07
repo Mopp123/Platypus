@@ -1,8 +1,10 @@
 #include "Text.h"
 #include "platypus/core/Application.h"
 #include "platypus/ecs/components/Renderable.h"
+#include "platypus/utils/StringUtils.hpp"
 #include "platypus/core/Debug.h"
 #include <sstream>
+#include <utf8.h>
 
 
 namespace platypus
@@ -12,7 +14,7 @@ namespace platypus
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const std::wstring& text,
+            const std::string& text,
             const Vector4f& color,
             const Font* pFont
         )
@@ -23,7 +25,7 @@ namespace platypus
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
-            std::wstring finalText;
+            std::string finalText;
             if (parentLayout.wordWrap == WordWrap::NONE)
             {
                 maxLineWidth = get_text_scale(text, pFont).x;
@@ -48,7 +50,6 @@ namespace platypus
             layout.scale = { maxLineWidth, charHeight * lineCount };
 
             UIElement* pElement = add_container(ui, pParent, layout, false, NULL_ID, pFont);
-            Debug::log("___TEST___Creating text renderable");
             GUIRenderable* pTextRenderable = create_gui_renderable(
                 pElement->getEntityID(),
                 color
@@ -61,8 +62,8 @@ namespace platypus
         }
 
 
-        std::wstring wrap_text(
-            const std::wstring& text,
+        std::string wrap_text(
+            const std::string& text,
             const Font* pFont,
             const UIElement* pParentElement,
             float& outMaxLineWidth,
@@ -79,28 +80,30 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
-                return L"";
+                return "";
             }
             #endif
 
             outLineCount = 1;
-            std::wstring wrappedText;
+            std::string wrappedText;
 
             float parentLayoutWidth = parentLayout.scale.x - parentLayout.padding.x;
 
-            std::wstring fullText = text;
+            std::string fullText = text;
 
-            std::wistringstream stream(text);
-            std::wstring word;
-            std::vector<std::wstring> words;
-            while (getline(stream, word, L' '))
+            std::istringstream stream(text);
+            std::string word;
+            std::vector<std::string> words;
+            // NOTE: Not sure if splitting into words safe enough if varying unicode char
+            // sizes? -> Should be tho?
+            while (getline(stream, word, ' '))
                 words.push_back(word);
 
             float lineWidth = parentLayout.padding.x;
-            float spaceWidth = get_text_scale(L" ", pFont).x;
+            float spaceWidth = get_text_scale(" ", pFont).x;
             for (size_t i = 0; i < words.size(); ++i)
             {
-                const std::wstring& str = words[i];
+                const std::string& str = words[i];
                 Vector2f wordScale = get_text_scale(str, pFont);
                 float wordWidth = wordScale.x;
                 bool lastWord = i == words.size() - 1;
@@ -128,7 +131,7 @@ namespace platypus
         void set_text(
             UIElement* pTextElement,
             UIElement* pParentElement,
-            const std::wstring& text
+            const std::string& text
         )
         {
             // TODO: Make App, SceneManager and Scene accessing safer here!
@@ -140,7 +143,7 @@ namespace platypus
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
-            std::wstring finalText;
+            std::string finalText;
             if (parentLayout.wordWrap == WordWrap::NONE)
             {
                 maxLineWidth = get_text_scale(text, pFont).x;
@@ -166,16 +169,23 @@ namespace platypus
             pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
         }
 
-        Vector2f get_text_scale(const std::wstring& text, const Font* pFont)
+        Vector2f get_text_scale(const std::string& text, const Font* pFont)
         {
             Vector2f scale(0, (float)pFont->getMaxCharHeight());
-            for (wchar_t c : text)
+
+            const size_t textSize = text.size();
+            const char* pData = (const char*)text.data();
+            utf8::iterator it(pData, pData, pData + textSize);
+            utf8::iterator endIt(pData + textSize, pData, pData + textSize);
+            while (it != endIt)
             {
-                const FontGlyphData * const pGlyph = pFont->getGlyph(c);
+                uint32_t codepoint = (uint32_t)*it;
+                const FontGlyphData * const pGlyph = pFont->getGlyph(codepoint);
                 if (pGlyph)
                 {
                     scale.x += (float)(pGlyph->advance >> 6);
                 }
+                ++it;
             }
             return scale;
         }
