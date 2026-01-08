@@ -11,6 +11,7 @@ namespace platypus { namespace util { namespace str {
 
     void append_utf8(uint32_t codepoint, std::string& target);
     void pop_back_utf8(std::string& target);
+    size_t length_utf8(const std::string& str);
     uint32_t get_first_codepoint(const char* pStr, size_t size);
 
     // Calls func that gets utf8 codepoint and void* (for user data) for each character in the string

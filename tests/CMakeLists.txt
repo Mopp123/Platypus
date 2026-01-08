@@ -28,7 +28,7 @@ if(${BUILD_TARGET} MATCHES "desktop")
     add_library(platypus SHARED IMPORTED)
     set_property(TARGET platypus PROPERTY IMPORTED_LOCATION "${PARENT_DIR}/build/libplatypus.so")
 elseif(${BUILD_TARGET} MATCHES "web")
-    add_compile_definitions(PLATYPUS_BUILD_WEB=1)
+    add_compile_definitions(PLATYPUS_BUILD_WEB=1 PLATYPUS_DEBUG=1)
     list(
         APPEND PROJECT_INCLUDES
         ${PARENT_DIR}/dependencies/stb
@@ -37,7 +37,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/dependencies/utfcpp
     )
     # NOTE: Below doesn't work if using add_compile_options() instead! ...for some reason...
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
     set(CMAKE_EXECUTABLE_SUFFIX .html)
     set(HTML_SHELL_LOCATION "${PROJECT_SOURCE_DIR}/shell.html")
     # NOTE: This gets converted to camel case for some reason...

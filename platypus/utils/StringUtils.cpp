@@ -32,6 +32,11 @@ namespace platypus { namespace util { namespace str {
         target.erase(it, it + lastCharSize);
     }
 
+    size_t length_utf8(const std::string& str)
+    {
+        return utf8::distance(str.begin(), str.end());
+    }
+
     uint32_t get_first_codepoint(const char* pStr, size_t size)
     {
         utf8::iterator it(pStr, pStr, pStr + size);

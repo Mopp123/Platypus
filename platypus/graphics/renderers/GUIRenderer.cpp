@@ -3,6 +3,7 @@
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/core/Application.h"
+#include "platypus/utils/StringUtils.hpp"
 #include "platypus/core/Debug.h"
 #include <cstring>
 #include <stdexcept>
@@ -12,7 +13,7 @@
 namespace platypus
 {
     size_t GUIRenderer::s_maxBatches = 100;
-    size_t GUIRenderer::s_maxBatchLength = 1000;
+    size_t GUIRenderer::s_maxBatchLength = 2000;
     GUIRenderer::GUIRenderer(
         const MasterRenderer& masterRenderer,
         DescriptorPool& descriptorPool,
@@ -145,7 +146,7 @@ namespace platypus
             std::vector<GUIRenderData> instanceBufferData(s_maxBatchLength);
             batchData.pInstancedBuffer = new Buffer(
                 instanceBufferData.data(),
-                sizeof(GUITransform),
+                sizeof(GUIRenderData),
                 instanceBufferData.size(),
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_DYNAMIC,
@@ -237,10 +238,18 @@ namespace platypus
             textureID = pAssetManager->getWhiteTexture()->getID();
         }
 
-        int batchIndex = findExistingBatchIndex(pRenderable->layer, textureID);
+        size_t requiredBatchElements = 1;
+        if (pRenderable->isText)
+            requiredBatchElements = util::str::length_utf8(pRenderable->text);
+
+        int batchIndex = findExistingBatchIndex(
+            pRenderable->layer,
+            textureID,
+            requiredBatchElements
+        );
         if (batchIndex == -1)
         {
-            batchIndex = findFreeBatchIndex();
+            batchIndex = findFreeBatchIndex(requiredBatchElements);
             if (batchIndex == -1)
             {
                 Debug::log(
@@ -269,9 +278,13 @@ namespace platypus
             createTextureDescriptorSets(textureID);
 
         if (pRenderable->fontID != NULL_ID)
+        {
             addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
+        }
         else
+        {
             addToImageBatch(_batches[batchIndex], pRenderable, pTransform);
+        }
     }
 
     const CommandBuffer& GUIRenderer::recordCommandBuffer(
@@ -433,9 +446,13 @@ namespace platypus
         return currentCommandBuffer;
     }
 
-    int GUIRenderer::findExistingBatchIndex(uint32_t layer, ID_t textureID)
+    int GUIRenderer::findExistingBatchIndex(
+        uint32_t layer,
+        ID_t textureID,
+        size_t requiredBatchDataElements
+    ) const
     {
-        std::map<uint32_t, std::set<size_t>>::iterator layerIt = _toRender.find(layer);
+        std::map<uint32_t, std::set<size_t>>::const_iterator layerIt = _toRender.find(layer);
         if (layerIt == _toRender.end())
             return -1;
 
@@ -444,18 +461,20 @@ namespace platypus
         for (layerBatchIt = layerBatches.begin(); layerBatchIt != layerBatches.end(); ++layerBatchIt)
         {
             size_t batchIndex = *layerBatchIt;
-            BatchData& batchData = _batches[batchIndex];
-            if (batchData.textureID == textureID && batchData.count + 1 <= s_maxBatchLength)
+            const BatchData& batchData = _batches[batchIndex];
+            if (batchData.textureID == textureID && batchData.count + requiredBatchDataElements <= s_maxBatchLength)
                 return batchIndex;
         }
         return -1;
     }
 
-    int GUIRenderer::findFreeBatchIndex()
+    int GUIRenderer::findFreeBatchIndex(size_t requiredBatchDataElements) const
     {
         for (int  i = 0; i < _batches.size(); ++i)
         {
-            if (_batches[i].textureID == NULL_ID)
+            const BatchData& batchData = _batches[i];
+            // TODO: Varying size batches?
+            if (batchData.textureID == NULL_ID && requiredBatchDataElements <= s_maxBatchLength)
                 return i;
         }
         return -1;
@@ -508,17 +527,22 @@ namespace platypus
 
         // TODO: Optimize -> fucked up to copy the string here!
         // (can't use const_iterator here to use the utf8::next)
-        std::string tmpStr = pRenderable->text;
-        std::string::iterator charIterator = tmpStr.begin();
-        while (charIterator != tmpStr.end())
+        const size_t textSize = pRenderable->text.size();
+        const char* pTextData = reinterpret_cast<const char*>(pRenderable->text.data());
+        utf8::iterator charIt(pTextData, pTextData, pTextData + textSize);
+        utf8::iterator charEndIt(pTextData + textSize, pTextData, pTextData + textSize);
+        while (charIt != charEndIt)
         {
-            uint32_t codepoint = (uint32_t)utf8::next(charIterator, tmpStr.end());
+            //uint32_t codepoint = (uint32_t)utf8::next(charIterator, tmpStr.end());
+            uint32_t codepoint = static_cast<uint32_t>(*charIt);
+            //Debug::log("___TEST___codepoint = " + std::to_string(codepoint));
 
             // Check, do we want to change line? (0xA = '\n')
             if (codepoint == 0xA)
             {
                 posY += charHeight;
                 posX = originalX;
+                ++charIt;
                 continue;
             }
             // Empty space currently uses font specific details so no any special cases here..
@@ -566,6 +590,7 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_ERROR
                 );
             }
+            ++charIt;
         }
     }
 
@@ -607,7 +632,7 @@ namespace platypus
         ID_t textureID
     )
     {
-        int batchIndex = findExistingBatchIndex(layer, textureID);
+        int batchIndex = findExistingBatchIndex(layer, textureID, 0);
         if (batchIndex == -1)
         {
             Debug::log(

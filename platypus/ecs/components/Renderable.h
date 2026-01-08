@@ -25,6 +25,7 @@ namespace platypus
         Vector2f textureOffset = Vector2f(0, 0);
         uint32_t layer = 0;
 
+        bool isText = false;
         // NOTE: Warning when initially allocating from component pool!
         // -> needs to be explicitly resized to have any space!
         std::string text;
@@ -43,6 +44,7 @@ namespace platypus
         Vector4f color,
         Vector2f textureOffset,
         uint32_t layer,
+        bool isText,
         std::string text
     );
 

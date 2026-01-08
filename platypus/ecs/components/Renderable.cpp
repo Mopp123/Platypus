@@ -69,6 +69,7 @@ namespace platypus
         Vector4f color,
         Vector2f textureOffset,
         uint32_t layer,
+        bool isText,
         std::string text
     )
     {
@@ -107,8 +108,8 @@ namespace platypus
         else
             pRenderable->text.resize(text.size());
 
+        pRenderable->isText = isText;
         pRenderable->text = text;
-
 
         return pRenderable;
     }
@@ -125,6 +126,7 @@ namespace platypus
             color,
             { 0, 0 },
             0,
+            false,
             ""
         );
     }
@@ -141,6 +143,7 @@ namespace platypus
             { 1, 1, 1, 1 },
             { 0, 0 },
             0,
+            false,
             ""
         );
     }

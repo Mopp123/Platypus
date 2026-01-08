@@ -21,7 +21,7 @@ namespace platypus
         {
             Layout parentLayout = pParent->getLayout();
 
-            float charHeight = (float)pFont->getMaxCharHeight();
+            float charHeight = static_cast<float>(pFont->getMaxCharHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
@@ -52,16 +52,22 @@ namespace platypus
             UIElement* pElement = add_container(ui, pParent, layout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(
                 pElement->getEntityID(),
-                color
+                pFont->getTextureID(),
+                pFont->getID(),
+                color,
+                { 0, 0 }, // texture offset
+                0, // layer
+                true, // isText?
+                finalText
             );
-            pTextRenderable->textureID = pFont->getTextureID();
-            pTextRenderable->fontID = pFont->getID();
-            pTextRenderable->text = finalText;
 
             return pElement;
         }
 
-
+        // NOTE: VERY inefficient!
+        // DO NOT USE if editing some text, like input field
+        //  -> those should modify just the parts that are
+        //  actually modified!
         std::string wrap_text(
             const std::string& text,
             const Font* pFont,
@@ -89,8 +95,6 @@ namespace platypus
 
             float parentLayoutWidth = parentLayout.scale.x - parentLayout.padding.x;
 
-            std::string fullText = text;
-
             std::istringstream stream(text);
             std::string word;
             std::vector<std::string> words;
@@ -100,33 +104,66 @@ namespace platypus
                 words.push_back(word);
 
             float lineWidth = parentLayout.padding.x;
-            float spaceWidth = get_text_scale(" ", pFont).x;
+            float spaceWidth = get_char_scale(0x20, pFont).x;
             for (size_t i = 0; i < words.size(); ++i)
             {
-                const std::string& str = words[i];
+                std::string_view str = words[i];
                 Vector2f wordScale = get_text_scale(str, pFont);
                 float wordWidth = wordScale.x;
                 bool lastWord = i == words.size() - 1;
 
+                // If single word goes out of bounds split into 2 words
+                if (parentLayout.padding.x + wordWidth >= parentLayoutWidth)
+                {
+                    const size_t wordSize = str.size();
+                    const char* pWordData = reinterpret_cast<const char*>(str.data());
+                    utf8::iterator charIt(pWordData, pWordData, pWordData + wordSize);
+                    utf8::iterator charEndIt(pWordData + wordSize, pWordData, pWordData + wordSize);
+                    float partialWordWidth = 0.0;
+                    std::string s1;
+                    std::string s2;
+                    while (charIt != charEndIt)
+                    {
+                        uint32_t codepoint = (uint32_t)*charIt;
+                        const float charWidth = get_char_scale(codepoint, pFont).x;
+                        partialWordWidth += charWidth;
+                        if (parentLayout.padding.x + partialWordWidth < parentLayoutWidth)
+                        {
+                            util::str::append_utf8(codepoint, s1);
+                        }
+                        else
+                        {
+                            util::str::append_utf8(codepoint, s2);
+                        }
+                        ++charIt;
+                    }
+                    str = s1;
+                    Vector2f s1Scale = get_text_scale(str, pFont);
+                    wordWidth = s1Scale.x;
+
+                    words.erase(words.begin() + i);
+                    words.insert(words.begin() + i, s1);
+                    words.insert(words.begin() + i + 1, s2);
+                }
                 if (lineWidth + wordWidth >= parentLayoutWidth)
                 {
-                    wrappedText += L'\n';
+                    wrappedText += '\n';
                     lineWidth = parentLayout.padding.x;
                     ++outLineCount;
                 }
 
                 wrappedText += str;
+
                 if (!lastWord)
                 {
                     wordWidth += spaceWidth;
-                    wrappedText += L' ';
+                    wrappedText += ' ';
                 }
                 lineWidth += wordWidth;
                 outMaxLineWidth = std::max(outMaxLineWidth, lineWidth);
             }
             return wrappedText;
         }
-
 
         void set_text(
             UIElement* pTextElement,
@@ -139,7 +176,7 @@ namespace platypus
 
             const Layout& parentLayout = pParentElement->getLayout();
             const Font* pFont = pTextElement->getFont();
-            float charHeight = (float)pFont->getMaxCharHeight();
+            float charHeight = static_cast<float>(pFont->getMaxCharHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
@@ -169,9 +206,23 @@ namespace platypus
             pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
         }
 
-        Vector2f get_text_scale(const std::string& text, const Font* pFont)
+        Vector2f get_char_scale(uint32_t codepoint, const Font* pFont)
         {
-            Vector2f scale(0, (float)pFont->getMaxCharHeight());
+            const FontGlyphData * const pGlyph = pFont->getGlyph(codepoint);
+            if (pGlyph)
+            {
+                return {
+                    static_cast<float>(pGlyph->advance >> 6),
+                    static_cast<float>(pFont->getMaxCharHeight())
+                };
+            }
+            return { 0, 0 };
+        }
+
+        template <typename T>
+        Vector2f get_text_scale(T text, const Font* pFont)
+        {
+            Vector2f scale(0, static_cast<float>(pFont->getMaxCharHeight()));
 
             const size_t textSize = text.size();
             const char* pData = (const char*)text.data();
@@ -189,5 +240,8 @@ namespace platypus
             }
             return scale;
         }
+
+        template Vector2f get_text_scale<const std::string&>(const std::string& text, const Font* pFont);
+        template Vector2f get_text_scale<std::string_view>(std::string_view text, const Font* pFont);
     }
 }
