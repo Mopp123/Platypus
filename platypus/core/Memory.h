@@ -1,40 +1,61 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <set>
 
 
 namespace platypus
 {
+    template <typename T>
     class MemoryPool
     {
     protected:
-        size_t _totalSize = 0;
-        size_t _occupiedSize = 0;
+        size_t _totalLength = 0;
+        size_t _occupiedLength = 0;
+        int32_t _highestOccupiedIndex = -1;
+        int32_t _prevHighestOccupiedIndex = -1;
+
+        // *Why the fuck isn't _pStorage T* instead?!?!
         void* _pStorage = nullptr;
+
+        // Clearing elements from middle stores the free indices here.
+        std::set<size_t> _freeIndices;
 
     public:
         MemoryPool() {}
-        MemoryPool(size_t size);
-        MemoryPool(const MemoryPool& other);
+        MemoryPool(size_t maxLength);
+        MemoryPool(const MemoryPool<T>& other);
         virtual ~MemoryPool();
 
-        // Allocates chunk of size "size" in pool and returns ptr to that
-        void* alloc(size_t size);
-        void* alloc(size_t offset, size_t size);
+        // Occupies and constructs element at index
+        T* occupy(size_t index);
+        // Occupies and constructs element at free index
+        // (uses _freeIndices if exists, at back otherwise)
+        T* occupy();
 
+        // Clears single element at index and calls its' destructor
+        void clearStorage(size_t index);
         // Clears full storage but doesn't resize the actual storage
-        // (sets all data and _occupeidSize to 0)
+        // (calls every object's destructor and sets storage to 0)
         void clearStorage();
-        // Clears storage of specified area
-        void clearStorage(size_t offset, size_t size);
 
         // Calls free for _pStorage and sets it to nullptr
         void freeStorage();
-        void addSpace(size_t newSize);
+        // NOTE: Not sure if this works legally with the updated pool!
+        void addSpace(size_t newLength);
 
-        inline size_t getSize() const { return _occupiedSize; }
-        inline size_t getCapacity() const { return _totalSize; }
+        inline size_t getOccupiedLength() const { return _occupiedLength; }
+        inline size_t getTotalLength() const { return _totalLength; }
+
+        inline size_t getOccupiedSize() const { return _occupiedLength * sizeof(T); }
+        inline size_t getTotalSize() const { return _totalLength * sizeof(T); }
 
         inline void* accessStorage() { return _pStorage; }
+
+    private:
+        // Returns previous occupied index from index
+        // Returns -1 if no previous occupied index found
+        int32_t findPreviousOccupiedIndex(size_t index);
     };
 }
