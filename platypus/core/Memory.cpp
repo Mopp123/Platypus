@@ -9,7 +9,7 @@ namespace platypus
     template <typename T>
     MemoryPool<T>::MemoryPool(size_t maxLength) :
         _totalLength(maxLength),
-        _occupiedLength(0)
+        _occupiedCount(0)
     {
         _pStorage = calloc(_totalLength, sizeof(T));
         memset(_pStorage, 0, getTotalSize());
@@ -19,7 +19,7 @@ namespace platypus
     template <typename T>
     MemoryPool<T>::MemoryPool(const MemoryPool<T>& other) :
         _totalLength(other._totalLength),
-        _occupiedLength(other._occupiedLength),
+        _occupiedCount(other._occupiedCount),
         _pStorage(other._pStorage)
     {
         Debug::log(
@@ -49,14 +49,14 @@ namespace platypus
             return nullptr;
         }
         T* pElement = new (reinterpret_cast<T*>(_pStorage) + index) T;
-        ++_occupiedLength;
+        ++_occupiedCount;
         return pElement;
     }
 
     template <typename T>
     T* MemoryPool<T>::occupy()
     {
-        if (_occupiedLength >= _totalLength)
+        if (_occupiedCount >= _totalLength)
         {
             Debug::log(
                 "Max length(" + std::to_string(_totalLength) + ") exceeded!",
@@ -66,8 +66,8 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        T* pElement = nullptr;
 
+        T* pElement = nullptr;
         if (!_freeIndices.empty())
         {
             size_t index = *_freeIndices.begin();
@@ -79,12 +79,12 @@ namespace platypus
         }
         else
         {
-            // If we ever get here all indices MUST be occupied up until _occupiedLength!
-            pElement = new (reinterpret_cast<T*>(_pStorage) + _occupiedLength) T;
+            // If we ever get here all indices MUST be occupied up until _occupiedCount!
+            pElement = new (reinterpret_cast<T*>(_pStorage) + _occupiedCount) T;
             _prevHighestOccupiedIndex = _highestOccupiedIndex;
-            _highestOccupiedIndex = static_cast<int32_t>(_occupiedLength);
+            _highestOccupiedIndex = static_cast<int32_t>(_occupiedCount);
         }
-        ++_occupiedLength;
+        ++_occupiedCount;
         return pElement;
     }
 
@@ -105,14 +105,8 @@ namespace platypus
             return;
         }
 
-        // If clearing from current "back" pos
-        //  -> decreace _occupiedSize so next allocation will reside
-        //  at the freed "back"
-        if (index == _occupiedLength - 1)
-            --_occupiedLength;
-        else
-            _freeIndices.insert(index);
-
+        // If clearing from somewhere else than back, add to freed indices
+        // so the next occupation can use the free index instead of back
         if (index == static_cast<int32_t>(_highestOccupiedIndex))
         {
             if (_prevHighestOccupiedIndex != -1)
@@ -126,22 +120,25 @@ namespace platypus
                 // If we get here it means there should not be a single occupied index left?
                 _highestOccupiedIndex = -1;
             }
+            _freeIndices.insert(index);
         }
         else if (index == static_cast<int32_t>(_prevHighestOccupiedIndex))
         {
             _prevHighestOccupiedIndex = findPreviousOccupiedIndex(index);
+            _freeIndices.insert(index);
         }
 
         T* ptr = reinterpret_cast<T*>(_pStorage) + index;
         ptr->~T();
         uint8_t* pData = reinterpret_cast<uint8_t*>(_pStorage) + index;
         memset(reinterpret_cast<void*>(pData), 0, sizeof(T));
+        --_occupiedCount;
     }
 
     template <typename T>
     void MemoryPool<T>::clearStorage()
     {
-        if (_occupiedLength == 0)
+        if (_occupiedCount == 0)
         {
             Debug::log(
                 "Pool's occupied length was already 0",
@@ -166,7 +163,7 @@ namespace platypus
         }
 
         memset(_pStorage, 0, getTotalSize());
-        _occupiedLength = 0;
+        _occupiedCount = 0;
     }
 
     template <typename T>
@@ -194,7 +191,7 @@ namespace platypus
         );
 
         _totalLength = 0;
-        _occupiedLength = 0;
+        _occupiedCount = 0;
         _prevHighestOccupiedIndex = -1;
         _highestOccupiedIndex = -1;
     }
@@ -222,6 +219,82 @@ namespace platypus
         free(_pStorage);
         _pStorage = pNewStorage;
         _totalLength = newLength;
+    }
+
+    template <typename T>
+    T* MemoryPool<T>::operator[](size_t index)
+    {
+        #ifdef PLATYPUS_DEBUG
+        if (index >= _highestOccupiedIndex)
+        {
+            Debug::log(
+                "Index: " + std::to_string(index) + " out of bounds of occupied indices!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (_freeIndices.find(index) == _freeIndices.end())
+        {
+            Debug::log(
+                "Element at index " + std::to_string(index) + " was already freed!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        #endif
+
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index;
+        return reinterpret_cast<T*>(ptr);
+    }
+
+    template <typename T>
+    const T* MemoryPool<T>::operator[](size_t index) const
+    {
+        #ifdef PLATYPUS_DEBUG
+        if (index >= _highestOccupiedIndex)
+        {
+            Debug::log(
+                "Index: " + std::to_string(index) + " out of bounds of occupied indices!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (_freeIndices.find(index) == _freeIndices.end())
+        {
+            Debug::log(
+                "Element at index " + std::to_string(index) + " was already freed!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        #endif
+
+        const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_pStorage) + index;
+        return reinterpret_cast<const T*>(ptr);
+    }
+
+    template <typename T>
+    T* MemoryPool<T>::any()
+    {
+        if (_highestOccupiedIndex == -1)
+        {
+            Debug::log(
+                "No occupied elements exist!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return reinterpret_cast<T*>((reinterpret_cast<uint8_t*>(_pStorage) + _highestOccupiedIndex));
     }
 
     template <typename T>

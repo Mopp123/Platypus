@@ -12,7 +12,7 @@ namespace platypus
     {
     protected:
         size_t _totalLength = 0;
-        size_t _occupiedLength = 0;
+        size_t _occupiedCount = 0;
         int32_t _highestOccupiedIndex = -1;
         int32_t _prevHighestOccupiedIndex = -1;
 
@@ -45,13 +45,19 @@ namespace platypus
         // NOTE: Not sure if this works legally with the updated pool!
         void addSpace(size_t newLength);
 
-        inline size_t getOccupiedLength() const { return _occupiedLength; }
+        T* operator[](size_t index);
+        const T* operator[](size_t index) const;
+
+        // *earlier system called this "first".
+        // The "first" was used to find first allocated component of some type
+        // to quickly test stuff...
+        T* any();
+
+        inline size_t getOccupiedCount() const { return _occupiedCount; }
         inline size_t getTotalLength() const { return _totalLength; }
 
-        inline size_t getOccupiedSize() const { return _occupiedLength * sizeof(T); }
+        inline size_t getOccupiedSize() const { return _occupiedCount * sizeof(T); }
         inline size_t getTotalSize() const { return _totalLength * sizeof(T); }
-
-        inline void* accessStorage() { return _pStorage; }
 
     private:
         // Returns previous occupied index from index
