@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Application.h"
 #include "Debug.h"
+#include "platypus/ecs/components/ComponentPool.hpp".h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
@@ -17,62 +18,52 @@ namespace platypus
     {
         size_t maxEntityCount = 10000;
 
-        _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_TRANSFORM,
+        _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = new ComponentPool<Transform>(
             sizeof(Transform),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_GUI_TRANSFORM,
+        _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = new ComponentPool<GUITransform>(
             sizeof(GUITransform),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
+        _componentPools[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = new ComponentPool<Renderable3D>(
             sizeof(Renderable3D),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
+        _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = new ComponentPool<SkeletalAnimation>(
             sizeof(SkeletalAnimation),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+        _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = new ComponentPool<GUIRenderable>(
             sizeof(GUIRenderable),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_CAMERA,
+        _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = new ComponentPool<Camera>(
             sizeof(Camera),
             1,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_LIGHT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_LIGHT,
+        _componentPools[ComponentType::COMPONENT_TYPE_LIGHT] = new ComponentPool<Light>(
             sizeof(Light),
             1,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_PARENT,
+        _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = new ComponentPool<Parent>(
             sizeof(Parent),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_CHILDREN,
+        _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = new ComponentPool<Children>(
             sizeof(Children),
             maxEntityCount,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_JOINT,
+        _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = new ComponentPool<SkeletonJoint>(
             sizeof(SkeletonJoint),
             maxEntityCount,
             true
@@ -85,7 +76,7 @@ namespace platypus
 
     Scene::~Scene()
     {
-        std::unordered_map<ComponentType, ComponentPool>::iterator poolIterator;
+        std::unordered_map<ComponentType, MemoryPool>::iterator poolIterator;
         for (poolIterator = _componentPools.begin(); poolIterator != _componentPools.end(); ++poolIterator)
             poolIterator->second.freeStorage();
 

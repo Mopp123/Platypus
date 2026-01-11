@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "platypus/ecs/Entity.h"
-#include "platypus/ecs/components/ComponentPool.h"
+#include "Memory.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/systems/System.h"
 #include "platypus/utils/Maths.h"
@@ -29,7 +29,8 @@ namespace platypus
         std::vector<Entity> _entities;
 
         std::vector<entityID_t> _freeEntityIDs;
-        std::unordered_map<ComponentType, ComponentPool> _componentPools;
+        // NOTE: I don't like these being heap allocated, but want to get this just working for now...
+        std::unordered_map<ComponentType, MemoryPool*> _componentPools;
 
         entityID_t _activeCameraEntity = NULL_ENTITY_ID;
 
