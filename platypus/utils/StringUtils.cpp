@@ -1,4 +1,5 @@
 #include "StringUtils.hpp"
+#include "platypus/core/Debug.h"
 #include <utf8.h>
 
 
@@ -34,7 +35,23 @@ namespace platypus { namespace util { namespace str {
 
     size_t length_utf8(const std::string& str)
     {
-        return utf8::distance(str.begin(), str.end());
+        size_t length = 0;
+        try
+        {
+            length = utf8::distance(str.begin(), str.end());
+        }
+        catch (const utf8::exception& e)
+        {
+            std::string exceptionStr(e.what());
+            Debug::log(
+                "Failed to find utf8 string length for string " + str + " "
+                "utf8::exception: " + exceptionStr,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return length;
     }
 
     uint32_t get_first_codepoint(const char* pStr, size_t size)

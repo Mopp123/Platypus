@@ -1,4 +1,5 @@
 #include "WaterTestScene.hpp"
+#include "ShadowTestScene.hpp"
 #include <cmath>
 
 using namespace platypus;
@@ -256,4 +257,10 @@ void WaterTestScene::update()
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
     else
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
+
+    InputManager& inputManager = pApp->getInputManager();
+    if (inputManager.isKeyDown(KeyName::KEY_0))
+    {
+        pApp->getSceneManager().assignNextScene(new ShadowTestScene);
+    }
 }

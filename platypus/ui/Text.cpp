@@ -107,7 +107,7 @@ namespace platypus
             float spaceWidth = get_char_scale(0x20, pFont).x;
             for (size_t i = 0; i < words.size(); ++i)
             {
-                std::string_view str = words[i];
+                std::string str = words[i];
                 Vector2f wordScale = get_text_scale(str, pFont);
                 float wordWidth = wordScale.x;
                 bool lastWord = i == words.size() - 1;
@@ -241,6 +241,7 @@ namespace platypus
             return scale;
         }
 
+        template Vector2f get_text_scale<std::string>(std::string text, const Font* pFont);
         template Vector2f get_text_scale<const std::string&>(const std::string& text, const Font* pFont);
         template Vector2f get_text_scale<std::string_view>(std::string_view text, const Font* pFont);
     }

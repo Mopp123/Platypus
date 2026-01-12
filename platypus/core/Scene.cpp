@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Application.h"
 #include "Debug.h"
+#include "platypus/ecs/components/ComponentPool.hpp"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
@@ -15,66 +16,56 @@ namespace platypus
 {
     Scene::Scene()
     {
-        size_t maxEntityCount = 10000;
+        size_t maxPoolLength = 10000;
 
-        _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_TRANSFORM,
+        _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = new ComponentPool<Transform>(
             sizeof(Transform),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_GUI_TRANSFORM,
+        _componentPools[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = new ComponentPool<GUITransform>(
             sizeof(GUITransform),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
+        _componentPools[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = new ComponentPool<Renderable3D>(
             sizeof(Renderable3D),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
+        _componentPools[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = new ComponentPool<SkeletalAnimation>(
             sizeof(SkeletalAnimation),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+        _componentPools[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = new ComponentPool<GUIRenderable>(
             sizeof(GUIRenderable),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_CAMERA,
+        _componentPools[ComponentType::COMPONENT_TYPE_CAMERA] = new ComponentPool<Camera>(
             sizeof(Camera),
             1,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_LIGHT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_LIGHT,
+        _componentPools[ComponentType::COMPONENT_TYPE_LIGHT] = new ComponentPool<Light>(
             sizeof(Light),
             1,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_PARENT,
+        _componentPools[ComponentType::COMPONENT_TYPE_PARENT] = new ComponentPool<Parent>(
             sizeof(Parent),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_CHILDREN,
+        _componentPools[ComponentType::COMPONENT_TYPE_CHILDREN] = new ComponentPool<Children>(
             sizeof(Children),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
-        _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = ComponentPool(
-            ComponentType::COMPONENT_TYPE_JOINT,
+        _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = new ComponentPool<SkeletonJoint>(
             sizeof(SkeletonJoint),
-            maxEntityCount,
+            maxPoolLength,
             true
         );
 
@@ -85,9 +76,9 @@ namespace platypus
 
     Scene::~Scene()
     {
-        std::unordered_map<ComponentType, ComponentPool>::iterator poolIterator;
+        std::unordered_map<ComponentType, MemoryPool*>::iterator poolIterator;
         for (poolIterator = _componentPools.begin(); poolIterator != _componentPools.end(); ++poolIterator)
-            poolIterator->second.freeStorage();
+            poolIterator->second->freeStorage();
 
         _entities.clear();
 
@@ -104,7 +95,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        return _componentPools[componentType].allocComponent(target);
+        return _componentPools[componentType]->occupy(&target);
     }
 
     entityID_t Scene::createEntity()
@@ -180,11 +171,11 @@ namespace platypus
         }
 
         // Destroy/free all this entity's components
-        std::unordered_map<ComponentType, ComponentPool>::iterator poolsIt;
+        std::unordered_map<ComponentType, MemoryPool*>::iterator poolsIt;
         for (poolsIt = _componentPools.begin(); poolsIt != _componentPools.end(); ++poolsIt)
         {
             if (_entities[entityID].componentMask & poolsIt->first)
-                poolsIt->second.destroyComponent(entityID);
+                poolsIt->second->clearStorage(&entityID);
         }
         // Destroy/free entity itself
         _freeEntityIDs.push_back(entityID);
@@ -215,7 +206,7 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        _componentPools[componentType].destroyComponent(entityID);
+        _componentPools[componentType]->clearStorage(&entityID);
         _entities[entityID].componentMask &= ~componentType;
     }
 
@@ -226,7 +217,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        if (_componentPools[type].getComponentCount() == 0)
+        if (_componentPools[type]->getOccupiedCount() == 0)
         {
             if (enableWarning)
             {
@@ -238,7 +229,7 @@ namespace platypus
             }
             return nullptr;
         }
-        return _componentPools[type].first();
+        return _componentPools[type]->any();
     }
 
     const void* Scene::getComponent(ComponentType type, bool enableWarning) const
@@ -248,8 +239,8 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        std::unordered_map<ComponentType, ComponentPool>::const_iterator it = _componentPools.find(type);
-        if (it->second.getComponentCount() == 0)
+        std::unordered_map<ComponentType, MemoryPool*>::const_iterator it = _componentPools.find(type);
+        if (it->second->getOccupiedCount() == 0)
         {
             if (enableWarning)
             {
@@ -261,7 +252,7 @@ namespace platypus
             }
             return nullptr;
         }
-        return it->second.first();
+        return it->second->any();
     }
 
     void* Scene::getComponent(
@@ -289,7 +280,7 @@ namespace platypus
         if ((_entities[entityID].componentMask & (uint64_t)type) == (uint64_t)type)
         {
             // NOTE: Changed to using [] operator, below commented out previous way...
-            return _componentPools[type][entityID];
+            return _componentPools[type]->getElement(&entityID);
             //return (Component*)componentPools[type].getComponent_DANGER(entityID);
         }
         if (!nestedSearch && enableWarning)
@@ -316,7 +307,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        std::unordered_map<ComponentType, ComponentPool>::const_iterator poolIt = _componentPools.find(type);
+        std::unordered_map<ComponentType, MemoryPool*>::const_iterator poolIt = _componentPools.find(type);
         if (poolIt == _componentPools.end())
         {
             Debug::log(
@@ -330,7 +321,7 @@ namespace platypus
         if ((_entities[entityID].componentMask & (uint64_t)type) == (uint64_t)type)
         {
             // NOTE: Changed to using [] operator, below commented out previous way...
-            return poolIt->second[entityID];
+            return poolIt->second->getElement(&entityID);
             //return (Component*)componentPools[type].getComponent_DANGER(entityID);
         }
         if (!nestedSearch && enableWarning)
