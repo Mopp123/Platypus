@@ -42,7 +42,7 @@ namespace platypus
                 );
             }
 
-            Layout layout = parentLayout;
+            Layout layout;
             // NOTE: If word wrapping, this scale isn't really usable for anything, since
             // it's just w*h rect and doesn't hold info about specific line sizes...
             //  -> if want to have some text mouse over, this can't be used for anything
@@ -55,6 +55,8 @@ namespace platypus
                 pFont->getTextureID(),
                 pFont->getID(),
                 color,
+                { 0, 0, 0, 0 }, // border color
+                0.0f, // border thickness
                 { 0, 0 }, // texture offset
                 0, // layer
                 true, // isText?

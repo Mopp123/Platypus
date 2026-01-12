@@ -161,6 +161,8 @@ namespace platypus
                     layout.color
                 );
                 pRenderable->textureID = textureID;
+                pRenderable->borderColor = layout.borderColor;
+                pRenderable->borderThickness = static_cast<float>(layout.borderThickness);
             }
 
             UIElement* pElement = new UIElement(

@@ -83,6 +83,9 @@ namespace platypus
             std::vector<Layout> children;
 
             WordWrap wordWrap = WordWrap::NONE;
+
+            Vector4f borderColor = Vector4f(0, 0, 0, 0);
+            uint32_t borderThickness = 0;
         };
 
         class LayoutUI;

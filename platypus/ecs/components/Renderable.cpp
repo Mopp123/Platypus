@@ -67,6 +67,8 @@ namespace platypus
         ID_t textureID,
         ID_t fontID,
         Vector4f color,
+        Vector4f borderColor,
+        float borderThickness,
         Vector2f textureOffset,
         uint32_t layer,
         bool isText,
@@ -96,6 +98,8 @@ namespace platypus
         pRenderable->textureID = textureID;
         pRenderable->fontID = fontID;
         pRenderable->color = color;
+        pRenderable->borderColor = borderColor;
+        pRenderable->borderThickness = borderThickness;
         pRenderable->textureOffset = textureOffset;
         pRenderable->layer = layer;
 
@@ -129,6 +133,8 @@ namespace platypus
             NULL_ID,
             NULL_ID,
             color,
+            { 0, 0, 0, 0 }, // border color
+            0.0f, // border thickness
             { 0, 0 },
             0,
             false,
@@ -145,7 +151,9 @@ namespace platypus
             target,
             textureID,
             NULL_ID,
-            { 1, 1, 1, 1 },
+            { 1, 1, 1, 1 }, // color
+            { 0, 0, 0, 0 }, // border color
+            0.0f, // border thickness
             { 0, 0 },
             0,
             false,

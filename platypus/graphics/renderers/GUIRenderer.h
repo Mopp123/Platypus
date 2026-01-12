@@ -38,9 +38,12 @@ namespace platypus
         // Per instance
         struct GUIRenderData
         {
+            // xy = position, zw = scale
             Vector4f translation = Vector4f(0, 0, 1, 1);
             Vector2f textureOffset = Vector2f(0, 0);
             Vector4f color = Vector4f(1, 1, 1, 1);
+            Vector4f borderColor = Vector4f(1, 1, 1, 1);
+            float borderThickness = 0.0f; // Not sure if this single float will cause problems?
         };
 
         /*

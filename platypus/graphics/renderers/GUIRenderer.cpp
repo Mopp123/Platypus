@@ -50,9 +50,11 @@ namespace platypus
                 },
                 {
                     {
-                        { 1, ShaderDataType::Float4 },
-                        { 2, ShaderDataType::Float2 },
-                        { 3, ShaderDataType::Float4 }
+                        { 1, ShaderDataType::Float4 }, // translation
+                        { 2, ShaderDataType::Float2 }, // texture offset
+                        { 3, ShaderDataType::Float4 }, // color
+                        { 4, ShaderDataType::Float4 }, // border color
+                        { 5, ShaderDataType::Float }, // border thickness
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                     1
@@ -86,9 +88,11 @@ namespace platypus
                 },
                 {
                     {
-                        { 1, ShaderDataType::Float4 },
-                        { 2, ShaderDataType::Float2 },
-                        { 3, ShaderDataType::Float4 }
+                        { 1, ShaderDataType::Float4 }, // translation
+                        { 2, ShaderDataType::Float2 }, // texture offset
+                        { 3, ShaderDataType::Float4 }, // color
+                        { 4, ShaderDataType::Float4 }, // border color
+                        { 5, ShaderDataType::Float }, // border thickness
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                     1
@@ -496,7 +500,9 @@ namespace platypus
                 pTransform->scale.y
             },
             pRenderable->textureOffset,
-            pRenderable->color
+            pRenderable->color,
+            pRenderable->borderColor,
+            pRenderable->borderThickness
         };
         batchData.pInstancedBuffer->updateHost(
             (void*)(&renderData),
@@ -515,6 +521,9 @@ namespace platypus
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         const Font* pFont = (const Font*)pAssetManager->getAsset(pRenderable->fontID, AssetType::ASSET_TYPE_FONT);
         const std::unordered_map<uint32_t, FontGlyphData>& glyphMapping = pFont->getGlyphMapping();
+
+        const Vector4f& borderColor = pRenderable->borderColor;
+        const float borderThickness = pRenderable->borderThickness;
 
         const float originalX = pTransform->position.x;
         float posX = originalX;
@@ -572,7 +581,9 @@ namespace platypus
                         (float)(int)charWidth, (float)(int)charHeight,
                     },
                     { (float)glyphData.textureOffsetX, (float)glyphData.textureOffsetY },
-                    pRenderable->color
+                    pRenderable->color,
+                    borderColor,
+                    borderThickness
                 };
                 batchData.pInstancedBuffer->updateHost(
                     (void*)(&renderData),

@@ -2,6 +2,10 @@
 
 layout(location = 0) in vec2 var_texCoord;
 layout(location = 1) in vec4 var_color;
+layout(location = 2) in vec2 var_pos;
+layout(location = 3) in vec2 var_scale;
+layout(location = 4) in vec4 var_borderColor;
+layout(location = 5) in float var_borderThickness;
 
 layout(set = 0, binding = 0) uniform sampler2D textureSampler;
 
