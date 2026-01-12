@@ -27,7 +27,7 @@ touch $out_file
 echo "#pragma once" >> $out_file
 echo '' >> $out_file
 find $src_dir -type f -print0 | while read -d $'\0' file; do
-    if [[ $file != *"platform"* ]] && [[ $file == *.h ]] && [[ $file != *"Platypus.h" ]]
+    if [[ $file != *"platform"* ]] && [[ ( $file == *.h || $file == *.hpp ) ]] && [[ $file != *"Platypus.h" ]]
     then
         echo "#include \"$(realpath -s --relative-to="$src_dir" "$file")\"" >> $out_file
     fi

@@ -121,15 +121,25 @@ namespace platypus
         inline uint64_t getRequiredComponentsMask() const { return _requiredComponentsMask; }
 
     private:
-        int findExistingBatchIndex(uint32_t layer, ID_t textureID);
-
-        int findFreeBatchIndex();
+        // requiredBatchDataElements is the amount elements required to fit into the batch (NOT size in bytes!)
+        // For plain images its always 1 but for text it varies ()
+        //  -> This is to make sure that a string can fit into the batch
+        // NOTE: by providing requiredBatchDataElements = 0, you can just probe does batche exist
+        // without intention of adding to it!
+        int findExistingBatchIndex(
+            uint32_t layer,
+            ID_t textureID,
+            size_t requiredBatchDataElements
+        ) const;
+        int findFreeBatchIndex(size_t requiredBatchDataElements) const;
 
         void addToImageBatch(
             BatchData& batchData,
             const GUIRenderable* pRenderable,
             const GUITransform* pTransform
         );
+        // NOTE: You need to make sure that the string can fit into the batch before calling this!
+        // (Done guaranteed by findExistingBatchIndex and findFreeBatchIndex)
         void addToFontBatch(
             BatchData& batchData,
             const GUIRenderable* pRenderable,

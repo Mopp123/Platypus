@@ -50,6 +50,7 @@ void BaseScene::initBase()
         { {0, 1, 0}, 0.0f },
         { 1, 1, 1 }
     );
+
     int windowSurfaceWidth = 0;
     int windowSurfaceHeight = 0;
     Application::get_instance()->getWindow().getSurfaceExtent(

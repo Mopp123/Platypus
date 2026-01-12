@@ -31,6 +31,7 @@ include_directories(
     "dependencies/json"
     "dependencies/tinygltf"
     "dependencies/freetype/include"
+    "dependencies/utfcpp"
 )
 
 file(GLOB SRC_FILES

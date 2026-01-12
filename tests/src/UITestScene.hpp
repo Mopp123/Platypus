@@ -7,7 +7,7 @@ class UITestScene : public BaseScene
 private:
     platypus::ui::LayoutUI _ui;
 
-    std::wstring _inputStr;
+    std::string _inputStr;
     platypus::ui::UIElement* _pInputBoxElement = nullptr; // parent of _pInputTextElement
     platypus::ui::UIElement* _pInputTextElement = nullptr;
 
@@ -26,7 +26,7 @@ private:
     );
 
     void createTextBox(
-        const std::wstring& txt,
+        const std::string& txt,
         const platypus::Vector2f& pos,
         const platypus::Vector2f& scale,
         const platypus::Vector4f& color,

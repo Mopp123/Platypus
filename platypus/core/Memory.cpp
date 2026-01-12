@@ -1,28 +1,53 @@
 #include "Memory.h"
 #include <cstring>
 #include <cstdlib>
+#include <limits>
 #include "Debug.h"
-#include "platypus/Common.h"
 
 
 namespace platypus
 {
-     MemoryPool::MemoryPool(size_t capacity) :
-        _totalSize(capacity),
-        _occupiedSize(0)
+    MemoryPool::MemoryPool(
+        size_t elementSize,
+        size_t maxLength,
+        bool allowResize,
+        MemoryPoolResizeType resizeType
+    ) :
+        _elementSize(elementSize),
+        _totalLength(maxLength),
+        _occupiedCount(0),
+        _allowResize(allowResize),
+        _resizeType(resizeType)
     {
-        _pStorage = calloc(_totalSize, 1);
-        memset(_pStorage, 0, _totalSize);
+        // Some member funcs returns either valid index or -1 to the allocated space.
+        // int32_t is atm used, so length can't exceed max value of int32_t
+        constexpr int32_t maxInt32_t{std::numeric_limits<int32_t>::max()};
+        if (maxLength > maxInt32_t)
+        {
+            Debug::log(
+                "Pool length can't exceed maximum value of int32_t(" + std::to_string(maxInt32_t) + ". "
+                "Requested length was " + std::to_string(maxLength),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        _pStorage = calloc(_totalLength, _elementSize);
+        memset(_pStorage, 0, getTotalSize());
     }
 
     // NOTE: Don't remember why I allowed copying?
     MemoryPool::MemoryPool(const MemoryPool& other) :
-        _totalSize(other._totalSize),
-        _occupiedSize(other._occupiedSize),
+        _elementSize(other._elementSize),
+        _totalLength(other._totalLength),
+        _occupiedCount(other._occupiedCount),
+        _allowResize(other._allowResize),
+        _resizeType(other._resizeType),
         _pStorage(other._pStorage)
     {
         Debug::log(
             "Copied memory pool!",
+            PLATYPUS_CURRENT_FUNC_NAME,
             Debug::MessageType::PLATYPUS_WARNING
         );
         PLATYPUS_ASSERT(false);
@@ -32,86 +57,349 @@ namespace platypus
     {
     }
 
-    void* MemoryPool::alloc(size_t size)
+    void* MemoryPool::occupy(void* pUserData)
     {
-        if (_occupiedSize + size > _totalSize)
+        if (_occupiedCount >= _totalLength)
         {
-            Debug::log(
-                "@MemoryPool::alloc(1) Capacity exceeded!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
+            if (!_allowResize)
+            {
+                Debug::log(
+                    "Pool was full and resizing wasn't enabled",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return nullptr;
+            }
+            size_t newLength = _totalLength + 1;
+            if (_resizeType == MemoryPoolResizeType::DOUBLE)
+                newLength = _totalLength * 2;
+
+            addSpace(newLength);
         }
-        void* ptr = ((PE_byte*)_pStorage) + _occupiedSize;
-        _occupiedSize += size;
-        return ptr;
-    }
 
-    void* MemoryPool::alloc(size_t offset, size_t size)
-    {
-        if (offset + size > _totalSize)
+        void* pElement = nullptr;
+        size_t occupyIndex = 0;
+        if (!_freeIndices.empty())
         {
-            Debug::log(
-                "@MemoryPool::alloc(2) Capacity exceeded!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
+            occupyIndex = *_freeIndices.begin();
+            uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + occupyIndex * _elementSize;
+            pElement = reinterpret_cast<void*>(ptr);
+            _freeIndices.erase(occupyIndex);
+            int32_t signedIndex = static_cast<int32_t>(occupyIndex);
+            if (signedIndex > _prevHighestOccupiedIndex)
+                _prevHighestOccupiedIndex = signedIndex;
         }
-        void* ptr = ((PE_byte*)_pStorage) + offset;
-        _occupiedSize += size;
-        return ptr;
+        else
+        {
+            // If we ever get here all indices MUST be occupied up until _occupiedCount!
+            occupyIndex = _occupiedCount;
+            uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + occupyIndex * _elementSize;
+            pElement = reinterpret_cast<void*>(ptr);
+            _prevHighestOccupiedIndex = _highestOccupiedIndex;
+            _highestOccupiedIndex = static_cast<int32_t>(occupyIndex);
+        }
+        constructElement(occupyIndex, pElement, pUserData);
+        ++_occupiedCount;
+        return pElement;
     }
 
-    void MemoryPool::clearStorage()
+    void MemoryPool::clearStorage(size_t index, void* pUserData)
     {
-        memset(_pStorage, 0, _totalSize);
-        _occupiedSize = 0;
-    }
-
-    void MemoryPool::clearStorage(size_t offset, size_t size)
-    {
-        // If clearing from current "back" pos
-        //  -> decreace _occupiedSize so next allocation will reside
-        //  at the freed "back"
-        if (offset + size  == _occupiedSize)
-            _occupiedSize -= size;
-        memset(((PE_byte*)_pStorage) + offset, 0, size);
-    }
-
-    void MemoryPool::freeStorage()
-    {
-        free(_pStorage);
-        _pStorage = nullptr;
-
-        Debug::log(
-            "@MemoryPool::freeStorage freed " + std::to_string(_totalSize)
-        );
-
-        _totalSize = 0;
-        _occupiedSize = 0;
-    }
-
-    void MemoryPool::addSpace(size_t newSize)
-    {
-        if (newSize < _totalSize)
+        if (index >= _totalLength)
         {
             Debug::log(
-                "@MemoryPool::addSpace newSize was less than current size",
+                "Index: " + std::to_string(index) + " out of bounds! "
+                "Total allocated elements: " + std::to_string(_totalLength) + " "
+                "total allocated size: " + std::to_string(getTotalSize()) + " "
+                "element size: " + std::to_string(_elementSize),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return;
         }
 
-        void* pNewStorage = calloc(newSize, 1);
-        memset(pNewStorage, 0, newSize);
+        // If clearing from somewhere else than back, add to freed indices
+        // so the next occupation can use the free index instead of back
+        if (index == static_cast<int32_t>(_highestOccupiedIndex))
+        {
+            if (_prevHighestOccupiedIndex != -1)
+            {
+                _highestOccupiedIndex = _prevHighestOccupiedIndex;
+                if (_highestOccupiedIndex != -1)
+                    _prevHighestOccupiedIndex = findPreviousOccupiedIndex(_highestOccupiedIndex);
+            }
+            else
+            {
+                // If we get here it means there should not be a single occupied index left?
+                _highestOccupiedIndex = -1;
+            }
+            _freeIndices.insert(index);
+        }
+        else if (index == static_cast<int32_t>(_prevHighestOccupiedIndex))
+        {
+            _prevHighestOccupiedIndex = findPreviousOccupiedIndex(index);
+            _freeIndices.insert(index);
+        }
 
-        memcpy(pNewStorage, _pStorage, _totalSize);
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index;
+        void* voidPtr = reinterpret_cast<void*>(ptr);
+        destroyElement(index, voidPtr, pUserData);
+        memset(voidPtr, 0, _elementSize);
+        --_occupiedCount;
+    }
+
+    void MemoryPool::clearStorage(void* pUserData)
+    {
+        int32_t signedIndex = userDataToIndex(pUserData);
+        if (signedIndex == -1)
+        {
+            Debug::log(
+                "Failed to convert pUserData to pool index",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        size_t index = static_cast<size_t>(signedIndex);
+        if (index >= _totalLength)
+        {
+            Debug::log(
+                "Index: " + std::to_string(index) + " out of bounds! "
+                "Total allocated elements: " + std::to_string(_totalLength) + " "
+                "total allocated size: " + std::to_string(getTotalSize()) + " "
+                "element size: " + std::to_string(_elementSize),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        // If clearing from somewhere else than back, add to freed indices
+        // so the next occupation can use the free index instead of back
+        if (index == static_cast<int32_t>(_highestOccupiedIndex))
+        {
+            if (_prevHighestOccupiedIndex != -1)
+            {
+                _highestOccupiedIndex = _prevHighestOccupiedIndex;
+                if (_highestOccupiedIndex != -1)
+                    _prevHighestOccupiedIndex = findPreviousOccupiedIndex(_highestOccupiedIndex);
+            }
+            else
+            {
+                // If we get here it means there should not be a single occupied index left?
+                _highestOccupiedIndex = -1;
+            }
+            _freeIndices.insert(index);
+        }
+        else if (index == static_cast<int32_t>(_prevHighestOccupiedIndex))
+        {
+            _prevHighestOccupiedIndex = findPreviousOccupiedIndex(index);
+            _freeIndices.insert(index);
+        }
+
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index;
+        void* voidPtr = reinterpret_cast<void*>(ptr);
+        destroyElement(index, voidPtr, pUserData);
+        memset(voidPtr, 0, _elementSize);
+        --_occupiedCount;
+    }
+
+    void MemoryPool::clearStorage()
+    {
+        if (_occupiedCount == 0)
+        {
+            Debug::log(
+                "Pool's occupied length was already 0",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        if (_highestOccupiedIndex != -1)
+        {
+            size_t lastIndex = static_cast<size_t>(_highestOccupiedIndex);
+            for (size_t index = 0; index < lastIndex; ++index)
+            {
+                if (_freeIndices.find(index) == _freeIndices.end())
+                {
+                    uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
+                    destroyElement(index, reinterpret_cast<void*>(ptr), nullptr);
+                }
+            }
+        }
+
+        onClearFullStorage();
+        memset(_pStorage, 0, getTotalSize());
+        _occupiedCount = 0;
+    }
+
+    void MemoryPool::freeStorage()
+    {
+        if (_highestOccupiedIndex != -1)
+        {
+            size_t lastIndex = static_cast<size_t>(_highestOccupiedIndex);
+            for (size_t index = 0; index < lastIndex; ++index)
+            {
+                if (_freeIndices.find(index) == _freeIndices.end())
+                {
+                    uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
+                    destroyElement(index, reinterpret_cast<void*>(ptr), nullptr);
+                }
+            }
+        }
+
+        onFreeStorage();
 
         free(_pStorage);
+        _pStorage = nullptr;
+
+        Debug::log(
+            "Freed " + std::to_string(getTotalSize()) + " bytes",
+            PLATYPUS_CURRENT_FUNC_NAME
+        );
+
+        _elementSize = 0;
+        _totalLength = 0;
+        _occupiedCount = 0;
+        _prevHighestOccupiedIndex = -1;
+        _highestOccupiedIndex = -1;
+    }
+
+    // NOTE: Not sure if this works legally with the updated pool!
+    void MemoryPool::addSpace(size_t newLength)
+    {
+        if (newLength < _totalLength)
+        {
+            Debug::log(
+                "New length: " + std::to_string(newLength) + " was less "
+                "than current length: " + std::to_string(_totalLength),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        size_t newSize = newLength * _elementSize;
+        void* pNewStorage = calloc(newLength, _elementSize);
+        memset(pNewStorage, 0, newSize);
+        memcpy(pNewStorage, _pStorage, getTotalSize());
+        free(_pStorage);
         _pStorage = pNewStorage;
-        _totalSize = newSize;
+        _totalLength = newLength;
+    }
+
+    void* MemoryPool::getElement(void* pUserData)
+    {
+        int32_t signedIndex = userDataToIndex(pUserData);
+        if (signedIndex == -1)
+            return nullptr;
+
+        size_t index = static_cast<int32_t>(signedIndex);
+        #ifdef PLATYPUS_DEBUG
+        if (index > _highestOccupiedIndex)
+        {
+            Debug::log(
+                "Index: " + std::to_string(index) + " out of bounds of occupied indices!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (_freeIndices.find(index) != _freeIndices.end())
+        {
+            Debug::log(
+                "Element at index " + std::to_string(index) + " was already freed!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        #endif
+
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
+        return reinterpret_cast<void*>(ptr);
+    }
+
+    const void* MemoryPool::getElement(void* pUserData) const
+    {
+        int32_t signedIndex = userDataToIndex(pUserData);
+        if (signedIndex == -1)
+            return nullptr;
+
+        size_t index = static_cast<int32_t>(signedIndex);
+        #ifdef PLATYPUS_DEBUG
+        if (index > _highestOccupiedIndex)
+        {
+            Debug::log(
+                "Index: " + std::to_string(index) + " out of bounds of occupied indices!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (_freeIndices.find(index) != _freeIndices.end())
+        {
+            Debug::log(
+                "Element at index " + std::to_string(index) + " was already freed!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        #endif
+
+        const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_pStorage) + index * _elementSize;
+        return reinterpret_cast<const void*>(ptr);
+    }
+
+    void* MemoryPool::any()
+    {
+        if (_highestOccupiedIndex == -1)
+        {
+            Debug::log(
+                "No occupied elements exist!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return reinterpret_cast<void*>(
+            (reinterpret_cast<uint8_t*>(_pStorage) + _highestOccupiedIndex * _elementSize)
+        );
+    }
+
+    int32_t MemoryPool::findPreviousOccupiedIndex(size_t index)
+    {
+        if (index > _totalLength)
+        {
+            Debug::log(
+                "Index " + std::to_string(index) + " "
+                "exceeded max length of " + std::to_string(_totalLength),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+
+        for (size_t currentIndex = index - 1; currentIndex >= 0; ++currentIndex)
+        {
+            if (_freeIndices.find(currentIndex) == _freeIndices.end())
+                return currentIndex;
+        }
+        return -1;
     }
 }

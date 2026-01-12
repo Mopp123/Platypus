@@ -398,7 +398,7 @@ namespace platypus
             );
         }
 
-        trim_spaces(blockName);
+        util::str::trim_spaces(blockName);
 
         uint32_t blockIndex = glGetUniformBlockIndex(_id, blockName.c_str());
         if (blockIndex == GL_INVALID_INDEX)

@@ -24,9 +24,11 @@ namespace platypus
         Vector4f color = Vector4f(1, 1, 1, 1);
         Vector2f textureOffset = Vector2f(0, 0);
         uint32_t layer = 0;
+
+        bool isText = false;
         // NOTE: Warning when initially allocating from component pool!
         // -> needs to be explicitly resized to have any space!
-        std::wstring text;
+        std::string text;
     };
 
     Renderable3D* create_renderable3D(
@@ -42,7 +44,8 @@ namespace platypus
         Vector4f color,
         Vector2f textureOffset,
         uint32_t layer,
-        std::wstring text
+        bool isText,
+        std::string text
     );
 
     GUIRenderable* create_gui_renderable(

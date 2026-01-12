@@ -1,7 +1,7 @@
 #include "SkinnedMeshTestScene.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
-#include "MaterialTestScene.hpp"
+#include "WaterTestScene.hpp"
 #include <string>
 
 
@@ -154,7 +154,7 @@ void SkinnedMeshTestScene::init()
     );
     Model* pBoxModel = pAssetManager->loadStaticModel("assets/TestCube.glb");
 
-    int area = 2;
+    int area = 4;
     float spacing = 3.25f;
 
     for (int x = 0; x < area; ++x)
@@ -242,11 +242,14 @@ void SkinnedMeshTestScene::update()
     _camController.update();
 
     InputManager& inputManager = Application::get_instance()->getInputManager();
-    if (inputManager.isKeyDown(KeyName::KEY_0))
-        Application::get_instance()->getSceneManager().assignNextScene(new MaterialTestScene);
 
     if (inputManager.isKeyDown(KeyName::KEY_R))
         change_animation(this, _rootJointEntities, _pRunAnimationAsset);
     else if (inputManager.isKeyDown(KeyName::KEY_T))
         change_animation(this, _rootJointEntities, _pIdleAnimationAsset);
+
+    if (inputManager.isKeyDown(KeyName::KEY_0))
+    {
+        Application::get_instance()->getSceneManager().assignNextScene(new WaterTestScene);
+    }
 }
