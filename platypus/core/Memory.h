@@ -7,6 +7,12 @@
 
 namespace platypus
 {
+    enum class MemoryPoolResizeType
+    {
+        INCREMENT,
+        DOUBLE
+    };
+
     class MemoryPool
     {
     protected:
@@ -16,6 +22,9 @@ namespace platypus
         int32_t _highestOccupiedIndex = -1;
         int32_t _prevHighestOccupiedIndex = -1;
 
+        bool _allowResize = false;
+        MemoryPoolResizeType _resizeType = MemoryPoolResizeType::INCREMENT;
+
         // *Why the fuck isn't _pStorage T* instead?!?!
         void* _pStorage = nullptr;
 
@@ -24,7 +33,12 @@ namespace platypus
 
     public:
         MemoryPool() {}
-        MemoryPool(size_t elementSize, size_t maxLength);
+        MemoryPool(
+            size_t elementSize,
+            size_t maxLength,
+            bool allowResize,
+            MemoryPoolResizeType resizeType = MemoryPoolResizeType::INCREMENT
+        );
         MemoryPool(const MemoryPool& other);
         virtual ~MemoryPool();
 
@@ -33,12 +47,6 @@ namespace platypus
         virtual void destroyElement(size_t index, void* pData, void* pUserData) = 0;
         virtual void onClearFullStorage() = 0;
         virtual void onFreeStorage() = 0;
-        virtual void* onStorageFull();
-
-        // NOTE: Shouldn't really even be used!?
-        // Occupies and constructs element at index.
-        // Returns ptr to the constructed element
-        //void* occupy(size_t index);
 
         // Occupies and constructs element at first found free index.
         // Returns ptr to the constructed element
@@ -47,6 +55,7 @@ namespace platypus
         void* occupy(void* pUserData);
 
         // Clears single element at index and calls its' destructor
+        // *pUserData can be used to convert from some data type into pool index using userDataToIndex
         void clearStorage(size_t index, void* pUserData);
         void clearStorage(void* pUserData);
 
@@ -60,6 +69,7 @@ namespace platypus
         // NOTE: Not sure if this works legally with the updated pool!
         void addSpace(size_t newLength);
 
+        // *requiers userDataToIndex impl
         void* getElement(void* pUserData);
         const void* getElement(void* pUserData) const;
 

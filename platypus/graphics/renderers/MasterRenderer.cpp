@@ -21,7 +21,7 @@ namespace platypus
             _descriptorPool,
             1000, // max static batch len
             1000, // max static instanced batch len
-            1600,  // max skinned batch len
+            500,  // max skinned batch len
             50 // max skinned mesh joints
         ),
 

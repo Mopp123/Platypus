@@ -7,10 +7,17 @@
 
 namespace platypus
 {
-    MemoryPool::MemoryPool(size_t elementSize, size_t maxLength) :
+    MemoryPool::MemoryPool(
+        size_t elementSize,
+        size_t maxLength,
+        bool allowResize,
+        MemoryPoolResizeType resizeType
+    ) :
         _elementSize(elementSize),
         _totalLength(maxLength),
-        _occupiedCount(0)
+        _occupiedCount(0),
+        _allowResize(allowResize),
+        _resizeType(resizeType)
     {
         // Some member funcs returns either valid index or -1 to the allocated space.
         // int32_t is atm used, so length can't exceed max value of int32_t
@@ -34,6 +41,8 @@ namespace platypus
         _elementSize(other._elementSize),
         _totalLength(other._totalLength),
         _occupiedCount(other._occupiedCount),
+        _allowResize(other._allowResize),
+        _resizeType(other._resizeType),
         _pStorage(other._pStorage)
     {
         Debug::log(
@@ -48,44 +57,25 @@ namespace platypus
     {
     }
 
-    void* MemoryPool::onStorageFull()
-    {
-        Debug::log(
-            "Max length(" + std::to_string(_totalLength) + ") exceeded!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return nullptr;
-    }
-
-    /*
-    void* MemoryPool::occupy(size_t index)
-    {
-        if (index >= _totalLength)
-        {
-            Debug::log(
-                "Index " + std::to_string(index) + " "
-                "exceeded max length of " + std::to_string(_totalLength),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
-        }
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
-        void* voidPtr = reinterpret_cast<void*>(ptr);
-        constructElement(voidPtr);
-        ++_occupiedCount;
-        return voidPtr;
-    }
-    */
-
     void* MemoryPool::occupy(void* pUserData)
     {
         if (_occupiedCount >= _totalLength)
         {
-            return onStorageFull();
+            if (!_allowResize)
+            {
+                Debug::log(
+                    "Pool was full and resizing wasn't enabled",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return nullptr;
+            }
+            size_t newLength = _totalLength + 1;
+            if (_resizeType == MemoryPoolResizeType::DOUBLE)
+                newLength = _totalLength * 2;
+
+            addSpace(newLength);
         }
 
         void* pElement = nullptr;

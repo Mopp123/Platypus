@@ -253,8 +253,10 @@ namespace platypus
             if (batchIndex == -1)
             {
                 Debug::log(
-                    "@GUIRenderer::submit "
-                    "No free batches found!",
+                    "No free batches found! "
+                    "Required batch elements: " + std::to_string(requiredBatchElements) + " "
+                    "max batch length: " + std::to_string(s_maxBatchLength),
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 return;
@@ -266,8 +268,8 @@ namespace platypus
                 ))
             {
                 Debug::log(
-                    "@GUIRenderer::submit "
                     "Failed to occupy batch!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 return;
