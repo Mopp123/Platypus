@@ -223,7 +223,7 @@ namespace platypus
             Debug::log("        type: " + deviceTypeStr);
             Debug::log("        api version: " + std::to_string(properties.apiVersion));
 
-            if (is_device_adequate(physicalDevice, surface, requiredExtensions))
+            if (is_device_adequate(physicalDevice, surface, requiredExtensions) && properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
                 Debug::log("Picked device: " + deviceNameStr);
                 outMinUniformBufferOffsetAlignment = properties.limits.minUniformBufferOffsetAlignment;

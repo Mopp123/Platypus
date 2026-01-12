@@ -28,10 +28,12 @@ namespace platypus
         MemoryPool(const MemoryPool& other);
         virtual ~MemoryPool();
 
+        virtual int32_t userDataToIndex(void* pUserData) const = 0;
         virtual void constructElement(size_t index, void* pData, void* pUserData) = 0;
         virtual void destroyElement(size_t index, void* pData, void* pUserData) = 0;
         virtual void onClearFullStorage() = 0;
         virtual void onFreeStorage() = 0;
+        virtual void* onStorageFull();
 
         // NOTE: Shouldn't really even be used!?
         // Occupies and constructs element at index.
@@ -46,6 +48,8 @@ namespace platypus
 
         // Clears single element at index and calls its' destructor
         void clearStorage(size_t index, void* pUserData);
+        void clearStorage(void* pUserData);
+
         // Clears full storage but doesn't resize the actual storage
         // (calls every object's destructor and sets storage to 0)
         void clearStorage();
@@ -56,8 +60,8 @@ namespace platypus
         // NOTE: Not sure if this works legally with the updated pool!
         void addSpace(size_t newLength);
 
-        void* operator[](size_t index);
-        const void* operator[](size_t index) const;
+        void* getElement(void* pUserData);
+        const void* getElement(void* pUserData) const;
 
         // *earlier system called this "first".
         // The "first" was used to find first allocated component of some type

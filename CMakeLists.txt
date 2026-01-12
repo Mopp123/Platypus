@@ -16,11 +16,10 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(
-    -Wall -g
+    -Wall -O3
 )
 
 add_compile_definitions(
-    PLATYPUS_DEBUG=1
     PLATYPUS_BUILD_DESKTOP=1
 )
 

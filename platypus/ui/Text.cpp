@@ -241,6 +241,7 @@ namespace platypus
             return scale;
         }
 
+        template Vector2f get_text_scale<std::string>(std::string text, const Font* pFont);
         template Vector2f get_text_scale<const std::string&>(const std::string& text, const Font* pFont);
         template Vector2f get_text_scale<std::string_view>(std::string_view text, const Font* pFont);
     }

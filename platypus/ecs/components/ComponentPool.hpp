@@ -26,9 +26,13 @@ namespace platypus
         ComponentPool(const ComponentPool& other);
         ~ComponentPool();
 
+        virtual int32_t userDataToIndex(void* pUserData) const;
         virtual void constructElement(size_t index, void* pData, void* pUserData);
         virtual void destroyElement(size_t index, void* pData, void* pUserData);
         virtual void onClearFullStorage();
         virtual void onFreeStorage();
+
+    NOTE: RATHER MAKE RESIZING HAPPEN VIA MemoryPool, NOT HERE!
+        virtual void* onStorageFull() override;
     };
 }

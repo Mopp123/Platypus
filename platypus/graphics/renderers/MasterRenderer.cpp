@@ -16,7 +16,14 @@ namespace platypus
     MasterRenderer::MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat) :
         _swapchainRef(swapchain),
         _descriptorPool(_swapchainRef),
-        _batcher(*this, _descriptorPool, 1000, 1000, 500, 50),
+        _batcher(
+            *this,
+            _descriptorPool,
+            1000, // max static batch len
+            1000, // max static instanced batch len
+            1600,  // max skinned batch len
+            50 // max skinned mesh joints
+        ),
 
         _scene3DDataDescriptorSetLayout(
             {
@@ -240,7 +247,9 @@ namespace platypus
         }
 
         if ((entity.componentMask & _pGUIRenderer->getRequiredComponentsMask()) == _pGUIRenderer->getRequiredComponentsMask())
+        {
             _pGUIRenderer->submit(pScene, entity.id);
+        }
     }
 
     void MasterRenderer::render(const Window& window)
@@ -600,8 +609,30 @@ namespace platypus
         Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
         Matrix4f viewMatrix = Matrix4f(1.0f);
 
-        Camera* pCamera = (Camera*)pScene->getComponent(ComponentType::COMPONENT_TYPE_CAMERA);
-        Transform* pCameraTransform = (Transform*)pScene->getComponent(ComponentType::COMPONENT_TYPE_TRANSFORM);
+        entityID_t activeCamera = pScene->getActiveCameraEntity();
+        if (activeCamera == NULL_ENTITY_ID)
+        {
+            Debug::log(
+                "No active camera assigned for the scene!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+            return _primaryCommandBuffers[_currentFrame];
+        }
+
+        Camera* pCamera = reinterpret_cast<Camera*>(
+            pScene->getComponent(
+                activeCamera,
+                ComponentType::COMPONENT_TYPE_CAMERA
+            )
+        );
+        Transform* pCameraTransform = reinterpret_cast<Transform*>(
+            pScene->getComponent(
+                activeCamera,
+                ComponentType::COMPONENT_TYPE_TRANSFORM
+            )
+        );
+
         Vector4f cameraPosition;
         if (pCamera)
         {

@@ -178,7 +178,7 @@ void ShadowTestScene::init()
     SkeletalAnimationData* pAnimationAsset1 = pAssetManager->createSkeletalAnimation(animations[0]);
     SkeletalAnimationData* pAnimationAsset2 = pAssetManager->createSkeletalAnimation(animations[1]);
 
-    int area = 2;
+    int area = 40;
     float spacing = 3.0f;
     float startX = 20.0f;
     float startZ = 20.0f;
