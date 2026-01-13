@@ -7,7 +7,7 @@
 
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/RenderCommand.hpp"
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"

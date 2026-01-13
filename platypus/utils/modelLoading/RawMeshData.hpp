@@ -1,8 +1,8 @@
 #pragma once
 
 #include "platypus/graphics/Buffers.hpp"
-#include "platypus/utils/Maths.h"
-#include "platypus/utils/AnimationDataUtils.h"
+#include "platypus/utils/Maths.hpp"
+#include "platypus/utils/AnimationDataUtils.hpp"
 #include "platypus/Common.h"
 #include <vector>
 

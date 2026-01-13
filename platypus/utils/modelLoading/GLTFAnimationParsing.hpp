@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/utils/AnimationDataUtils.h"
+#include "platypus/utils/AnimationDataUtils.hpp"
 #include <unordered_map>
 
 

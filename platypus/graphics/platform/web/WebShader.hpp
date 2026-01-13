@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platypus/graphics/Shader.hpp"
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "platypus/graphics/Buffers.hpp"
 #include <string>
 #include <vector>

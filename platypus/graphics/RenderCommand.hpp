@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "CommandBuffer.hpp"
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"

@@ -1,4 +1,4 @@
-#include "GLTFFileUtils.h"
+#include "GLTFFileUtils.hpp"
 #include <tiny_gltf.h>
 #include "platypus/core/Debug.hpp"
 

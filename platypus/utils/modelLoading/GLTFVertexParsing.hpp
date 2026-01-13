@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platypus/graphics/Buffers.hpp"
-#include "RawMeshData.h"
+#include "RawMeshData.hpp"
 
 
 // Nasty shit to be able to use here...

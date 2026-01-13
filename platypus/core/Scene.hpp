@@ -4,7 +4,7 @@
 #include "Memory.hpp"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/systems/System.hpp"
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 
 #include <unordered_map>
 #include <vector>

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "platypus/ecs/Entity.hpp"
-#include "platypus/utils/Maths.h"
-#include "platypus/utils/ID.h"
+#include "platypus/utils/Maths.hpp"
+#include "platypus/utils/ID.hpp"
 
 
 namespace platypus

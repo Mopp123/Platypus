@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
 #include <string>
 

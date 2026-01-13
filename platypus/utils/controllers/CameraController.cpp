@@ -1,4 +1,4 @@
-#include "CameraController.h"
+#include "CameraController.hpp"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Timing.hpp"

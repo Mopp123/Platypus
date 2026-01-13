@@ -2,7 +2,7 @@
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Transform.h"
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 

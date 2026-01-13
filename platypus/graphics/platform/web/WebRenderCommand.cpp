@@ -10,10 +10,10 @@
 #include "WebShader.hpp"
 #include "platypus/assets/Texture.hpp"
 #include "platypus/assets/platform/web/WebTexture.hpp"
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "platypus/Common.h"
 #include "platypus/core/Application.hpp"
-#include "platypus/graphics/renderers/MasterRenderer.h"
+#include "platypus/graphics/renderers/MasterRenderer.hpp"
 #include <GL/glew.h>
 
 

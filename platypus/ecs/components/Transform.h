@@ -1,8 +1,8 @@
 #pragma once
 
-#include "platypus/utils/Maths.h"
+#include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
-#include "platypus/utils/AnimationDataUtils.h"
+#include "platypus/utils/AnimationDataUtils.hpp"
 #include <vector>
 
 #define PLATYPUS_MAX_CHILD_ENTITIES 10

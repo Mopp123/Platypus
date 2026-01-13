@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Asset.hpp"
-#include "platypus/utils/AnimationDataUtils.h"
+#include "platypus/utils/AnimationDataUtils.hpp"
 
 
 namespace platypus

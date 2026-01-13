@@ -1,5 +1,5 @@
-#include "GLTFAnimationParsing.h"
-#include "GLTFFileUtils.h"
+#include "GLTFAnimationParsing.hpp"
+#include "GLTFFileUtils.hpp"
 #include "platypus/Common.h"
 #include "platypus/core/Debug.hpp"
 

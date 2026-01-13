@@ -1,7 +1,7 @@
 #pragma once
 
-#include "platypus/utils/AnimationDataUtils.h"
-#include "RawMeshData.h"
+#include "platypus/utils/AnimationDataUtils.hpp"
+#include "RawMeshData.hpp"
 #include <vector>
 #include <string>
 

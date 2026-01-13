@@ -1,7 +1,6 @@
 #pragma once
 
 #include "platypus/Platypus.h"
-#include "platypus/utils/Maths.h"
 
 
 class BaseScene : public platypus::Scene
