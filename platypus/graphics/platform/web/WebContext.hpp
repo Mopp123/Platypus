@@ -2,10 +2,10 @@
 
 #include <emscripten/html5.h>
 #include "platypus/graphics/Buffers.hpp"
-#include "platypus/graphics/Shader.hpp"
 #include "platypus/core/Debug.hpp"
 #include <unordered_map>
 #include <set>
+#include <GL/glew.h>
 
 #ifdef PLATYPUS_DEBUG
     #define GL_FUNC(func)	func;																				\

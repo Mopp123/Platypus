@@ -417,7 +417,7 @@ namespace platypus
                 pFragmentShader,
                 CullMode::CULL_MODE_BACK, // TODO: Cull plz?
                 FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-                true, // Enable depth test
+                false, // Enable depth test
                 false, // enable depth write
                 DepthCompareOperation::COMPARE_OP_LESS_OR_EQUAL,
                 false, // Enable color blend NOTE: Might actually be required atm

@@ -219,6 +219,7 @@ void ShadowTestScene::init()
         framebufferDebugTextureSampler
     );
 
+    /*
     _framebufferDebugEntity = createEntity();
     create_gui_transform(
         _framebufferDebugEntity,
@@ -230,6 +231,7 @@ void ShadowTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment()->getID()
     );
+    */
 }
 
 void ShadowTestScene::update()
@@ -283,6 +285,7 @@ void ShadowTestScene::update()
         }
     }
 
+    /*
     GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
         _framebufferDebugEntity,
         ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
@@ -294,6 +297,7 @@ void ShadowTestScene::update()
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
     else
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
+    */
 
 
     if (inputManager.isKeyDown(KeyName::KEY_0))

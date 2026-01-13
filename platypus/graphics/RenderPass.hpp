@@ -40,7 +40,11 @@ namespace platypus
         RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE = 0x1,
         RENDER_PASS_ATTACHMENT_USAGE_COLOR_CONTINUE = 0x1 << 1,
         RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE = 0x1 << 2,
-        RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE = 0x1 << 3
+        RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE = 0x1 << 3,
+
+        // Used to prevent depth writing on web impl
+        // (need to call glDepthMask before glClear which happens when beginning the render pass)
+        RENDER_PASS_ATTACHMENT_USAGE_READ_ONLY_DEPTH = 0x1 << 4
     };
 
     enum RenderPassAttachmentClearFlagBits
@@ -92,5 +96,18 @@ namespace platypus
         inline uint32_t getAttachmentUsageFlags() const { return _attachmentUsageFlags; }
         inline uint32_t getAttachmentClearFlags() const { return _attachmentClearFlags; }
         inline const RenderPassImpl* getImpl() const { return _pImpl; }
+        inline bool usesDepthAttachment() const
+        {
+            return static_cast<bool>(
+                (_attachmentUsageFlags & RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE) ||
+                (_attachmentUsageFlags & RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE)
+            );
+        }
+        inline bool writesDepth() const
+        {
+            return (!(_attachmentUsageFlags & RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_READ_ONLY_DEPTH) &&
+                usesDepthAttachment()
+            );
+        }
     };
 }

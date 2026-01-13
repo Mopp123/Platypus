@@ -80,17 +80,14 @@ namespace platypus
 
                     const int32_t framebufferWidth = (int32_t)pFramebuffer->getWidth();
                     const int32_t framebufferHeight = (int32_t)pFramebuffer->getHeight();
-                    glBlitFramebuffer(
-                        0, 0,
-                        framebufferWidth, framebufferHeight,
-                        0, 0,
-                        framebufferWidth, framebufferHeight,
-                        GL_DEPTH_BUFFER_BIT,
-                        GL_NEAREST
-                    );
+                    GL_FUNC(glBlitFramebuffer(0, 0, framebufferWidth, framebufferHeight, 0, 0, framebufferWidth, framebufferHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST));
 
-                    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                    // NOTE: glBindFramebuffer(GL_FRAMEBUFFER, target)
+                    // sets the GL_READ_FRAMEBUFFER and GL_DRAW_FRAMEBUFFER to target
+                    //  -> unnecessary to unbind and bind GL_FRAMEBUFFER again immediately...
+                    //  TODO: do something about this!
+                    GL_FUNC(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
+                    GL_FUNC(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
                 }
 
                 GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, pFramebufferImpl->id));
@@ -100,6 +97,17 @@ namespace platypus
                 GL_FUNC(glBindFramebuffer(GL_FRAMEBUFFER, 0));
             }
 
+            // IMPORTANT: call glDepthMask before glClear!
+            // ...Wasted embarrassing amount of time figuring out issue relating to this!
+            if (renderPass.writesDepth())
+            {
+                GL_FUNC(glDepthMask(GL_TRUE));
+            }
+            else
+            {
+                GL_FUNC(glDepthMask(GL_FALSE));
+            }
+
             uint32_t clearBits = 0;
             if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR)
             {
@@ -107,10 +115,14 @@ namespace platypus
                 clearBits |= GL_COLOR_BUFFER_BIT;
             }
             if (renderPass.getAttachmentClearFlags() & RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH)
+            {
                 clearBits |= GL_DEPTH_BUFFER_BIT;
+            }
 
             if (clearBits)
+            {
                 GL_FUNC(glClear(clearBits));
+            }
         }
 
         void end_render_pass(
@@ -133,7 +145,7 @@ namespace platypus
         )
         {
             PipelineImpl* pPipelineImpl = pipeline.getImpl();
-            ((CommandBufferImpl*)commandBuffer.getImpl())->pBoundPipeline = &pipeline;
+            commandBuffer.getImpl()->pBoundPipeline = &pipeline;
 
             // Testing getting rid of UniformInfos
             // Reset useLocationIndex from "prev round"
@@ -152,15 +164,6 @@ namespace platypus
             else
             {
                 GL_FUNC(glDisable(GL_DEPTH_TEST));
-            }
-
-            if (pipeline.isDepthWriteEnabled())
-            {
-                GL_FUNC(glDepthMask(GL_TRUE));
-            }
-            else
-            {
-                GL_FUNC(glDepthMask(GL_FALSE));
             }
 
             switch(pipeline.getDepthCompareOperation())

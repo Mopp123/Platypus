@@ -3,6 +3,10 @@ precision mediump float;
 
 in vec2 var_texCoord;
 in vec4 var_color;
+in vec2 var_pos;
+in vec2 var_scale;
+in vec4 var_borderColor;
+in float var_borderThickness;
 
 uniform sampler2D textureSampler;
 

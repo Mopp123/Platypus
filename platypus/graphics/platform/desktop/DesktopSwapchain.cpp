@@ -204,6 +204,7 @@ namespace platypus
         )[0];
     }
 
+    // TODO: Delete!
     static void create_framebuffers(
         const std::vector<Texture*>& colorTextures,
         Texture* pDepthTexture,
@@ -317,10 +318,8 @@ namespace platypus
         _renderPass(
             RenderPassType::SCREEN_PASS,
             false,
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE |
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
-            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR |
-            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE,
+            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR
         )
     {
         _pImpl = new SwapchainImpl;
@@ -429,6 +428,8 @@ namespace platypus
             _colorTextures
         );
 
+        // NOTE: Currently doing all 3D stuff offscreen so don't need depth buffer for swapchain!
+        /*
         create_depth_texture(
             device,
             pDeviceImpl->physicalDevice,
@@ -437,7 +438,6 @@ namespace platypus
             &_pDepthImage,
             &_pDepthTexture
         );
-
         _renderPass.create(_colorImages[0]->getFormat(), _pDepthImage->getFormat());
 
         create_framebuffers(
@@ -447,6 +447,21 @@ namespace platypus
             selectedExtent,
             _framebuffers
         );
+        */
+
+        _renderPass.create(_colorImages[0]->getFormat(), ImageFormat::NONE);
+
+        for (Texture* pColorTexture : _colorTextures)
+        {
+            Framebuffer* pFramebuffer = new Framebuffer(
+                _renderPass,
+                { pColorTexture },
+                nullptr,
+                selectedExtent.width,
+                selectedExtent.height
+            );
+            _framebuffers.push_back(pFramebuffer);
+        }
 
         create_sync_objects(
             device,
@@ -486,8 +501,9 @@ namespace platypus
         for (Image* pColorImage : _colorImages)
             delete pColorImage;
 
-        delete _pDepthTexture;
-        delete _pDepthImage;
+        // NOTE: Currently doing all 3D stuff offscreen so don't need depth buffer for swapchain!
+        //delete _pDepthTexture;
+        //delete _pDepthImage;
 
         _colorTextures.clear();
         _colorImages.clear();

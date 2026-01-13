@@ -103,9 +103,9 @@ namespace platypus
         Pipeline* pPipeline = nullptr;
         ~BatchPipelineData()
         {
+            delete pPipeline; // IMPORTANT! Pipeline needs to be destroyed before the associated shaders (web impl detaches shaders from "program" in pipeline's destructor)
             delete pVertexShader;
             delete pFragmentShader;
-            delete pPipeline;
         }
     };
 
