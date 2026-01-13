@@ -1,11 +1,11 @@
-#include "TransformSystem.h"
+#include "TransformSystem.hpp"
 
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 
 #include "platypus/assets/AssetManager.hpp"
-#include "platypus/ecs/Entity.h"
+#include "platypus/ecs/Entity.hpp"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
 

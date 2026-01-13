@@ -2,7 +2,6 @@
 
 #include "platypus/Platypus.h"
 #include "BaseScene.hpp"
-#include "platypus/ecs/Entity.h"
 
 
 class ShadowTestScene : public BaseScene

@@ -3,7 +3,7 @@
 #include "platypus/core/Memory.hpp"
 #include "platypus/core/Debug.hpp"
 
-#include "platypus/ecs/Entity.h"
+#include "platypus/ecs/Entity.hpp"
 
 #include <cstring>
 #include <unordered_map>

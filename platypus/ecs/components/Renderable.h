@@ -2,7 +2,7 @@
 
 #include "platypus/utils/ID.h"
 #include "platypus/utils/Maths.h"
-#include "platypus/ecs/Entity.h"
+#include "platypus/ecs/Entity.hpp"
 #include <string>
 
 

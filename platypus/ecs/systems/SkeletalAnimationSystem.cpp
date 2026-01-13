@@ -1,4 +1,4 @@
-#include "SkeletalAnimationSystem.h"
+#include "SkeletalAnimationSystem.hpp"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
 #include "platypus/core/Scene.hpp"

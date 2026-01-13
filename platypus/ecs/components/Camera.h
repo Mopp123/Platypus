@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platypus/utils/Maths.h"
-#include "platypus/ecs/Entity.h"
+#include "platypus/ecs/Entity.hpp"
 
 
 namespace platypus

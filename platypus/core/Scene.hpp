@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "platypus/ecs/Entity.h"
+#include "platypus/ecs/Entity.hpp"
 #include "Memory.hpp"
 #include "platypus/ecs/components/Component.h"
-#include "platypus/ecs/systems/System.h"
+#include "platypus/ecs/systems/System.hpp"
 #include "platypus/utils/Maths.h"
 
 #include <unordered_map>

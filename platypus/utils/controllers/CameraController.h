@@ -2,7 +2,7 @@
 
 #include "platypus/utils/Maths.h"
 #include "platypus/core/InputEvent.hpp"
-#include "platypus/ecs/Entity.h"
+#include "platypus/ecs/Entity.hpp"
 
 
 namespace platypus

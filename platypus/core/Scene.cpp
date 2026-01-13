@@ -7,8 +7,8 @@
 #include "platypus/ecs/components/SkeletalAnimation.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"
-#include "platypus/ecs/systems/SkeletalAnimationSystem.h"
-#include "platypus/ecs/systems/TransformSystem.h"
+#include "platypus/ecs/systems/SkeletalAnimationSystem.hpp"
+#include "platypus/ecs/systems/TransformSystem.hpp"
 #include "platypus/ecs/systems/LightSystem.hpp"
 
 
