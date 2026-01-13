@@ -2,7 +2,7 @@
 
 #include "platypus/ecs/Entity.hpp"
 #include "Memory.hpp"
-#include "platypus/ecs/components/Component.h"
+#include "platypus/ecs/components/Component.hpp"
 #include "platypus/ecs/systems/System.hpp"
 #include "platypus/utils/Maths.hpp"
 

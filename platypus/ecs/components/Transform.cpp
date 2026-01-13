@@ -1,6 +1,6 @@
-#include "Transform.h"
+#include "Transform.hpp"
 #include "platypus/core/Application.hpp"
-#include "SkeletalAnimation.h"
+#include "SkeletalAnimation.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 

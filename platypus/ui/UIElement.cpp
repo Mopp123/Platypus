@@ -1,7 +1,7 @@
 #include "UIElement.hpp"
 #include "LayoutUI.hpp"
-#include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/Renderable.h"
+#include "platypus/ecs/components/Transform.hpp"
+#include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/core/Application.hpp"
 
 

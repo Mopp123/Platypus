@@ -1,7 +1,4 @@
 #include "ShadowTestScene.hpp"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/ecs/components/Transform.h"
-
 #include "SkinnedMeshTestScene.hpp"
 
 

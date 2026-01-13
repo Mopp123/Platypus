@@ -1,5 +1,5 @@
 #include "CameraController.hpp"
-#include "platypus/ecs/components/Transform.h"
+#include "platypus/ecs/components/Transform.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Timing.hpp"
 #include "platypus/core/Debug.hpp"

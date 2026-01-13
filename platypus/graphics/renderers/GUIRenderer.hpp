@@ -7,8 +7,8 @@
 #include "platypus/graphics/Descriptors.hpp"
 #include "platypus/graphics/Pipeline.hpp"
 #include "platypus/graphics/Shader.hpp"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/ecs/components/Transform.h"
+#include "platypus/ecs/components/Renderable.hpp"
+#include "platypus/ecs/components/Transform.hpp"
 #include <cstdlib>
 #include <map>
 

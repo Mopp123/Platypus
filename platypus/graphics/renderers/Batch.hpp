@@ -5,7 +5,7 @@
 #include "platypus/graphics/Buffers.hpp"
 #include "platypus/graphics/RenderPass.hpp"
 #include "platypus/assets/Mesh.hpp"
-#include "platypus/ecs/components/Lights.h"
+#include "platypus/ecs/components/Lights.hpp"
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...

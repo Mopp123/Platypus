@@ -8,10 +8,10 @@
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/RenderCommand.hpp"
 #include "platypus/utils/Maths.hpp"
-#include "platypus/ecs/components/Camera.h"
-#include "platypus/ecs/components/Lights.h"
-#include "platypus/ecs/components/Component.h"
-#include "platypus/ecs/components/SkeletalAnimation.h"
+#include "platypus/ecs/components/Camera.hpp"
+#include "platypus/ecs/components/Lights.hpp"
+#include "platypus/ecs/components/Component.hpp"
+#include "platypus/ecs/components/SkeletalAnimation.hpp"
 
 
 namespace platypus

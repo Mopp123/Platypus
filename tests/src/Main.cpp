@@ -1,4 +1,4 @@
-#include "UITestScene.hpp"
+#include "WaterTestScene.hpp"
 
 
 int main(int argc, const char** argv)
@@ -14,7 +14,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new UITestScene
+        new WaterTestScene
     );
     app.run();
     return 0;

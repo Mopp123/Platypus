@@ -1,5 +1,4 @@
 #include "BaseScene.hpp"
-#include "platypus/ecs/components/Renderable.h"
 
 using namespace platypus;
 

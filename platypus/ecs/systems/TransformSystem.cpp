@@ -6,8 +6,8 @@
 
 #include "platypus/assets/AssetManager.hpp"
 #include "platypus/ecs/Entity.hpp"
-#include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/SkeletalAnimation.h"
+#include "platypus/ecs/components/Transform.hpp"
+#include "platypus/ecs/components/SkeletalAnimation.hpp"
 
 
 namespace platypus

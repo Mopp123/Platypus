@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "Camera.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"

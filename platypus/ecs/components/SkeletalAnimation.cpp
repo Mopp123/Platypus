@@ -1,4 +1,4 @@
-#include "SkeletalAnimation.h"
+#include "SkeletalAnimation.hpp"
 #include "platypus/assets/SkeletalAnimationData.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"

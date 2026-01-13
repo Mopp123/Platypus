@@ -1,6 +1,6 @@
 #include "SkeletalAnimationSystem.hpp"
-#include "platypus/ecs/components/Component.h"
-#include "platypus/ecs/components/SkeletalAnimation.h"
+#include "platypus/ecs/components/Component.hpp"
+#include "platypus/ecs/components/SkeletalAnimation.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Timing.hpp"
 
