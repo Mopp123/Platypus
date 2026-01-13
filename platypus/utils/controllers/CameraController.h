@@ -1,11 +1,8 @@
 #pragma once
 
 #include "platypus/utils/Maths.h"
-#include "platypus/core/Scene.h"
+#include "platypus/core/InputEvent.hpp"
 #include "platypus/ecs/Entity.h"
-#include "platypus/ecs/components/Transform.h"
-
-#include "platypus/core/InputEvent.h"
 
 
 namespace platypus

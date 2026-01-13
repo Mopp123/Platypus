@@ -3,9 +3,9 @@
 #include "DesktopBuffers.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
-#include "DesktopContext.hpp"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+
+#include "platypus/core/Debug.hpp"
+
 #include <cstring>
 #include <vulkan/vk_enum_string_helper.h>
 

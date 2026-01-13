@@ -3,7 +3,7 @@
 #include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/web/WebTexture.h"
 #include "WebContext.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <GL/glew.h>
 
 #include <unordered_map>

@@ -1,11 +1,12 @@
 #pragma once
 
 #include "platypus/utils/Maths.h"
-#include "platypus/core/Scene.h"
+
+#include "platypus/core/Scene.hpp"
+#include "platypus/core/InputEvent.hpp"
+
 #include "platypus/ecs/Entity.h"
 #include "platypus/assets/Font.h"
-#include "platypus/core/InputManager.h"
-#include "platypus/core/InputEvent.h"
 #include <vector>
 
 

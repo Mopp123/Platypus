@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "platypus/ecs/Entity.h"
-#include "Memory.h"
+#include "Memory.hpp"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/systems/System.h"
 #include "platypus/utils/Maths.h"

@@ -2,9 +2,11 @@
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderCommand.h"
-#include "platypus/core/Application.h"
 #include "platypus/utils/StringUtils.hpp"
-#include "platypus/core/Debug.h"
+
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
+
 #include <cstring>
 #include <stdexcept>
 #include <utf8.h>

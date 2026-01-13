@@ -1,4 +1,4 @@
-#include "Timing.h"
+#include "Timing.hpp"
 
 
 namespace platypus

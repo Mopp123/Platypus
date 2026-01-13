@@ -1,7 +1,7 @@
 #include "PostProcessingRenderer.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/RenderCommand.h"
-#include "platypus/core/Application.h"
+#include "platypus/core/Application.hpp"
 
 
 namespace platypus

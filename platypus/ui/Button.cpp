@@ -1,6 +1,6 @@
 #include "Button.h"
 #include "Text.h"
-#include "platypus/core/Application.h"
+#include "platypus/core/Application.hpp"
 
 
 namespace platypus

@@ -7,9 +7,10 @@
 #include <cstring>
 #include <set>
 
-#include "platypus/core/Debug.h"
-#include "platypus/Common.h"
+#include "platypus/core/Debug.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
+
+#include "platypus/Common.h"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/platform/desktop/DesktopSwapchain.h"
 #include "platypus/graphics/CommandBuffer.h"

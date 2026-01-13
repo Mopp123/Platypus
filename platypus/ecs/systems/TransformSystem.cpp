@@ -1,11 +1,13 @@
 #include "TransformSystem.h"
-#include "platypus/core/Scene.h"
-#include "platypus/core/Application.h"
+
+#include "platypus/core/Scene.hpp"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
+
 #include "platypus/assets/AssetManager.h"
 #include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "platypus/core/Debug.h"
 
 
 namespace platypus

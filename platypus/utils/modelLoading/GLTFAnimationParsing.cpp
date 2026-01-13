@@ -1,7 +1,7 @@
 #include "GLTFAnimationParsing.h"
 #include "GLTFFileUtils.h"
 #include "platypus/Common.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 
 #include <tiny_gltf.h>
 #include <unordered_map>

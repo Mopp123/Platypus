@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "platypus/core/Scene.h"
+#include "platypus/core/Scene.hpp"
 #include "platypus/graphics/CommandBuffer.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/Descriptors.h"

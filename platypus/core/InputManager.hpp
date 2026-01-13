@@ -1,6 +1,6 @@
 #pragma once
 
-#include "InputEvent.h"
+#include "InputEvent.hpp"
 #include "platypus/core/Window.hpp"
 #include <unordered_map>
 #include <vector>

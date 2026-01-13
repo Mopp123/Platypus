@@ -1,5 +1,5 @@
 #include "DesktopDescriptors.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include "DesktopShader.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"

@@ -1,9 +1,8 @@
 #include "SkeletalAnimationSystem.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "platypus/core/Application.h"
-#include "platypus/core/Timing.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Scene.hpp"
+#include "platypus/core/Timing.hpp"
 
 
 namespace platypus

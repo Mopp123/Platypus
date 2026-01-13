@@ -4,7 +4,7 @@
 #include "CommandBuffer.h"
 #include "Swapchain.h"
 #include "platypus/assets/Image.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <algorithm>
 
 

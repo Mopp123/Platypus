@@ -1,10 +1,9 @@
 #pragma once
 
 #include "platypus/utils/Maths.h"
-#include "platypus/core/Scene.h"
+#include "platypus/core/Scene.hpp"
 #include "UIElement.h"
 #include <vector>
-#include <string>
 
 /*
     Issues with prev UI systems:

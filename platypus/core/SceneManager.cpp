@@ -1,7 +1,7 @@
-#include "SceneManager.h"
-#include "Application.h"
+#include "SceneManager.hpp"
+#include "Application.hpp"
+#include "Debug.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "Debug.h"
 
 
 namespace platypus

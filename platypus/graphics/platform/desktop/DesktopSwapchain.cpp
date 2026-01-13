@@ -4,7 +4,7 @@
 #include "DesktopDevice.hpp"
 #include "DesktopContext.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
 #include <algorithm>

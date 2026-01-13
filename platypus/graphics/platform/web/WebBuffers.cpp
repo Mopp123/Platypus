@@ -1,6 +1,6 @@
 #include "platypus/graphics/Buffers.h"
 #include "WebBuffers.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include "platypus/graphics/Context.hpp"
 #include "WebContext.hpp"
 #include "platypus/Common.h"

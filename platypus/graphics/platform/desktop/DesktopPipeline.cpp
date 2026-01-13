@@ -6,8 +6,7 @@
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "platypus/graphics/Context.hpp"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include "DesktopRenderPass.h"
 #include "DesktopDescriptors.h"
 #include <vulkan/vulkan.h>

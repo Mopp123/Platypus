@@ -1,4 +1,4 @@
-﻿#include "Debug.h"
+﻿#include "Debug.hpp"
 #include <iostream>
 
 #ifdef PLATYPUS_BUILD_WEB

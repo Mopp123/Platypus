@@ -1,7 +1,7 @@
-#include "Application.h"
+#include "Application.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "Debug.h"
-#include "Timing.h"
+#include "Debug.hpp"
+#include "Timing.hpp"
 
 #include <chrono>
 

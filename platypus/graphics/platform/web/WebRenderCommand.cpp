@@ -12,7 +12,7 @@
 #include "platypus/assets/platform/web/WebTexture.h"
 #include "platypus/utils/Maths.h"
 #include "platypus/Common.h"
-#include "platypus/core/Application.h"
+#include "platypus/core/Application.hpp"
 #include "platypus/graphics/renderers/MasterRenderer.h"
 #include <GL/glew.h>
 

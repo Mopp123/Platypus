@@ -1,6 +1,6 @@
 #include "platypus/graphics/Descriptors.h"
 #include "WebDescriptors.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus

@@ -1,9 +1,9 @@
-#include "Scene.h"
-#include "Application.h"
-#include "Debug.h"
+#include "Scene.hpp"
+#include "Application.hpp"
+#include "Debug.hpp"
+
 #include "platypus/ecs/components/ComponentPool.hpp"
 #include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"

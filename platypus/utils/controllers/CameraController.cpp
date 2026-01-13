@@ -1,9 +1,8 @@
 #include "CameraController.h"
 #include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/Camera.h"
-#include "platypus/core/Application.h"
-#include "platypus/core/Timing.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Timing.hpp"
+#include "platypus/core/Debug.hpp"
 #include <cmath>
 
 

@@ -1,8 +1,8 @@
 #include "Transform.h"
-#include "platypus/core/Application.h"
+#include "platypus/core/Application.hpp"
 #include "SkeletalAnimation.h"
-#include "platypus/core/Scene.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Scene.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus

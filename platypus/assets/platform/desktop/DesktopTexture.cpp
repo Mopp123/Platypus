@@ -9,7 +9,7 @@
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
 #include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 #include <cmath>
 #include <vulkan/vulkan_core.h>

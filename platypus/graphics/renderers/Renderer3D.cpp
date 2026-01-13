@@ -2,7 +2,7 @@
 #include "MasterRenderer.h"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/RenderCommand.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus

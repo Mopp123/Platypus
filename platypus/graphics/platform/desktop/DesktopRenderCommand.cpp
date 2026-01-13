@@ -8,7 +8,7 @@
 #include "DesktopDescriptors.h"
 #include "platypus/assets/Texture.h"
 #include "platypus/assets/platform/desktop/DesktopTexture.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 

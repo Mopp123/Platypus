@@ -1,8 +1,8 @@
-#include "platypus/core/InputEvent.h"
-#include "platypus/core/InputManager.h"
-#include "platypus/core/Application.h"
+#include "platypus/core/InputEvent.hpp"
+#include "platypus/core/InputManager.hpp"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 #include "platypus/utils/StringUtils.hpp"
-#include "platypus/core/Debug.h"
 
 #include <emscripten.h>
 #include <emscripten/em_types.h>

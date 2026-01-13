@@ -1,5 +1,5 @@
 #include "Image.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <cstring>
 
 // NOTE: When starting to use tinygltf we probably need to define STB_IMAGE_IMPLEMENTATION in the file

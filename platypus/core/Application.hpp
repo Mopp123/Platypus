@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Window.hpp"
-#include "InputManager.h"
+#include "InputManager.hpp"
 #include "platypus/graphics/Context.hpp"
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/renderers/MasterRenderer.h"
-#include "SceneManager.h"
+#include "SceneManager.hpp"
 #include "platypus/assets/AssetManager.h"
 
 

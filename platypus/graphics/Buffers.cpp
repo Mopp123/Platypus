@@ -1,6 +1,6 @@
 #include "Buffers.h"
 #include "Device.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include "platypus/Common.h"
 #include <cstring>
 

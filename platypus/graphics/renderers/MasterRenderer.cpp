@@ -1,6 +1,10 @@
 #include "MasterRenderer.h"
 #include "platypus/assets/Texture.h"
-#include "platypus/core/Application.h"
+
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Timing.hpp"
+#include "platypus/core/Debug.hpp"
+
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/RenderCommand.h"
 #include "platypus/utils/Maths.h"
@@ -8,8 +12,7 @@
 #include "platypus/ecs/components/Lights.h"
 #include "platypus/ecs/components/Component.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"
-#include "platypus/core/Timing.h"
-#include "platypus/core/Debug.h"
+
 
 namespace platypus
 {

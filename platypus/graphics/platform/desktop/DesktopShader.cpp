@@ -2,7 +2,7 @@
 #include "platypus/graphics/Device.hpp"
 #include "DesktopShader.h"
 #include "DesktopDevice.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include "platypus/utils/FileUtils.h"
 #include <vulkan/vk_enum_string_helper.h>
 

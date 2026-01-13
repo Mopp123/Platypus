@@ -1,7 +1,7 @@
 #include "platypus/assets/Texture.h"
 #include "WebTexture.h"
 #include "platypus/graphics/platform/web/WebContext.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 
 #include <GL/glew.h>
 #include <GL/glext.h>

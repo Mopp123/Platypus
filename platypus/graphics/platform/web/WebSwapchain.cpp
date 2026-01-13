@@ -1,5 +1,5 @@
 #include "platypus/graphics/Swapchain.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus

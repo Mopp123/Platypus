@@ -1,6 +1,6 @@
 #include "Batch.hpp"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus

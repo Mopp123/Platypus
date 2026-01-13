@@ -1,5 +1,5 @@
 #include "ModelLoading.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <unordered_map>
 
 // NOTE: GLTFVertexParsing and GLTFSkeletonParsing includes tinygltf as well

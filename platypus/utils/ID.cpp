@@ -2,7 +2,7 @@
 #include <time.h>
 #include <cstdlib>
 #include <cstring>
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus
