@@ -1,5 +1,5 @@
-#include "UIElement.h"
-#include "LayoutUI.h"
+#include "UIElement.hpp"
+#include "LayoutUI.hpp"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/core/Application.hpp"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "UIElement.h"
-#include "LayoutUI.h"
+#include "UIElement.hpp"
+#include "LayoutUI.hpp"
 
 
 namespace platypus

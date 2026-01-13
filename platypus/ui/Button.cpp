@@ -1,5 +1,5 @@
-#include "Button.h"
-#include "Text.h"
+#include "Button.hpp"
+#include "Text.hpp"
 #include "platypus/core/Application.hpp"
 
 

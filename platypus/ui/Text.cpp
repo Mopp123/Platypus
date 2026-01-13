@@ -1,4 +1,4 @@
-#include "Text.h"
+#include "Text.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/ecs/components/Renderable.h"

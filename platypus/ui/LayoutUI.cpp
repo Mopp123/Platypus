@@ -1,4 +1,4 @@
-#include "LayoutUI.h"
+#include "LayoutUI.hpp"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/core/Application.hpp"
 
