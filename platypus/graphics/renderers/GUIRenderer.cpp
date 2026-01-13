@@ -1,7 +1,7 @@
-#include "GUIRenderer.h"
+#include "GUIRenderer.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/RenderCommand.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/RenderCommand.hpp"
 #include "platypus/utils/StringUtils.hpp"
 
 #include "platypus/core/Application.hpp"

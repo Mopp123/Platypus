@@ -3,8 +3,8 @@
 #include "Asset.hpp"
 #include "Texture.hpp"
 #include "Mesh.hpp"
-#include "platypus/graphics/Descriptors.h"
-#include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/Descriptors.hpp"
+#include "platypus/graphics/Pipeline.hpp"
 #include <unordered_map>
 
 #define PE_MAX_MATERIAL_TEX_CHANNELS 5

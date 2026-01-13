@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/graphics/Descriptors.h"
+#include "platypus/graphics/Descriptors.hpp"
 #include <vulkan/vulkan.h>
 
 

@@ -2,8 +2,8 @@
 
 #include "Asset.hpp"
 #include "Image.hpp"
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/CommandBuffer.hpp"
+#include "platypus/graphics/Pipeline.hpp"
 #include <memory>
 
 

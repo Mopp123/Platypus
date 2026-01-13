@@ -1,4 +1,4 @@
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Shader.hpp"
 #include "WebShader.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/utils/FileUtils.h"

@@ -1,9 +1,9 @@
-#include "platypus/graphics/CommandBuffer.h"
-#include "DesktopCommandBuffer.h"
+#include "platypus/graphics/CommandBuffer.hpp"
+#include "DesktopCommandBuffer.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
 #include "DesktopContext.hpp"
-#include "DesktopRenderPass.h"
+#include "DesktopRenderPass.hpp"
 #include "platypus/core/Debug.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 

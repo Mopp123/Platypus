@@ -2,7 +2,7 @@
 #include "DesktopFramebuffer.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "DesktopDevice.hpp"
-#include "DesktopRenderPass.h"
+#include "DesktopRenderPass.hpp"
 #include "platypus/assets/Texture.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.hpp"
 #include "platypus/core/Debug.hpp"

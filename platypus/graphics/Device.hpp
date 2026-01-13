@@ -1,8 +1,8 @@
 #pragma once
 
 #include "platypus/core/Window.hpp"
-#include "CommandBuffer.h"
-#include "Swapchain.h"
+#include "CommandBuffer.hpp"
+#include "Swapchain.hpp"
 #include "platypus/assets/Image.hpp"
 #include "platypus/core/Debug.hpp"
 #include <algorithm>

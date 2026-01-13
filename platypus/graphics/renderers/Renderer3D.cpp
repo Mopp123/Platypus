@@ -1,7 +1,7 @@
 #include "Renderer3D.hpp"
-#include "MasterRenderer.h"
+#include "MasterRenderer.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/RenderCommand.h"
+#include "platypus/graphics/RenderCommand.hpp"
 #include "platypus/core/Debug.hpp"
 
 

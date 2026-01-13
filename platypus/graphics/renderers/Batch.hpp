@@ -1,8 +1,8 @@
 #pragma once
 
-#include "platypus/graphics/Pipeline.h"
-#include "platypus/graphics/Descriptors.h"
-#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Pipeline.hpp"
+#include "platypus/graphics/Descriptors.hpp"
+#include "platypus/graphics/Buffers.hpp"
 #include "platypus/graphics/RenderPass.hpp"
 #include "platypus/assets/Mesh.hpp"
 #include "platypus/ecs/components/Lights.h"

@@ -1,5 +1,5 @@
 #include "AssetManager.hpp"
-#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Buffers.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/utils/modelLoading/ModelLoading.h"
 #include "platypus/Common.h"

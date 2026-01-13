@@ -1,11 +1,11 @@
 #pragma once
 
 #include "platypus/utils/Maths.h"
-#include "CommandBuffer.h"
+#include "CommandBuffer.hpp"
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
-#include "Pipeline.h"
-#include "Descriptors.h"
+#include "Pipeline.hpp"
+#include "Descriptors.hpp"
 
 
 namespace platypus

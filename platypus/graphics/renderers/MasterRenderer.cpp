@@ -1,4 +1,4 @@
-#include "MasterRenderer.h"
+#include "MasterRenderer.hpp"
 #include "platypus/assets/Texture.hpp"
 
 #include "platypus/core/Application.hpp"
@@ -6,7 +6,7 @@
 #include "platypus/core/Debug.hpp"
 
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/RenderCommand.h"
+#include "platypus/graphics/RenderCommand.hpp"
 #include "platypus/utils/Maths.h"
 #include "platypus/ecs/components/Camera.h"
 #include "platypus/ecs/components/Lights.h"

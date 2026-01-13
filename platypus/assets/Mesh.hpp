@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Asset.hpp"
-#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Buffers.hpp"
 #include "platypus/utils/Maths.h"
 #include "platypus/utils/AnimationDataUtils.h"
 

@@ -1,6 +1,6 @@
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Shader.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "DesktopShader.h"
+#include "DesktopShader.hpp"
 #include "DesktopDevice.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/utils/FileUtils.h"

@@ -11,10 +11,10 @@
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
 
 #include "platypus/Common.h"
-#include "platypus/graphics/Swapchain.h"
-#include "platypus/graphics/platform/desktop/DesktopSwapchain.h"
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
+#include "platypus/graphics/Swapchain.hpp"
+#include "platypus/graphics/platform/desktop/DesktopSwapchain.hpp"
+#include "platypus/graphics/CommandBuffer.hpp"
+#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.hpp"
 
 
 namespace platypus

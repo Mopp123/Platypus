@@ -1,9 +1,9 @@
 #pragma once
 
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/Descriptors.h"
-#include "platypus/graphics/Shader.h"
-#include "platypus/graphics/CommandBuffer.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/Descriptors.hpp"
+#include "platypus/graphics/Shader.hpp"
+#include "platypus/graphics/CommandBuffer.hpp"
 #include "platypus/assets/Texture.hpp"
 #include <map>
 

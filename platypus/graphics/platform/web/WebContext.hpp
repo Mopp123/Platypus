@@ -1,8 +1,8 @@
 #pragma once
 
 #include <emscripten/html5.h>
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/Shader.hpp"
 #include "platypus/core/Debug.hpp"
 #include <unordered_map>
 #include <set>

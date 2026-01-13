@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Shader.hpp"
 
 
 namespace platypus

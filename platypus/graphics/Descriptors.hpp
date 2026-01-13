@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Buffers.h"
-#include "Swapchain.h"
+#include "Buffers.hpp"
+#include "Swapchain.hpp"
 #include <memory>
 
 

@@ -3,8 +3,8 @@
 #include "Window.hpp"
 #include "InputManager.hpp"
 #include "platypus/graphics/Context.hpp"
-#include "platypus/graphics/Swapchain.h"
-#include "platypus/graphics/renderers/MasterRenderer.h"
+#include "platypus/graphics/Swapchain.hpp"
+#include "platypus/graphics/renderers/MasterRenderer.hpp"
 #include "SceneManager.hpp"
 #include "platypus/assets/AssetManager.hpp"
 

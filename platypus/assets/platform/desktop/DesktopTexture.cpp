@@ -1,12 +1,12 @@
 #include "platypus/assets/Texture.hpp"
 #include "DesktopTexture.hpp"
 
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/platform/desktop/DesktopBuffers.h"
-#include "platypus/graphics/platform/desktop/DesktopPipeline.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/platform/desktop/DesktopBuffers.hpp"
+#include "platypus/graphics/platform/desktop/DesktopPipeline.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
-#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
+#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.hpp"
 #include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
 #include "platypus/core/Debug.hpp"

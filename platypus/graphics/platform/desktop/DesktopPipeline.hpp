@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/Pipeline.hpp"
 #include <vulkan/vulkan.h>
 
 

@@ -2,9 +2,9 @@
 #include "DesktopDevice.hpp"
 #include "platypus/graphics/Context.hpp"
 #include "DesktopContext.hpp"
-#include "platypus/graphics/Swapchain.h"
-#include "DesktopSwapchain.h"
-#include "DesktopCommandBuffer.h"
+#include "platypus/graphics/Swapchain.hpp"
+#include "DesktopSwapchain.hpp"
+#include "DesktopCommandBuffer.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.hpp"
 #include <vulkan/vk_enum_string_helper.h>

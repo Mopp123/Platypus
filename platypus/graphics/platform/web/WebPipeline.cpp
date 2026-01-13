@@ -1,8 +1,8 @@
-#include "platypus/graphics/Pipeline.h"
+#include "platypus/graphics/Pipeline.hpp"
+#include "WebPipeline.hpp"
 #include "platypus/graphics/Context.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
-#include "WebPipeline.h"
 #include "WebContext.hpp"
 
 #include <GL/glew.h>

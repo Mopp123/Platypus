@@ -2,10 +2,10 @@
 
 #include <cstdint>
 #include <vector>
-#include "Shader.h"
-#include "Buffers.h"
+#include "Shader.hpp"
+#include "Buffers.hpp"
 #include "RenderPass.hpp"
-#include "Descriptors.h"
+#include "Descriptors.hpp"
 
 
 namespace platypus

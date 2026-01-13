@@ -1,5 +1,5 @@
-#include "platypus/graphics/Buffers.h"
-#include "WebBuffers.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "WebBuffers.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/graphics/Context.hpp"
 #include "WebContext.hpp"

@@ -2,11 +2,11 @@
 
 
 #include "platypus/core/Scene.hpp"
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/Descriptors.h"
-#include "platypus/graphics/Pipeline.h"
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/CommandBuffer.hpp"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/Descriptors.hpp"
+#include "platypus/graphics/Pipeline.hpp"
+#include "platypus/graphics/Shader.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/ecs/components/Transform.h"
 #include <cstdlib>

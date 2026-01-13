@@ -2,7 +2,7 @@
 #include "platypus/graphics/Device.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.hpp"
 #include "DesktopDevice.hpp"
-#include "DesktopRenderPass.h"
+#include "DesktopRenderPass.hpp"
 #include "platypus/core/Debug.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 

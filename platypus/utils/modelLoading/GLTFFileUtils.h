@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Buffers.hpp"
 #include "platypus/utils/Maths.h"
 #include <vector>
 #include <string>

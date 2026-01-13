@@ -1,5 +1,5 @@
-#include "platypus/graphics/Swapchain.h"
-#include "DesktopSwapchain.h"
+#include "platypus/graphics/Swapchain.hpp"
+#include "DesktopSwapchain.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "DesktopDevice.hpp"
 #include "DesktopContext.hpp"

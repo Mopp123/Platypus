@@ -1,8 +1,8 @@
 #pragma once
 
-#include "platypus/graphics/Pipeline.h"
-#include "platypus/graphics/Buffers.h"
-#include "WebPipeline.h"
+#include "platypus/graphics/Pipeline.hpp"
+#include "platypus/graphics/Buffers.hpp"
+#include "WebPipeline.hpp"
 
 
 namespace platypus

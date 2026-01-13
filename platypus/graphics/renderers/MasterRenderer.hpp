@@ -1,14 +1,14 @@
 #pragma once
 
-#include "platypus/graphics/CommandBuffer.h"
-#include "platypus/graphics/Swapchain.h"
-#include "platypus/graphics/Descriptors.h"
+#include "platypus/graphics/CommandBuffer.hpp"
+#include "platypus/graphics/Swapchain.hpp"
+#include "platypus/graphics/Descriptors.hpp"
 #include "platypus/graphics/Framebuffer.hpp"
 #include "platypus/graphics/RenderPass.hpp"
 #include "platypus/graphics/RenderPassInstance.hpp"
 #include "platypus/ecs/components/Renderable.h"
 #include "platypus/assets/Material.hpp"
-#include "GUIRenderer.h"
+#include "GUIRenderer.hpp"
 #include "Renderer3D.hpp"
 #include "PostProcessingRenderer.hpp"
 #include "Batch.hpp"
