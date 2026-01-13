@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Asset.h"
-#include "Texture.h"
+#include "Asset.hpp"
+#include "Texture.hpp"
 #include <string>
 #include <unordered_map>
 

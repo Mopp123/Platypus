@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Asset.h"
+#include "Asset.hpp"
 #include "platypus/utils/AnimationDataUtils.h"
 
 

@@ -4,7 +4,7 @@
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 
-#include "platypus/assets/AssetManager.h"
+#include "platypus/assets/AssetManager.hpp"
 #include "platypus/ecs/Entity.h"
 #include "platypus/ecs/components/Transform.h"
 #include "platypus/ecs/components/SkeletalAnimation.h"

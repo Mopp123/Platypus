@@ -4,7 +4,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Shader.h"
 #include "platypus/graphics/CommandBuffer.h"
-#include "platypus/assets/Texture.h"
+#include "platypus/assets/Texture.hpp"
 #include <map>
 
 

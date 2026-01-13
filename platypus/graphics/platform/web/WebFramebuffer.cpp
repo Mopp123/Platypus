@@ -1,7 +1,7 @@
 #include "platypus/graphics/Framebuffer.hpp"
 #include "WebFramebuffer.hpp"
-#include "platypus/assets/Texture.h"
-#include "platypus/assets/platform/web/WebTexture.h"
+#include "platypus/assets/Texture.hpp"
+#include "platypus/assets/platform/web/WebTexture.hpp"
 #include "WebContext.hpp"
 #include "platypus/core/Debug.hpp"
 #include <GL/glew.h>

@@ -6,7 +6,7 @@
 #include "platypus/graphics/Swapchain.h"
 #include "platypus/graphics/renderers/MasterRenderer.h"
 #include "SceneManager.hpp"
-#include "platypus/assets/AssetManager.h"
+#include "platypus/assets/AssetManager.hpp"
 
 
 namespace platypus

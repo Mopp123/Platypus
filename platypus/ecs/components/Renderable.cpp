@@ -2,7 +2,7 @@
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
-#include "platypus/assets/AssetManager.h"
+#include "platypus/assets/AssetManager.hpp"
 
 
 namespace platypus

@@ -1,5 +1,5 @@
 #include "SkeletalAnimation.h"
-#include "platypus/assets/SkeletalAnimationData.h"
+#include "platypus/assets/SkeletalAnimationData.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/core/Scene.hpp"

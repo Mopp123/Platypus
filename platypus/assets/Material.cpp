@@ -1,5 +1,5 @@
-#include "Material.h"
-#include "AssetManager.h"
+#include "Material.hpp"
+#include "AssetManager.hpp"
 
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"

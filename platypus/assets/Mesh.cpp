@@ -1,4 +1,4 @@
-#include "Mesh.h"
+#include "Mesh.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/Common.h"
 #include <cmath>

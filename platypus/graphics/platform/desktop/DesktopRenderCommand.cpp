@@ -6,8 +6,8 @@
 #include "DesktopBuffers.h"
 #include "DesktopShader.h"
 #include "DesktopDescriptors.h"
-#include "platypus/assets/Texture.h"
-#include "platypus/assets/platform/desktop/DesktopTexture.h"
+#include "platypus/assets/Texture.hpp"
+#include "platypus/assets/platform/desktop/DesktopTexture.hpp"
 #include "platypus/core/Debug.hpp"
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>

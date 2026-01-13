@@ -1,5 +1,5 @@
-#include "platypus/assets/Texture.h"
-#include "DesktopTexture.h"
+#include "platypus/assets/Texture.hpp"
+#include "DesktopTexture.hpp"
 
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/platform/desktop/DesktopBuffers.h"

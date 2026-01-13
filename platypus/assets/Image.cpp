@@ -1,4 +1,4 @@
-#include "Image.h"
+#include "Image.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
 

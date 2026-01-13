@@ -1,5 +1,5 @@
-#include "platypus/assets/Texture.h"
-#include "WebTexture.h"
+#include "platypus/assets/Texture.hpp"
+#include "WebTexture.hpp"
 #include "platypus/graphics/platform/web/WebContext.hpp"
 #include "platypus/core/Debug.hpp"
 

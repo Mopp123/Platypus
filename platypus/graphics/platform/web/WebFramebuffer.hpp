@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/assets/Texture.h"
+#include "platypus/assets/Texture.hpp"
 #include <cstdint>
 
 

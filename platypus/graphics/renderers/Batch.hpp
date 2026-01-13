@@ -4,7 +4,7 @@
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Buffers.h"
 #include "platypus/graphics/RenderPass.hpp"
-#include "platypus/assets/Mesh.h"
+#include "platypus/assets/Mesh.hpp"
 #include "platypus/ecs/components/Lights.h"
 #include <unordered_map>
 

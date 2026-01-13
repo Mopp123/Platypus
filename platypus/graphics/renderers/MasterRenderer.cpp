@@ -1,5 +1,5 @@
 #include "MasterRenderer.h"
-#include "platypus/assets/Texture.h"
+#include "platypus/assets/Texture.hpp"
 
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Timing.hpp"

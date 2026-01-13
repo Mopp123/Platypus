@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/assets/Image.h"
+#include "platypus/assets/Image.hpp"
 #include <GL/glew.h>
 #include <cstdint>
 

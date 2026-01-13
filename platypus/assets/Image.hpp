@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platypus/Common.h"
-#include "Asset.h"
+#include "Asset.hpp"
 
 #define PE_IMAGE_MAX_CHANNELS 4
 

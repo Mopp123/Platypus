@@ -3,7 +3,7 @@
 #include "platypus/core/Window.hpp"
 #include "CommandBuffer.h"
 #include "Swapchain.h"
-#include "platypus/assets/Image.h"
+#include "platypus/assets/Image.hpp"
 #include "platypus/core/Debug.hpp"
 #include <algorithm>
 

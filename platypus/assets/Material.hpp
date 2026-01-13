@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Asset.h"
-#include "Texture.h"
-#include "Mesh.h"
+#include "Asset.hpp"
+#include "Texture.hpp"
+#include "Mesh.hpp"
 #include "platypus/graphics/Descriptors.h"
 #include "platypus/graphics/Pipeline.h"
 #include <unordered_map>

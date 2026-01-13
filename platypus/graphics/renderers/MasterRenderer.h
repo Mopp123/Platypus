@@ -7,7 +7,7 @@
 #include "platypus/graphics/RenderPass.hpp"
 #include "platypus/graphics/RenderPassInstance.hpp"
 #include "platypus/ecs/components/Renderable.h"
-#include "platypus/assets/Material.h"
+#include "platypus/assets/Material.hpp"
 #include "GUIRenderer.h"
 #include "Renderer3D.hpp"
 #include "PostProcessingRenderer.hpp"

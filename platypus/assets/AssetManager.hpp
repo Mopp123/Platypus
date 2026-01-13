@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Asset.h"
-#include "Image.h"
-#include "Mesh.h"
-#include "Model.h"
-#include "Texture.h"
-#include "Material.h"
-#include "Font.h"
-#include "SkeletalAnimationData.h"
+#include "Asset.hpp"
+#include "Image.hpp"
+#include "Mesh.hpp"
+#include "Model.hpp"
+#include "Texture.hpp"
+#include "Material.hpp"
+#include "Font.hpp"
+#include "SkeletalAnimationData.hpp"
 #include <unordered_map>
 #include <vector>
 

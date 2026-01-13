@@ -6,7 +6,7 @@
 #include "platypus/core/InputEvent.hpp"
 
 #include "platypus/ecs/Entity.h"
-#include "platypus/assets/Font.h"
+#include "platypus/assets/Font.hpp"
 #include <vector>
 
 
