@@ -78,4 +78,29 @@ namespace platypus { namespace util { namespace str {
             ++it;
         }
     }
+
+    bool contains(const std::vector<std::string>& target, const std::string& str)
+    {
+        for (const std::string& s : target)
+        {
+            if (str == s)
+                return true;
+        }
+        return false;
+    }
+
+    std::vector<std::string> contains(
+        const std::vector<std::string>& target,
+        const std::vector<std::string>& strings
+    )
+    {
+        std::vector<std::string> missing;
+        missing.reserve(strings.size());
+        for (const std::string& s : strings)
+        {
+            if (!contains(target, s))
+                missing.emplace_back(s);
+        }
+        return missing;
+    }
 }}}

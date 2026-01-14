@@ -7,6 +7,13 @@
 
 namespace platypus
 {
+    struct PhysicalDevice
+    {
+        VkPhysicalDevice handle = VK_NULL_HANDLE;
+        VkPhysicalDeviceProperties properties;
+        std::vector<VkFormat> colorFormats;
+        std::vector<VkFormat> depthFormats;
+    };
 
     struct DeviceImpl
     {

@@ -15,6 +15,27 @@
 
 namespace platypus
 {
+    static std::vector<PhysicalDevice> get_physical_devices(VkInstance instance)
+    {
+        std::vector<PhysicalDevice> physicalDevices;
+
+        uint32_t count = 0;
+        vkEnumeratePhysicalDevices(instance, &count, nullptr);
+        if (count == 0)
+            return physicalDevices;
+
+        std::vector<VkPhysicalDevice> availableDevices;
+        vkEnumeratePhysicalDevices(instance, &count, availableDevices.data());
+
+        for (VkPhysicalDevice availableDevice : availableDevices)
+        {
+            // TODO: Get all used info about the available device...
+        }
+
+        return physicalDevices;
+    }
+
+
     static bool check_device_extension_availability(
         VkPhysicalDevice physicalDevice,
         const std::vector<const char*>& extensions,

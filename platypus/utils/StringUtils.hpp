@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 
@@ -19,5 +20,13 @@ namespace platypus { namespace util { namespace str {
         const std::string& str,
         void* pUserData,
         void(*pFunc)(uint32_t, void*)
+    );
+
+    bool contains(const std::vector<std::string>& target, const std::string& str);
+    // Checks if elements in strings are contained in target.
+    // Returns strings that aren't found.
+    std::vector<std::string> contains(
+        const std::vector<std::string>& target,
+        const std::vector<std::string>& strings
     );
 }}}

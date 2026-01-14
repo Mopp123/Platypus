@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <cstring>
-#include <set>
+#include <string>
 
 #include "platypus/core/Debug.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
@@ -15,160 +15,68 @@
 #include "platypus/graphics/platform/desktop/DesktopSwapchain.hpp"
 #include "platypus/graphics/CommandBuffer.hpp"
 #include "platypus/graphics/platform/desktop/DesktopCommandBuffer.hpp"
+#include "platypus/utils/StringUtils.hpp"
 
 
 namespace platypus
 {
-    static std::vector<const char*> get_required_instance_extensions()
+    static std::vector<std::string> get_required_extensions()
     {
-        std::vector<const char*> requiredExtensions;
+        std::vector<std::string> requiredExtensions;
         uint32_t glfwRequiredExtensionCount = 0;
         const char** glfwRequiredExtensions = glfwGetRequiredInstanceExtensions(&glfwRequiredExtensionCount);
         for (uint32_t i = 0; i < glfwRequiredExtensionCount; ++i)
-            requiredExtensions.push_back(glfwRequiredExtensions[i]);
+            requiredExtensions.push_back(std::string(glfwRequiredExtensions[i]));
 
         #ifdef PLATYPUS_DEBUG
-            requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        requiredExtensions.push_back(std::string(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
         #endif
+
         return requiredExtensions;
     }
 
 
-    static std::vector<const char*> get_required_layers()
+    static std::vector<std::string> get_required_layers()
     {
-        std::vector<const char*> requiredLayers;
+        std::vector<std::string> requiredLayers;
         #ifdef PLATYPUS_DEBUG
-            requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
+        requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
         #endif
         return requiredLayers;
     }
 
 
-    static bool check_instance_extension_availability(
-        const std::vector<const char*>& extensions,
-        std::vector<const char*>& outUnavailable
-    )
+    static std::vector<std::string> get_available_layers()
     {
-        uint32_t availableExtensionCount = 0;
-        vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
-        std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, availableExtensions.data());
-        for (size_t i = 0; i < extensions.size(); ++i)
-        {
-            bool found = false;
-            for (const VkExtensionProperties& availableExtension : availableExtensions)
-            {
-                if (strcmp(extensions[i], availableExtension.extensionName) == 0)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-                outUnavailable.push_back(extensions[i]);
-        }
-        return outUnavailable.empty();
-    }
-
-
-    static bool check_layer_availability(const std::vector<const char*>& layers, std::vector<const char*>& outUnavailable)
-    {
-        uint32_t availableLayerCount = 0;
-        vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
-        std::vector<VkLayerProperties> availableLayers(availableLayerCount);
-        vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
+        uint32_t count = 0;
+        vkEnumerateInstanceLayerProperties(&count, nullptr);
+        std::vector<VkLayerProperties> layers(count);
+        std::vector<std::string> outLayerNames(count);
+        vkEnumerateInstanceLayerProperties(&count, layers.data());
 
         for (size_t i = 0; i < layers.size(); ++i)
-        {
-            bool found = false;
-            for (const VkLayerProperties& availableLayer : availableLayers)
-            {
-                if (strcmp(layers[i], availableLayer.layerName) == 0)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-                outUnavailable.push_back(layers[i]);
-        }
-        return outUnavailable.empty();
+            outLayerNames[i] = std::string(layers[i].layerName);
+
+        return outLayerNames;
     }
 
 
-    static VkInstance create_instance(
-        const char* appName,
-        const std::vector<const char*>& extensions,
-        const std::vector<const char*>& layers
-    )
+    static std::vector<std::string> get_available_extensions()
     {
-        VkApplicationInfo appInfo{};
-        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = appName;
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = PLATYPUS_ENGINE_NAME;
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_MAKE_API_VERSION(0, 1, 1, 0);
+        uint32_t count = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+        std::vector<VkExtensionProperties> extensions(count);
+        std::vector<std::string> outExtensionNames(count);
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, extensions.data());
+        for (size_t i = 0; i < extensions.size(); ++i)
+            outExtensionNames[i] = std::string(extensions[i].extensionName);
 
-        VkInstanceCreateInfo instanceCreateInfo{};
-        instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        instanceCreateInfo.pApplicationInfo = &appInfo;
-
-        // Check extensions
-        std::vector<const char*> unavailableExtensions;
-        if (!check_instance_extension_availability(extensions, unavailableExtensions))
-        {
-            std::string unavailableListStr;
-            for (size_t i = 0; i < unavailableExtensions.size(); ++i)
-                unavailableListStr += std::string(unavailableExtensions[i]) + (i == unavailableExtensions.size() - 1 ? "" : ", ");
-            Debug::log(
-                "@Context::Context "
-                "Failed to create context due to unavailable extensions: " + unavailableListStr,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        instanceCreateInfo.enabledExtensionCount = extensions.size();
-        instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
-
-        // Check layers
-        std::vector<const char*> unavailableLayers;
-        if (!check_layer_availability(layers, unavailableLayers))
-        {
-            std::string unavailableListStr;
-            for (size_t i = 0; i < unavailableLayers.size(); ++i)
-                unavailableListStr += std::string(unavailableLayers[i]) + (i == unavailableLayers.size() - 1 ? "" : ", ");
-            Debug::log(
-                "@Context::Context "
-                "Failed to create context due to unavailable layers: " + unavailableListStr,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        instanceCreateInfo.enabledLayerCount = layers.size();
-        instanceCreateInfo.ppEnabledLayerNames = layers.data();
-
-        VkInstance instance;
-        VkResult createInstanceResult = vkCreateInstance(
-            &instanceCreateInfo,
-            nullptr,
-            &instance
-        );
-        if (createInstanceResult != VK_SUCCESS)
-        {
-            const std::string resultStr(string_VkResult(createInstanceResult));
-            Debug::log(
-                "@create_instance "
-                "Failed to create VkInstance! VkResult: " + resultStr
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        return instance;
+        return outExtensionNames;
     }
 
 
     #ifdef PLATYPUS_DEBUG
-        VkResult create_vk_debug_messenger(
+        static VkResult create_vk_debug_messenger(
             VkInstance instance,
             const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
             const VkAllocationCallbacks* pAllocator,
@@ -182,7 +90,7 @@ namespace platypus
                 return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
-        void destroy_vk_debug_messenger(
+        static void destroy_vk_debug_messenger(
             VkInstance instance,
             VkDebugUtilsMessengerEXT debugMessenger,
             const VkAllocationCallbacks* pAllocator
@@ -347,28 +255,92 @@ namespace platypus
     {
         s_pWindow = pWindow;
 
-        std::vector<const char*> requiredInstanceExtensions = get_required_instance_extensions();
-        std::vector<const char*> requiredLayers = get_required_layers();
+        std::vector<std::string> requiredExtensions = get_required_extensions();
+        std::vector<std::string> requiredLayers = get_required_layers();
 
-        VkInstance instance = create_instance(
-            appName,
-            requiredInstanceExtensions,
+        std::vector<std::string> missingExtensions = util::str::contains(
+            get_available_extensions(),
+            requiredExtensions
+        );
+        for (const std::string& missingExtension : missingExtensions)
+        {
+            Debug::log(
+                "Missing required instance extension: " + missingExtension,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        std::vector<std::string> missingLayer = util::str::contains(
+            get_available_layers(),
             requiredLayers
         );
+        for (const std::string& missingLayer : missingLayer)
+        {
+            Debug::log(
+                "Missing required layer: " + missingLayer,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        VkApplicationInfo appInfo{};
+        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName = appName;
+        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.pEngineName = PLATYPUS_ENGINE_NAME;
+        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion = VK_MAKE_API_VERSION(0, 1, 1, 0);
+
+        VkInstanceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo = &appInfo;
+
+        std::vector<const char*> useExtensions(requiredExtensions.size());
+        for (size_t i = 0; i < requiredExtensions.size(); ++i)
+            useExtensions[i] = requiredExtensions[i].c_str();
+
+        std::vector<const char*> useLayers(requiredLayers.size());
+        for (size_t i = 0; i < requiredLayers.size(); ++i)
+            useLayers[i] = requiredLayers[i].c_str();
+
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(useExtensions.size());
+        createInfo.ppEnabledExtensionNames = useExtensions.data();
+        createInfo.enabledLayerCount = static_cast<uint32_t>(useLayers.size());
+        createInfo.ppEnabledLayerNames = useLayers.data();
+
+        VkInstance handle;
+        VkResult createResult = vkCreateInstance(
+            &createInfo,
+            nullptr,
+            &handle
+        );
+        if (createResult != VK_SUCCESS)
+        {
+            const std::string resultStr(string_VkResult(createResult));
+            Debug::log(
+                "Failed to create VkInstance! VkResult: " + resultStr,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
 
         #ifdef PLATYPUS_DEBUG
-            VkDebugUtilsMessengerEXT debugMessenger = create_debug_messenger(instance);
+            VkDebugUtilsMessengerEXT debugMessenger = create_debug_messenger(handle);
         #endif
 
-        create_window_surface(instance, pWindow);
+        create_window_surface(handle, pWindow);
 
         s_pImpl = new ContextImpl;
-        s_pImpl->instance = instance;
+        s_pImpl->instance = handle;
         #ifdef PLATYPUS_DEBUG
             s_pImpl->debugMessenger = debugMessenger;
         #endif
-
-        Debug::log("Graphics Context created");
     }
 
     void Context::destroy()
