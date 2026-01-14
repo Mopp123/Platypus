@@ -25,11 +25,11 @@ namespace platypus
         SwapchainImpl* _pImpl = nullptr;
 
         RenderPass _renderPass;
-        std::vector<Image*> _colorImages;
-        std::vector<Texture*> _colorTextures;
+        std::vector<Texture*> _colorAttachments;
 
+        bool _createDepthAttachment = false;
         Image* _pDepthImage;
-        Texture* _pDepthTexture;
+        Texture* _pDepthAttachment;
         std::vector<Framebuffer*> _framebuffers;
 
         // NOTE: Currently these aren't touched by the web implementation at all.
@@ -42,7 +42,7 @@ namespace platypus
         size_t _currentFrame = 0;
 
     public:
-        Swapchain(const Window& window);
+        Swapchain(const Window& window, bool createDepthAttachment);
         ~Swapchain();
 
         void create(const Window& window);
@@ -57,10 +57,9 @@ namespace platypus
         inline const RenderPass& getRenderPass() const { return _renderPass; }
         inline const RenderPass* getRenderPassPtr() const { return &_renderPass; }
 
-        inline const std::vector<Image*> getColorImages() const { return _colorImages; }
-        inline const std::vector<Texture*> getColorTextures() const { return _colorTextures; }
+        inline const std::vector<Texture*> getColorAttachments() const { return _colorAttachments; }
         inline const Image* getDepthImage() const { return _pDepthImage; }
-        inline const Texture* getDepthTexture() const { return _pDepthTexture; }
+        inline const Texture* getDepthAttachment() const { return _pDepthAttachment; }
         inline const std::vector<Framebuffer*>& getFramebuffers() const { return _framebuffers; }
         inline std::vector<Framebuffer*>& getFramebuffers() { return _framebuffers; }
         inline const Framebuffer* getCurrentFramebuffer() const

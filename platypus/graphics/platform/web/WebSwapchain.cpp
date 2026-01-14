@@ -10,15 +10,14 @@ namespace platypus
     };
 
 
-    Swapchain::Swapchain(const Window& window) :
+    Swapchain::Swapchain(const Window& window, bool createDepthAttachment) :
         _renderPass(
             RenderPassType::SCREEN_PASS,
             false,
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE |
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
-            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR |
-            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
-        )
+            createDepthAttachment ? RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE | RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE : RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE,
+            createDepthAttachment ? RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR | RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH : RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR
+        ),
+        _createDepthAttachment(createDepthAttachment)
     {
         _pImpl = new SwapchainImpl;
         create(window);
@@ -34,7 +33,7 @@ namespace platypus
     // TODO: Window surface (just a 2D quad)
     void Swapchain::create(const Window& window)
     {
-        _renderPass.create(ImageFormat::R8G8B8A8_UNORM, ImageFormat::D32_SFLOAT);
+        _renderPass.create(ImageFormat::R8G8B8A8_UNORM, _createDepthAttachment ? ImageFormat::D32_SFLOAT : ImageFormat::NONE);
 
         int width = 0;
         int height = 0;

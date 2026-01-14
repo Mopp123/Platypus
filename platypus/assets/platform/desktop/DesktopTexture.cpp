@@ -458,8 +458,9 @@ namespace platypus
     {}
 
 
-    Texture::Texture(bool empty) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE)
+    Texture::Texture(ImageFormat format) :
+        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _imageFormat(format)
     {
         _pImpl = new TextureImpl;
     }

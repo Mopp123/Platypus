@@ -69,8 +69,9 @@ namespace platypus
 
     public:
         // Needed for Vulkan swapchain's color and depth textures. ...fucking dumb
-        // This should ONLY create the _pImpl!
-        Texture(bool empty);
+        // This should ONLY create the _pImpl and set _imageFormat!
+        // *This kind of Texture can't be sampled in shader!
+        Texture(ImageFormat format);
         Texture(
             TextureType type,
             const TextureSampler& sampler,

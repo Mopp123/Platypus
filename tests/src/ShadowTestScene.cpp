@@ -136,10 +136,11 @@ void ShadowTestScene::init()
     // Test meshes that cast shadows
     Material* pStaticMeshMaterial = createMeshMaterial(
         pAssetManager,
-        "assets/textures/DiffuseTest.png",
+        "assets/textures/DiffuseTestAlpha.png",
         true,
-        true, // cast shadows
-        true // receive shadows
+        false, // cast shadows
+        false, // receive shadows
+        true // transparent
     );
     Material* pSkinnedMeshMaterial = createMeshMaterial(
         pAssetManager,
@@ -149,12 +150,12 @@ void ShadowTestScene::init()
         true // receive shadows
     );
 
-    Mesh* pStaticInstancedMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", true)->getMeshes()[0];
+    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", false)->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
         { 1, 1, 1 },
-        pStaticInstancedMesh->getID(),
+        pStaticMesh->getID(),
         pStaticMeshMaterial->getID()
     );
 
@@ -162,7 +163,7 @@ void ShadowTestScene::init()
         { 10, 0, 10 },
         { { 0, 2, 0 }, 0.0f },
         { 2, 2, 2 },
-        pStaticInstancedMesh->getID(),
+        pStaticMesh->getID(),
         pStaticMeshMaterial->getID()
     );
 
@@ -219,7 +220,6 @@ void ShadowTestScene::init()
         framebufferDebugTextureSampler
     );
 
-    /*
     _framebufferDebugEntity = createEntity();
     create_gui_transform(
         _framebufferDebugEntity,
@@ -231,7 +231,6 @@ void ShadowTestScene::init()
         _framebufferDebugEntity,
         pMasterRenderer->getShadowPassInstance()->getFramebuffer(0)->getDepthAttachment()->getID()
     );
-    */
 }
 
 void ShadowTestScene::update()
@@ -285,7 +284,6 @@ void ShadowTestScene::update()
         }
     }
 
-    /*
     GUIRenderable* pFramebufferDebugRenderable = (GUIRenderable*)getComponent(
         _framebufferDebugEntity,
         ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
@@ -297,7 +295,6 @@ void ShadowTestScene::update()
         pFramebufferDebugRenderable->textureID = framebufferTexture->getID();
     else
         pFramebufferDebugRenderable->textureID = pApp->getAssetManager()->getWhiteTexture()->getID();
-    */
 
 
     if (inputManager.isKeyDown(KeyName::KEY_0))

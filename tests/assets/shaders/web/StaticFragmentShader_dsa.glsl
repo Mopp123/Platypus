@@ -54,7 +54,8 @@ void main()
     float specularFactor = pow(max(dot(unitNormal, halfWay), 0.0), shininess);
     vec4 specularColor = lightColor * specularFactor * specularStrength * specularTextureColor;
 
-    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * diffuseTextureColor;
+    vec4 finalColor = (var_ambientLightColor + lightDiffuseColor + specularColor) * vec4(diffuseTextureColor.rgb, 1.0);
+    finalColor.a = diffuseTextureColor.a;
 
     outColor = finalColor;;
 }
