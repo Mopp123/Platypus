@@ -1,8 +1,6 @@
-#include "LayoutUI.h"
-#include "platypus/ecs/components/Transform.h"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+#include "LayoutUI.hpp"
+#include "platypus/ecs/components/Transform.hpp"
+#include "platypus/core/Application.hpp"
 
 
 namespace platypus

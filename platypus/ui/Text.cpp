@@ -1,8 +1,8 @@
-#include "Text.h"
-#include "platypus/core/Application.h"
-#include "platypus/ecs/components/Renderable.h"
+#include "Text.hpp"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
+#include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/utils/StringUtils.hpp"
-#include "platypus/core/Debug.h"
 #include <sstream>
 #include <utf8.h>
 

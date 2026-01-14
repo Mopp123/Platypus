@@ -1,7 +1,4 @@
 #include "TerrainTestScene.hpp"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/ecs/components/Transform.h"
-#include <cmath>
 
 
 using namespace platypus;

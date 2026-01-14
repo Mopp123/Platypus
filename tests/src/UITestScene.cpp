@@ -1,7 +1,4 @@
 #include "UITestScene.hpp"
-#include "platypus/ui/LayoutUI.h"
-#include "platypus/ui/Text.h"
-#include "platypus/ui/Button.h"
 
 #include <iostream>
 

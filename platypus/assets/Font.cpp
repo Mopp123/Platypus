@@ -1,7 +1,7 @@
-#include "Font.h"
-#include "platypus/core/Application.h"
-#include "AssetManager.h"
-#include "platypus/core/Debug.h"
+#include "Font.hpp"
+#include "platypus/core/Application.hpp"
+#include "AssetManager.hpp"
+#include "platypus/core/Debug.hpp"
 
 #include <cmath>
 

@@ -1,8 +1,8 @@
-#include "Memory.h"
+#include "Memory.hpp"
+#include "Debug.hpp"
 #include <cstring>
 #include <cstdlib>
 #include <limits>
-#include "Debug.h"
 
 
 namespace platypus

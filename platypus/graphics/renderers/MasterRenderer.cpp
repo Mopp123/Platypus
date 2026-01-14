@@ -1,15 +1,18 @@
-#include "MasterRenderer.h"
-#include "platypus/assets/Texture.h"
-#include "platypus/core/Application.h"
+#include "MasterRenderer.hpp"
+#include "platypus/assets/Texture.hpp"
+
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Timing.hpp"
+#include "platypus/core/Debug.hpp"
+
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/RenderCommand.h"
-#include "platypus/utils/Maths.h"
-#include "platypus/ecs/components/Camera.h"
-#include "platypus/ecs/components/Lights.h"
-#include "platypus/ecs/components/Component.h"
-#include "platypus/ecs/components/SkeletalAnimation.h"
-#include "platypus/core/Timing.h"
-#include "platypus/core/Debug.h"
+#include "platypus/graphics/RenderCommand.hpp"
+#include "platypus/utils/Maths.hpp"
+#include "platypus/ecs/components/Camera.hpp"
+#include "platypus/ecs/components/Lights.hpp"
+#include "platypus/ecs/components/Component.hpp"
+#include "platypus/ecs/components/SkeletalAnimation.hpp"
+
 
 namespace platypus
 {
@@ -63,7 +66,8 @@ namespace platypus
             RenderPassType::TRANSPARENT_PASS,
             true,
             RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_CONTINUE |
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE,
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_CONTINUE |
+            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_READ_ONLY_DEPTH,
             0
         ),
         _offscreenTextureSampler(
@@ -149,7 +153,6 @@ namespace platypus
     void MasterRenderer::cleanRenderers()
     {
         Device::wait_for_operations();
-
         _batcher.freeBatches();
         _pGUIRenderer->freeBatches();
     }
@@ -418,7 +421,6 @@ namespace platypus
         );
         Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
 
-        Debug::log("___TEST___FRAMEBUFFER create opaque");
         _pOpaqueFramebuffer = new Framebuffer(
             _opaquePass,
             { _pColorAttachment },
@@ -426,7 +428,6 @@ namespace platypus
             swapchainExtent.width,
             swapchainExtent.height
         );
-        Debug::log("___TEST___FRAMEBUFFER create transparent");
         _pTransparentFramebuffer = new Framebuffer(
             _transparentPass,
             { _pColorAttachment },
@@ -435,7 +436,6 @@ namespace platypus
             swapchainExtent.height
         );
 
-        Debug::log("___TEST___FRAMEBUFFER create shadowpass instance");
         _shadowPassInstance.create();
 
         // NOTE: This is so wrong way of dealing with Materials that are relying on this kind of
@@ -501,17 +501,13 @@ namespace platypus
     {
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
 
-        Debug::log("___TEST___MasterRenderer::createPipelines creating post processing pipeline");
         _pPostProcessingRenderer->createPipelines(_swapchainRef.getRenderPass());
 
-        Debug::log("___TEST___MasterRenderer::createPipelines creating GUIRenderer pipeline");
         _pGUIRenderer->createPipeline(
             _swapchainRef.getRenderPass(),
             swapchainExtent.width,
             swapchainExtent.height
         );
-
-        Debug::log("___TEST___MasterRenderer::createPipelines creating Material pipelines");
 
         // NOTE: Materials' pipelines gets initially created by Batcher.
         // If swapchain recreation occurs this makes the Materials to also recreate
@@ -533,7 +529,6 @@ namespace platypus
 
     void MasterRenderer::createShaderResources()
     {
-        Debug::log("___TEST___MasterRenderer::createShaderResources");
         // NOTE: ATM JUST TESTING HERE!
         _pPostProcessingRenderer->createShaderResources(_pColorAttachment);
 
@@ -544,7 +539,6 @@ namespace platypus
 
     void MasterRenderer::destroyShaderResources()
     {
-        Debug::log("___TEST___MasterRenderer::destroyShaderResources");
         _pPostProcessingRenderer->destroyShaderResources();
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -731,7 +725,7 @@ namespace platypus
             currentCommandBuffer,
             _shadowPassInstance.getRenderPass(),
             pShadowFramebuffer,
-            { 1, 0, 1, 1 }
+            { 1, 0, 0, 1 }
         );
         std::vector<CommandBuffer> shadowpassCommandBuffers;
         shadowpassCommandBuffers.push_back(
@@ -793,7 +787,7 @@ namespace platypus
             currentCommandBuffer,
             _transparentPass,
             _pTransparentFramebuffer,
-            { 1, 0, 1, 1 }
+            { 0, 1, 0, 1 }
         );
         std::vector<CommandBuffer> transparentPassCommandBuffers;
         transparentPassCommandBuffers.push_back(

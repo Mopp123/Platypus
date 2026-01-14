@@ -1,15 +1,15 @@
-#include "platypus/assets/Texture.h"
-#include "DesktopTexture.h"
+#include "platypus/assets/Texture.hpp"
+#include "DesktopTexture.hpp"
 
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/platform/desktop/DesktopBuffers.h"
-#include "platypus/graphics/platform/desktop/DesktopPipeline.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/platform/desktop/DesktopBuffers.hpp"
+#include "platypus/graphics/platform/desktop/DesktopPipeline.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
-#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.h"
+#include "platypus/graphics/platform/desktop/DesktopCommandBuffer.hpp"
 #include "platypus/graphics/platform/desktop/DesktopContext.hpp"
 
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 #include <cmath>
 #include <vulkan/vulkan_core.h>
@@ -458,8 +458,9 @@ namespace platypus
     {}
 
 
-    Texture::Texture(bool empty) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE)
+    Texture::Texture(ImageFormat format) :
+        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _imageFormat(format)
     {
         _pImpl = new TextureImpl;
     }

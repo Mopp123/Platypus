@@ -1,6 +1,6 @@
 #include "platypus/core/Window.hpp"
+#include "platypus/core/Debug.hpp"
 #include "platypus/Common.h"
-#include "platypus/core/Debug.h"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>

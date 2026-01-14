@@ -1,7 +1,7 @@
-#include "SceneManager.h"
-#include "Application.h"
+#include "SceneManager.hpp"
+#include "Application.hpp"
+#include "Debug.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "Debug.h"
 
 
 namespace platypus
@@ -124,7 +124,11 @@ namespace platypus
 
             Application* pApp = Application::get_instance();
             Device::wait_for_operations();
+
+            Debug::log("___TEST___cleaning renderers...", PLATYPUS_CURRENT_FUNC_NAME);
             pApp->getMasterRenderer()->cleanRenderers();
+            Debug::log("___TEST___success!", PLATYPUS_CURRENT_FUNC_NAME);
+
             pApp->getInputManager().destroyEvents();
             pApp->getAssetManager()->destroyAssets();
 

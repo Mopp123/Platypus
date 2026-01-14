@@ -1,5 +1,4 @@
-﻿#include "InputManager.h"
-#include "platypus/core/Debug.h"
+﻿#include "InputManager.hpp"
 
 
 namespace platypus

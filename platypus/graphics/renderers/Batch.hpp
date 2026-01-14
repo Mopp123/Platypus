@@ -1,11 +1,11 @@
 #pragma once
 
-#include "platypus/graphics/Pipeline.h"
-#include "platypus/graphics/Descriptors.h"
-#include "platypus/graphics/Buffers.h"
+#include "platypus/graphics/Pipeline.hpp"
+#include "platypus/graphics/Descriptors.hpp"
+#include "platypus/graphics/Buffers.hpp"
 #include "platypus/graphics/RenderPass.hpp"
-#include "platypus/assets/Mesh.h"
-#include "platypus/ecs/components/Lights.h"
+#include "platypus/assets/Mesh.hpp"
+#include "platypus/ecs/components/Lights.hpp"
 #include <unordered_map>
 
 // TODO: Some better way to deal with this...
@@ -103,9 +103,9 @@ namespace platypus
         Pipeline* pPipeline = nullptr;
         ~BatchPipelineData()
         {
+            delete pPipeline; // IMPORTANT! Pipeline needs to be destroyed before the associated shaders (web impl detaches shaders from "program" in pipeline's destructor)
             delete pVertexShader;
             delete pFragmentShader;
-            delete pPipeline;
         }
     };
 

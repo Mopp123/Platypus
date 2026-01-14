@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/graphics/CommandBuffer.h"
+#include "platypus/graphics/CommandBuffer.hpp"
 #include "Batch.hpp"
 #include <unordered_map>
 

@@ -1,8 +1,8 @@
 #include "platypus/graphics/Context.hpp"
 #include "WebContext.hpp"
-#include "platypus/core/Debug.h"
-#include "platypus/graphics/Shader.h"
-#include "platypus/graphics/Buffers.h"
+#include "platypus/core/Debug.hpp"
+#include "platypus/graphics/Shader.hpp"
+#include "platypus/graphics/Buffers.hpp"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>

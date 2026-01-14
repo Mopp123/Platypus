@@ -1,5 +1,5 @@
-#include "Maths.h"
-#include "platypus/core/Debug.h"
+#include "Maths.hpp"
+#include "platypus/core/Debug.hpp"
 #include <cstring>
 #include <cmath>
 

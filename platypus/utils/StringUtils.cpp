@@ -1,5 +1,5 @@
 #include "StringUtils.hpp"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Debug.hpp"
 #include <utf8.h>
 
 

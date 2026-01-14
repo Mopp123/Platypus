@@ -1,7 +1,7 @@
 #pragma once
 
-#include "System.h"
-#include "platypus/ecs/components/Lights.h"
+#include "System.hpp"
+#include "platypus/ecs/components/Lights.hpp"
 
 
 namespace platypus

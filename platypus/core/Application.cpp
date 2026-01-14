@@ -1,7 +1,7 @@
-#include "Application.h"
+#include "Application.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "Debug.h"
-#include "Timing.h"
+#include "Debug.hpp"
+#include "Timing.hpp"
 
 #include <chrono>
 
@@ -81,7 +81,7 @@ namespace platypus
 
         // NOTE: HUGE ISSUE:
         _pAssetManager = new AssetManager;
-        _pSwapchain = new Swapchain(_window);
+        _pSwapchain = new Swapchain(_window, false);
 
         // NOTE: Only temporarely figuring shadowmap depth format here!
         // +Not sure if this fallback is enough if D32_SFLOAT not available...

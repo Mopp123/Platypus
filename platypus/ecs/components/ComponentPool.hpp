@@ -1,8 +1,9 @@
 #pragma once
 
-#include "platypus/core/Memory.h"
-#include "platypus/ecs/Entity.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Memory.hpp"
+#include "platypus/core/Debug.hpp"
+
+#include "platypus/ecs/Entity.hpp"
 
 #include <cstring>
 #include <unordered_map>

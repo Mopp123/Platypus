@@ -2,7 +2,7 @@
 
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
-#include "platypus/assets/Texture.h"
+#include "platypus/assets/Texture.hpp"
 
 
 namespace platypus

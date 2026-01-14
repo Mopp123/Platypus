@@ -1,10 +1,12 @@
-#include "GUIRenderer.h"
+#include "GUIRenderer.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/graphics/Buffers.h"
-#include "platypus/graphics/RenderCommand.h"
-#include "platypus/core/Application.h"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/RenderCommand.hpp"
 #include "platypus/utils/StringUtils.hpp"
-#include "platypus/core/Debug.h"
+
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
+
 #include <cstring>
 #include <stdexcept>
 #include <utf8.h>
@@ -67,8 +69,8 @@ namespace platypus
             &_imgFragmentShader,
             CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            true, // enable depth write
+            false, // enable depth test
+            false, // enable depth write
             DepthCompareOperation::COMPARE_OP_ALWAYS,
             true, // enable color blending
             sizeof(Matrix4f) + sizeof(float), // push constants size
@@ -105,8 +107,8 @@ namespace platypus
             &_fontFragmentShader,
             CullMode::CULL_MODE_BACK,
             FrontFace::FRONT_FACE_COUNTER_CLOCKWISE,
-            true, // enable depth test
-            true, // enable depth write
+            false, // enable depth test
+            false, // enable depth write
             DepthCompareOperation::COMPARE_OP_ALWAYS,
             true, // enable color blending
             sizeof(Matrix4f) + sizeof(float), // push constants size

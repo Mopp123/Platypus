@@ -1,9 +1,9 @@
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Shader.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "DesktopShader.h"
+#include "DesktopShader.hpp"
 #include "DesktopDevice.hpp"
-#include "platypus/core/Debug.h"
-#include "platypus/utils/FileUtils.h"
+#include "platypus/core/Debug.hpp"
+#include "platypus/utils/FileUtils.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 
 

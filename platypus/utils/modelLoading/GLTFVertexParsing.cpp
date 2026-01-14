@@ -1,6 +1,6 @@
-#include "GLTFVertexParsing.h"
-#include "platypus/core/Debug.h"
-#include "GLTFFileUtils.h"
+#include "GLTFVertexParsing.hpp"
+#include "platypus/core/Debug.hpp"
+#include "GLTFFileUtils.hpp"
 
 #include <tiny_gltf.h>
 #include <cstring>

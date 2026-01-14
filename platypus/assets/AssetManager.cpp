@@ -1,8 +1,7 @@
-#include "AssetManager.h"
-#include "platypus/graphics/Buffers.h"
-#include "platypus/assets/SkeletalAnimationData.h"
-#include "platypus/core/Debug.h"
-#include "platypus/utils/modelLoading/ModelLoading.h"
+#include "AssetManager.hpp"
+#include "platypus/graphics/Buffers.hpp"
+#include "platypus/core/Debug.hpp"
+#include "platypus/utils/modelLoading/ModelLoading.hpp"
 #include "platypus/Common.h"
 
 

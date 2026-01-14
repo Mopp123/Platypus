@@ -1,4 +1,4 @@
-#include "SkeletalAnimationData.h"
+#include "SkeletalAnimationData.hpp"
 
 
 namespace platypus

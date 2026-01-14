@@ -1,13 +1,14 @@
-#include "platypus/graphics/Swapchain.h"
-#include "DesktopSwapchain.h"
+#include "platypus/graphics/Swapchain.hpp"
+#include "DesktopSwapchain.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "DesktopDevice.hpp"
 #include "DesktopContext.hpp"
 #include "platypus/core/platform/desktop/DesktopWindow.hpp"
-#include "platypus/core/Debug.h"
-#include "platypus/assets/Texture.h"
-#include "platypus/assets/platform/desktop/DesktopTexture.h"
+#include "platypus/core/Debug.hpp"
+#include "platypus/assets/Texture.hpp"
+#include "platypus/assets/platform/desktop/DesktopTexture.hpp"
 #include <algorithm>
+#include <string>
 #include <vulkan/vk_enum_string_helper.h>
 
 
@@ -90,30 +91,25 @@ namespace platypus
         return desiredFormats[0];
     }
 
-
-    static void create_color_images(
-        ImageFormat format,
-        uint32_t width,
-        uint32_t height,
-        const std::vector<VkImage>& swapchainImages,
-        std::vector<Image*>& outImages
-    )
-    {
-        for (size_t i = 0; i < swapchainImages.size(); ++i)
-        {
-            size_t channels = get_image_format_channel_count(format);
-            Image* pImage = new Image(nullptr, width, height, channels, format);
-            outImages.push_back(pImage);
-        }
-    }
-
-    static void create_color_textures(
+    static void create_color_attachments(
         VkDevice device,
         ImageFormat format,
         const std::vector<VkImage>& swapchainImages,
         std::vector<Texture*>& outTextures
     )
     {
+        if (outTextures.size() != swapchainImages.size())
+        {
+            Debug::log(
+                "outTextures' length(" + std::to_string(outTextures.size()) + ") "
+                "needs to be the same as swapchain image count(" + std::to_string(swapchainImages.size()) + ")",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
         for (size_t i = 0; i < swapchainImages.size(); ++i)
         {
             VkImageView imageView = create_image_views(
@@ -123,20 +119,19 @@ namespace platypus
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 1
             )[0];
-            Texture* pTexture = new Texture(true);
+            Texture* pTexture = new Texture(format);
             pTexture->getImpl()->image = swapchainImages[i];
             pTexture->getImpl()->imageView = imageView;
-            outTextures.push_back(pTexture);
+            outTextures[i] = pTexture;
         }
     }
 
-    static void create_depth_texture(
+    static void create_depth_attachment(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkExtent2D surfaceExtent,
         VmaAllocator allocator,
-        Image** pOutImage,
-        Texture** pOutTexture
+        Texture** pOutAttachment
     )
     {
         VkFormat format = get_supported_depth_image_format(physicalDevice);
@@ -182,20 +177,11 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
-        ImageFormat engineImageFormat = to_engine_format(format);
-        size_t channelCount = get_image_format_channel_count(engineImageFormat);
-        *pOutImage = new Image(
-            nullptr,
-            surfaceExtent.width,
-            surfaceExtent.height,
-            channelCount,
-            engineImageFormat
-        );
 
-        *pOutTexture = new Texture(true);
-        (*pOutTexture)->getImpl()->image = vkImage;
-        (*pOutTexture)->getImpl()->vmaAllocation = imageAllocation;
-        (*pOutTexture)->getImpl()->imageView = create_image_views(
+        *pOutAttachment = new Texture(to_engine_format(format));
+        (*pOutAttachment)->getImpl()->image = vkImage;
+        (*pOutAttachment)->getImpl()->vmaAllocation = imageAllocation;
+        (*pOutAttachment)->getImpl()->imageView = create_image_views(
             device,
             { vkImage },
             format,
@@ -203,28 +189,6 @@ namespace platypus
             1
         )[0];
     }
-
-    static void create_framebuffers(
-        const std::vector<Texture*>& colorTextures,
-        Texture* pDepthTexture,
-        const RenderPass& renderPass,
-        VkExtent2D surfaceExtent,
-        std::vector<Framebuffer*>& outFramebuffers
-    )
-    {
-        for (Texture* pColorTexture : colorTextures)
-        {
-            Framebuffer* pFramebuffer = new Framebuffer(
-                renderPass,
-                { pColorTexture },
-                pDepthTexture,
-                surfaceExtent.width,
-                surfaceExtent.height
-            );
-            outFramebuffers.push_back(pFramebuffer);
-        }
-    }
-
 
     static void create_sync_objects(
         VkDevice device,
@@ -313,15 +277,14 @@ namespace platypus
     }
 
 
-    Swapchain::Swapchain(const Window& window) :
+    Swapchain::Swapchain(const Window& window, bool createDepthAttachment) :
         _renderPass(
             RenderPassType::SCREEN_PASS,
             false,
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE |
-            RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE,
-            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR |
-            RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH
-        )
+            createDepthAttachment ? RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE | RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_DEPTH_DISCRETE : RenderPassAttachmentUsageFlagBits::RENDER_PASS_ATTACHMENT_USAGE_COLOR_DISCRETE,
+            createDepthAttachment ? RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR | RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_DEPTH : RenderPassAttachmentClearFlagBits::RENDER_PASS_ATTACHMENT_CLEAR_COLOR
+        ),
+        _createDepthAttachment(createDepthAttachment)
     {
         _pImpl = new SwapchainImpl;
         create(window);
@@ -414,39 +377,41 @@ namespace platypus
             _pImpl->maxFramesInFlight = 1;
 
         ImageFormat engineImageFormat = to_engine_format(selectedFormat.format);
-        create_color_images(
-            engineImageFormat,
-            selectedExtent.width,
-            selectedExtent.height,
-            createdImages,
-            _colorImages
-        );
-
-        create_color_textures(
+        _colorAttachments.resize(_imageCount);
+        create_color_attachments(
             device,
             engineImageFormat,
             createdImages,
-            _colorTextures
+            _colorAttachments
         );
 
-        create_depth_texture(
-            device,
-            pDeviceImpl->physicalDevice,
-            selectedExtent,
-            pDeviceImpl->vmaAllocator,
-            &_pDepthImage,
-            &_pDepthTexture
-        );
+        ImageFormat depthFormat = ImageFormat::NONE;
+        if (_createDepthAttachment)
+        {
+            create_depth_attachment(
+                device,
+                pDeviceImpl->physicalDevice,
+                selectedExtent,
+                pDeviceImpl->vmaAllocator,
+                &_pDepthAttachment
+            );
+            depthFormat = _pDepthAttachment->getImageFormat();
+        }
 
-        _renderPass.create(_colorImages[0]->getFormat(), _pDepthImage->getFormat());
+        _renderPass.create(engineImageFormat, depthFormat);
 
-        create_framebuffers(
-            _colorTextures,
-            _pDepthTexture,
-            _renderPass,
-            selectedExtent,
-            _framebuffers
-        );
+        _framebuffers.resize(_imageCount);
+        for (size_t i = 0; i < _imageCount; ++i)
+        {
+            Framebuffer* pFramebuffer = new Framebuffer(
+                _renderPass,
+                { _colorAttachments[i] },
+                _pDepthAttachment,
+                selectedExtent.width,
+                selectedExtent.height
+            );
+            _framebuffers[i] = pFramebuffer;
+        }
 
         create_sync_objects(
             device,
@@ -480,17 +445,16 @@ namespace platypus
         _pImpl->inFlightFences.clear();
         _pImpl->inFlightImages.clear();
 
-        for (Texture* pColorTexture : _colorTextures)
-            delete pColorTexture;
+        for (Texture* pColorAttachment : _colorAttachments)
+            delete pColorAttachment;
 
-        for (Image* pColorImage : _colorImages)
-            delete pColorImage;
+        _colorAttachments.clear();
 
-        delete _pDepthTexture;
-        delete _pDepthImage;
-
-        _colorTextures.clear();
-        _colorImages.clear();
+        if (_pDepthAttachment)
+        {
+            delete _pDepthAttachment;
+            _pDepthAttachment = nullptr;
+        }
 
         for (Framebuffer* pFramebuffer : _framebuffers)
             delete pFramebuffer;

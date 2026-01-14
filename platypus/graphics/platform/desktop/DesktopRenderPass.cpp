@@ -1,9 +1,9 @@
 #include "platypus/graphics/RenderPass.hpp"
 #include "platypus/graphics/Device.hpp"
-#include "platypus/assets/platform/desktop/DesktopTexture.h"
+#include "platypus/assets/platform/desktop/DesktopTexture.hpp"
 #include "DesktopDevice.hpp"
-#include "DesktopRenderPass.h"
-#include "platypus/core/Debug.h"
+#include "DesktopRenderPass.hpp"
+#include "platypus/core/Debug.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 
 

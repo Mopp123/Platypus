@@ -1,11 +1,11 @@
-#include "ModelLoading.h"
-#include "platypus/core/Debug.h"
+#include "ModelLoading.hpp"
+#include "platypus/core/Debug.hpp"
 #include <unordered_map>
 
 // NOTE: GLTFVertexParsing and GLTFSkeletonParsing includes tinygltf as well
 // and needs to be included before below defines and tinygltf include!
-#include "GLTFVertexParsing.h"
-#include "GLTFAnimationParsing.h"
+#include "GLTFVertexParsing.hpp"
+#include "GLTFAnimationParsing.hpp"
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -13,7 +13,7 @@
 #define JSON_NOEXCEPTION
 #include <tiny_gltf.h>
 
-#include "GLTFFileUtils.h"
+#include "GLTFFileUtils.hpp"
 
 
 namespace platypus

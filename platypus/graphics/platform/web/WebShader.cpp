@@ -1,7 +1,7 @@
-#include "platypus/graphics/Shader.h"
+#include "platypus/graphics/Shader.hpp"
 #include "WebShader.hpp"
-#include "platypus/core/Debug.h"
-#include "platypus/utils/FileUtils.h"
+#include "platypus/core/Debug.hpp"
+#include "platypus/utils/FileUtils.hpp"
 #include "platypus/utils/StringUtils.hpp"
 
 #include <set>

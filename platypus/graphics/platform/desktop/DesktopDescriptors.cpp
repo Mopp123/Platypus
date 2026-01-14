@@ -1,12 +1,12 @@
-#include "DesktopDescriptors.h"
-#include "platypus/core/Debug.h"
-#include "DesktopShader.h"
+#include "DesktopDescriptors.hpp"
+#include "DesktopShader.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/platform/desktop/DesktopDevice.hpp"
-#include "DesktopSwapchain.h"
-#include "DesktopBuffers.h"
-#include "platypus/assets/Texture.h"
-#include "platypus/assets/platform/desktop/DesktopTexture.h"
+#include "DesktopSwapchain.hpp"
+#include "DesktopBuffers.hpp"
+#include "platypus/assets/Texture.hpp"
+#include "platypus/assets/platform/desktop/DesktopTexture.hpp"
+#include "platypus/core/Debug.hpp"
 #include <vulkan/vk_enum_string_helper.h>
 
 

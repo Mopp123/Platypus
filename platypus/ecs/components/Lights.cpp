@@ -1,7 +1,7 @@
-#include "Lights.h"
-#include "platypus/core/Application.h"
-#include "platypus/core/Scene.h"
-#include "platypus/core/Debug.h"
+#include "Lights.hpp"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Scene.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus

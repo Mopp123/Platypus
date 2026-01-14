@@ -1,9 +1,10 @@
 #include "LightSystem.hpp"
-#include "platypus/ecs/components/Component.h"
-#include "platypus/ecs/components/Camera.h"
-#include "platypus/utils/Maths.h"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+#include "platypus/ecs/components/Component.hpp"
+#include "platypus/ecs/components/Camera.hpp"
+#include "platypus/ecs/components/Transform.hpp"
+#include "platypus/utils/Maths.hpp"
+#include "platypus/core/Scene.hpp"
+#include "platypus/core/Debug.hpp"
 
 #include <cmath>
 

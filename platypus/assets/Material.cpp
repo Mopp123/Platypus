@@ -1,7 +1,9 @@
-#include "Material.h"
-#include "AssetManager.h"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+#include "Material.hpp"
+#include "AssetManager.hpp"
+
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
+
 #include "platypus/graphics/Device.hpp"
 #include <vector>
 

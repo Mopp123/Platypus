@@ -1,6 +1,4 @@
 #include "SkinnedMeshTestScene.hpp"
-#include "platypus/ecs/components/Renderable.h"
-#include "platypus/ecs/components/Transform.h"
 #include "WaterTestScene.hpp"
 #include <string>
 

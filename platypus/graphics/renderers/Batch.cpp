@@ -1,6 +1,6 @@
 #include "Batch.hpp"
-#include "platypus/core/Application.h"
-#include "platypus/core/Debug.h"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus
@@ -239,18 +239,23 @@ namespace platypus
 
     void Batcher::freeBatches()
     {
+        Debug::log("___TEST___destroying managed pipelines...");
         destroyManagedPipelines();
+        Debug::log("___TEST___success!");
 
+        Debug::log("___TEST___deleting batches...");
         std::unordered_map<RenderPassType, std::vector<Batch*>>::iterator batchIt;
         for (batchIt = _batches.begin(); batchIt != _batches.end(); ++batchIt)
         {
             for (Batch* pBatch : batchIt->second)
                 delete pBatch;
         }
+        Debug::log("___TEST___success!");
 
         _batches.clear();
         _identifierBatchMapping.clear();
 
+        Debug::log("___TEST___freeing descriptor sets...");
         MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
         DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
         for (std::vector<BatchShaderResource>& batchResources : _allocatedShaderResources)
@@ -263,6 +268,7 @@ namespace platypus
                 descriptorPool.freeDescriptorSets(resource.descriptorSet);
             }
         }
+        Debug::log("___TEST___success!");
         _allocatedShaderResources.clear();
         _batchShaderResourceMapping.clear();
     }
