@@ -15,7 +15,158 @@
 
 namespace platypus
 {
-    static std::vector<PhysicalDevice> get_physical_devices(VkInstance instance)
+    static std::set<VkFormat> s_allFormats = {
+        VK_FORMAT_R8_SRGB,
+        VK_FORMAT_R8G8B8_SRGB,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_B8G8R8A8_SRGB,
+        VK_FORMAT_B8G8R8_SRGB,
+        VK_FORMAT_R8_UNORM,
+        VK_FORMAT_R8G8B8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_B8G8R8A8_UNORM,
+        VK_FORMAT_B8G8R8_UNORM,
+
+        VK_FORMAT_D16_UNORM,
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D32_SFLOAT_S8_UINT
+    };
+
+    static std::set<VkFormat> s_colorFormats = {
+        VK_FORMAT_R8_SRGB,
+        VK_FORMAT_R8G8B8_SRGB,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_B8G8R8A8_SRGB,
+        VK_FORMAT_B8G8R8_SRGB,
+        VK_FORMAT_R8_UNORM,
+        VK_FORMAT_R8G8B8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_B8G8R8A8_UNORM,
+        VK_FORMAT_B8G8R8_UNORM
+    };
+
+    static std::set<VkFormat> s_depthFormats = {
+        VK_FORMAT_D16_UNORM,
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D32_SFLOAT_S8_UINT
+    };
+
+    // Returns which formats in possibleFormats are supported
+    static std::unordered_map<VkFormat, VkFormatProperties> get_supported_formats(
+        VkPhysicalDevice physicalDevice,
+        const std::set<VkFormat>& possibleFormats
+    )
+    {
+        std::unordered_map<VkFormat, VkFormatProperties> supportedFormats;
+        for (VkFormat possibleFormat : possibleFormats)
+        {
+            VkFormatProperties possibleFormatProperties;
+            vkGetPhysicalDeviceFormatProperties(
+                physicalDevice,
+                possibleFormat,
+                &possibleFormatProperties
+            );
+            if (!(possibleFormatProperties.bufferFeatures == 0 &&
+                possibleFormatProperties.linearTilingFeatures == 0 &&
+                possibleFormatProperties.optimalTilingFeatures == 0)
+            )
+            {
+                supportedFormats[possibleFormat] = possibleFormatProperties;
+            }
+        }
+        return supportedFormats;
+    }
+
+
+    static std::vector<VkFormat> get_color_formats(const PhysicalDevice& physicalDevice)
+    {
+        std::vector<VkFormat> colorFormats;
+        const std::unordered_map<VkFormat, VkFormatProperties>& supportedFormats = physicalDevice.supportedFormats;
+        std::unordered_map<VkFormat, VkFormatProperties>::const_iterator it;
+        for (it = supportedFormats.begin(); it != supportedFormats.end(); ++it)
+        {
+            if (s_colorFormats.find(it->first) != s_colorFormats.end())
+                colorFormats.push_back(it->first);
+        }
+        return colorFormats;
+    }
+
+
+    static std::vector<VkFormat> get_depth_formats(const PhysicalDevice& physicalDevice)
+    {
+        std::vector<VkFormat> depthFormats;
+        const std::unordered_map<VkFormat, VkFormatProperties>& supportedFormats = physicalDevice.supportedFormats;
+        std::unordered_map<VkFormat, VkFormatProperties>::const_iterator it;
+        for (it = supportedFormats.begin(); it != supportedFormats.end(); ++it)
+        {
+            if (s_depthFormats.find(it->first) != s_depthFormats.end())
+                depthFormats.push_back(it->first);
+        }
+        return depthFormats;
+    }
+
+
+    static WindowSurfaceProperties get_window_surface_properties(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR surface
+    )
+    {
+        WindowSurfaceProperties properties{};
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &properties.capabilities);
+
+        uint32_t formatCount = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+        properties.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, properties.formats.data());
+
+        uint32_t presentModes = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, nullptr);
+        properties.presentModes.resize(presentModes);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, properties.presentModes.data());
+
+        return properties;
+    };
+
+
+    static QueueProperties get_queue_properties(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR surface
+    )
+    {
+        QueueProperties result;
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+        int index = 0;
+        for (const VkQueueFamilyProperties& queueFamilyProperties : queueFamilies)
+        {
+            if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                result.queueFlags |= QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
+                result.graphicsFamilyIndex = index;
+            }
+            VkBool32 presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &presentSupport);
+            if (presentSupport)
+            {
+                result.queueFlags |= QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
+                result.presentFamilyIndex = index;
+            }
+            ++index;
+        }
+        return result;
+    }
+
+
+    static std::vector<PhysicalDevice> get_physical_devices(
+        VkInstance instance,
+        VkSurfaceKHR windowSurface
+    )
     {
         std::vector<PhysicalDevice> physicalDevices;
 
@@ -24,240 +175,93 @@ namespace platypus
         if (count == 0)
             return physicalDevices;
 
-        std::vector<VkPhysicalDevice> availableDevices;
+        std::vector<VkPhysicalDevice> availableDevices(count);
         vkEnumeratePhysicalDevices(instance, &count, availableDevices.data());
 
         for (VkPhysicalDevice availableDevice : availableDevices)
         {
-            // TODO: Get all used info about the available device...
+            PhysicalDevice physicalDevice{ availableDevice };
+            vkGetPhysicalDeviceProperties(availableDevice, &physicalDevice.properties);
+
+            physicalDevice.queueProperties = get_queue_properties(
+                physicalDevice.handle,
+                windowSurface
+            );
+
+            uint32_t deviceExtensionCount = 0;
+            vkEnumerateDeviceExtensionProperties(
+                availableDevice,
+                nullptr,
+                &deviceExtensionCount,
+                nullptr
+            );
+            physicalDevice.extensionProperties.resize(deviceExtensionCount);
+            vkEnumerateDeviceExtensionProperties(
+                availableDevice,
+                nullptr,
+                &deviceExtensionCount,
+                physicalDevice.extensionProperties.data()
+            );
+
+            physicalDevice.supportedFormats = get_supported_formats(availableDevice, s_allFormats);
+
+            physicalDevice.windowSurfaceProperties = get_window_surface_properties(
+                availableDevice,
+                windowSurface
+            );
+
+            physicalDevices.push_back(physicalDevice);
         }
 
         return physicalDevices;
     }
 
 
-    static bool check_device_extension_availability(
-        VkPhysicalDevice physicalDevice,
-        const std::vector<const char*>& extensions,
-        std::vector<const char*>& outUnavailable
+    // Returns error messages for each missing feature.
+    // Returns empty vec if device is adequate.
+    static std::vector<std::string> is_device_adequate(
+        const PhysicalDevice& physicalDevice,
+        VkSurfaceKHR windowSurface,
+        const std::vector<std::string>& requiredExtensions
     )
     {
-        uint32_t availableExtensionCount = 0;
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, nullptr);
-        std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, availableExtensions.data());
-        for (size_t i = 0; i < extensions.size(); ++i)
+        std::vector<std::string> errors;
+        if (!(physicalDevice.queueProperties.queueFlags & QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS))
+            errors.push_back("No graphics queue found");
+        if (!(physicalDevice.queueProperties.queueFlags & QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT))
+            errors.push_back("No present queue found");
+
+        std::vector<std::string> missingExtensions;
+        for (const std::string& requiredExtension : requiredExtensions)
         {
             bool found = false;
-            for (const VkExtensionProperties& availableExtension : availableExtensions)
+            for (VkExtensionProperties availableExtension : physicalDevice.extensionProperties)
             {
-                if (strcmp(extensions[i], availableExtension.extensionName) == 0)
+                if (strcmp(requiredExtension.c_str(), availableExtension.extensionName) == 0)
                 {
                     found = true;
                     break;
                 }
             }
             if (!found)
-                outUnavailable.push_back(extensions[i]);
+                missingExtensions.push_back(requiredExtension);
         }
-        return outUnavailable.empty();
-    }
-
-
-    static DeviceImpl::QueueFamilyIndices find_queue_families(
-        VkPhysicalDevice physicalDevice,
-        VkSurfaceKHR surface
-    )
-    {
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-        DeviceImpl::QueueFamilyIndices result;
-        int index = 0;
-        for (const VkQueueFamilyProperties& queueFamilyProperties : queueFamilies)
+        if (!missingExtensions.empty())
         {
-            if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                result.queueFlags |= DeviceImpl::QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS;
-                result.graphicsFamily = index;
-            }
-            VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &presentSupport);
-            if (presentSupport)
-            {
-                result.queueFlags |= DeviceImpl::QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
-                result.presentFamily = index;
-            }
-            ++index;
+            for (const std::string& missingExtension : missingExtensions)
+                errors.push_back("Missing extension: " + missingExtension);
         }
-        return result;
-    }
 
+        // TODO: Make sure that required formats are supported!
+        if (physicalDevice.supportedFormats.empty())
+            errors.push_back("No supported formats found");
 
-    static DeviceImpl::SurfaceDetails query_surface_details(
-        VkPhysicalDevice physicalDevice,
-        VkSurfaceKHR surface
-    )
-    {
-        DeviceImpl::SurfaceDetails details{};
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
+        if (physicalDevice.windowSurfaceProperties.formats.empty())
+            errors.push_back("No window surface formats found");
+        if (physicalDevice.windowSurfaceProperties.presentModes.empty())
+            errors.push_back("No window surface present modes found");
 
-        uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data());
-
-        uint32_t presentModes = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, nullptr);
-        details.presentModes.resize(presentModes);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModes, details.presentModes.data());
-
-        return details;
-    };
-
-
-    static bool is_device_adequate(
-        VkPhysicalDevice physicalDevice,
-        VkSurfaceKHR surface,
-        const std::vector<const char*>& requiredExtensions
-    )
-    {
-        // TODO:
-        //  * Have some device limit requirements and check those here
-        //  from VkPhysicalDeviceProperties
-        //  * Some logging telling why device not adequate
-        DeviceImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice, surface);
-        uint32_t requiredFlags = DeviceImpl::QueueFamilyFlagBits::QUEUE_FAMILY_GRAPHICS | DeviceImpl::QueueFamilyFlagBits::QUEUE_FAMILY_PRESENT;
-
-        std::vector<const char*> unavailableExtensions;
-        bool supportsSwapchain = check_device_extension_availability(
-            physicalDevice,
-            requiredExtensions,
-            unavailableExtensions
-        );
-
-        DeviceImpl::SurfaceDetails surfaceDetails = query_surface_details(
-            physicalDevice,
-            surface
-        );
-        bool swapchainDetailsAdequate = !surfaceDetails.formats.empty() && !surfaceDetails.presentModes.empty();
-
-        return ((queueFamilyIndices.queueFlags & requiredFlags) == requiredFlags) && supportsSwapchain && swapchainDetailsAdequate;
-    }
-
-
-    static VkPhysicalDevice auto_pick_physical_device(
-        VkInstance instance,
-        VkSurfaceKHR surface,
-        const std::vector<const char*>& requiredExtensions,
-        size_t& outMinUniformBufferOffsetAlignment,
-        std::vector<VkFormat>& outAvailableDepthFormats,
-        std::vector<VkFormat>& outAvailableColorFormats
-    )
-    {
-        uint32_t physicalDeviceCount = 0;
-        vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
-        if (physicalDeviceCount == 0)
-        {
-            Debug::log(
-                "@auto_pick_physical_device "
-                "No physical devices found",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-        vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices.data());
-
-        const std::vector<VkFormat> possibleDepthFormats = {
-            VK_FORMAT_D16_UNORM,
-            VK_FORMAT_D32_SFLOAT,
-            VK_FORMAT_D16_UNORM_S8_UINT,
-            VK_FORMAT_D24_UNORM_S8_UINT,
-            VK_FORMAT_D32_SFLOAT_S8_UINT
-        };
-
-        const std::vector<VkFormat> possibleColorFormats = {
-            VK_FORMAT_R8_SRGB,
-            VK_FORMAT_R8G8B8_SRGB,
-            VK_FORMAT_R8G8B8A8_SRGB,
-            VK_FORMAT_B8G8R8A8_SRGB,
-            VK_FORMAT_B8G8R8_SRGB,
-            VK_FORMAT_R8_UNORM,
-            VK_FORMAT_R8G8B8_UNORM,
-            VK_FORMAT_R8G8B8A8_UNORM,
-            VK_FORMAT_B8G8R8A8_UNORM,
-            VK_FORMAT_B8G8R8_UNORM
-        };
-
-        Debug::log(
-            "Found physical devices:"
-        );
-        for (const VkPhysicalDevice& physicalDevice : physicalDevices)
-        {
-            VkPhysicalDeviceProperties properties;
-            vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-
-            // Get available depth formats
-            for (VkFormat possibleFormat : possibleDepthFormats)
-            {
-                VkFormatProperties possibleFormatProperties;
-                vkGetPhysicalDeviceFormatProperties(
-                    physicalDevice,
-                    possibleFormat,
-                    &possibleFormatProperties
-                );
-                if (!(possibleFormatProperties.bufferFeatures == 0 &&
-                    possibleFormatProperties.linearTilingFeatures == 0 &&
-                    possibleFormatProperties.optimalTilingFeatures == 0)
-                )
-                {
-                    outAvailableDepthFormats.push_back(possibleFormat);
-                }
-            }
-
-            // Get available color formats
-            for (VkFormat possibleFormat : possibleColorFormats)
-            {
-                VkFormatProperties possibleFormatProperties;
-                vkGetPhysicalDeviceFormatProperties(
-                    physicalDevice,
-                    possibleFormat,
-                    &possibleFormatProperties
-                );
-                if (!(possibleFormatProperties.bufferFeatures == 0 &&
-                    possibleFormatProperties.linearTilingFeatures == 0 &&
-                    possibleFormatProperties.optimalTilingFeatures == 0)
-                )
-                {
-                    outAvailableColorFormats.push_back(possibleFormat);
-                }
-            }
-
-            // TODO:
-            //  * Maybe display some more info?
-            //  * Store device limits somewhere?
-            std::string deviceNameStr(properties.deviceName);
-            std::string deviceTypeStr = string_VkPhysicalDeviceType(properties.deviceType);
-            Debug::log("    " + deviceNameStr);
-            Debug::log("        type: " + deviceTypeStr);
-            Debug::log("        api version: " + std::to_string(properties.apiVersion));
-
-            if (is_device_adequate(physicalDevice, surface, requiredExtensions))
-            {
-                Debug::log("Picked device: " + deviceNameStr);
-                outMinUniformBufferOffsetAlignment = properties.limits.minUniformBufferOffsetAlignment;
-                return physicalDevice;
-            }
-        }
-        Debug::log(
-            "@auto_pick_physical_device "
-            "Failed to find suitable physical device",
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return physicalDevices[0];
+        return errors;
     }
 
 
@@ -272,46 +276,107 @@ namespace platypus
     {
         s_pWindow = pWindow;
 
-        VkSurfaceKHR surface = pWindow->getImpl()->surface;
+        ContextImpl* pContextImpl = Context::get_impl();
+        if (!pContextImpl)
+        {
+            Debug::log(
+                "ContextImpl was nullptr! "
+                "Make sure you have created context before creating the Device!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
 
-        std::vector<const char*> requiredExtensions = {
+        VkInstance instance = pContextImpl->instance;
+        if (instance == VK_NULL_HANDLE)
+        {
+            Debug::log(
+                "VkInstance was VK_NULL_HANDLE "
+                "Make sure you have created context before creating the Device!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        VkSurfaceKHR surface = pWindow->getImpl()->surface;
+        if (surface == VK_NULL_HANDLE)
+        {
+            Debug::log(
+                "Window's VkSurfaceKHR was VK_NULL_HANDLE "
+                "Make sure you have created the window before creating the Device!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        std::vector<std::string> requiredExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
 
-        std::vector<VkFormat> deviceDepthFormats;
-        std::vector<VkFormat> deviceColorFormats;
-        VkPhysicalDevice selectedPhysicalDevice = auto_pick_physical_device(
-            Context::get_impl()->instance,
-            surface,
-            requiredExtensions,
-            s_minUniformBufferOffsetAlignment,
-            deviceDepthFormats,
-            deviceColorFormats
-        );
-        for (VkFormat supportedDepthFormat : deviceDepthFormats)
-            s_supportedDepthFormats.push_back(to_engine_format(supportedDepthFormat));
-        for (VkFormat supportedColorFormat : deviceColorFormats)
-            s_supportedColorFormats.push_back(to_engine_format(supportedColorFormat));
+        std::vector<PhysicalDevice> availableDevices = get_physical_devices(instance, surface);
+        std::vector<PhysicalDevice> adequateDevices;
 
-        DeviceImpl::QueueFamilyIndices queueFamilyIndices = find_queue_families(
-            selectedPhysicalDevice,
-            surface
-        );
-        DeviceImpl::SurfaceDetails surfaceDetails = query_surface_details(
-            selectedPhysicalDevice,
-            surface
-        );
+        Debug::log("Found devices:");
+        for (const PhysicalDevice& availableDevice : availableDevices)
+        {
+            Debug::log("    " + std::string(availableDevice.properties.deviceName));
+            std::vector<std::string> missingFeatures = is_device_adequate(
+                availableDevice,
+                surface,
+                requiredExtensions
+            );
+            if (missingFeatures.empty())
+            {
+                adequateDevices.push_back(availableDevice);
+            }
+            else
+            {
+                std::string msg = "        ->Invalid for application's usage due to following issues:\n";
+                for (size_t i = 0; i < missingFeatures.size(); ++i)
+                {
+                    msg += "            " + missingFeatures[i];
+                    if (i != missingFeatures.size() - 1)
+                        msg += "\n";
+                }
+                Debug::log(msg);
+            }
+        }
+
+        if (adequateDevices.empty())
+        {
+            Debug::log(
+                "No adequate devices found!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        Debug::log("Usable devices:");
+        for (const PhysicalDevice& adequateDevice : adequateDevices)
+            Debug::log("    " + std::string(adequateDevice.properties.deviceName));
+
+        // Selecting first adequate device for now JUST FOR TESTING!
+        PhysicalDevice selectedPhysicalDevice = adequateDevices[0];
+        s_minUniformBufferOffsetAlignment = selectedPhysicalDevice.properties.limits.minUniformBufferOffsetAlignment;
+        QueueProperties queueProperties = selectedPhysicalDevice.queueProperties;
 
         // It's possible that the chosen device has queue family supporting both graphics and
         // presentation so figure that out..
-        std::set<uint32_t> uniqueQueueFamilies = {
-            queueFamilyIndices.graphicsFamily,
-            queueFamilyIndices.presentFamily
+        std::set<uint32_t> uniqueQueueFamilyIndices = {
+            queueProperties.graphicsFamilyIndex,
+            queueProperties.presentFamilyIndex
         };
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         float queuePriority = 1.0f;
-        for (uint32_t queueFamilyIndex : uniqueQueueFamilies)
+        for (uint32_t queueFamilyIndex : uniqueQueueFamilyIndices)
         {
             VkDeviceQueueCreateInfo queueCreateInfo{};
             queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -323,19 +388,23 @@ namespace platypus
 
         VkPhysicalDeviceFeatures physicalDeviceFeatures{};
 
-        VkDeviceCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
-        createInfo.pQueueCreateInfos = queueCreateInfos.data();
-        createInfo.pEnabledFeatures = &physicalDeviceFeatures;
+        VkDeviceCreateInfo deviceCreateInfo{};
+        deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+        deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+        deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
 
-        createInfo.enabledExtensionCount = (uint32_t)requiredExtensions.size();
-        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+        std::vector<const char*> useExtensions(requiredExtensions.size());
+        for (size_t i = 0; i < requiredExtensions.size(); ++i)
+            useExtensions[i] = requiredExtensions[i].c_str();
+
+        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(useExtensions.size());
+        deviceCreateInfo.ppEnabledExtensionNames = useExtensions.data();
 
         VkDevice device;
         VkResult createDeviceResult = vkCreateDevice(
-            selectedPhysicalDevice,
-            &createInfo,
+            selectedPhysicalDevice.handle,
+            &deviceCreateInfo,
             nullptr,
             &device
         );
@@ -343,28 +412,37 @@ namespace platypus
         {
             const std::string resultStr(string_VkResult(createDeviceResult));
             Debug::log(
-                "@Device::create "
-                "Failed to create VkDevice! VkResult: " + resultStr
+                "Failed to create VkDevice! VkResult: " + resultStr,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
+            return;
         }
 
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue = VK_NULL_HANDLE;
-        vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily, 0, &graphicsQueue);
-        vkGetDeviceQueue(device, queueFamilyIndices.presentFamily, 0, &presentQueue);
+        // NOTE: Should we care about the queue indices here (set to 0)
+        // in addition to the family indices?
+        vkGetDeviceQueue(device, queueProperties.graphicsFamilyIndex, 0, &graphicsQueue);
+        vkGetDeviceQueue(device, queueProperties.presentFamilyIndex, 0, &presentQueue);
 
         s_pImpl = new DeviceImpl;
         s_pImpl->physicalDevice = selectedPhysicalDevice;
         s_pImpl->device = device;
-        s_pImpl->queueFamilyIndices = queueFamilyIndices;
         s_pImpl->graphicsQueue = graphicsQueue;
         s_pImpl->presentQueue = presentQueue;
-        s_pImpl->surfaceDetails = surfaceDetails;
+
+        // Fucking dumb, but will do for now...
+        for (VkFormat colorFormat : get_color_formats(selectedPhysicalDevice))
+            s_supportedColorFormats.push_back(to_engine_format(colorFormat));
+
+        for (VkFormat depthFormat : get_depth_formats(selectedPhysicalDevice))
+            s_supportedDepthFormats.push_back(to_engine_format(depthFormat));
 
         VmaAllocatorCreateInfo allocatorCreateInfo{};
         allocatorCreateInfo.flags = 0;
-        allocatorCreateInfo.physicalDevice = selectedPhysicalDevice;
+        allocatorCreateInfo.physicalDevice = selectedPhysicalDevice.handle;
         allocatorCreateInfo.device = device;
         allocatorCreateInfo.instance = Context::get_impl()->instance;
         allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_0;
@@ -389,6 +467,9 @@ namespace platypus
 
     void Device::destroy()
     {
+        s_supportedColorFormats.clear();
+        s_supportedDepthFormats.clear();
+
         if (!s_pImpl)
         {
             Debug::log(
@@ -401,6 +482,8 @@ namespace platypus
         delete s_pCommandPool;
         vmaDestroyAllocator(s_pImpl->vmaAllocator);
         vkDestroyDevice(s_pImpl->device, nullptr);
+
+        s_pImpl->physicalDevice = { };
     }
 
     void Device::submit_primary_command_buffer(
@@ -468,8 +551,8 @@ namespace platypus
 
     void Device::handle_window_resize()
     {
-        s_pImpl->surfaceDetails = query_surface_details(
-            s_pImpl->physicalDevice,
+        s_pImpl->physicalDevice.windowSurfaceProperties = get_window_surface_properties(
+            s_pImpl->physicalDevice.handle,
             s_pWindow->getImpl()->surface
         );
     }
@@ -500,5 +583,21 @@ namespace platypus
         }
         #endif
         return s_pImpl;
+    }
+
+    bool is_format_supported(VkFormat format)
+    {
+        const PhysicalDevice& physicalDevice = Device::get_impl()->physicalDevice;
+        if (physicalDevice.handle == VK_NULL_HANDLE)
+        {
+            Debug::log(
+                "Physical device was VK_NULL_HANDLE",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        return physicalDevice.supportedFormats.find(format) != physicalDevice.supportedFormats.end();
     }
 }

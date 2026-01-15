@@ -576,13 +576,22 @@ namespace platypus
 
         VkFormat vkImageFormat = to_vk_format(imageFormat);
 
-        // Using vkCmdBlit to create mipmaps, so make sure this is supported
-        VkFormatProperties imageFormatProperties;
-        vkGetPhysicalDeviceFormatProperties(
-            Device::get_impl()->physicalDevice,
-            vkImageFormat,
-            &imageFormatProperties
-        );
+        // Using vkCmdBlit to create mipmaps, so make sure this is supported!
+        //  -> even if the image format is supported, need to make sure that the format feature
+        //  VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT is also supported!
+        if (!is_format_supported(vkImageFormat))
+        {
+            Debug::log(
+                "Image format " + image_format_to_string(imageFormat) + " "
+                "not supported by the selected device"
+                " "+ std::string(Device::get_impl()->physicalDevice.properties.deviceName),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        VkFormatProperties imageFormatProperties = Device::get_impl()->physicalDevice.supportedFormats[vkImageFormat];
         if (!(imageFormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
         {
             Debug::log(

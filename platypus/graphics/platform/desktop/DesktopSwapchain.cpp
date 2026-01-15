@@ -299,7 +299,7 @@ namespace platypus
     void Swapchain::create(const Window& window)
     {
         DeviceImpl* pDeviceImpl = Device::get_impl();
-        const DeviceImpl::SurfaceDetails& surfaceDetails = pDeviceImpl->surfaceDetails;
+        const WindowSurfaceProperties& surfaceDetails = pDeviceImpl->physicalDevice.windowSurfaceProperties;
         const VkSurfaceCapabilitiesKHR& surfaceCapabilities = surfaceDetails.capabilities;
         VkSurfaceFormatKHR selectedFormat = select_surface_format(surfaceDetails.formats);
         VkPresentModeKHR selectedPresentMode = select_present_mode(surfaceDetails.presentModes);
@@ -320,10 +320,10 @@ namespace platypus
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        const DeviceImpl::QueueFamilyIndices& deviceQueueFamilyIndices = pDeviceImpl->queueFamilyIndices;
+        const QueueProperties& queueProperties = pDeviceImpl->physicalDevice.queueProperties;
         uint32_t usedIndices[2] = {
-            deviceQueueFamilyIndices.graphicsFamily,
-            deviceQueueFamilyIndices.presentFamily
+            queueProperties.graphicsFamilyIndex,
+            queueProperties.presentFamilyIndex
         };
 
         if (usedIndices[0] == usedIndices[1])
@@ -390,7 +390,7 @@ namespace platypus
         {
             create_depth_attachment(
                 device,
-                pDeviceImpl->physicalDevice,
+                pDeviceImpl->physicalDevice.handle,
                 selectedExtent,
                 pDeviceImpl->vmaAllocator,
                 &_pDepthAttachment

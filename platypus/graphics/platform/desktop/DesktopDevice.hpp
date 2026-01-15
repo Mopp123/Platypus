@@ -3,50 +3,54 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <vector>
+#include <unordered_map>
 
 
 namespace platypus
 {
+    // *Maybe this should rather be in DesktopWindow?
+    struct WindowSurfaceProperties
+    {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };
+
+    enum QueueFamilyFlagBits
+    {
+        QUEUE_FAMILY_NONE = 0x0,
+        QUEUE_FAMILY_GRAPHICS = 0x1,
+        QUEUE_FAMILY_PRESENT = 0x2,
+    };
+
+    struct QueueProperties
+    {
+        uint32_t graphicsFamilyIndex;
+        uint32_t presentFamilyIndex;
+        uint32_t queueFlags = QueueFamilyFlagBits::QUEUE_FAMILY_NONE;
+    };
+
     struct PhysicalDevice
     {
         VkPhysicalDevice handle = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties properties;
-        std::vector<VkFormat> colorFormats;
-        std::vector<VkFormat> depthFormats;
+        QueueProperties queueProperties;
+        std::vector<VkExtensionProperties> extensionProperties;
+        std::unordered_map<VkFormat, VkFormatProperties> supportedFormats;
+
+        WindowSurfaceProperties windowSurfaceProperties;
     };
 
     struct DeviceImpl
     {
-        enum QueueFamilyFlagBits
-        {
-            QUEUE_FAMILY_NONE = 0x0,
-            QUEUE_FAMILY_GRAPHICS = 0x1,
-            QUEUE_FAMILY_PRESENT = 0x2,
-        };
-
-        struct QueueFamilyIndices
-        {
-            uint32_t graphicsFamily;
-            uint32_t presentFamily;
-            uint32_t queueFlags = QueueFamilyFlagBits::QUEUE_FAMILY_NONE;
-        };
-
-        struct SurfaceDetails
-        {
-            VkSurfaceCapabilitiesKHR capabilities;
-            std::vector<VkSurfaceFormatKHR> formats;
-            std::vector<VkPresentModeKHR> presentModes;
-        };
-
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        PhysicalDevice physicalDevice;
         VkDevice device = VK_NULL_HANDLE;
 
-        QueueFamilyIndices queueFamilyIndices;
         VkQueue graphicsQueue;
         VkQueue presentQueue;
 
-        SurfaceDetails surfaceDetails;
-
         VmaAllocator vmaAllocator;
     };
+
+    bool is_format_supported(VkFormat format);
 }
