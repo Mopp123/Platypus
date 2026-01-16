@@ -1,8 +1,20 @@
 #include "ShadowTestScene.hpp"
+#include <thread>
+#include <iostream>
 
+
+void func()
+{
+    std::cout << "Hello from another thread\n";
+}
 
 int main(int argc, const char** argv)
 {
+    void (*pFunc)() = &func;
+    std::thread t(pFunc);
+    t.join();
+
+    /*
     platypus::WindowMode windowMode = platypus::WindowMode::WINDOWED;
     #ifdef PLATYPUS_BUILD_WEB
         windowMode = platypus::WindowMode::WINDOWED_FIT_SCREEN;
@@ -17,5 +29,6 @@ int main(int argc, const char** argv)
         new ShadowTestScene
     );
     app.run();
+    */
     return 0;
 }
