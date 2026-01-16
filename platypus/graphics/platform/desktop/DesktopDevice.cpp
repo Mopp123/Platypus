@@ -265,6 +265,52 @@ namespace platypus
     }
 
 
+    bool is_format_supported(VkFormat format)
+    {
+        const PhysicalDevice& physicalDevice = Device::get_impl()->physicalDevice;
+        if (physicalDevice.handle == VK_NULL_HANDLE)
+        {
+            Debug::log(
+                "Physical device was VK_NULL_HANDLE",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+        return physicalDevice.supportedFormats.find(format) != physicalDevice.supportedFormats.end();
+    }
+
+    // *Could do something more interesting here in the future...
+    static uint32_t score_device(const PhysicalDevice& physicalDevice)
+    {
+        if (physicalDevice.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            return 1;
+        else
+            return 0;
+    }
+
+    static PhysicalDevice get_highest_score_device(
+        const std::vector<PhysicalDevice>& physicalDevices
+    )
+    {
+        if (physicalDevices.empty())
+            return { };
+
+        uint32_t highestScore = 0;
+        size_t highestIndex = 0;
+        for (size_t i = 0; i < physicalDevices.size(); ++i)
+        {
+            uint32_t score = score_device(physicalDevices[i]);
+            if (score > highestScore)
+            {
+                highestScore = score;
+                highestIndex = i;
+            }
+        }
+        return physicalDevices[highestIndex];
+    }
+
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
     size_t Device::s_minUniformBufferOffsetAlignment = 0;
@@ -362,8 +408,9 @@ namespace platypus
         for (const PhysicalDevice& adequateDevice : adequateDevices)
             Debug::log("    " + std::string(adequateDevice.properties.deviceName));
 
-        // Selecting first adequate device for now JUST FOR TESTING!
-        PhysicalDevice selectedPhysicalDevice = adequateDevices[0];
+        // Score adequate devices and select best one
+        PhysicalDevice selectedPhysicalDevice = get_highest_score_device(adequateDevices);
+        Debug::log("Selected device: " + std::string(selectedPhysicalDevice.properties.deviceName));
         s_minUniformBufferOffsetAlignment = selectedPhysicalDevice.properties.limits.minUniformBufferOffsetAlignment;
         QueueProperties queueProperties = selectedPhysicalDevice.queueProperties;
 
@@ -583,21 +630,5 @@ namespace platypus
         }
         #endif
         return s_pImpl;
-    }
-
-    bool is_format_supported(VkFormat format)
-    {
-        const PhysicalDevice& physicalDevice = Device::get_impl()->physicalDevice;
-        if (physicalDevice.handle == VK_NULL_HANDLE)
-        {
-            Debug::log(
-                "Physical device was VK_NULL_HANDLE",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return false;
-        }
-        return physicalDevice.supportedFormats.find(format) != physicalDevice.supportedFormats.end();
     }
 }
