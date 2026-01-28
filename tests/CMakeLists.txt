@@ -37,7 +37,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
         ${PARENT_DIR}/dependencies/utfcpp
     )
     # NOTE: Below doesn't work if using add_compile_options() instead! ...for some reason...
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1 -fexceptions -pthread")
     set(CMAKE_EXECUTABLE_SUFFIX .html)
     set(HTML_SHELL_LOCATION "${PROJECT_SOURCE_DIR}/shell.html")
     # NOTE: This gets converted to camel case for some reason...
@@ -45,7 +45,7 @@ elseif(${BUILD_TARGET} MATCHES "web")
     # Emscripten recommends using the -o out.html
     set(HTML_OUT "userTest.html")
 
-    set(ADDITIONAL_LINK_FLAGS "--emrun -fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH=1 -l websocket.js")
+    set(ADDITIONAL_LINK_FLAGS "--emrun -fexceptions -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -o ${HTML_OUT} --shell-file ${HTML_SHELL_LOCATION} -sFORCE_FILESYSTEM --use-preload-plugins -sFETCH -sALLOW_MEMORY_GROWTH=1 -l websocket.js -pthread -sPTHREAD_POOL_SIZE=3 -sPROXY_TO_PTHREAD")
     # NOTE: Engine source is included as a part of the web build
     # -> specify all engine files here
     list(APPEND SRC_FILES
