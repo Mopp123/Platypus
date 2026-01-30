@@ -14,14 +14,8 @@ layout(location = 0) out vec4 outColor;
 void main()
 {
     vec4 textureColor = texture(textureSampler, var_texCoord) * var_color;
-
-    if (var_pos.x > var_borderThickness && var_pos.x < var_scale.x - var_borderThickness &&
-        var_pos.y > var_borderThickness && var_pos.y < var_scale.y - var_borderThickness)
-    {
-        outColor = textureColor;
-    }
-    else
-    {
-        outColor = var_borderColor;
-    }
+    // *Was able to get rid of previously used if statement with followin
+    vec2 inBounds = step(vec2(var_borderThickness), var_pos) * step(var_pos, var_scale - var_borderThickness);
+    float mask = min(inBounds.x, inBounds.y);
+    outColor = mix(var_borderColor, textureColor, mask);
 }

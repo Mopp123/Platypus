@@ -83,6 +83,7 @@ void main_loop()
 int main(int argc, const char** argv)
 {
     emscripten_set_main_loop(main_loop, 0, true);
+    std::cout << "Some main code there...\n";
 
     /*
     platypus::WindowMode windowMode = platypus::WindowMode::WINDOWED;
