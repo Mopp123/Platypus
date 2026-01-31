@@ -1,4 +1,5 @@
-#include "ShadowTestScene.hpp"
+#include "LoadingScreen.hpp"
+#include <iostream>
 
 
 int main(int argc, const char** argv)
@@ -14,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new ShadowTestScene
+        new LoadingScreen
     );
     app.run();
     return 0;
