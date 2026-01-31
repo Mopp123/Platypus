@@ -539,13 +539,18 @@ namespace platypus
         return foundAssets;
     }
 
-    void AssetManager::addExternalPersistentAsset(Asset* pAsset)
+    void AssetManager::makePersistent(Asset* pAsset)
     {
-        _assets[pAsset->getID()] = pAsset;
         _persistentAssets[pAsset->getID()] = pAsset;
     }
 
-    void AssetManager::destroyExternalPersistentAsset(Asset* pAsset)
+    void AssetManager::addExternalPersistentAsset(Asset* pAsset)
+    {
+        _assets[pAsset->getID()] = pAsset;
+        makePersistent(pAsset);
+    }
+
+    void AssetManager::destroyPersistentAsset(Asset* pAsset)
     {
         ID_t assetID = pAsset->getID();
         delete _assets[assetID];

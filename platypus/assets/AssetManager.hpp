@@ -95,8 +95,10 @@ namespace platypus
         Asset* getAsset(ID_t assetID, AssetType type) const;
         std::vector<Asset*> getAssets(AssetType type) const;
 
+        void makePersistent(Asset* pAsset);
+        // For adding asset that wasn't created using the AssetManager
         void addExternalPersistentAsset(Asset* pAsset);
-        void destroyExternalPersistentAsset(Asset* pAsset);
+        void destroyPersistentAsset(Asset* pAsset);
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }

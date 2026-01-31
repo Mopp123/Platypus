@@ -73,9 +73,9 @@ namespace platypus
         // TODO: If dimensions don't change, etc don't destroy and recreate
         // unless RenderPassInstance gets destroyed!
         if (_pColorAttachment)
-            Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pColorAttachment);
+            Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pColorAttachment);
         if (_pDepthAttachment)
-            Application::get_instance()->getAssetManager()->destroyExternalPersistentAsset(_pDepthAttachment);
+            Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pDepthAttachment);
 
         _pColorAttachment = nullptr;
         _pDepthAttachment = nullptr;
