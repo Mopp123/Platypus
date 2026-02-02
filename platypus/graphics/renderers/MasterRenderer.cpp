@@ -598,6 +598,7 @@ namespace platypus
         Application* pApp = Application::get_instance();
         SceneManager& sceneManager = pApp->getSceneManager();
         Scene* pScene = sceneManager.accessCurrentScene();
+        const EnvironmentProperties& sceneEnvProperties = pScene->environmentProperties;
 
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
         Matrix4f orthographicProjectionMatrix = Matrix4f(1.0f);
@@ -646,7 +647,7 @@ namespace platypus
         _scene3DData.cameraPosition = cameraPosition;
         _scene3DData.viewMatrix = viewMatrix;
 
-        const Vector3f sceneAmbientLight = pScene->environmentProperties.ambientColor;
+        const Vector3f sceneAmbientLight = sceneEnvProperties.ambientColor;
         _scene3DData.ambientLightColor = {
             sceneAmbientLight.r,
             sceneAmbientLight.g,
@@ -756,7 +757,7 @@ namespace platypus
             currentCommandBuffer,
             _opaquePass,
             _pOpaqueFramebuffer,
-            { 1, 0, 1, 1 }
+            sceneEnvProperties.clearColor
         );
         std::vector<CommandBuffer> opaquePassCommandBuffers;
         opaquePassCommandBuffers.push_back(
