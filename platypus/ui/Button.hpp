@@ -46,5 +46,19 @@ namespace platypus
             const std::string& text,
             const Font* pFont
         );
+
+        UIElement* add_button_element(
+            LayoutUI& ui,
+            UIElement* pParent,
+            const Layout& layout,
+            const Vector4f& highlightColor,
+            const Vector4f& textColor,
+            const Vector4f& textHighlightColor,
+            const std::string& text,
+            const Font* pFont,
+            bool setWidthToTextWidth,
+            bool setHeightToTextHeight,
+            const Vector2f& scalePadding // padding if setting width and/or height to text's dimensions
+        );
     }
 }

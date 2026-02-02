@@ -89,5 +89,58 @@ namespace platypus
 
             return pContainer;
         }
+
+        UIElement* add_button_element(
+            LayoutUI& ui,
+            UIElement* pParent,
+            const Layout& layout,
+            const Vector4f& highlightColor,
+            const Vector4f& textColor,
+            const Vector4f& textHighlightColor,
+            const std::string& text,
+            const Font* pFont,
+            bool setWidthToTextWidth,
+            bool setHeightToTextHeight,
+            const Vector2f& scalePadding // padding if setting width and/or height to text's dimensions
+        )
+        {
+            Layout useLayout = layout;
+
+            Vector2f textScale = get_text_scale(text, pFont);
+            if (setWidthToTextWidth)
+            {
+                useLayout.padding.x = scalePadding.x;
+                useLayout.scale.x = textScale.x + scalePadding.x * 2.0f;
+            }
+            if (setHeightToTextHeight)
+            {
+                useLayout.padding.y = scalePadding.y;
+                useLayout.scale.y = textScale.y + scalePadding.y * 2.0f;
+            }
+
+            UIElement* pContainer = add_container(ui, pParent, useLayout, true);
+            UIElement* pText = add_text_element(
+                ui,
+                pContainer,
+                text,
+                textColor,
+                pFont
+            );
+
+            Button button =
+            {
+                layout.color,
+                highlightColor,
+                textColor,
+                textHighlightColor,
+                pContainer,
+                pText
+            };
+
+            pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(button);
+            pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
+
+            return pContainer;
+        }
     }
 }

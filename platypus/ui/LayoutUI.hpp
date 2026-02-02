@@ -38,6 +38,8 @@ namespace platypus
                 Vector4f buttonHighlightColor = Vector4f(0.55f, 0.55f, 0.55f, 1.0f);
                 Vector4f buttonTextColor = Vector4f(1, 1, 1, 1);
                 Vector4f buttonTextHighlightColor = Vector4f(0.1f, 0.1f, 0.1f, 1);
+                Vector4f buttonBorderColor = Vector4f(0, 0, 0, 1);
+                float buttonBorderThickness = 0.0f;
             };
 
             static Config s_config;

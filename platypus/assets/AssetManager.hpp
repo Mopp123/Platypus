@@ -78,6 +78,13 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
+        // For loading models that have anications or not
+        // NOTE: Can't have instancing for meshes loaded with this atm.
+        // TODO: The instancing overhaul?
+        Model* loadModel(
+            const std::string& filepath,
+            std::vector<KeyframeAnimationData>& outAnimations
+        );
         Mesh* createTerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,

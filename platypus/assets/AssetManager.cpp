@@ -434,6 +434,61 @@ namespace platypus
         return pModel;
     }
 
+    Model* AssetManager::loadModel(
+        const std::string& filepath,
+        std::vector<KeyframeAnimationData>& outAnimations
+    )
+    {
+        std::vector<MeshData> loadedMeshes;
+        if (!load_gltf_model(filepath, loadedMeshes, outAnimations))
+        {
+            Debug::log(
+                "Failed to load model using filepath: " + filepath,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+
+        std::vector<Mesh*> createdMeshes;
+        for (const MeshData& meshData : loadedMeshes)
+        {
+            Buffer* pVertexBuffer = new Buffer(
+                (void*)meshData.vertexBufferData.rawData.data(),
+                meshData.vertexBufferData.elementSize,
+                meshData.vertexBufferData.length,
+                BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+            MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
+            Buffer* pIndexBuffer = new Buffer(
+                (void*)useIndexBuffer.rawData.data(),
+                useIndexBuffer.elementSize,
+                useIndexBuffer.length,
+                BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+            // NOTE: Possible issue if the mesh is skinned but doesn't have animations?
+            MeshType meshType = outAnimations.empty() ? MeshType::MESH_TYPE_STATIC : MeshType::MESH_TYPE_SKINNED;
+            Mesh* pMesh = new Mesh(
+                meshType,
+                meshData.vertexBufferLayout,
+                pVertexBuffer,
+                pIndexBuffer,
+                meshData.transformationMatrix,
+                meshData.bindPose
+            );
+            _assets[pMesh->getID()] = pMesh;
+            createdMeshes.push_back(pMesh);
+        }
+        Model* pModel = new Model(createdMeshes);
+        _assets[pModel->getID()] = pModel;
+        return pModel;
+    }
+
     Mesh* AssetManager::createTerrainMesh(
         float tileSize,
         const std::vector<float>& heightmapData,
