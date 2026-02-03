@@ -87,6 +87,8 @@ namespace platypus
 
             Vector4f borderColor = Vector4f(0, 0, 0, 0);
             uint32_t borderThickness = 0;
+
+            bool stretchToFitContent = false;
         };
 
         class LayoutUI;
@@ -180,6 +182,7 @@ namespace platypus
             );
 
             void setScale(const Vector2f& scale);
+            Vector2f getGlobalPosition() const;
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }

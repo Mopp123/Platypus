@@ -37,6 +37,16 @@ namespace platypus
         return { x * value, y * value };
     }
 
+    bool Vector2f::operator==(const Vector2f& other) const
+    {
+        return x == other.x && y == other.y;
+    }
+
+    bool Vector2f::operator!=(const Vector2f& other) const
+    {
+        return !(x == other.x && y == other.y);
+    }
+
     std::string Vector2f::toString() const
     {
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";

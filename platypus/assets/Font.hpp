@@ -37,7 +37,13 @@ namespace platypus
         int _textureAtlasRowCount = 1;
         int _textureAtlasTileWidth = 1; // Width in pixels of a single tile inside the font's texture atlas.
         // Max height of a character
-        int _charHeight = 1;
+        int _maxCharHeight = 1;
+        // If part of a character goes below baseline,
+        // this value can be used to determine for example
+        // how much a button needs to stretch vertically in
+        // order for the text to be completely inside it.
+        // NOTE: This shouldn't be used in rendering tho!
+        int _maxBaselineDrop = 0;
 
         std::unordered_map<uint32_t, FontGlyphData> _glyphMapping;
 
@@ -58,7 +64,8 @@ namespace platypus
         inline const std::unordered_map<uint32_t, FontGlyphData>& getGlyphMapping() const { return _glyphMapping; }
         inline int getTextureAtlasRowCount() const { return _textureAtlasRowCount; }
         inline int getTilePixelWidth() const { return _textureAtlasTileWidth; }
-        inline int getMaxCharHeight() const { return _charHeight; }
+        inline int getMaxCharHeight() const { return _maxCharHeight; }
+        inline int getMaxBaselineDrop() const { return _maxBaselineDrop; }
         inline ID_t getTextureID() const { return _textureID; }
 
     private:

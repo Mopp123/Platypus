@@ -154,13 +154,13 @@ void UITestScene::init()
         pFont
     );
 
-    //inputManager.addCharInputEvent(
-    //    new TestCharInputEvent(
-    //        _inputStr,
-    //        _pInputTextElement,
-    //        _pInputBoxElement
-    //    )
-    //);
+    inputManager.addCharInputEvent(
+        new TestCharInputEvent(
+            _inputStr,
+            _pInputTextElement,
+            _pInputBoxElement
+        )
+    );
 
     /*
     TODO: Make the shit work rather like below!

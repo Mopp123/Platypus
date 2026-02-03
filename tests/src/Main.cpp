@@ -1,4 +1,4 @@
-#include "LoadingScreen.hpp"
+#include "UITestScene.hpp"
 #include <iostream>
 
 
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new LoadingScreen
+        new UITestScene
     );
     app.run();
     return 0;

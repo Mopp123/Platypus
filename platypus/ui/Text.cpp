@@ -224,19 +224,23 @@ namespace platypus
         template <typename T>
         Vector2f get_text_scale(T text, const Font* pFont)
         {
-            Vector2f scale(0, static_cast<float>(pFont->getMaxCharHeight()));
+            Vector2f scale(
+                0,
+                static_cast<float>(pFont->getMaxCharHeight()) +
+                static_cast<float>(pFont->getMaxBaselineDrop())
+            );
 
             const size_t textSize = text.size();
-            const char* pData = (const char*)text.data();
+            const char* pData = static_cast<const char*>(text.data());
             utf8::iterator it(pData, pData, pData + textSize);
             utf8::iterator endIt(pData + textSize, pData, pData + textSize);
             while (it != endIt)
             {
-                uint32_t codepoint = (uint32_t)*it;
+                uint32_t codepoint = static_cast<uint32_t>(*it);
                 const FontGlyphData * const pGlyph = pFont->getGlyph(codepoint);
                 if (pGlyph)
                 {
-                    scale.x += (float)(pGlyph->advance >> 6);
+                    scale.x += static_cast<float>(pGlyph->advance >> 6);
                 }
                 ++it;
             }

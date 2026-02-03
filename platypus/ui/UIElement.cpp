@@ -3,6 +3,7 @@
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus
@@ -101,6 +102,28 @@ namespace platypus
             _children.push_back(pChild);
             _previousItemPosition = childPosition;
             _previousItemScale = childScale;
+            if (_layout.stretchToFitContent)
+            {
+                float childRight = childPosition.x + childScale.x;
+                float childBottom = childPosition.y + childScale.y;
+                Vector2f ownPosition = getGlobalPosition();
+                float ownRight = ownPosition.x + _layout.scale.x;
+                float ownBottom = ownPosition.y + _layout.scale.y;
+                Vector2f newScale = _layout.scale;
+                if (childRight >= ownRight)
+                {
+                    float stretchX = childRight - ownRight;
+                    newScale.x = _layout.scale.x + stretchX + _layout.padding.x;
+                }
+                if (childBottom >= ownBottom)
+                {
+                    float stretchY = childBottom - ownBottom;
+                    Debug::log("STRETCHING Y by " + std::to_string(stretchY));
+                    newScale.y = _layout.scale.y + stretchY + _layout.padding.y;
+                }
+                if (newScale != _layout.scale)
+                    setScale(newScale);
+            }
         }
 
         void UIElement::setScale(const Vector2f& scale)
@@ -117,6 +140,19 @@ namespace platypus
             _layout.scale = scale;
         }
 
+        Vector2f UIElement::getGlobalPosition() const
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+            );
+            if (pTransform)
+            {
+                return pTransform->position;
+            }
+            return { };
+        }
 
         UIElement* add_container(
             LayoutUI& ui,

@@ -82,9 +82,7 @@ namespace platypus
         int maxGlyphWidth = 0;
         int maxGlyphHeight = 0;
 
-
         FT_Select_Charmap(fontFace, FT_ENCODING_UNICODE);
-
 
         std::string::iterator charIterator = charsToLoad.begin();
         // NOTE: Originally the pair's first was ptr to heap allocated bitmap data
@@ -125,6 +123,7 @@ namespace platypus
 
             maxGlyphWidth = std::max(maxGlyphWidth, currentGlyphWidth);
             maxGlyphHeight = std::max(maxGlyphHeight, currentGlyphHeight);
+            _maxBaselineDrop = std::max(_maxBaselineDrop, currentGlyphHeight - ftGlyph->bitmap_top);
 
             const int glyphBitmapSize = currentGlyphWidth * currentGlyphHeight;
             std::vector<unsigned char> bitmap(glyphBitmapSize);
@@ -149,7 +148,7 @@ namespace platypus
         // (This results in many unused pixels tho..)
         _textureAtlasTileWidth = std::max(maxGlyphWidth, maxGlyphHeight);
         // ...but we also need max glyph height to render properly...
-        _charHeight = std::max(maxGlyphHeight, maxGlyphHeight);
+        _maxCharHeight = maxGlyphHeight;
 
         // Combine all the loaded glyphs bitmaps into a single large texture atlas
         const unsigned int combinedGlyphBitmapWidth = textureAtlasRowCount * _textureAtlasTileWidth;

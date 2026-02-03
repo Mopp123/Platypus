@@ -58,7 +58,7 @@ namespace platypus
             const Font* pFont,
             bool setWidthToTextWidth,
             bool setHeightToTextHeight,
-            const Vector2f& scalePadding // padding if setting width and/or height to text's dimensions
+            const Vector2f& padding
         );
     }
 }
