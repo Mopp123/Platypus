@@ -29,7 +29,7 @@ namespace platypus
         // TODO: Figure out a better way!
         return createFont(
             filepath,
-            " qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|ÖöÄä"
+            " qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|#ÖöÄä"
         );
     }
 
