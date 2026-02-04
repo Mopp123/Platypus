@@ -180,7 +180,7 @@ namespace platypus
             // -> their children are handled by the apply_transform_hierarchy func
             bool hasRequiredComponentMask = (entity.componentMask & _requiredComponentMask) == _requiredComponentMask;
             bool isRoot = (entity.componentMask & ComponentType::COMPONENT_TYPE_PARENT) == 0;
-            if (!hasRequiredComponentMask || !isRoot)
+            if (!hasRequiredComponentMask || !isRoot || !entity.active)
             {
                 continue;
             }

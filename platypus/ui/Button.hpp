@@ -47,6 +47,8 @@ namespace platypus
             const Font* pFont
         );
 
+        // NOTE: Stretches always to fit the text vertically
+        //  -> stretching horizontally is optional
         UIElement* add_button_element(
             LayoutUI& ui,
             UIElement* pParent,
@@ -56,9 +58,7 @@ namespace platypus
             const Vector4f& textHighlightColor,
             const std::string& text,
             const Font* pFont,
-            bool setWidthToTextWidth,
-            bool setHeightToTextHeight,
-            const Vector2f& padding
+            UIElement::OnClickEvent* pOnClick
         );
     }
 }

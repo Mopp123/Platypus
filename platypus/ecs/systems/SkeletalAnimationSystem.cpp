@@ -19,7 +19,7 @@ namespace platypus
     {
         for (const Entity& entity : pScene->getEntities())
         {
-            if ((entity.componentMask & _requiredComponentMask) != _requiredComponentMask)
+            if (!shouldUpdate(entity))
                 continue;
 
             SkeletalAnimation* pAnimationComponent = (SkeletalAnimation*)pScene->getComponent(

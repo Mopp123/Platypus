@@ -99,26 +99,29 @@ namespace platypus
             const Vector4f& textHighlightColor,
             const std::string& text,
             const Font* pFont,
-            bool setWidthToTextWidth,
-            bool setHeightToTextHeight,
-            const Vector2f& padding
+            UIElement::OnClickEvent* pOnClick
         )
         {
             Layout useLayout = layout;
 
             Vector2f textScale = get_text_scale(text, pFont);
-            if (setWidthToTextWidth)
-            {
-                //useLayout.padding.x = padding.x;
-                useLayout.scale.x = textScale.x + useLayout.padding.x * 2.0f;
-            }
-            if (setHeightToTextHeight)
-            {
-                //useLayout.padding.y = padding.y;
-                useLayout.scale.y = textScale.y + useLayout.padding.y * 2.0f;
-            }
 
-            UIElement* pContainer = add_container(ui, pParent, useLayout, true);
+            if (useLayout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
+                useLayout.scale.x = textScale.x + useLayout.padding.x * 2.0f;
+
+            if (useLayout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
+                useLayout.scale.y = textScale.y + useLayout.padding.y * 2.0f;
+
+            UIElement* pContainer = add_container(
+                ui,
+                pParent,
+                useLayout,
+                true, // create renderable
+                NULL_ID, // textureID
+                nullptr, // pFont
+                pOnClick
+            );
+
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,

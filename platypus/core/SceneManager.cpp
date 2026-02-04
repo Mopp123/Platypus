@@ -6,49 +6,6 @@
 
 namespace platypus
 {
-    /*
-    static void submit_renderable(
-        Scene* pScene,
-        ComponentPool& renderablePool,
-        ComponentPool& transformPool,
-        const std::vector<Entity>& entities,
-        Renderer* pRenderer,
-        uint32_t requiredComponentMask,
-        ComponentType requiredAdditionalComponent
-    )
-    {
-        void* pCustomData = nullptr;
-        size_t customDataSize = 0;
-        for (const Entity& e : entities)
-        {
-            if ((e.componentMask & requiredComponentMask) == requiredComponentMask)
-            {
-                Component* pRenderable = (Component*)renderablePool[e.id];
-                Transform* pTransform = (Transform*)transformPool[e.id];
-                if (!pRenderable->isActive())
-                    continue;
-
-                if (requiredAdditionalComponent != ComponentType::PK_EMPTY)
-                {
-                    Component* pAdditionalComponent = pScene->getComponent(
-                        e.id,
-                        requiredAdditionalComponent
-                    );
-                    pCustomData = (void*)pAdditionalComponent;
-                    customDataSize = sizeof(Component*); // ..ptr size should be same for any ptr
-                }
-
-                pRenderer->submit(
-                    pRenderable,
-                    pTransform->getTransformationMatrix(),
-                    pCustomData,
-                    customDataSize
-                );
-            }
-        }
-    }
-    */
-
     SceneManager::~SceneManager()
     {
         if (_pCurrentScene)
@@ -84,29 +41,10 @@ namespace platypus
         Application* pApp = Application::get_instance();
         MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
         for (const Entity& entity : _pCurrentScene->_entities)
-            pMasterRenderer->submit(_pCurrentScene, entity);
-
-        /*
-        ComponentPool& transformPool = _pCurrentScene->componentPools[ComponentType::PK_TRANSFORM];
-        std::map<ComponentType, Renderer*>& renderers = masterRenderer.accessRenderers();
-        std::map<ComponentType, Renderer*>::iterator rIt;
-        const std::vector<Entity>& entities = _pCurrentScene->entities;
-        for (rIt = renderers.begin(); rIt != renderers.end(); ++rIt)
         {
-            const ComponentType& renderableType = rIt->first;
-            // TODO: make this more clever..
-            ComponentType requiredAdditionalComponent = renderableType == ComponentType::PK_RENDERABLE_SKINNED ? ComponentType::PK_ANIMATION_DATA : ComponentType::PK_EMPTY;
-            submit_renderable(
-                _pCurrentScene,
-                _pCurrentScene->componentPools[renderableType],
-                transformPool,
-                entities,
-                rIt->second,
-                ComponentType::PK_TRANSFORM | renderableType,
-                requiredAdditionalComponent
-            );
+            if (entity.active)
+                pMasterRenderer->submit(_pCurrentScene, entity);
         }
-        */
     }
 
     // triggers scene switching at the end of the frame

@@ -130,6 +130,75 @@ namespace platypus
         return { };
     }
 
+    void Scene::setEntityActive(entityID_t entity, bool arg)
+    {
+        if (entity < _entities.size())
+        {
+            if (_entities[entity].id != NULL_ENTITY_ID)
+            {
+               _entities[entity].active = arg;
+            }
+            #ifdef PLATYPUS_DEBUG
+            else
+            {
+                Debug::log(
+                    "Entity with ID: " + std::to_string(entity) + " was marked as NULL_ENTITY_ID! "
+                    "The entity may have already been destroyed.",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+        }
+        #ifdef PLATYPUS_DEBUG
+        else
+        {
+            Debug::log(
+                "Entity ID: " + std::to_string(entity) + " out of bounds!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        #endif
+    }
+
+    bool Scene::isEntityActive(entityID_t entity) const
+    {
+        if (entity < _entities.size())
+        {
+            if (_entities[entity].id != NULL_ENTITY_ID)
+            {
+               return _entities[entity].active;
+            }
+            #ifdef PLATYPUS_DEBUG
+            else
+            {
+                Debug::log(
+                    "Entity with ID: " + std::to_string(entity) + " was marked as NULL_ENTITY_ID! "
+                    "The entity may have already been destroyed.",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+        }
+        #ifdef PLATYPUS_DEBUG
+        else
+        {
+            Debug::log(
+                "Entity ID: " + std::to_string(entity) + " out of bounds!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        #endif
+        return false;
+    }
+
     bool Scene::entityExists(entityID_t entity) const
     {
         if (entity < 0 || entity >= _entities.size())

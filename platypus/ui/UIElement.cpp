@@ -12,6 +12,9 @@ namespace platypus
     {
         void UIElement::ElementCursorPosEvent::func(int x, int y)
         {
+            if (!_pScene->isEntityActive(_pElement->_entityID))
+                return;
+
             GUITransform* pTransform = (GUITransform*)_pScene->getComponent(
                 _pElement->_entityID,
                 ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
@@ -49,6 +52,9 @@ namespace platypus
 
         void UIElement::ElementMouseButtonEvent::func(MouseButtonName button, InputAction action, int mods)
         {
+            if (!_pScene->isEntityActive(_pElement->_entityID))
+                return;
+
             if (_pElement->_isMouseOver)
             {
                 UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
@@ -61,8 +67,10 @@ namespace platypus
         UIElement::UIElement(
             entityID_t entityID,
             Layout layout,
-            const Font* pFont
+            const Font* pFont,
+            OnClickEvent* pOnClickEvent
         ) :
+            _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
             _layout(layout),
             _pFont(pFont)
@@ -77,7 +85,7 @@ namespace platypus
                 )
             );
             inputManager.addMouseButtonEvent(
-                new ElementMouseButtonEvent(this)
+                new ElementMouseButtonEvent(pScene, this)
             );
         }
 
@@ -102,28 +110,32 @@ namespace platypus
             _children.push_back(pChild);
             _previousItemPosition = childPosition;
             _previousItemScale = childScale;
-            if (_layout.stretchToFitContent)
+
+            Vector2f newScale = _layout.scale;
+            Vector2f globalPosition = getGlobalPosition();
+            if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
             {
                 float childRight = childPosition.x + childScale.x;
-                float childBottom = childPosition.y + childScale.y;
-                Vector2f ownPosition = getGlobalPosition();
-                float ownRight = ownPosition.x + _layout.scale.x;
-                float ownBottom = ownPosition.y + _layout.scale.y;
-                Vector2f newScale = _layout.scale;
-                if (childRight >= ownRight)
+                float ownRight = globalPosition.x + _layout.scale.x - _layout.padding.x;
+                if (childRight > ownRight)
                 {
                     float stretchX = childRight - ownRight;
-                    newScale.x = _layout.scale.x + stretchX + _layout.padding.x;
+                    newScale.x = _layout.scale.x + stretchX;
                 }
-                if (childBottom >= ownBottom)
+            }
+            if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
+            {
+                float childBottom = childPosition.y + childScale.y;
+                float ownBottom = globalPosition.y + _layout.scale.y - _layout.padding.y;
+                if (childBottom > ownBottom)
                 {
                     float stretchY = childBottom - ownBottom;
-                    Debug::log("STRETCHING Y by " + std::to_string(stretchY));
-                    newScale.y = _layout.scale.y + stretchY + _layout.padding.y;
+                    newScale.y = _layout.scale.y + stretchY;
+                    Debug::log("___TEST___Stretch vertically by: " + std::to_string(stretchY));
                 }
-                if (newScale != _layout.scale)
-                    setScale(newScale);
             }
+            if (newScale != _layout.scale)
+                setScale(newScale);
         }
 
         void UIElement::setScale(const Vector2f& scale)
@@ -154,13 +166,24 @@ namespace platypus
             return { };
         }
 
+        void UIElement::setActive(bool arg)
+        {
+            for (UIElement* pChild : _children)
+                pChild->setActive(arg);
+
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            pScene->setEntityActive(_entityID, arg);
+        }
+
+
         UIElement* add_container(
             LayoutUI& ui,
             UIElement* pParent,
             const Layout& layout,
             bool createRenderable,
             ID_t textureID,
-            const Font* pFont
+            const Font* pFont,
+            UIElement::OnClickEvent* pOnClickEvent
         )
         {
             Vector2f scale = layout.scale;
@@ -203,7 +226,8 @@ namespace platypus
             UIElement* pElement = new UIElement(
                 entity,
                 layout,
-                pFont
+                pFont,
+                pOnClickEvent
             );
 
             if (pParent)

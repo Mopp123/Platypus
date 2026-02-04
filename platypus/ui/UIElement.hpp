@@ -63,6 +63,12 @@ namespace platypus
             NORMAL
         };
 
+        enum StretchFitContentFlagBits
+        {
+            STRETCH_FIT_CONTENT_HORIZONTALLY = 0x1,
+            STRETCH_FIT_CONTENT_VERTICALLY = 0x1 << 1
+        };
+
         struct Layout
         {
             Vector2f position;
@@ -88,7 +94,7 @@ namespace platypus
             Vector4f borderColor = Vector4f(0, 0, 0, 0);
             uint32_t borderThickness = 0;
 
-            bool stretchToFitContent = false;
+            uint32_t stretchFitContentFlags = 0;
         };
 
         class LayoutUI;
@@ -154,8 +160,15 @@ namespace platypus
             class ElementMouseButtonEvent : public MouseButtonEvent
             {
             public:
+                Scene* _pScene = nullptr;
                 UIElement* _pElement = nullptr;
-                ElementMouseButtonEvent(UIElement* pElement) : _pElement(pElement) {}
+                ElementMouseButtonEvent(
+                    Scene* pScene,
+                    UIElement* pElement
+                ) :
+                    _pScene(pScene),
+                    _pElement(pElement)
+                {}
                 ~ElementMouseButtonEvent() {}
                 virtual void func(MouseButtonName button, InputAction action, int mods);
             };
@@ -171,7 +184,8 @@ namespace platypus
             UIElement(
                 entityID_t entityID,
                 Layout layout,
-                const Font* pFont
+                const Font* pFont,
+                OnClickEvent* pOnClickEvent
             );
             ~UIElement();
 
@@ -183,6 +197,7 @@ namespace platypus
 
             void setScale(const Vector2f& scale);
             Vector2f getGlobalPosition() const;
+            void setActive(bool arg);
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }
@@ -197,7 +212,8 @@ namespace platypus
             const Layout& layout,
             bool createRenderable,
             ID_t textureID = NULL_ID,
-            const Font* pFont = nullptr
+            const Font* pFont = nullptr,
+            UIElement::OnClickEvent* pOnClickEvent = nullptr
         );
     }
 }

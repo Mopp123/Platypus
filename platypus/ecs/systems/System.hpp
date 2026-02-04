@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "platypus/ecs/Entity.hpp"
 
 
 namespace platypus
@@ -18,5 +19,10 @@ namespace platypus
         virtual ~System() {}
 
         virtual void update(Scene* pScene) = 0;
+
+        inline bool shouldUpdate(const Entity& entity)
+        {
+            return ((entity.componentMask & _requiredComponentMask) == _requiredComponentMask) && entity.active;
+        }
     };
 }

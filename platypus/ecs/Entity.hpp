@@ -14,12 +14,14 @@ namespace platypus
         // TODO: remove parent from here -> that kind of stuff handled using Parent and Children components!
         entityID_t parentID = NULL_ENTITY_ID;
         uint64_t componentMask = 0;
+        bool active = true;
 
         Entity() {}
         Entity(const Entity& other) :
             id(other.id),
             parentID(other.parentID),
-            componentMask(other.componentMask)
+            componentMask(other.componentMask),
+            active(other.active)
         {}
 
         void clear()
