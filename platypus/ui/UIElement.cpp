@@ -47,6 +47,9 @@ namespace platypus
                     _pElement->_isMouseOver = false;
                 }
             }
+
+            if (_pElement->_pDragEvent && _pElement->_dragged)
+                _pElement->_pDragEvent->func(x, y);
         }
 
 
@@ -60,7 +63,11 @@ namespace platypus
                 UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
+
+                _pElement->_dragged = true;
             }
+            if (action == InputAction::RELEASE)
+                _pElement->_dragged = false;
         }
 
 
@@ -150,6 +157,34 @@ namespace platypus
                 pTransform->scale = scale;
             }
             _layout.scale = scale;
+        }
+
+        Vector2f UIElement::getGlobalScale() const
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+            );
+            if (pTransform)
+                return pTransform->scale;
+            else
+                return _layout.scale;
+        }
+
+        void UIElement::setGlobalPosition(const Vector2f& position)
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+            );
+            // NOTE: Not actually sure what to do if there's no Transform
+            // since the layout's position is a relative position and not global
+            if (pTransform)
+                pTransform->position = position;
+            else
+                _layout.position = position;
         }
 
         Vector2f UIElement::getGlobalPosition() const

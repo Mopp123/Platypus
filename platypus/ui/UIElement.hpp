@@ -122,6 +122,13 @@ namespace platypus
                 virtual void func(int mx, int my) = 0;
             };
 
+            class DragEvent
+            {
+            public:
+                virtual ~DragEvent() {}
+                virtual void func(int mx, int my) = 0;
+            };
+
             class OnClickEvent
             {
             public:
@@ -135,6 +142,7 @@ namespace platypus
             MouseEnterEvent* _pMouseEnterEvent = nullptr;
             MouseOverEvent* _pMouseOverEvent = nullptr;
             MouseExitEvent* _pMouseExitEvent = nullptr;
+            DragEvent* _pDragEvent = nullptr;
             OnClickEvent* _pOnClickEvent = nullptr;
 
         private:
@@ -179,6 +187,7 @@ namespace platypus
             std::vector<UIElement*> _children;
 
             bool _isMouseOver = false;
+            bool _dragged = false;
 
         public:
             UIElement(
@@ -196,6 +205,8 @@ namespace platypus
             );
 
             void setScale(const Vector2f& scale);
+            Vector2f getGlobalScale() const;
+            void setGlobalPosition(const Vector2f& position);
             Vector2f getGlobalPosition() const;
             void setActive(bool arg);
 
