@@ -104,6 +104,8 @@ namespace platypus
                 delete _pMouseOverEvent;
             if (_pMouseExitEvent)
                 delete _pMouseExitEvent;
+            if (_pDragEvent)
+                delete _pDragEvent;
             if (_pOnClickEvent)
                 delete _pOnClickEvent;
         }
