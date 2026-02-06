@@ -149,6 +149,8 @@ namespace platypus
 
         void UIElement::setScale(const Vector2f& scale)
         {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUITransform* pTransform = (GUITransform*)pScene->getComponent(
                 _entityID,
@@ -163,6 +165,8 @@ namespace platypus
 
         Vector2f UIElement::getGlobalScale() const
         {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUITransform* pTransform = (GUITransform*)pScene->getComponent(
                 _entityID,
@@ -176,6 +180,8 @@ namespace platypus
 
         void UIElement::setGlobalPosition(const Vector2f& position)
         {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUITransform* pTransform = (GUITransform*)pScene->getComponent(
                 _entityID,
@@ -191,6 +197,8 @@ namespace platypus
 
         Vector2f UIElement::getGlobalPosition() const
         {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUITransform* pTransform = (GUITransform*)pScene->getComponent(
                 _entityID,
@@ -201,6 +209,22 @@ namespace platypus
                 return pTransform->position;
             }
             return { };
+        }
+
+        GUIRenderable* UIElement::getRenderable()
+        {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+            );
+            if (pRenderable)
+            {
+                return pRenderable;
+            }
+            return nullptr;
         }
 
         void UIElement::setActive(bool arg)

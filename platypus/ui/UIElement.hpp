@@ -6,6 +6,7 @@
 #include "platypus/core/InputEvent.hpp"
 
 #include "platypus/ecs/Entity.hpp"
+#include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/assets/Font.hpp"
 #include <vector>
 
@@ -208,6 +209,7 @@ namespace platypus
             Vector2f getGlobalScale() const;
             void setGlobalPosition(const Vector2f& position);
             Vector2f getGlobalPosition() const;
+            GUIRenderable* getRenderable();
             void setActive(bool arg);
 
             inline const entityID_t getEntityID() const { return _entityID; }
