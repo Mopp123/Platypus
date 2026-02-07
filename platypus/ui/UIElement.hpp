@@ -204,6 +204,15 @@ namespace platypus
                 const Vector2f& childPosition,
                 const Vector2f& childScale
             );
+            // Used to update current element according to child.
+            // Used to set _previousItemPosition, _previousItemScale
+            // and possibly stretching current element to make the child
+            // fit in.
+            void updateFromChild(
+                UIElement* pChild,
+                const Vector2f& childPosition,
+                const Vector2f& childScale
+            );
 
             void setScale(const Vector2f& scale);
             Vector2f getGlobalScale() const;
@@ -227,6 +236,13 @@ namespace platypus
             ID_t textureID = NULL_ID,
             const Font* pFont = nullptr,
             UIElement::OnClickEvent* pOnClickEvent = nullptr
+        );
+
+        void update_containers(
+            LayoutUI& ui,
+            UIElement* pParent,
+            UIElement* pElement,
+            const Layout& layout
         );
     }
 }

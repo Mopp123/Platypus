@@ -117,6 +117,15 @@ namespace platypus
         )
         {
             _children.push_back(pChild);
+            updateFromChild(pChild, childPosition, childScale);
+        }
+
+        void UIElement::updateFromChild(
+            UIElement* pChild,
+            const Vector2f& childPosition,
+            const Vector2f& childScale
+        )
+        {
             _previousItemPosition = childPosition;
             _previousItemScale = childScale;
 
@@ -297,6 +306,49 @@ namespace platypus
             ui.addElement(pElement, pParent == nullptr);
 
             return pElement;
+        }
+
+        void update_containers(
+            LayoutUI& ui,
+            UIElement* pParent,
+            UIElement* pElement,
+            const Layout& layout
+        )
+        {
+            Vector2f scale = layout.scale;
+
+            const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
+            entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
+            Vector2f previousItemPosition = pParent != nullptr ? pParent->_previousItemPosition : Vector2f(0, 0);
+            Vector2f previousItemScale = pParent != nullptr ? pParent->_previousItemScale : Vector2f(0, 0);
+            int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
+
+            Vector2f position = ui.calcPosition(
+                layout,
+                pParentLayout,
+                parentEntityID,
+                scale,
+                previousItemPosition,
+                previousItemScale,
+                childIndex
+            );
+
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUITransform* pTransform = reinterpret_cast<GUITransform*>(
+                    pScene->getComponent(
+                    pElement->getEntityID(),
+                    ComponentType::COMPONENT_TYPE_TRANSFORM
+                )
+            );
+            pTransform->position = position;
+            pTransform->scale = scale;
+
+            if (pParent)
+                pParent->updateFromChild(pElement, position, scale);
+
+            // TODO:
+            // 1. Update new roots for the LayoutUI here!
+            // 2. Do the LayoutUI's update here... or something like that?
         }
     }
 }
