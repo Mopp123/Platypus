@@ -78,7 +78,8 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
-        // For loading models that have anications or not
+        // For loading models that have animations or not
+        // NOTE: path can also be an image which is used as a heightmap to generate the model
         // NOTE: Can't have instancing for meshes loaded with this atm.
         // TODO: The instancing overhaul?
         Model* loadModel(
