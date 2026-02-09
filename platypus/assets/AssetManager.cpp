@@ -47,23 +47,35 @@ namespace platypus
 
     AssetManager::~AssetManager()
     {
-        std::unordered_map<ID_t, Asset*>::iterator it;
-        for (it = _assets.begin(); it != _assets.end(); ++it)
-            delete it->second;
-
-        _assets.clear();
-        _persistentAssets.clear();
+        if (!_assets.empty())
+        {
+            Debug::log(
+                "All assets haven't yet been destroyed!"
+                " Remaining assets: " + std::to_string(_assets.size()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
     }
 
-    void AssetManager::destroyAssets()
+    void AssetManager::destroyAssets(bool destroyPersistentAssets)
     {
         std::unordered_map<ID_t, Asset*>::iterator it;
         for (it = _assets.begin(); it != _assets.end(); ++it)
         {
-            if (_persistentAssets.find(it->first) == _persistentAssets.end())
+            if (destroyPersistentAssets)
+            {
                 delete it->second;
+            }
+            else if (_persistentAssets.find(it->first) == _persistentAssets.end())
+            {
+                delete it->second;
+            }
         }
         _assets.clear();
+        if (destroyPersistentAssets)
+            _persistentAssets.clear();
 
         // Re add persistent assets to assets
         std::unordered_map<ID_t, Asset*>::iterator persistentIt;
@@ -605,9 +617,8 @@ namespace platypus
         makePersistent(pAsset);
     }
 
-    void AssetManager::destroyPersistentAsset(Asset* pAsset)
+    void AssetManager::destroyPersistentAsset(ID_t assetID)
     {
-        ID_t assetID = pAsset->getID();
         delete _assets[assetID];
         _assets.erase(assetID);
         _persistentAssets.erase(assetID);

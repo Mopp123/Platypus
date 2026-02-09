@@ -715,6 +715,7 @@ namespace platypus
             shaderName += "receiveShadows/";
         }
 
+        // NOTE: Non instanced static and skinned meshes could use the same fragment shaders?
         switch (meshType)
         {
             case MeshType::MESH_TYPE_STATIC : shaderName += "Static"; break;

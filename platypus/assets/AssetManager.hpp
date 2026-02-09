@@ -27,7 +27,7 @@ namespace platypus
     public:
         AssetManager();
         ~AssetManager();
-        void destroyAssets();
+        void destroyAssets(bool destroyPersistentAssets = false);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
         Image* loadImage(const std::string& filepath, ImageFormat format);
@@ -105,7 +105,7 @@ namespace platypus
         void makePersistent(Asset* pAsset);
         // For adding asset that wasn't created using the AssetManager
         void addExternalPersistentAsset(Asset* pAsset);
-        void destroyPersistentAsset(Asset* pAsset);
+        void destroyPersistentAsset(ID_t assetID);
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
