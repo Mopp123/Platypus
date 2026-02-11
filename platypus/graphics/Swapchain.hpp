@@ -28,8 +28,8 @@ namespace platypus
         std::vector<Texture*> _colorAttachments;
 
         bool _createDepthAttachment = false;
-        Image* _pDepthImage;
-        Texture* _pDepthAttachment;
+        Image* _pDepthImage = nullptr;
+        Texture* _pDepthAttachment = nullptr;
         std::vector<Framebuffer*> _framebuffers;
 
         // NOTE: Currently these aren't touched by the web implementation at all.
