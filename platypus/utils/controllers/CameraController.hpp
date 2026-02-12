@@ -67,5 +67,8 @@ namespace platypus
         );
 
         inline void setOffsetPos(const Vector3f& position) { _offsetPosition = position; }
+        inline const Vector3f& getOffsetPos() const { return _offsetPosition; }
+        inline void setZoom(float zoom) { _zoom = zoom; }
+        inline float getZoom() const { return _zoom; }
     };
 }

@@ -1,0 +1,7 @@
+if(BUILD_TARGET STREQUAL "desktop")
+    add_subdirectory(desktop)
+elseif(BUILD_TARGET STREQUAL "web")
+    add_subdirectory(web)
+else()
+    message(FATAL_ERROR "Invalid BUILD_TARGET: ${BUILD_TARGET}")
+endif()
