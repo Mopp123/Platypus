@@ -54,7 +54,8 @@ namespace platypus
             UIElement::OnClickEvent* pUserEvent
         ) :
             _pScene(pScene),
-            _button(button)
+            _button(button),
+            _pUserEvent(pUserEvent)
         {
         }
 
@@ -173,7 +174,7 @@ namespace platypus
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,
             bool selectable,
-            ButtonSelectEvent* pOnSelect,
+            UIElement::OnClickEvent* pOnSelect,
             ButtonDeselectEvent* pOnDeselect
         )
         {

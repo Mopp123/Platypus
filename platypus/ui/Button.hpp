@@ -46,6 +46,8 @@ namespace platypus
         private:
             Scene* _pScene = nullptr;
             Button _button;
+            UIElement::OnClickEvent* _pUserEvent = nullptr;
+
         public:
             ButtonSelectEvent(Scene* pScene, Button button, UIElement::OnClickEvent* pUserEvent);
             ~ButtonSelectEvent();
@@ -86,7 +88,7 @@ namespace platypus
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,
             bool selectable,
-            ButtonSelectEvent* pOnSelect,
+            UIElement::OnClickEvent* pOnSelect,
             ButtonDeselectEvent* pOnDeselect
         );
     }
