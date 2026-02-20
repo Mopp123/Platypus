@@ -36,6 +36,8 @@ namespace platypus
                 delete pElement;
         }
 
+        // NOTE: Atm called only on window resize, recursively starting from root elements.
+        // TODO: Maybe rather do this shit per element and call it for each root element at resize
         void LayoutUI::update(
             const UIElement* pElement,
             const UIElement* pParentElement,
