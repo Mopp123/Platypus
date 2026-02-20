@@ -53,19 +53,40 @@ namespace platypus
         }
 
 
-        void UIElement::ElementMouseButtonEvent::func(MouseButtonName button, InputAction action, int mods)
+        void UIElement::ElementMouseButtonEvent::func(
+            MouseButtonName button,
+            InputAction action,
+            int mods
+        )
         {
             if (!_pScene->isEntityActive(_pElement->_entityID))
                 return;
 
             if (_pElement->_isMouseOver)
             {
+                if (_pElement->_selectable)
+                {
+                    _pElement->_selected = true;
+                    if (_pElement->_pOnSelectEvent)
+                        _pElement->_pOnSelectEvent->func(button, action);
+                }
+
                 UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
 
                 _pElement->_dragged = true;
             }
+            else
+            {
+                if (_pElement->_selectable)
+                {
+                    _pElement->_selected = false;
+                    if (_pElement->_pOnSelectEvent)
+                        _pElement->_pOnDeselectEvent->func(button, action);
+                }
+            }
+
             if (action == InputAction::RELEASE)
                 _pElement->_dragged = false;
         }
@@ -75,12 +96,14 @@ namespace platypus
             entityID_t entityID,
             Layout layout,
             const Font* pFont,
-            OnClickEvent* pOnClickEvent
+            OnClickEvent* pOnClickEvent,
+            bool selectable
         ) :
             _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
             _layout(layout),
-            _pFont(pFont)
+            _pFont(pFont),
+            _selectable(selectable)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
@@ -108,6 +131,10 @@ namespace platypus
                 delete _pDragEvent;
             if (_pOnClickEvent)
                 delete _pOnClickEvent;
+            if (_pOnSelectEvent)
+                delete _pOnSelectEvent;
+            if (_pOnDeselectEvent)
+                delete _pOnDeselectEvent;
         }
 
         void UIElement::addChild(
@@ -253,7 +280,10 @@ namespace platypus
             bool createRenderable,
             ID_t textureID,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClickEvent
+            UIElement::OnClickEvent* pOnClickEvent,
+            bool selectable,
+            UIElement::OnClickEvent* pOnSelectEvent,
+            UIElement::OnClickEvent* pOnDeselectEvent
         )
         {
             Vector2f scale = layout.scale;
@@ -297,7 +327,8 @@ namespace platypus
                 entity,
                 layout,
                 pFont,
-                pOnClickEvent
+                pOnClickEvent,
+                selectable
             );
 
             if (pParent)

@@ -85,10 +85,10 @@ namespace platypus
             VerticalAlignment verticalContentAlignment = VerticalAlignment::TOP;
 
             ExpandElements expandElements = ExpandElements::DOWN;
-            float elementGap;
+            float elementGap = 0.0f;
             ValueType elementGapType = ValueType::PIXEL;
             uint32_t layer = 0;
-            std::vector<Layout> children;
+            //std::vector<Layout> children = { };
 
             WordWrap wordWrap = WordWrap::NONE;
 
@@ -96,6 +96,28 @@ namespace platypus
             uint32_t borderThickness = 0;
 
             uint32_t stretchFitContentFlags = 0;
+
+            /*
+            Layout(const Layout& other) :
+                position(other.position),
+                scale(other.scale),
+                color(other.color),
+                padding(other.padding),
+                horizontalAlignment(other.horizontalAlignment),
+                verticalAlignment(other.verticalContentAlignment),
+                horizontalContentAlignment(other.horizontalContentAlignment),
+                verticalContentAlignment(other.verticalContentAlignment),
+                expandElements(other.expandElements),
+                elementGap(other.elementGap),
+                elementGapType(other.elementGapType),
+                layer(other.layer),
+                children(other.children),
+                wordWrap(other.wordWrap),
+                borderColor(other.borderColor),
+                borderThickness(other.borderThickness),
+                stretchFitContentFlags(other.stretchFitContentFlags)
+            {}
+            */
         };
 
         class LayoutUI;
@@ -146,6 +168,9 @@ namespace platypus
             DragEvent* _pDragEvent = nullptr;
             OnClickEvent* _pOnClickEvent = nullptr;
 
+            OnClickEvent* _pOnSelectEvent = nullptr;
+            OnClickEvent* _pOnDeselectEvent = nullptr;
+
         private:
             friend class LayoutUI;
 
@@ -189,13 +214,16 @@ namespace platypus
 
             bool _isMouseOver = false;
             bool _dragged = false;
+            bool _selected = false;
+            bool _selectable = false;
 
         public:
             UIElement(
                 entityID_t entityID,
                 Layout layout,
                 const Font* pFont,
-                OnClickEvent* pOnClickEvent
+                OnClickEvent* pOnClickEvent,
+                bool selectable
             );
             ~UIElement();
 
@@ -225,6 +253,7 @@ namespace platypus
             inline const Layout& getLayout() const { return _layout; }
             inline const Font* getFont() const { return _pFont; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
+            inline bool isSelected() const { return _selected; }
         };
 
 
@@ -235,7 +264,10 @@ namespace platypus
             bool createRenderable,
             ID_t textureID = NULL_ID,
             const Font* pFont = nullptr,
-            UIElement::OnClickEvent* pOnClickEvent = nullptr
+            UIElement::OnClickEvent* pOnClickEvent = nullptr,
+            bool selectable = false,
+            UIElement::OnClickEvent* pOnSelectEvent = nullptr,
+            UIElement::OnClickEvent* pOnDeselectEvent = nullptr
         );
 
         void update_containers(
