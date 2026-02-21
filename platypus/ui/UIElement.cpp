@@ -64,27 +64,11 @@ namespace platypus
 
             if (_pElement->_isMouseOver)
             {
-                if (_pElement->_selectable)
-                {
-                    _pElement->_selected = true;
-                    if (_pElement->_pOnSelectEvent)
-                        _pElement->_pOnSelectEvent->func(button, action);
-                }
-
                 UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
 
                 _pElement->_dragged = true;
-            }
-            else
-            {
-                if (_pElement->_selectable)
-                {
-                    _pElement->_selected = false;
-                    if (_pElement->_pOnSelectEvent)
-                        _pElement->_pOnDeselectEvent->func(button, action);
-                }
             }
 
             if (action == InputAction::RELEASE)
@@ -96,14 +80,12 @@ namespace platypus
             entityID_t entityID,
             Layout layout,
             const Font* pFont,
-            OnClickEvent* pOnClickEvent,
-            bool selectable
+            OnClickEvent* pOnClickEvent
         ) :
             _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
             _layout(layout),
-            _pFont(pFont),
-            _selectable(selectable)
+            _pFont(pFont)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
@@ -131,10 +113,6 @@ namespace platypus
                 delete _pDragEvent;
             if (_pOnClickEvent)
                 delete _pOnClickEvent;
-            if (_pOnSelectEvent)
-                delete _pOnSelectEvent;
-            if (_pOnDeselectEvent)
-                delete _pOnDeselectEvent;
         }
 
         void UIElement::addChild(
@@ -176,7 +154,6 @@ namespace platypus
                 {
                     float stretchY = childBottom - ownBottom;
                     newScale.y = _layout.scale.y + stretchY;
-                    Debug::log("___TEST___Stretch vertically by: " + std::to_string(stretchY));
                 }
             }
             if (newScale != _layout.scale)
@@ -280,10 +257,7 @@ namespace platypus
             bool createRenderable,
             ID_t textureID,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClickEvent,
-            bool selectable,
-            UIElement::OnClickEvent* pOnSelectEvent,
-            UIElement::OnClickEvent* pOnDeselectEvent
+            UIElement::OnClickEvent* pOnClickEvent
         )
         {
             Vector2f scale = layout.scale;
@@ -327,8 +301,7 @@ namespace platypus
                 entity,
                 layout,
                 pFont,
-                pOnClickEvent,
-                selectable
+                pOnClickEvent
             );
 
             if (pParent)

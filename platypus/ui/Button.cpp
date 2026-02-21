@@ -10,9 +10,6 @@ namespace platypus
     {
         void ButtonMouseEnterEvent::func(int mx, int my)
         {
-            if (_button.pBox->isSelected())
-                return;
-
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
                 _button.pBox->getEntityID(),
@@ -30,9 +27,6 @@ namespace platypus
 
         void ButtonMouseExitEvent::func(int mx, int my)
         {
-            if (_button.pBox->isSelected())
-                return;
-
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
                 _button.pBox->getEntityID(),
@@ -46,68 +40,6 @@ namespace platypus
                 pBoxRenderable->color = _button.originalColor;
             if (pTextRenderable)
                 pTextRenderable->color = _button.originalTextColor;
-        }
-
-        ButtonSelectEvent::ButtonSelectEvent(
-            Scene* pScene,
-            Button button,
-            UIElement::OnClickEvent* pUserEvent
-        ) :
-            _pScene(pScene),
-            _button(button),
-            _pUserEvent(pUserEvent)
-        {
-        }
-
-        ButtonSelectEvent::~ButtonSelectEvent()
-        {
-        }
-
-        // TODO: Allow modifying border color
-        void ButtonSelectEvent::func(MouseButtonName button, InputAction action)
-        {
-            GUIRenderable* pBoxRenderable = reinterpret_cast<GUIRenderable*>(
-                _pScene->getComponent(_button.pBox->getEntityID(), ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
-            );
-            GUIRenderable* pTextRenderable = reinterpret_cast<GUIRenderable*>(
-                _pScene->getComponent(_button.pText->getEntityID(), ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
-            );
-            pBoxRenderable->color = _button.selectedColor;
-            pTextRenderable->color = _button.textSelectedColor;
-
-            //if (_pUserEvent)
-            //    _pUserEvent->func(button, action);
-        }
-
-
-        ButtonDeselectEvent::ButtonDeselectEvent(
-            Scene* pScene,
-            Button button,
-            UIElement::OnClickEvent* pUserEvent
-        ) :
-            _pScene(pScene),
-            _button(button)
-        {
-        }
-
-        // TODO: Allow modifying border color
-        void ButtonDeselectEvent::func(MouseButtonName button, InputAction action)
-        {
-            GUIRenderable* pBoxRenderable = reinterpret_cast<GUIRenderable*>(
-                _pScene->getComponent(_button.pBox->getEntityID(), ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
-            );
-            GUIRenderable* pTextRenderable = reinterpret_cast<GUIRenderable*>(
-                _pScene->getComponent(_button.pText->getEntityID(), ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
-            );
-            pBoxRenderable->color = _button.originalColor;
-            pTextRenderable->color = _button.originalTextColor;
-
-            //if (_pUserEvent)
-            //    _pUserEvent->func(button, action);
-        }
-
-        ButtonDeselectEvent::~ButtonDeselectEvent()
-        {
         }
 
 
@@ -147,10 +79,8 @@ namespace platypus
             {
                 originalColor,
                 highlightColor,
-                { 0, 0, 0, 0 },
                 originalTextColor,
                 textHighlightColor,
-                { 0, 0, 0, 0 },
                 pContainer,
                 pText
             };
@@ -161,21 +91,16 @@ namespace platypus
             return pContainer;
         }
 
-        UIElement* add_button_element(
+        Button add_button_element(
             LayoutUI& ui,
             UIElement* pParent,
             const Layout& layout,
             const Vector4f& highlightColor,
-            const Vector4f& selectedColor,
             const Vector4f& textColor,
             const Vector4f& textHighlightColor,
-            const Vector4f& textSelectedColor,
             const std::string& text,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClick,
-            bool selectable,
-            UIElement::OnClickEvent* pOnSelect,
-            ButtonDeselectEvent* pOnDeselect
+            UIElement::OnClickEvent* pOnClick
         )
         {
             Layout useLayout = layout;
@@ -195,10 +120,7 @@ namespace platypus
                 true, // create renderable
                 NULL_ID, // textureID
                 nullptr, // pFont
-                pOnClick,
-                selectable,
-                nullptr,
-                nullptr
+                pOnClick
             );
 
             UIElement* pText = add_text_element(
@@ -212,24 +134,16 @@ namespace platypus
             Button button = {
                 layout.color,
                 highlightColor,
-                selectedColor,
                 textColor,
                 textHighlightColor,
-                textSelectedColor,
                 pContainer,
                 pText
             };
 
-            if (selectable)
-            {
-                Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-                pContainer->_pOnSelectEvent = new ButtonSelectEvent(pScene, button, nullptr);
-                pContainer->_pOnDeselectEvent = new ButtonDeselectEvent(pScene, button, nullptr);
-            }
             pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(button);
             pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
 
-            return pContainer;
+            return button;
         }
     }
 }
