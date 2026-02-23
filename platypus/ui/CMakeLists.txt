@@ -4,4 +4,5 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/LayoutUI.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Text.cpp
     ${CMAKE_CURRENT_LIST_DIR}/UIElement.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/InputField.cpp
 )

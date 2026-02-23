@@ -211,6 +211,7 @@ namespace platypus
 
             bool _isMouseOver = false;
             bool _dragged = false;
+            bool _selected = false; // NOTE: this is atm only used by InputField
 
         public:
             UIElement(
@@ -248,6 +249,8 @@ namespace platypus
             inline const Font* getFont() const { return _pFont; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
             inline bool isMouseOver() const { return _isMouseOver; }
+            inline void setSelected(bool arg) { _selected = arg; }
+            inline bool isSelected() const { return _selected; }
         };
 
 

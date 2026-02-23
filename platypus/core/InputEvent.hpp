@@ -121,6 +121,7 @@ namespace platypus
         virtual ~CharInputEvent() {};
         virtual void func(unsigned int codepoint) = 0;
     };
+
     class WindowResizeEvent
     {
     public:

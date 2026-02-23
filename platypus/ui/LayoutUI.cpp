@@ -126,14 +126,14 @@ namespace platypus
             if (horizontalAlignment == HorizontalAlignment::RIGHT)
                 position.x = parentPosition.x + parentScale.x - padding.x - scale.x - layout.position.x;
             if (horizontalAlignment == HorizontalAlignment::CENTER)
-                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f;
+                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + layout.position.x;
 
             if (verticalAlignment == VerticalAlignment::TOP)
                 position.y = parentPosition.y + padding.y + layout.position.y;
             if (verticalAlignment == VerticalAlignment::BOTTOM)
                 position.y = parentPosition.y + parentScale.y - padding.y - scale.y - layout.position.y;
             if (verticalAlignment == VerticalAlignment::CENTER)
-                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f;
+                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + layout.position.y;
 
             if (childIndex != 0)
             {
