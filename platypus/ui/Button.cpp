@@ -100,7 +100,9 @@ namespace platypus
             const Vector4f& textHighlightColor,
             const std::string& text,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClick
+            UIElement::OnClickEvent* pOnClick,
+            UIElement::MouseEnterEvent* pOnEnter,
+            UIElement::MouseExitEvent* pOnExit
         )
         {
             Layout useLayout = layout;
@@ -140,8 +142,15 @@ namespace platypus
                 pText
             };
 
-            pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(button);
-            pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
+            if (pOnEnter)
+                pContainer->_pMouseEnterEvent = pOnEnter;
+            else
+                pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(button);
+
+            if (pOnExit)
+                pContainer->_pMouseExitEvent = pOnExit;
+            else
+                pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
 
             return button;
         }

@@ -58,7 +58,9 @@ namespace platypus
             const Vector4f& textHighlightColor,
             const std::string& text,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClick
+            UIElement::OnClickEvent* pOnClick,
+            UIElement::MouseEnterEvent* pOnEnter = nullptr,
+            UIElement::MouseExitEvent* pOnExit = nullptr
         );
     }
 }
