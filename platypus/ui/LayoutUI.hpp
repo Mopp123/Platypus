@@ -58,32 +58,13 @@ namespace platypus
             int _windowWidth = 0;
             int _windowHeight = 0;
 
-            std::vector<UIElement*> _elements;
             std::vector<UIElement*> _rootElements;
 
         public:
             void init(Scene* pScene, InputManager& inputManager);
             ~LayoutUI();
 
-            void update(
-                const UIElement* pElement,
-                const UIElement* pParentElement,
-                const Vector2f& previousItemPosition = Vector2f(0, 0),
-                const Vector2f& previousItemScale = Vector2f(0, 0),
-                int childIndex = 0
-            );
-
-            Vector2f calcPosition(
-                const Layout& layout,
-                const Layout* pParentLayout,
-                entityID_t parentEntity,
-                const Vector2f& scale,
-                const Vector2f& previousItemPosition,
-                const Vector2f& previousItemScale,
-                int childIndex = 0
-            );
-
-            void addElement(UIElement* pElement, bool isRoot);
+            void addRootElement(UIElement* pElement);
 
         private:
             float toPercentage(float v1, float v2);

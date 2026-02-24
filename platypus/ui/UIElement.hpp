@@ -237,6 +237,24 @@ namespace platypus
                 const Vector2f& childScale
             );
 
+            static Vector2f calc_position(
+                const Layout& layout,
+                const Layout* pParentLayout,
+                entityID_t parentEntity,
+                const Vector2f& scale,
+                const Vector2f& previousItemPosition,
+                const Vector2f& previousItemScale,
+                int childIndex = 0
+            );
+
+            // Updates position for UIElement tree recursively
+            void updatePosition(
+                const UIElement* pParentElement,
+                const Vector2f& previousItemPosition = Vector2f(0, 0),
+                const Vector2f& previousItemScale = Vector2f(0, 0),
+                int childIndex = 0
+            );
+
             void setScale(const Vector2f& scale);
             Vector2f getGlobalScale() const;
             void setGlobalPosition(const Vector2f& position);
@@ -264,11 +282,13 @@ namespace platypus
             UIElement::OnClickEvent* pOnClickEvent = nullptr
         );
 
+        /*
         void update_containers(
             LayoutUI& ui,
             UIElement* pParent,
             UIElement* pElement,
             const Layout& layout
         );
+        */
     }
 }

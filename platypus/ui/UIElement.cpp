@@ -4,6 +4,7 @@
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
+#include <cmath>
 
 
 namespace platypus
@@ -113,6 +114,9 @@ namespace platypus
                 delete _pDragEvent;
             if (_pOnClickEvent)
                 delete _pOnClickEvent;
+
+            for (UIElement* pChild : _children)
+                delete pChild;
         }
 
         void UIElement::addChild(
@@ -158,6 +162,122 @@ namespace platypus
             }
             if (newScale != _layout.scale)
                 setScale(newScale);
+        }
+
+        Vector2f UIElement::calc_position(
+            const Layout& layout,
+            const Layout* pParentLayout,
+            entityID_t parentEntity,
+            const Vector2f& scale,
+            const Vector2f& previousItemPosition,
+            const Vector2f& previousItemScale,
+            int childIndex
+        )
+        {
+            Vector2f position;
+
+            Application* pApp = Application::get_instance();
+            Window& window = pApp->getWindow();
+            Vector2f parentScale(
+                static_cast<float>(window.getWidth()),
+                static_cast<float>(window.getHeight())
+            );
+            Vector2f parentPosition(0.0f, 0.0f);
+            Vector2f padding = pParentLayout != nullptr ? pParentLayout->padding : Vector2f(0.0f, 0.0f);
+            float elementGap = pParentLayout != nullptr ? pParentLayout->elementGap : 0.0f;
+
+            HorizontalAlignment horizontalAlignment = pParentLayout != nullptr ? pParentLayout->horizontalContentAlignment : layout.horizontalAlignment;
+            VerticalAlignment verticalAlignment = pParentLayout != nullptr ? pParentLayout->verticalContentAlignment : layout.verticalAlignment;
+            ExpandElements expandElements = pParentLayout != nullptr ? pParentLayout->expandElements : ExpandElements::DOWN;
+
+            if (pParentLayout)
+            {
+                Scene* pScene = pApp->getSceneManager().accessCurrentScene();
+                GUITransform* pParentTransform = reinterpret_cast<GUITransform*>(
+                    pScene->getComponent(
+                        parentEntity,
+                        ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                    )
+                );
+                parentPosition = pParentTransform->position;
+                parentScale = pParentTransform->scale;
+            }
+
+            if (horizontalAlignment == HorizontalAlignment::LEFT)
+                position.x = parentPosition.x + padding.x + layout.position.x;
+            if (horizontalAlignment == HorizontalAlignment::RIGHT)
+                position.x = parentPosition.x + parentScale.x - padding.x - scale.x - layout.position.x;
+            if (horizontalAlignment == HorizontalAlignment::CENTER)
+                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + layout.position.x;
+
+            if (verticalAlignment == VerticalAlignment::TOP)
+                position.y = parentPosition.y + padding.y + layout.position.y;
+            if (verticalAlignment == VerticalAlignment::BOTTOM)
+                position.y = parentPosition.y + parentScale.y - padding.y - scale.y - layout.position.y;
+            if (verticalAlignment == VerticalAlignment::CENTER)
+                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + layout.position.y;
+
+            if (childIndex != 0)
+            {
+                if (expandElements == ExpandElements::RIGHT)
+                    position.x = previousItemPosition.x + previousItemScale.x + elementGap + layout.position.x;
+                else if (expandElements == ExpandElements::DOWN)
+                    position.y = previousItemPosition.y + previousItemScale.y + elementGap + layout.position.y;
+            }
+
+            // Round to integer so don't get weird looking lines...
+            return { std::round(position.x), std::round(position.y) };
+        }
+
+        void UIElement::updatePosition(
+            const UIElement* pParentElement,
+            const Vector2f& previousItemPosition,
+            const Vector2f& previousItemScale,
+            int childIndex
+        )
+        {
+            const Layout* pParentLayout = pParentElement != nullptr ? &pParentElement->_layout : nullptr;
+            entityID_t parentEntity = pParentElement != nullptr ? pParentElement->_entityID : NULL_ENTITY_ID;
+            Vector2f position = calc_position(
+                _layout,
+                pParentLayout,
+                parentEntity,
+                _layout.scale,
+                previousItemPosition,
+                previousItemScale,
+                childIndex
+            );
+
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            if (_entityID != NULL_ENTITY_ID)
+            {
+                GUITransform* pTransform = (GUITransform*)pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                );
+                // TODO: Make scaling possible?
+                pTransform->position = position;
+            }
+
+            Vector2f usePrevItemPos;
+            Vector2f usePrevItemScale;
+            for (size_t i = 0; i < _children.size(); ++i)
+            {
+                UIElement* pChildElement = _children[i];
+                pChildElement->update(
+                    this,
+                    usePrevItemPos,
+                    usePrevItemScale,
+                    i
+                );
+
+                GUITransform* pChildTransform = (GUITransform*)pScene->getComponent(
+                    pChildElement->_entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                );
+                usePrevItemPos = pChildTransform->position;
+                usePrevItemScale = pChildTransform->scale;
+            }
         }
 
         void UIElement::setScale(const Vector2f& scale)
@@ -268,7 +388,7 @@ namespace platypus
             Vector2f previousItemScale = pParent != nullptr ? pParent->_previousItemScale : Vector2f(0, 0);
             int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
 
-            Vector2f position = ui.calcPosition(
+            Vector2f position = UIElement::calc_position(
                 layout,
                 pParentLayout,
                 parentEntityID,
@@ -307,11 +427,13 @@ namespace platypus
             if (pParent)
                 pParent->addChild(pElement, position, scale);
 
-            ui.addElement(pElement, pParent == nullptr);
+            if (!pParent)
+                ui.addRootElement(pElement);
 
             return pElement;
         }
 
+        /*
         void update_containers(
             LayoutUI& ui,
             UIElement* pParent,
@@ -354,5 +476,6 @@ namespace platypus
             // 1. Update new roots for the LayoutUI here!
             // 2. Do the LayoutUI's update here... or something like that?
         }
+        */
     }
 }
