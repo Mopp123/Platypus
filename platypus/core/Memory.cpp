@@ -143,7 +143,7 @@ namespace platypus
             _freeIndices.insert(index);
         }
 
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index;
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
         void* voidPtr = reinterpret_cast<void*>(ptr);
         destroyElement(index, voidPtr, pUserData);
         memset(voidPtr, 0, _elementSize);
@@ -202,7 +202,8 @@ namespace platypus
             _freeIndices.insert(index);
         }
 
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index;
+        Debug::log("___TEST___Clearing component storage for entity at index: " + std::to_string(index));
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
         void* voidPtr = reinterpret_cast<void*>(ptr);
         destroyElement(index, voidPtr, pUserData);
         memset(voidPtr, 0, _elementSize);

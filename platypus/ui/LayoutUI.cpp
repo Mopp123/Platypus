@@ -1,6 +1,7 @@
 #include "LayoutUI.hpp"
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus
@@ -29,6 +30,7 @@ namespace platypus
 
         LayoutUI::~LayoutUI()
         {
+            Debug::log("___TEST___Destroying LayoutUI");
             for (UIElement* pElement : _rootElements)
                 delete pElement;
         }

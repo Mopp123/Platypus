@@ -131,6 +131,12 @@ namespace platypus
 
         // NOTE: Why the fuck this shit isn't done in the destructor!?!?!?
         Device::wait_for_operations();
+
+        // Need to delete current scene before anything else...
+        //  ...this is getting out of hand.. had to do this because of the way
+        //  UIElements are freed atm...
+        _sceneManager.cleanUp();
+
         // NOTE: Need to destroy assets before destroying MasterRenderer because
         // some rely on descriptor pool that's living in the MasterRenderer atm!
         _pAssetManager->destroyAssets(true);

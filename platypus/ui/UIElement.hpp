@@ -204,6 +204,9 @@ namespace platypus
                 virtual void func(MouseButtonName button, InputAction action, int mods);
             };
 
+            ElementCursorPosEvent* _pCursorPosEvent = nullptr;
+            ElementMouseButtonEvent* _pMouseButtonEvent = nullptr;
+
             entityID_t _entityID = NULL_ENTITY_ID;
             Layout _layout;
             const Font* _pFont = nullptr;
@@ -227,6 +230,10 @@ namespace platypus
                 const Vector2f& childPosition,
                 const Vector2f& childScale
             );
+            // Destroys child tree recursively
+            // NOTE: Very shit and inefficient, just testing atm!
+            void destroyChildren();
+            void destroyChild(UIElement* pChild);
             // Used to update current element according to child.
             // Used to set _previousItemPosition, _previousItemScale
             // and possibly stretching current element to make the child

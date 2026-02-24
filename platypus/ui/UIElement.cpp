@@ -91,15 +91,10 @@ namespace platypus
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
             InputManager& inputManager = pApp->getInputManager();
-            inputManager.addCursorPosEvent(
-                new ElementCursorPosEvent(
-                    pScene,
-                    this
-                )
-            );
-            inputManager.addMouseButtonEvent(
-                new ElementMouseButtonEvent(pScene, this)
-            );
+            _pCursorPosEvent = new ElementCursorPosEvent(pScene, this);
+            _pMouseButtonEvent = new ElementMouseButtonEvent(pScene, this);
+            inputManager.addCursorPosEvent(_pCursorPosEvent);
+            inputManager.addMouseButtonEvent(_pMouseButtonEvent);
         }
 
         UIElement::~UIElement()
@@ -115,8 +110,18 @@ namespace platypus
             if (_pOnClickEvent)
                 delete _pOnClickEvent;
 
+            Application* pApp = Application::get_instance();
+            InputManager& inputManager = pApp->getInputManager();
+            if (_pMouseButtonEvent)
+                inputManager.destroyMouseButtonEvent(_pMouseButtonEvent);
+            if (_pCursorPosEvent)
+                inputManager.destroyCursorPosEvent(_pCursorPosEvent);
+
             for (UIElement* pChild : _children)
                 delete pChild;
+
+            Scene* pScene = pApp->getSceneManager().accessCurrentScene();
+            pScene->destroyEntity(_entityID);
         }
 
         void UIElement::addChild(
@@ -127,6 +132,42 @@ namespace platypus
         {
             _children.push_back(pChild);
             updateFromChild(pChild, childPosition, childScale);
+        }
+
+        void UIElement::destroyChildren()
+        {
+            for (UIElement* pChild : _children)
+                delete pChild;
+
+            _children.clear();
+        }
+
+        void UIElement::destroyChild(UIElement* pChild)
+        {
+            int32_t eraseIndex = -1;
+            for (size_t i = 0; i < _children.size(); ++i)
+            {
+                if (_children[i] == pChild)
+                {
+                    _children[i]->destroyChildren();
+                    delete _children[i];
+                    eraseIndex = static_cast<size_t>(i);
+                    break;
+                }
+            }
+            if (eraseIndex >= 0)
+            {
+                _children.erase(_children.begin() + static_cast<size_t>(eraseIndex));
+            }
+            else
+            {
+                Debug::log(
+                    "Child UIElement not found!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
         }
 
         void UIElement::updateFromChild(
@@ -264,7 +305,7 @@ namespace platypus
             for (size_t i = 0; i < _children.size(); ++i)
             {
                 UIElement* pChildElement = _children[i];
-                pChildElement->update(
+                pChildElement->updatePosition(
                     this,
                     usePrevItemPos,
                     usePrevItemScale,

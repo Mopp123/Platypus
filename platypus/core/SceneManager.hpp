@@ -22,6 +22,8 @@ namespace platypus
         // Detects and handles scene switching
         void handleSceneSwitching();
 
+        void cleanUp();
+
         inline const Scene* const getCurrentScene() const { return _pCurrentScene; }
         inline Scene* accessCurrentScene() { return _pCurrentScene; }
     };

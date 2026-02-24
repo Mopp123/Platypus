@@ -60,6 +60,10 @@ namespace platypus
         void addCharInputEvent(CharInputEvent* ev);
         void addWindowResizeEvent(WindowResizeEvent* ev);
 
+        // *Inefficient as fuck atm...
+        void destroyMouseButtonEvent(MouseButtonEvent* ev);
+        void destroyCursorPosEvent(CursorPosEvent* ev);
+
         void destroyEvents();
 
         void processKeyEvents(KeyName key, int scancode, InputAction action, int mods);

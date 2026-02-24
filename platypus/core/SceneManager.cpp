@@ -8,10 +8,7 @@ namespace platypus
 {
     SceneManager::~SceneManager()
     {
-        if (_pCurrentScene)
-            delete _pCurrentScene;
-        if (_pNextScene)
-            delete _pNextScene;
+        cleanUp();
     }
 
     // NOTE: This does a bit more than just updates the current scene
@@ -67,14 +64,29 @@ namespace platypus
             pApp->getMasterRenderer()->cleanRenderers();
             Debug::log("___TEST___success!", PLATYPUS_CURRENT_FUNC_NAME);
 
+            // NOTE: Important that the scene gets destroyed here, since
+            // it might destroy some resources explicitly by itself and
+            // the input and asset managers then cleans the rest!
+            delete _pCurrentScene;
+
             pApp->getInputManager().destroyEvents();
             pApp->getAssetManager()->destroyAssets();
 
-            delete _pCurrentScene;
             _pCurrentScene = _pNextScene;
             _pCurrentScene->init();
 
             _pNextScene = nullptr;
         }
+    }
+
+    void SceneManager::cleanUp()
+    {
+        if (_pCurrentScene)
+            delete _pCurrentScene;
+        if (_pNextScene)
+            delete _pNextScene;
+
+        _pCurrentScene = nullptr;
+        _pNextScene = nullptr;
     }
 }
