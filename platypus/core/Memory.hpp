@@ -55,7 +55,7 @@ namespace platypus
         void* occupy(void* pUserData);
 
         // Clears single element at index and calls its' destructor
-        // *pUserData can be used to convert from some data type into pool index using userDataToIndex
+        // *pUserData can be used to convert from some data type into pool index using userDataToIndex()
         void clearStorage(size_t index, void* pUserData);
         void clearStorage(void* pUserData);
 

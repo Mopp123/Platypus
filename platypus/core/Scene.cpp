@@ -103,8 +103,8 @@ namespace platypus
         Entity entity;
         if (!_freeEntityIDs.empty())
         {
-            entityID_t freeID = _freeEntityIDs.back();
-            _freeEntityIDs.pop_back();
+            entityID_t freeID = _freeEntityIDs.front();
+            _freeEntityIDs.pop();
 
             entity.id = freeID;
             _entities[freeID] = entity;
@@ -247,7 +247,7 @@ namespace platypus
                 poolsIt->second->clearStorage(&entityID);
         }
         // Destroy/free entity itself
-        _freeEntityIDs.push_back(entityID);
+        _freeEntityIDs.push(entityID);
         _entities[entityID].clear();
     }
 

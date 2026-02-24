@@ -39,7 +39,7 @@ namespace platypus
         MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
         for (const Entity& entity : _pCurrentScene->_entities)
         {
-            if (entity.active)
+            if (entity.id != NULL_ENTITY_ID && entity.active)
                 pMasterRenderer->submit(_pCurrentScene, entity);
         }
     }

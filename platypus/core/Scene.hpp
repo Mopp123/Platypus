@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <queue>
 
 
 namespace platypus
@@ -28,7 +29,7 @@ namespace platypus
         std::vector<System*> _systems;
         std::vector<Entity> _entities;
 
-        std::vector<entityID_t> _freeEntityIDs;
+        std::queue<entityID_t> _freeEntityIDs;
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
         std::unordered_map<ComponentType, MemoryPool*> _componentPools;
 

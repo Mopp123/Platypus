@@ -78,11 +78,13 @@ namespace platypus
 
 
         UIElement::UIElement(
+            LayoutUI& ui,
             entityID_t entityID,
             Layout layout,
             const Font* pFont,
             OnClickEvent* pOnClickEvent
         ) :
+            _uiRef(ui),
             _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
             _layout(layout),
@@ -459,6 +461,7 @@ namespace platypus
             }
 
             UIElement* pElement = new UIElement(
+                ui,
                 entity,
                 layout,
                 pFont,

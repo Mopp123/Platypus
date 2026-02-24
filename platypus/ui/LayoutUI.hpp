@@ -65,6 +65,7 @@ namespace platypus
             ~LayoutUI();
 
             void addRootElement(UIElement* pElement);
+            void removeRootElement(UIElement* pElement);
 
         private:
             float toPercentage(float v1, float v2);

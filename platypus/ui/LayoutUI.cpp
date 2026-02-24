@@ -30,7 +30,6 @@ namespace platypus
 
         LayoutUI::~LayoutUI()
         {
-            Debug::log("___TEST___Destroying LayoutUI");
             for (UIElement* pElement : _rootElements)
                 delete pElement;
         }
@@ -38,6 +37,34 @@ namespace platypus
         void LayoutUI::addRootElement(UIElement* pElement)
         {
             _rootElements.push_back(pElement);
+        }
+
+        void LayoutUI::removeRootElement(UIElement* pElement)
+        {
+            int32_t eraseIndex = -1;
+            for (size_t i = 0; i < _rootElements.size(); ++i)
+            {
+                if (_rootElements[i] == pElement)
+                {
+                    eraseIndex = static_cast<int32_t>(i);
+                    break;
+                }
+            }
+            if (eraseIndex >= 0)
+            {
+                _rootElements.erase(_rootElements.begin() + static_cast<size_t>(eraseIndex));
+            }
+            #ifdef PLATYPUS_DEBUG
+            else
+            {
+                Debug::log(
+                    "No root element found",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
         }
 
         float LayoutUI::toPercentage(float v1, float v2)

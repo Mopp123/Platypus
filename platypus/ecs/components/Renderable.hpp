@@ -31,8 +31,6 @@ namespace platypus
         // NOTE: Warning when initially allocating from component pool!
         // -> needs to be explicitly resized to have any space!
         std::string text;
-
-        ~GUIRenderable() {}
     };
 
     Renderable3D* create_renderable3D(

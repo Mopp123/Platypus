@@ -123,6 +123,9 @@ namespace platypus
         class LayoutUI;
         class UIElement
         {
+        private:
+            LayoutUI& _uiRef;
+
         public:
             class MouseEnterEvent
             {
@@ -218,6 +221,7 @@ namespace platypus
 
         public:
             UIElement(
+                LayoutUI& ui,
                 entityID_t entityID,
                 Layout layout,
                 const Font* pFont,

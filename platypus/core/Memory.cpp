@@ -1,5 +1,6 @@
 #include "Memory.hpp"
 #include "Debug.hpp"
+#include "platypus/ecs/Entity.hpp"
 #include <cstring>
 #include <cstdlib>
 #include <limits>
@@ -87,8 +88,17 @@ namespace platypus
             pElement = reinterpret_cast<void*>(ptr);
             _freeIndices.erase(occupyIndex);
             int32_t signedIndex = static_cast<int32_t>(occupyIndex);
-            if (signedIndex > _prevHighestOccupiedIndex)
+            // NOTE: There were some issues with the highest occupied index...
+            // ...not sure if I trust this system anymore...
+            if (signedIndex > _prevHighestOccupiedIndex && signedIndex < _highestOccupiedIndex)
+            {
                 _prevHighestOccupiedIndex = signedIndex;
+            }
+            else if (signedIndex > _highestOccupiedIndex)
+            {
+                _prevHighestOccupiedIndex = _highestOccupiedIndex;
+                _highestOccupiedIndex = signedIndex;
+            }
         }
         else
         {
@@ -104,6 +114,8 @@ namespace platypus
         return pElement;
     }
 
+    // NOTE: Changed a bit after some fuckery...
+    // NOT TESTED! USE THE OTHER ONE INSTEAD IF POSSIBLE!
     void MemoryPool::clearStorage(size_t index, void* pUserData)
     {
         if (index >= _totalLength)
@@ -120,9 +132,9 @@ namespace platypus
             return;
         }
 
-        // If clearing from somewhere else than back, add to freed indices
-        // so the next occupation can use the free index instead of back
-        if (index == static_cast<int32_t>(_highestOccupiedIndex))
+        // Add to freed indices so next occupation can use that instead of "back"
+        // +also fuck around with the highest occupied index...
+        if (index == static_cast<size_t>(_highestOccupiedIndex))
         {
             if (_prevHighestOccupiedIndex != -1)
             {
@@ -135,13 +147,14 @@ namespace platypus
                 // If we get here it means there should not be a single occupied index left?
                 _highestOccupiedIndex = -1;
             }
-            _freeIndices.insert(index);
         }
-        else if (index == static_cast<int32_t>(_prevHighestOccupiedIndex))
+        else if (index == static_cast<size_t>(_prevHighestOccupiedIndex))
         {
             _prevHighestOccupiedIndex = findPreviousOccupiedIndex(index);
-            _freeIndices.insert(index);
         }
+        // NOTE: For some reason didn't previously add to _freeIndices if freeing the last elem...
+        // ...Don't remember why..
+        _freeIndices.insert(index);
 
         uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
         void* voidPtr = reinterpret_cast<void*>(ptr);
@@ -179,8 +192,8 @@ namespace platypus
             return;
         }
 
-        // If clearing from somewhere else than back, add to freed indices
-        // so the next occupation can use the free index instead of back
+        // Add to freed indices so next occupation can use that instead of "back"
+        // +also fuck around with the highest occupied index...
         if (index == static_cast<int32_t>(_highestOccupiedIndex))
         {
             if (_prevHighestOccupiedIndex != -1)
@@ -194,15 +207,15 @@ namespace platypus
                 // If we get here it means there should not be a single occupied index left?
                 _highestOccupiedIndex = -1;
             }
-            _freeIndices.insert(index);
         }
         else if (index == static_cast<int32_t>(_prevHighestOccupiedIndex))
         {
             _prevHighestOccupiedIndex = findPreviousOccupiedIndex(index);
-            _freeIndices.insert(index);
         }
+        // NOTE: For some reason didn't previously add to _freeIndices if freeing the last elem...
+        // ...Don't remember why..
+        _freeIndices.insert(index);
 
-        Debug::log("___TEST___Clearing component storage for entity at index: " + std::to_string(index));
         uint8_t* ptr = reinterpret_cast<uint8_t*>(_pStorage) + index * _elementSize;
         void* voidPtr = reinterpret_cast<void*>(ptr);
         destroyElement(index, voidPtr, pUserData);
@@ -303,12 +316,15 @@ namespace platypus
         if (signedIndex == -1)
             return nullptr;
 
-        size_t index = static_cast<int32_t>(signedIndex);
+        size_t index = static_cast<size_t>(signedIndex);
         #ifdef PLATYPUS_DEBUG
         if (index > _highestOccupiedIndex)
         {
+            entityID_t entity;
+            memcpy(reinterpret_cast<void*>(&entity), pUserData, sizeof(entityID_t));
             Debug::log(
-                "Index: " + std::to_string(index) + " out of bounds of occupied indices!",
+                "Entity's: " +std::to_string(entity) + " Index: " + std::to_string(index) + " out of bounds of occupied indices! "
+                "Highest occupied index was " + std::to_string(_highestOccupiedIndex),
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -396,9 +412,10 @@ namespace platypus
             return 0;
         }
 
-        for (size_t currentIndex = index - 1; currentIndex >= 0; ++currentIndex)
+        int32_t signedIndex = static_cast<int32_t>(index);
+        for (int32_t currentIndex = signedIndex - 1; currentIndex >= 0; --currentIndex)
         {
-            if (_freeIndices.find(currentIndex) == _freeIndices.end())
+            if (_freeIndices.find(static_cast<size_t>(currentIndex)) == _freeIndices.end())
                 return currentIndex;
         }
         return -1;
