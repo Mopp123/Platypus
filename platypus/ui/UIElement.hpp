@@ -219,7 +219,10 @@ namespace platypus
             bool _dragged = false;
             bool _selected = false; // NOTE: this is atm only used by InputField
 
+
         public:
+            static std::set<uint32_t> s_mouseOverLayers;
+
             UIElement(
                 LayoutUI& ui,
                 entityID_t entityID,
@@ -272,6 +275,11 @@ namespace platypus
             Vector2f getGlobalPosition() const;
             GUIRenderable* getRenderable();
             void setActive(bool arg);
+
+            uint32_t getLayer();
+            void setLayer(uint32_t layer);
+
+            static uint32_t mouse_over_layer();
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }

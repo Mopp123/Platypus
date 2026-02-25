@@ -27,6 +27,20 @@ namespace platypus
                 if (fx >= pTransform->position.x && fx <= pTransform->position.x + pTransform->scale.x &&
                     fy >= pTransform->position.y && fy <= pTransform->position.y + pTransform->scale.y)
                 {
+                    UIElement::s_mouseOverLayers.insert(static_cast<uint32_t>(_pElement->getLayer()));
+                    if (UIElement::mouse_over_layer() > _pElement->getLayer())
+                    {
+                        // *if it already was mouse over, but picked higher layer
+                        //  -> mouse exit
+                        if (_pElement->_isMouseOver)
+                        {
+                            if (_pElement->_pMouseExitEvent)
+                                _pElement->_pMouseExitEvent->func(x, y);
+                        }
+                        _pElement->_isMouseOver = false;
+                        return;
+                    }
+
                     if (!_pElement->_isMouseOver)
                     {
                         if (_pElement->_pMouseEnterEvent)
@@ -40,6 +54,11 @@ namespace platypus
                 }
                 else
                 {
+                    UIElement::s_mouseOverLayers.erase(static_cast<uint32_t>(_pElement->getLayer()));
+
+                    if (UIElement::mouse_over_layer() > _pElement->getLayer())
+                        return;
+
                     if (_pElement->_isMouseOver)
                     {
                         if (_pElement->_pMouseExitEvent)
@@ -77,6 +96,7 @@ namespace platypus
         }
 
 
+        std::set<uint32_t> UIElement::s_mouseOverLayers;
         UIElement::UIElement(
             LayoutUI& ui,
             entityID_t entityID,
@@ -405,11 +425,49 @@ namespace platypus
 
         void UIElement::setActive(bool arg)
         {
+            // *if setting inactive by OnClick func, reset mouseOver
+            _isMouseOver = false;
             for (UIElement* pChild : _children)
                 pChild->setActive(arg);
 
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             pScene->setEntityActive(_entityID, arg);
+        }
+
+        uint32_t UIElement::getLayer()
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                )
+            );
+            if (pRenderable)
+                return static_cast<int32_t>(pRenderable->layer);
+
+            return 0;
+        }
+
+        void UIElement::setLayer(uint32_t layer)
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                )
+            );
+            if (pRenderable)
+                pRenderable->layer = layer;
+        }
+
+        uint32_t UIElement::mouse_over_layer()
+        {
+            if (s_mouseOverLayers.empty())
+                return 0;
+
+            return *s_mouseOverLayers.rbegin();
         }
 
 

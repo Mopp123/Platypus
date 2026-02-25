@@ -62,5 +62,7 @@ namespace platypus
             UIElement::MouseEnterEvent* pOnEnter = nullptr,
             UIElement::MouseExitEvent* pOnExit = nullptr
         );
+
+        void reset_button(const Button& button);
     }
 }

@@ -1,6 +1,7 @@
 #include "Button.hpp"
 #include "Text.hpp"
 #include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 #include "platypus/core/Scene.hpp"
 
 
@@ -153,6 +154,36 @@ namespace platypus
                 pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
 
             return button;
+        }
+
+
+        void reset_button(const Button& button)
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            #ifdef PLATYPUS_DEBUG
+            if (!button.pBox)
+            {
+                Debug::log(
+                    "No button's box element was nullptr",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            if (!button.pText)
+            {
+                Debug::log(
+                    "No button's text element was nullptr",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            GUIRenderable* pBoxRenderable = button.pBox->getRenderable();
+            GUIRenderable* pTextRenderable = button.pText->getRenderable();
+            pBoxRenderable->color = button.originalColor;
+            pTextRenderable->color = button.originalTextColor;
         }
     }
 }
