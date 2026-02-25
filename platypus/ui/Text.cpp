@@ -208,6 +208,89 @@ namespace platypus
             pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
         }
 
+
+        void set_text_overflow_ellipsis(
+            UIElement* pTextElement,
+            UIElement* pParentElement,
+            Font* pFont,
+            const std::string& header,
+            const std::string& text,
+            uint8_t stripDirection
+        )
+        {
+            static const uint8_t s_stripDirEnd = 0;
+            static const uint8_t s_stripDirBegin = 1;
+
+            float headerVisualWidth = ui::get_text_scale(header, pFont).x;
+            const std::string fullText = header + text;
+            const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
+
+            std::string finalText;
+            const Layout& parentLayout = pParentElement->getLayout();
+            const float paddingX = parentLayout.padding.x;
+            if (paddingX + fullVisualWidth < parentLayout.scale.x + paddingX * 2)
+            {
+                finalText = header + text;
+            }
+            else
+            {
+                const size_t size = text.size();
+                char* pData = (char*)text.data();
+                //utf8::iterator<char*> it(pData + size - 1, pData, pData + size);
+                //utf8::iterator<char*> beginIt(pData, pData, pData + size);
+                utf8::iterator<char*> it;
+                utf8::iterator<char*> stopIt;
+                if (stripDirection == s_stripDirBegin)
+                {
+                    it = utf8::iterator<char*>(pData + size - 1, pData, pData + size);
+                    stopIt = utf8::iterator<char*>(pData, pData, pData + size);
+                }
+                else
+                {
+                    it = utf8::iterator<char*>(pData, pData, pData + size);
+                    stopIt = utf8::iterator<char*>(pData + size - 1, pData, pData + size);
+                }
+
+                const std::string visualBuffer = "...";
+                const float visualBufferWidth = ui::get_text_scale(visualBuffer, pFont).x;
+
+                float currentWidth = headerVisualWidth + visualBufferWidth;
+                std::string strippedStr;
+                while (true)
+                {
+                    uint32_t codepoint = static_cast<uint32_t>(*it);
+                    std::string charStr;
+                    util::str::append_utf8(codepoint, charStr);
+                    float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
+                    currentWidth += charVisualWidth;
+
+                    if (paddingX + currentWidth < parentLayout.scale.x + paddingX * 2)
+                    {
+                        util::str::append_utf8(codepoint, strippedStr);
+                    }
+
+                    if (it == stopIt)
+                        break;
+
+                    if (stripDirection == s_stripDirBegin)
+                        --it;
+                    else
+                        ++it;
+                }
+                if (stripDirection == s_stripDirBegin)
+                    finalText = header + visualBuffer + util::str::reverse(strippedStr);
+                else
+                    finalText = header + strippedStr + visualBuffer;
+            }
+
+            ui::set_text(
+                pTextElement,
+                pParentElement,
+                finalText
+            );
+        }
+
+
         Vector2f get_char_scale(uint32_t codepoint, const Font* pFont)
         {
             const FontGlyphData * const pGlyph = pFont->getGlyph(codepoint);
