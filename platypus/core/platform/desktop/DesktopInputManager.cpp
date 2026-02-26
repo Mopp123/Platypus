@@ -1,4 +1,5 @@
 #include "platypus/core/InputManager.hpp"
+#include "platypus/core/Debug.hpp"
 #include "DesktopWindow.hpp"
 #include <GLFW/glfw3.h>
 
@@ -149,6 +150,7 @@ namespace platypus
         int my = (int)y;
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
+        Debug::log("___TEST___mouse: " + std::to_string(mx) + ", " + std::to_string(my));
     }
 
     void scroll_callback(GLFWwindow* pGLFWwindow, double xOffset, double yOffset)

@@ -5,6 +5,7 @@
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cmath>
+#include <limits>
 
 
 namespace platypus
@@ -341,6 +342,129 @@ namespace platypus
                 usePrevItemPos = pChildTransform->position;
                 usePrevItemScale = pChildTransform->scale;
             }
+        }
+
+        /*
+        void UIElement::getTotalStretch(
+            Vector2f& scale
+        )
+        {
+            Vector2f globalPosition = getGlobalPosition();
+            for (UIElement* pChild : _children)
+            {
+                Vector2f childPos = pChild->getGlobalPosition();
+                Vector2f childScale = pChild->getGlobalScale();
+
+                float childRight = childPos.x + childScale.x;
+                float ownRight = globalPosition.x + scale.x - _layout.padding.x;
+                Vector2f toAdd;
+                if (childRight > ownRight)
+                    toAdd.x = childRight - ownRight;
+
+                float childBottom = childPos.y + childScale.y;
+                float ownBottom = globalPosition.y + scale.y - _layout.padding.y;
+                if (childBottom > ownBottom)
+                    toAdd.y = childBottom - ownBottom;
+
+                scale = scale + toAdd;
+                pChild->getTotalStretch(scale);
+            }
+        }
+        */
+
+        void UIElement::updatePosition_TEST(
+            const UIElement* pParent,
+            int32_t childIndex
+        )
+        {
+            Vector2f scale = _layout.scale;
+
+            const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
+            entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
+
+            Vector2f prevItemPos;
+            Vector2f prevItemScale;
+            int32_t prevIndex = childIndex - 1;
+            if (prevIndex >= 0)
+            {
+                prevItemPos = pParent->_children[prevIndex]->getGlobalPosition();
+                prevItemScale = pParent->_children[prevIndex]->getGlobalScale();
+            }
+            else if (pParent)
+            {
+                prevItemPos = pParent->getGlobalPosition();
+                prevItemScale = pParentLayout->padding;
+            }
+
+            Vector2f position = calc_position(
+                _layout,
+                pParentLayout,
+                parentEntityID,
+                scale,
+                prevItemPos,
+                prevItemScale,
+                pParent != nullptr ? pParent->getChildren().size() : 0
+            );
+
+            setGlobalPosition(position);
+            setScale(scale);
+
+            Debug::log("___TEST___pos set: " + position.toString() + " prev pos: " + prevItemPos.toString() + " prevIndex: " + std::to_string(prevIndex));
+
+            for (size_t i = 0; i < _children.size(); ++i)
+            {
+                _children[i]->updatePosition_TEST(this, i);
+            }
+        }
+
+        void UIElement::getChildBounds(
+            float& minX, float& maxX,
+            float& minY, float& maxY
+        )
+        {
+            for (UIElement* pChild : _children)
+            {
+                Vector2f childPos = pChild->getGlobalPosition();
+                Vector2f childScale = pChild->getGlobalScale();
+
+                float childLeft = childPos.x;
+                float childRight = childPos.x + childScale.x;
+
+                float childTop = childPos.y;
+                float childBottom = childPos.y + childScale.y;
+
+                minX = std::min(minX, childLeft);
+                minY = std::min(minY, childTop);
+                maxX = std::max(maxX, childRight);
+                maxY = std::max(maxY, childBottom);
+
+                pChild->getChildBounds(minX, maxX, minY, maxY);
+            }
+        }
+
+        void UIElement::stretch()
+        {
+            float minX = std::numeric_limits<float>::max();
+            float minY = std::numeric_limits<float>::max();
+            float maxX = 0;
+            float maxY = 0;
+            getChildBounds(minX, maxX, minY, maxY);
+            Vector2f pos = getGlobalPosition();
+            if (minX < pos.x)
+                pos.x = minX;
+            if (minY < pos.y)
+                pos.y = minY;
+
+            Vector2f scale = getGlobalScale();
+            if (maxX - minX > scale.x)
+                scale.x = maxX - minX;
+            if (maxY - minY > scale.y)
+                scale.y = maxY - minY;
+
+            Debug::log("___TEST___STRETCH: maxY: " + std::to_string(maxY));
+
+            setGlobalPosition(pos);
+            setScale(scale);
         }
 
         void UIElement::setScale(const Vector2f& scale)

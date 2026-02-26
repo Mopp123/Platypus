@@ -269,6 +269,17 @@ namespace platypus
                 int childIndex = 0
             );
 
+            void updatePosition_TEST(
+                const UIElement* pParent,
+                int32_t childIndex = 0
+            );
+
+            void getChildBounds(
+                float& minX, float& maxX,
+                float& minY, float& maxY
+            );
+            void stretch();
+
             void setScale(const Vector2f& scale);
             Vector2f getGlobalScale() const;
             void setGlobalPosition(const Vector2f& position);
