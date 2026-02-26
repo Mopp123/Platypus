@@ -235,7 +235,7 @@ namespace platypus
             const Vector2f& scale,
             const Vector2f& previousItemPosition,
             const Vector2f& previousItemScale,
-            int childIndex
+            bool isFirstChild
         )
         {
             Vector2f position;
@@ -281,7 +281,8 @@ namespace platypus
             if (verticalAlignment == VerticalAlignment::CENTER)
                 position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + layout.position.y;
 
-            if (childIndex != 0)
+            // Advance position if not the first child
+            if (!isFirstChild)
             {
                 if (expandElements == ExpandElements::RIGHT)
                     position.x = previousItemPosition.x + previousItemScale.x + elementGap + layout.position.x;
@@ -293,6 +294,8 @@ namespace platypus
             return { std::round(position.x), std::round(position.y) };
         }
 
+        // TODO: get rid of below
+        /*
         void UIElement::updatePosition(
             const UIElement* pParentElement,
             const Vector2f& previousItemPosition,
@@ -309,7 +312,7 @@ namespace platypus
                 _layout.scale,
                 previousItemPosition,
                 previousItemScale,
-                childIndex
+                childIndex == 0
             );
 
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -343,6 +346,7 @@ namespace platypus
                 usePrevItemScale = pChildTransform->scale;
             }
         }
+        */
 
         /*
         void UIElement::getTotalStretch(
@@ -377,8 +381,6 @@ namespace platypus
             int32_t childIndex
         )
         {
-            Vector2f scale = _layout.scale;
-
             const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
             entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
 
@@ -400,21 +402,15 @@ namespace platypus
                 _layout,
                 pParentLayout,
                 parentEntityID,
-                scale,
+                getGlobalScale(),
                 prevItemPos,
                 prevItemScale,
-                pParent != nullptr ? pParent->getChildren().size() : 0
+                childIndex == 0 //pParent != nullptr ? pParent->getChildren().size() : 0
             );
-
             setGlobalPosition(position);
-            setScale(scale);
-
-            Debug::log("___TEST___pos set: " + position.toString() + " prev pos: " + prevItemPos.toString() + " prevIndex: " + std::to_string(prevIndex));
 
             for (size_t i = 0; i < _children.size(); ++i)
-            {
                 _children[i]->updatePosition_TEST(this, i);
-            }
         }
 
         void UIElement::getChildBounds(
@@ -442,93 +438,139 @@ namespace platypus
             }
         }
 
-        void UIElement::stretch()
+        void UIElement::updateStretching(bool& repositionRequired)
         {
-            float minX = std::numeric_limits<float>::max();
-            float minY = std::numeric_limits<float>::max();
-            float maxX = 0;
-            float maxY = 0;
-            getChildBounds(minX, maxX, minY, maxY);
-            Vector2f pos = getGlobalPosition();
-            if (minX < pos.x)
-                pos.x = minX;
-            if (minY < pos.y)
-                pos.y = minY;
+            if (_layout.stretchFitContentFlags > 0)
+            {
+                float minX = std::numeric_limits<float>::max();
+                float minY = std::numeric_limits<float>::max();
+                float maxX = std::numeric_limits<float>::min();;
+                float maxY = std::numeric_limits<float>::min();
+                getChildBounds(minX, maxX, minY, maxY);
 
-            Vector2f scale = getGlobalScale();
-            if (maxX - minX > scale.x)
-                scale.x = maxX - minX;
-            if (maxY - minY > scale.y)
-                scale.y = maxY - minY;
+                GUITransform* pTransform = getTransform();
+                Vector2f& posRef = pTransform->position;
+                Vector2f& scaleRef = pTransform->scale;
+                const Vector2f prevPos = posRef;
+                const Vector2f prevScale = scaleRef;
 
-            Debug::log("___TEST___STRETCH: maxY: " + std::to_string(maxY));
+                // if minX or minY goes negative shit gets fucked
+                minX = std::max(minX, 0.0f);
+                minY = std::max(minY, 0.0f);
+                if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
+                {
+                    if (minX < posRef.x)
+                        posRef.x = minX;
+                    if (maxX - minX > scaleRef.x)
+                        scaleRef.x = maxX - minX;
+                }
+                if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
+                {
+                    if (minY < posRef.y)
+                        posRef.y = minY;
+                    if (maxY - minY > scaleRef.y)
+                        scaleRef.y = maxY - minY;
+                }
 
-            setGlobalPosition(pos);
-            setScale(scale);
+                // If stretching occurs, might need to reposition, depending on defined alignment
+                if (prevPos != posRef || prevScale != scaleRef)
+                {
+                    Debug::log("___TEST___Stretching -> repos required!");
+                    repositionRequired = true;
+                }
+            }
+
+            for (UIElement* pChild : _children)
+                pChild->updateStretching(repositionRequired);
+        }
+
+        void UIElement::updateAll_TEST(
+            const UIElement* pParent,
+            int32_t childIndex
+        )
+        {
+            // TODO: Needs some performance testing, this is quite funny:D
+            while (true)
+            {
+                updatePosition_TEST(pParent, childIndex);
+                bool repositionRequired = false;
+                updateStretching(repositionRequired);
+                if (!repositionRequired)
+                    return;
+            }
         }
 
         void UIElement::setScale(const Vector2f& scale)
         {
-            // TODO: Maybe have ptr to scene when creating the element so don't need to get
-            // every time again?
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-            );
-            if (pTransform)
-            {
-                pTransform->scale = scale;
-            }
-            _layout.scale = scale;
+            GUITransform* pTransform = getTransform();
+            pTransform->scale = scale;
         }
 
         Vector2f UIElement::getGlobalScale() const
         {
-            // TODO: Maybe have ptr to scene when creating the element so don't need to get
-            // every time again?
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-            );
-            if (pTransform)
-                return pTransform->scale;
-            else
-                return _layout.scale;
+            const GUITransform* pTransform = getTransform();
+            return pTransform->scale;
         }
 
         void UIElement::setGlobalPosition(const Vector2f& position)
         {
-            // TODO: Maybe have ptr to scene when creating the element so don't need to get
-            // every time again?
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-            );
-            // NOTE: Not actually sure what to do if there's no Transform
-            // since the layout's position is a relative position and not global
-            if (pTransform)
-                pTransform->position = position;
-            else
-                _layout.position = position;
+            GUITransform* pTransform = getTransform();
+            pTransform->position = position;
         }
 
         Vector2f UIElement::getGlobalPosition() const
         {
+            const GUITransform* pTransform = getTransform();
+            return pTransform->position;
+        }
+
+        GUITransform* UIElement::getTransform()
+        {
             // TODO: Maybe have ptr to scene when creating the element so don't need to get
             // every time again?
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+            GUITransform* pTransform = reinterpret_cast<GUITransform*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                )
             );
-            if (pTransform)
+            if (!pTransform)
             {
-                return pTransform->position;
+                Debug::log(
+                    "UIElement's(entityID: " + std::to_string(_entityID) + ") "
+                    "GUITransform component was nullptr! "
+                    "All UIElements are required to have GUITransform component!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
             }
-            return { };
+            return pTransform;
+        }
+
+        // *Fucking dumb, need the const version of above...
+        const GUITransform* UIElement::getTransform() const
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const GUITransform* pTransform = reinterpret_cast<const GUITransform*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                )
+            );
+            if (!pTransform)
+            {
+                Debug::log(
+                    "UIElement's(entityID: " + std::to_string(_entityID) + ") "
+                    "GUITransform component was nullptr! "
+                    "All UIElements are required to have GUITransform component!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            return pTransform;
         }
 
         GUIRenderable* UIElement::getRenderable()
@@ -536,9 +578,11 @@ namespace platypus
             // TODO: Maybe have ptr to scene when creating the element so don't need to get
             // every time again?
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                )
             );
             if (pRenderable)
             {
@@ -611,6 +655,9 @@ namespace platypus
             entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
             Vector2f previousItemPosition = pParent != nullptr ? pParent->_previousItemPosition : Vector2f(0, 0);
             Vector2f previousItemScale = pParent != nullptr ? pParent->_previousItemScale : Vector2f(0, 0);
+
+            // When adding child container, the pParent's child count is the index
+            // since we haven't added this new child yet
             int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
 
             Vector2f position = UIElement::calc_position(
@@ -620,7 +667,7 @@ namespace platypus
                 scale,
                 previousItemPosition,
                 previousItemScale,
-                childIndex
+                childIndex == 0
             );
 
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();

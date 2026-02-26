@@ -6,6 +6,7 @@
 #include "platypus/core/InputEvent.hpp"
 
 #include "platypus/ecs/Entity.hpp"
+#include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/assets/Font.hpp"
 #include <vector>
@@ -258,16 +259,18 @@ namespace platypus
                 const Vector2f& scale,
                 const Vector2f& previousItemPosition,
                 const Vector2f& previousItemScale,
-                int childIndex = 0
+                bool isFirstChild
             );
 
             // Updates position for UIElement tree recursively
+            /*
             void updatePosition(
                 const UIElement* pParentElement,
                 const Vector2f& previousItemPosition = Vector2f(0, 0),
                 const Vector2f& previousItemScale = Vector2f(0, 0),
                 int childIndex = 0
             );
+            */
 
             void updatePosition_TEST(
                 const UIElement* pParent,
@@ -278,12 +281,20 @@ namespace platypus
                 float& minX, float& maxX,
                 float& minY, float& maxY
             );
-            void stretch();
+            void updateStretching(bool& repositionRequired);
+
+            void updateAll_TEST(
+                const UIElement* pParent,
+                int32_t childIndex = 0
+            );
+
 
             void setScale(const Vector2f& scale);
             Vector2f getGlobalScale() const;
             void setGlobalPosition(const Vector2f& position);
             Vector2f getGlobalPosition() const;
+            GUITransform* getTransform();
+            const GUITransform* getTransform() const;
             GUIRenderable* getRenderable();
             void setActive(bool arg);
 

@@ -14,7 +14,8 @@ namespace platypus
             _uiRef._windowHeight = (float)h;
             for (UIElement* pRootElement : _uiRef._rootElements)
             {
-                pRootElement->updatePosition(nullptr);
+                //pRootElement->updatePosition(nullptr);
+                pRootElement->updateAll_TEST(nullptr);
             }
         }
 
