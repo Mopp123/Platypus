@@ -262,17 +262,7 @@ namespace platypus
                 bool isFirstChild
             );
 
-            // Updates position for UIElement tree recursively
-            /*
             void updatePosition(
-                const UIElement* pParentElement,
-                const Vector2f& previousItemPosition = Vector2f(0, 0),
-                const Vector2f& previousItemScale = Vector2f(0, 0),
-                int childIndex = 0
-            );
-            */
-
-            void updatePosition_TEST(
                 const UIElement* pParent,
                 int32_t childIndex = 0
             );
@@ -283,7 +273,11 @@ namespace platypus
             );
             void updateStretching(bool& repositionRequired);
 
-            void updateAll_TEST(
+            // Updates the whole UIElement tree.
+            // Does rescaling if stretching is enabled.
+            //  -> in such case repositions all elements also accordingly.
+            // NOTE: Pretty inefficient and awful, but will do for now
+            void updateTree(
                 const UIElement* pParent,
                 int32_t childIndex = 0
             );

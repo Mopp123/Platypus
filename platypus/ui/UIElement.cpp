@@ -294,89 +294,7 @@ namespace platypus
             return { std::round(position.x), std::round(position.y) };
         }
 
-        // TODO: get rid of below
-        /*
         void UIElement::updatePosition(
-            const UIElement* pParentElement,
-            const Vector2f& previousItemPosition,
-            const Vector2f& previousItemScale,
-            int childIndex
-        )
-        {
-            const Layout* pParentLayout = pParentElement != nullptr ? &pParentElement->_layout : nullptr;
-            entityID_t parentEntity = pParentElement != nullptr ? pParentElement->_entityID : NULL_ENTITY_ID;
-            Vector2f position = calc_position(
-                _layout,
-                pParentLayout,
-                parentEntity,
-                _layout.scale,
-                previousItemPosition,
-                previousItemScale,
-                childIndex == 0
-            );
-
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            if (_entityID != NULL_ENTITY_ID)
-            {
-                GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                    _entityID,
-                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-                );
-                // TODO: Make scaling possible?
-                pTransform->position = position;
-            }
-
-            Vector2f usePrevItemPos;
-            Vector2f usePrevItemScale;
-            for (size_t i = 0; i < _children.size(); ++i)
-            {
-                UIElement* pChildElement = _children[i];
-                pChildElement->updatePosition(
-                    this,
-                    usePrevItemPos,
-                    usePrevItemScale,
-                    i
-                );
-
-                GUITransform* pChildTransform = (GUITransform*)pScene->getComponent(
-                    pChildElement->_entityID,
-                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-                );
-                usePrevItemPos = pChildTransform->position;
-                usePrevItemScale = pChildTransform->scale;
-            }
-        }
-        */
-
-        /*
-        void UIElement::getTotalStretch(
-            Vector2f& scale
-        )
-        {
-            Vector2f globalPosition = getGlobalPosition();
-            for (UIElement* pChild : _children)
-            {
-                Vector2f childPos = pChild->getGlobalPosition();
-                Vector2f childScale = pChild->getGlobalScale();
-
-                float childRight = childPos.x + childScale.x;
-                float ownRight = globalPosition.x + scale.x - _layout.padding.x;
-                Vector2f toAdd;
-                if (childRight > ownRight)
-                    toAdd.x = childRight - ownRight;
-
-                float childBottom = childPos.y + childScale.y;
-                float ownBottom = globalPosition.y + scale.y - _layout.padding.y;
-                if (childBottom > ownBottom)
-                    toAdd.y = childBottom - ownBottom;
-
-                scale = scale + toAdd;
-                pChild->getTotalStretch(scale);
-            }
-        }
-        */
-
-        void UIElement::updatePosition_TEST(
             const UIElement* pParent,
             int32_t childIndex
         )
@@ -410,7 +328,7 @@ namespace platypus
             setGlobalPosition(position);
 
             for (size_t i = 0; i < _children.size(); ++i)
-                _children[i]->updatePosition_TEST(this, i);
+                _children[i]->updatePosition(this, i);
         }
 
         void UIElement::getChildBounds(
@@ -438,21 +356,24 @@ namespace platypus
             }
         }
 
+        static float s_testMaxY = 0;
         void UIElement::updateStretching(bool& repositionRequired)
         {
             if (_layout.stretchFitContentFlags > 0)
             {
-                float minX = std::numeric_limits<float>::max();
-                float minY = std::numeric_limits<float>::max();
-                float maxX = std::numeric_limits<float>::min();;
-                float maxY = std::numeric_limits<float>::min();
-                getChildBounds(minX, maxX, minY, maxY);
-
                 GUITransform* pTransform = getTransform();
                 Vector2f& posRef = pTransform->position;
                 Vector2f& scaleRef = pTransform->scale;
                 const Vector2f prevPos = posRef;
                 const Vector2f prevScale = scaleRef;
+
+                float minX = posRef.x;
+                float minY = posRef.y;
+                float maxX = posRef.x + scaleRef.x; // std::numeric_limits<float>::min();
+                float maxY = posRef.y + scaleRef.y; // std::numeric_limits<float>::min();
+                getChildBounds(minX, maxX, minY, maxY);
+
+                s_testMaxY = std::max(s_testMaxY, maxY);
 
                 // if minX or minY goes negative shit gets fucked
                 minX = std::max(minX, 0.0f);
@@ -460,44 +381,81 @@ namespace platypus
                 if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
                 {
                     if (minX < posRef.x)
-                        posRef.x = minX;
-                    if (maxX - minX > scaleRef.x)
-                        scaleRef.x = maxX - minX;
+                    {
+                        // NOTE: You'd get here by assigning negative values to some child element's
+                        // layout's position!
+                        //
+                        // Why this is an issue:
+                        //  *We'd need to change the element's position here. Then we'd need to
+                        //  prevent the updatePosition(...) to change this position on the "next
+                        //  round's" position updates. In addition to this we'd need to change the
+                        //  child element's layout's position to be correctly in relation to the
+                        //  parent's new position(that was updated here) so it's non negative,
+                        //  because the child's new position is calculated using its' layout's
+                        //  position. Otherwise the child and parent chases each others endlessly and
+                        //  other fuckery...
+                        Debug::log(
+                            "Child element's position on X-axis(" + std::to_string(minX) + ") "
+                            "was less than the parent element's(" + std::to_string(posRef.x) + "). "
+                            "This isn't allowed for horizontally stretching elements!",
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
+                        //posRef.x = minX;
+                    }
+
+                    if ((minX + (maxX - minX)) > (posRef.x + scaleRef.x))
+                        scaleRef.x = maxX - minX + _layout.padding.x;
                 }
                 if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
                 {
                     if (minY < posRef.y)
+                    {
+                        // *See notes in above, horizontal case's same issue.
+                        Debug::log(
+                            "Child element's position on Y-axis(" + std::to_string(minY) + ") "
+                            "was less than the parent element's(" + std::to_string(posRef.y) + "). "
+                            "This isn't allowed for vertically stretching elements!",
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
                         posRef.y = minY;
-                    if (maxY - minY > scaleRef.y)
-                        scaleRef.y = maxY - minY;
+                    }
+
+                    if ((minY + (maxY - minY)) > (posRef.y + scaleRef.y))
+                        scaleRef.y = maxY - minY + _layout.padding.y;
                 }
 
-                // If stretching occurs, might need to reposition, depending on defined alignment
+                // If stretching occurs, need to reposition the whole tree
                 if (prevPos != posRef || prevScale != scaleRef)
-                {
-                    Debug::log("___TEST___Stretching -> repos required!");
                     repositionRequired = true;
-                }
             }
 
             for (UIElement* pChild : _children)
                 pChild->updateStretching(repositionRequired);
         }
 
-        void UIElement::updateAll_TEST(
+        // Updates the whole UIElement tree.
+        // Does rescaling if stretching is enabled.
+        //  -> in such case repositions all elements also accordingly.
+        // NOTE: Pretty inefficient and awful, but will do for now
+        void UIElement::updateTree(
             const UIElement* pParent,
             int32_t childIndex
         )
         {
-            // TODO: Needs some performance testing, this is quite funny:D
             while (true)
             {
-                updatePosition_TEST(pParent, childIndex);
+                s_testMaxY = 0.0f;
+                // Need to update all positions before potential stretchings
+                // since the element positions affects the stretching
+                updatePosition(pParent, childIndex);
                 bool repositionRequired = false;
                 updateStretching(repositionRequired);
                 if (!repositionRequired)
-                    return;
+                    break;
             }
+
         }
 
         void UIElement::setScale(const Vector2f& scale)
