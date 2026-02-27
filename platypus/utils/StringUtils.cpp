@@ -62,6 +62,9 @@ namespace platypus { namespace util { namespace str {
 
     std::string reverse(const std::string& str)
     {
+        if (str.empty())
+            return "";
+
         std::string result;
         const size_t size = str.size();
         char* pData = (char*)str.data();

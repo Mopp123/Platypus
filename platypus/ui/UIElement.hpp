@@ -291,6 +291,7 @@ namespace platypus
             const GUITransform* getTransform() const;
             GUIRenderable* getRenderable();
             void setActive(bool arg);
+            bool isActive();
 
             uint32_t getLayer();
             void setLayer(uint32_t layer);

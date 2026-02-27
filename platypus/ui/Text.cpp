@@ -228,7 +228,7 @@ namespace platypus
             std::string finalText;
             const Layout& parentLayout = pParentElement->getLayout();
             const float paddingX = parentLayout.padding.x;
-            if (paddingX + fullVisualWidth < parentLayout.scale.x + paddingX * 2)
+            if ((paddingX + fullVisualWidth) < (parentLayout.scale.x - paddingX * 2))
             {
                 finalText = header + text;
             }
@@ -264,7 +264,7 @@ namespace platypus
                     float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
                     currentWidth += charVisualWidth;
 
-                    if (paddingX + currentWidth < parentLayout.scale.x + paddingX * 2)
+                    if ((paddingX + currentWidth) < (parentLayout.scale.x - paddingX * 2))
                     {
                         util::str::append_utf8(codepoint, strippedStr);
                     }

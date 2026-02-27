@@ -428,7 +428,10 @@ namespace platypus
 
                 // If stretching occurs, need to reposition the whole tree
                 if (prevPos != posRef || prevScale != scaleRef)
+                {
                     repositionRequired = true;
+                    _layout.scale = scaleRef; // NOTE: Not sure if this causes issues?
+                }
             }
 
             for (UIElement* pChild : _children)
@@ -444,6 +447,21 @@ namespace platypus
             int32_t childIndex
         )
         {
+            // To make this work by specifying pParent, need to
+            // figure out this UIElement's index in the pParent's
+            // _children... quite dumb...
+            if (pParent)
+            {
+                for (size_t i = 0; i < pParent->_children.size(); ++i)
+                {
+                    if (pParent->_children[i] == this)
+                    {
+                        childIndex = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+
             while (true)
             {
                 s_testMaxY = 0.0f;
@@ -560,13 +578,21 @@ namespace platypus
             pScene->setEntityActive(_entityID, arg);
         }
 
+        bool UIElement::isActive()
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            return pScene->isEntityActive(_entityID);
+        }
+
         uint32_t UIElement::getLayer()
         {
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
                 pScene->getComponent(
                     _entityID,
-                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+                    false,
+                    false
                 )
             );
             if (pRenderable)
@@ -607,7 +633,11 @@ namespace platypus
             UIElement::OnClickEvent* pOnClickEvent
         )
         {
-            Vector2f scale = layout.scale;
+            Layout useLayout = layout;
+            useLayout.padding.x += useLayout.borderThickness;
+            useLayout.padding.y += useLayout.borderThickness;
+            Vector2f scale = useLayout.scale;
+
 
             const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
             entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
@@ -619,7 +649,7 @@ namespace platypus
             int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
 
             Vector2f position = UIElement::calc_position(
-                layout,
+                useLayout,
                 pParentLayout,
                 parentEntityID,
                 scale,
@@ -640,17 +670,17 @@ namespace platypus
             {
                 GUIRenderable* pRenderable = create_gui_renderable(
                     entity,
-                    layout.color
+                    useLayout.color
                 );
                 pRenderable->textureID = textureID;
-                pRenderable->borderColor = layout.borderColor;
-                pRenderable->borderThickness = static_cast<float>(layout.borderThickness);
+                pRenderable->borderColor = useLayout.borderColor;
+                pRenderable->borderThickness = static_cast<float>(useLayout.borderThickness);
             }
 
             UIElement* pElement = new UIElement(
                 ui,
                 entity,
-                layout,
+                useLayout,
                 pFont,
                 pOnClickEvent
             );
