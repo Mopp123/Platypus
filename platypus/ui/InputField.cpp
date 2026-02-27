@@ -51,9 +51,10 @@ namespace platypus
                     )
                 );
                 UIElement* pContainer = _inputField.pContainer;
+                bool wasSelected = pContainer->isSelected();
                 if (_inputField.button.pBox->isMouseOver())
                 {
-                    if (!pContainer->isSelected())
+                    if (!wasSelected)
                         _inputField.pContainer->setSelected(true);
                     else
                         _inputField.pContainer->setSelected(false);
@@ -79,17 +80,20 @@ namespace platypus
                 }
                 else
                 {
-                    pButtonRenderable->color = buttonElement.originalColor;
+                    if (wasSelected)
+                    {
+                        pButtonRenderable->color = buttonElement.originalColor;
 
-                    // Erase the "|"
-                    UIElement* pTextElement = _inputField.button.pText;
-                    std::string& str = pTextElement->getRenderable()->text;
-                    util::str::pop_back_utf8(str);
-                    set_text(
-                        pTextElement,
-                        _inputField.button.pBox,
-                        str
-                    );
+                        // Erase the "|"
+                        UIElement* pTextElement = _inputField.button.pText;
+                        std::string& str = pTextElement->getRenderable()->text;
+                        util::str::pop_back_utf8(str);
+                        set_text(
+                            pTextElement,
+                            _inputField.button.pBox,
+                            str
+                        );
+                    }
                 }
             }
         }
@@ -197,7 +201,7 @@ namespace platypus
 
             Layout buttonLayout;
             buttonLayout.color = layout.color;
-            buttonLayout.padding = { 2, 2 };
+            buttonLayout.padding = { 0, 0 };
             buttonLayout.stretchFitContentFlags = layout.stretchFitContentFlags;
 
             if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)

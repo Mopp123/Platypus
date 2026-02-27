@@ -21,7 +21,6 @@ namespace platypus
         {
             Layout parentLayout = pParent->getLayout();
 
-            float charHeight = static_cast<float>(pFont->getMaxCharHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
@@ -47,7 +46,8 @@ namespace platypus
             // it's just w*h rect and doesn't hold info about specific line sizes...
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
-            layout.scale = { maxLineWidth, charHeight * lineCount };
+            float totalHeight = static_cast<float>(pFont->getFittingHeight()) + static_cast<float>(lineCount);
+            layout.scale = { maxLineWidth,  totalHeight };
 
             UIElement* pElement = add_container(ui, pParent, layout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(

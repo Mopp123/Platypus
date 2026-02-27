@@ -66,6 +66,10 @@ namespace platypus
         inline int getTilePixelWidth() const { return _textureAtlasTileWidth; }
         inline int getMaxCharHeight() const { return _maxCharHeight; }
         inline int getMaxBaselineDrop() const { return _maxBaselineDrop; }
+
+        // Returns vertical boundary in which each glyph fits in.
+        // -> _maxCharHeight doesn't take into account that some glyphs go below the baseline!
+        inline int getFittingHeight() const { return _maxCharHeight + _maxBaselineDrop; }
         inline ID_t getTextureID() const { return _textureID; }
 
     private:
