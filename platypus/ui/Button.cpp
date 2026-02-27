@@ -110,11 +110,13 @@ namespace platypus
 
             Vector2f textScale = get_text_scale(text, pFont);
 
+            /*
             if (useLayout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
                 useLayout.scale.x = textScale.x + useLayout.padding.x * 2.0f;
 
             if (useLayout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
                 useLayout.scale.y = textScale.y + useLayout.padding.y * 2.0f;
+            */
 
             UIElement* pContainer = add_container(
                 ui,
@@ -152,6 +154,8 @@ namespace platypus
                 pContainer->_pMouseExitEvent = pOnExit;
             else
                 pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
+
+            pContainer->updateTree(pParent);
 
             return button;
         }
