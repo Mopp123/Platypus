@@ -147,12 +147,14 @@ namespace platypus
             pScene->destroyEntity(_entityID);
         }
 
+        // NOTE: Via current tree updating system, could get rid of this?
         void UIElement::addChild(
             UIElement* pChild,
             const Vector2f& childPosition,
             const Vector2f& childScale
         )
         {
+            pChild->_pParent = this;
             _children.push_back(pChild);
             updateFromChild(pChild, childPosition, childScale);
         }
@@ -567,6 +569,14 @@ namespace platypus
             return nullptr;
         }
 
+        UIElement* UIElement::getRootParent()
+        {
+            if (!_pParent)
+                return this;
+            else
+                return _pParent->getRootParent();
+        }
+
         void UIElement::setActive(bool arg)
         {
             // *if setting inactive by OnClick func, reset mouseOver
@@ -686,7 +696,15 @@ namespace platypus
             );
 
             if (pParent)
+            {
+                // Need to do "stretching" and potential child element repositioning here
+                // so there's no need for explicitly calling the updateTreee func elsewhere.
+                // NOTE: This is pretty fucking inefficient and shit!
+                // TODO: Optimize somehow
                 pParent->addChild(pElement, position, scale);
+                UIElement* pRootParent = pElement->getRootParent();
+                pRootParent->updateTree(nullptr);
+            }
 
             if (!pParent)
                 ui.addRootElement(pElement);

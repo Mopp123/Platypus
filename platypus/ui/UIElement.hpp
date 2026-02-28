@@ -214,6 +214,7 @@ namespace platypus
             entityID_t _entityID = NULL_ENTITY_ID;
             Layout _layout;
             const Font* _pFont = nullptr;
+            UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
 
             bool _isMouseOver = false;
@@ -233,6 +234,7 @@ namespace platypus
             );
             ~UIElement();
 
+            // NOTE: Via current tree updating system, could get rid of this?
             void addChild(
                 UIElement* pChild,
                 const Vector2f& childPosition,
@@ -290,6 +292,8 @@ namespace platypus
             GUITransform* getTransform();
             const GUITransform* getTransform() const;
             GUIRenderable* getRenderable();
+            inline UIElement* getParent() const { return _pParent; }
+            UIElement* getRootParent();
             void setActive(bool arg);
             bool isActive();
 
