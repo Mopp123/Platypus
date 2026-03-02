@@ -230,7 +230,8 @@ namespace platypus
                 entityID_t entityID,
                 Layout layout,
                 const Font* pFont,
-                OnClickEvent* pOnClickEvent
+                OnClickEvent* pOnClickEvent,
+                bool stretchesParent = true
             );
             ~UIElement();
 
@@ -303,6 +304,7 @@ namespace platypus
             uint32_t getLayer();
             void setLayer(uint32_t layer);
 
+
             static uint32_t mouse_over_layer();
 
             inline const entityID_t getEntityID() const { return _entityID; }
@@ -312,6 +314,7 @@ namespace platypus
             inline bool isMouseOver() const { return _isMouseOver; }
             inline void setSelected(bool arg) { _selected = arg; }
             inline bool isSelected() const { return _selected; }
+            inline bool stretchesParent() const { return _stretchesParent; }
         };
 
 
@@ -322,7 +325,8 @@ namespace platypus
             bool createRenderable,
             ID_t textureID = NULL_ID,
             const Font* pFont = nullptr,
-            UIElement::OnClickEvent* pOnClickEvent = nullptr
+            UIElement::OnClickEvent* pOnClickEvent = nullptr,
+            bool stretchesParent = true
         );
 
         /*

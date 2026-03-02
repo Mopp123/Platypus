@@ -102,13 +102,15 @@ namespace platypus
             entityID_t entityID,
             Layout layout,
             const Font* pFont,
-            OnClickEvent* pOnClickEvent
+            OnClickEvent* pOnClickEvent,
+            bool stretchesParent
         ) :
             _uiRef(ui),
             _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
             _layout(layout),
-            _pFont(pFont)
+            _pFont(pFont),
+            _stretchesParent(stretchesParent)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
@@ -341,6 +343,9 @@ namespace platypus
         {
             for (UIElement* pChild : _children)
             {
+                if (!pChild->_stretchesParent)
+                    continue;
+
                 Vector2f childPos = pChild->getGlobalPosition();
                 Vector2f childScale = pChild->getGlobalScale();
 
@@ -637,7 +642,8 @@ namespace platypus
             bool createRenderable,
             ID_t textureID,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClickEvent
+            UIElement::OnClickEvent* pOnClickEvent,
+            bool stretchesParent
         )
         {
             Layout useLayout = layout;
@@ -689,7 +695,8 @@ namespace platypus
                 entity,
                 useLayout,
                 pFont,
-                pOnClickEvent
+                pOnClickEvent,
+                stretchesParent
             );
 
             if (pParent)
