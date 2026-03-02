@@ -148,7 +148,6 @@ namespace platypus
 
         int mx = (int)x;
         int my = (int)y;
-        Debug::log("___TEST___cursor = " + std::to_string(mx) + ", " + std::to_string(my));
         pInputManager->setMousePos(mx, my);
         pInputManager->processCursorPosEvents(mx, my);
     }

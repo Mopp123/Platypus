@@ -220,7 +220,7 @@ namespace platypus
             bool _isMouseOver = false;
             bool _dragged = false;
             bool _selected = false; // NOTE: this is atm only used by InputField
-
+            bool _stretchesParent = true;
 
         public:
             static std::set<uint32_t> s_mouseOverLayers;

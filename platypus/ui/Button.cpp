@@ -168,7 +168,7 @@ namespace platypus
             if (!button.pBox)
             {
                 Debug::log(
-                    "No button's box element was nullptr",
+                    "Button's box element was nullptr",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
