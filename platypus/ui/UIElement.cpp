@@ -371,8 +371,8 @@ namespace platypus
 
                 float minX = posRef.x;
                 float minY = posRef.y;
-                float maxX = posRef.x + scaleRef.x; // std::numeric_limits<float>::min();
-                float maxY = posRef.y + scaleRef.y; // std::numeric_limits<float>::min();
+                float maxX = std::numeric_limits<float>::min();
+                float maxY = std::numeric_limits<float>::min();
                 getChildBounds(minX, maxX, minY, maxY);
 
                 // if minX or minY goes negative shit gets fucked
@@ -404,7 +404,7 @@ namespace platypus
                         //posRef.x = minX;
                     }
 
-                    if ((minX + (maxX - minX)) > (posRef.x + scaleRef.x))
+                    if ((minX + (maxX - minX)) > (posRef.x + scaleRef.x - _layout.padding.x))
                         scaleRef.x = maxX - minX + _layout.padding.x;
                 }
                 if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
@@ -419,10 +419,10 @@ namespace platypus
                             Debug::MessageType::PLATYPUS_ERROR
                         );
                         PLATYPUS_ASSERT(false);
-                        posRef.y = minY;
+                        //posRef.y = minY;
                     }
 
-                    if ((minY + (maxY - minY)) > (posRef.y + scaleRef.y))
+                    if ((minY + (maxY - minY)) > (posRef.y + scaleRef.y - _layout.padding.y))
                         scaleRef.y = maxY - minY + _layout.padding.y;
                 }
 
@@ -430,7 +430,7 @@ namespace platypus
                 if (prevPos != posRef || prevScale != scaleRef)
                 {
                     repositionRequired = true;
-                    _layout.scale = scaleRef; // NOTE: Not sure if this causes issues?
+                    //_layout.scale = scaleRef; // NOTE: Not sure if this causes issues?
                 }
             }
 
