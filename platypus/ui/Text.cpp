@@ -46,7 +46,7 @@ namespace platypus
             // it's just w*h rect and doesn't hold info about specific line sizes...
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
-            float totalHeight = static_cast<float>(pFont->getFittingHeight()) + static_cast<float>(lineCount);
+            float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
             layout.scale = { maxLineWidth,  totalHeight };
 
             UIElement* pElement = add_container(ui, pParent, layout, false, NULL_ID, pFont);
@@ -227,8 +227,9 @@ namespace platypus
 
             std::string finalText;
             const Layout& parentLayout = pParentElement->getLayout();
-            const float paddingX = parentLayout.padding.x;
-            if ((paddingX + fullVisualWidth) < (parentLayout.scale.x - paddingX * 2))
+            const float parentWidth = pParentElement->getGlobalScale().x;
+            const float parentContentWidth = parentWidth - parentLayout.padding.x * 2;
+            if (fullVisualWidth < parentContentWidth)
             {
                 finalText = header + text;
             }
@@ -264,7 +265,7 @@ namespace platypus
                     float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
                     currentWidth += charVisualWidth;
 
-                    if ((paddingX + currentWidth) < (parentLayout.scale.x - paddingX * 2))
+                    if (currentWidth < parentContentWidth)
                     {
                         util::str::append_utf8(codepoint, strippedStr);
                     }
@@ -298,7 +299,8 @@ namespace platypus
             {
                 return {
                     static_cast<float>(pGlyph->advance >> 6),
-                    static_cast<float>(pFont->getMaxCharHeight())
+                    static_cast<float>(pFont->getFittingHeight())
+                    //static_cast<float>(pFont->getMaxCharHeight())
                 };
             }
             return { 0, 0 };
@@ -309,8 +311,7 @@ namespace platypus
         {
             Vector2f scale(
                 0,
-                static_cast<float>(pFont->getMaxCharHeight()) +
-                static_cast<float>(pFont->getMaxBaselineDrop())
+                static_cast<float>(pFont->getFittingHeight())
             );
 
             const size_t textSize = text.size();

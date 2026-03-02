@@ -5,7 +5,6 @@
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cmath>
-#include <limits>
 
 
 namespace platypus
@@ -156,7 +155,7 @@ namespace platypus
         {
             pChild->_pParent = this;
             _children.push_back(pChild);
-            updateFromChild(pChild, childPosition, childScale);
+            //updateFromChild(pChild, childPosition, childScale);
         }
 
         void UIElement::destroyChildren()
@@ -195,6 +194,7 @@ namespace platypus
             }
         }
 
+        /*
         void UIElement::updateFromChild(
             UIElement* pChild,
             const Vector2f& childPosition,
@@ -229,6 +229,7 @@ namespace platypus
             if (newScale != _layout.scale)
                 setScale(newScale);
         }
+        */
 
         Vector2f UIElement::calc_position(
             const Layout& layout,
@@ -358,7 +359,6 @@ namespace platypus
             }
         }
 
-        static float s_testMaxY = 0;
         void UIElement::updateStretching(bool& repositionRequired)
         {
             if (_layout.stretchFitContentFlags > 0)
@@ -374,8 +374,6 @@ namespace platypus
                 float maxX = posRef.x + scaleRef.x; // std::numeric_limits<float>::min();
                 float maxY = posRef.y + scaleRef.y; // std::numeric_limits<float>::min();
                 getChildBounds(minX, maxX, minY, maxY);
-
-                s_testMaxY = std::max(s_testMaxY, maxY);
 
                 // if minX or minY goes negative shit gets fucked
                 minX = std::max(minX, 0.0f);
@@ -466,7 +464,6 @@ namespace platypus
 
             while (true)
             {
-                s_testMaxY = 0.0f;
                 // Need to update all positions before potential stretchings
                 // since the element positions affects the stretching
                 updatePosition(pParent, childIndex);
@@ -698,7 +695,7 @@ namespace platypus
             if (pParent)
             {
                 // Need to do "stretching" and potential child element repositioning here
-                // so there's no need for explicitly calling the updateTreee func elsewhere.
+                // so there's no need for explicitly calling the updateTree func elsewhere.
                 // NOTE: This is pretty fucking inefficient and shit!
                 // TODO: Optimize somehow
                 pParent->addChild(pElement, position, scale);

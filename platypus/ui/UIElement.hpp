@@ -248,11 +248,14 @@ namespace platypus
             // Used to set _previousItemPosition, _previousItemScale
             // and possibly stretching current element to make the child
             // fit in.
-            void updateFromChild(
-                UIElement* pChild,
-                const Vector2f& childPosition,
-                const Vector2f& childScale
-            );
+            //
+            // NOTE: Shouldn't be needed anymore since updateTree(...) and updateStretching(...)
+            // TODO: Delete
+            //void updateFromChild(
+            //    UIElement* pChild,
+            //    const Vector2f& childPosition,
+            //    const Vector2f& childScale
+            //);
 
             static Vector2f calc_position(
                 const Layout& layout,
