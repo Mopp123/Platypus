@@ -14,6 +14,7 @@ namespace platypus
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
+            const Layout& layout,
             const std::string& text,
             const Vector4f& color,
             const Font* pFont
@@ -24,6 +25,8 @@ namespace platypus
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
+            // NOTE: Shouldn't the word wrapping be defined by
+            // this layout instead of the parent?
             std::string finalText;
             if (parentLayout.wordWrap == WordWrap::NONE)
             {
@@ -41,15 +44,15 @@ namespace platypus
                 );
             }
 
-            Layout layout;
+            Layout useLayout = layout;
             // NOTE: If word wrapping, this scale isn't really usable for anything, since
             // it's just w*h rect and doesn't hold info about specific line sizes...
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
-            layout.scale = { maxLineWidth,  totalHeight };
+            useLayout.scale = { maxLineWidth,  totalHeight };
 
-            UIElement* pElement = add_container(ui, pParent, layout, false, NULL_ID, pFont);
+            UIElement* pElement = add_container(ui, pParent, useLayout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(
                 pElement->getEntityID(),
                 pFont->getTextureID(),

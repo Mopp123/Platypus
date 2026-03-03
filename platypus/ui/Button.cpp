@@ -67,10 +67,12 @@ namespace platypus
                 originalColor // color
             };
 
+            Layout textLayout;
             UIElement* pContainer = add_container(ui, pParent, layout, true);
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,
+                textLayout,
                 text,
                 originalTextColor,
                 pFont
@@ -128,9 +130,11 @@ namespace platypus
                 pOnClick
             );
 
+            Layout textLayout;
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,
+                textLayout,
                 text,
                 textColor,
                 pFont
@@ -155,7 +159,7 @@ namespace platypus
             else
                 pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
 
-            pContainer->updateTree(pParent);
+            //pContainer->updateTree(pParent);
 
             return button;
         }

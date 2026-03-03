@@ -13,7 +13,14 @@ namespace platypus
             _uiRef._windowWidth = (float)w;
             _uiRef._windowHeight = (float)h;
             for (UIElement* pRootElement : _uiRef._rootElements)
-                pRootElement->updateTree(nullptr);
+            {
+                // TODO: Get rid of the old UIElement::updateTree(...)
+                //  -> some fixes might be required for the new way tho...
+                PLATYPUS_ASSERT(false);
+                pRootElement->updateScale_TEST();
+                pRootElement->updatePosition_TEST(0, {}, {});
+                //pRootElement->updateTree(nullptr);
+            }
         }
 
         LayoutUI::Config LayoutUI::s_config;

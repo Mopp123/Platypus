@@ -19,6 +19,12 @@ namespace platypus
 {
     namespace ui
     {
+        enum class PositionType
+        {
+            DYNAMIC,
+            ABSOLUTE
+        };
+
         enum class ValueType
         {
             PIXEL,
@@ -45,20 +51,6 @@ namespace platypus
             RIGHT
         };
 
-        enum class HorizontalConstraint
-        {
-            LEFT,
-            CENTER,
-            RIGHT
-        };
-
-        enum class VerticalConstraint
-        {
-            TOP,
-            CENTER,
-            BOTTOM
-        };
-
         enum class WordWrap
         {
             NONE,
@@ -78,6 +70,8 @@ namespace platypus
             Vector4f color = NULL_COLOR;
             Vector2f padding;
 
+            PositionType positionType = PositionType::DYNAMIC;
+
             // NOTE: Parent's content alignment override child's own alignment
             HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
             VerticalAlignment verticalAlignment = VerticalAlignment::TOP;
@@ -89,7 +83,6 @@ namespace platypus
             float elementGap = 0.0f;
             ValueType elementGapType = ValueType::PIXEL;
             uint32_t layer = 0;
-            //std::vector<Layout> children = { };
 
             WordWrap wordWrap = WordWrap::NONE;
 
@@ -97,28 +90,6 @@ namespace platypus
             uint32_t borderThickness = 0;
 
             uint32_t stretchFitContentFlags = 0;
-
-            /*
-            Layout(const Layout& other) :
-                position(other.position),
-                scale(other.scale),
-                color(other.color),
-                padding(other.padding),
-                horizontalAlignment(other.horizontalAlignment),
-                verticalAlignment(other.verticalContentAlignment),
-                horizontalContentAlignment(other.horizontalContentAlignment),
-                verticalContentAlignment(other.verticalContentAlignment),
-                expandElements(other.expandElements),
-                elementGap(other.elementGap),
-                elementGapType(other.elementGapType),
-                layer(other.layer),
-                children(other.children),
-                wordWrap(other.wordWrap),
-                borderColor(other.borderColor),
-                borderThickness(other.borderThickness),
-                stretchFitContentFlags(other.stretchFitContentFlags)
-            {}
-            */
         };
 
         class LayoutUI;
@@ -304,8 +275,16 @@ namespace platypus
             uint32_t getLayer();
             void setLayer(uint32_t layer);
 
+            void updateScale_TEST();
+            void updatePosition_TEST(
+                size_t childIndex,
+                const Vector2f& previousItemPosition,
+                const Vector2f& previousItemScale
+            );
 
             static uint32_t mouse_over_layer();
+
+            inline void setLayoutScale(Vector2f scale) { _layout.scale = scale; }
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }
