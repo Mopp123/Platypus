@@ -41,6 +41,36 @@ namespace platypus
         }
     }
 
+
+    ImageFormat string_to_image_format(const std::string& str)
+    {
+        if (str == "NONE") return ImageFormat::NONE;
+
+        if (str == "R8_SRGB") return ImageFormat::R8_SRGB;
+        if (str == "R8G8B8_SRGB") return ImageFormat::R8G8B8_SRGB;
+        if (str == "R8G8B8A8_SRGB") return ImageFormat::R8G8B8A8_SRGB;
+
+        if (str == "B8G8R8_SRGB") return ImageFormat::B8G8R8_SRGB;
+        if (str == "B8G8R8A8_SRGB") return ImageFormat::B8G8R8A8_SRGB;
+
+        if (str == "R8_UNORM") return ImageFormat::R8_UNORM;
+        if (str == "R8G8B8_UNORM") return ImageFormat::R8G8B8_UNORM;
+        if (str == "R8G8B8A8_UNORM") return ImageFormat::R8G8B8A8_UNORM;
+
+        if (str == "B8G8R8A8_UNORM") return ImageFormat::B8G8R8A8_UNORM;
+        if (str == "B8G8R8_UNORM") return ImageFormat::B8G8R8_UNORM;
+
+        // Depth formats
+        if (str == "D16_UNORM") return ImageFormat::D16_UNORM;
+        if (str == "D32_SFLOAT") return ImageFormat::D32_SFLOAT;
+        if (str == "D16_UNORM_S8_UINT") return ImageFormat::D16_UNORM_S8_UINT;
+        if (str == "D24_UNORM_S8_UINT") return ImageFormat::D24_UNORM_S8_UINT;
+        if (str == "D32_SFLOAT_S8_UINT") return ImageFormat::D32_SFLOAT_S8_UINT;
+
+        return ImageFormat::NONE;
+    }
+
+
     size_t get_image_format_channel_count(ImageFormat format)
     {
         switch (format)

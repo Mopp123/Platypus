@@ -3,6 +3,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <cstring>
+#include <filesystem>
 
 #include "platypus/core/Debug.hpp"
 
@@ -32,6 +33,7 @@ namespace platypus
 
         return buffer;
     }
+
 
     std::string load_text_file(const std::string& filepath)
     {
@@ -70,5 +72,37 @@ namespace platypus
         std::string sourceStr(pBuffer, fileLength-1);
         delete[] pBuffer;
         return sourceStr;
+    }
+
+
+    bool validate_file(const std::string& filepath, std::string& error)
+    {
+        if (filepath.empty())
+        {
+            error = "Filepath was empty";
+            return false;
+        }
+        else
+        {
+            try
+            {
+                if (!std::filesystem::exists(std::filesystem::path(filepath)))
+                {
+                    error = "File: " + filepath + " doesn't exist";
+                    return false;
+                }
+                else if (std::filesystem::status(filepath).type() != std::filesystem::file_type::regular)
+                {
+                    error = "File: " + filepath + " wasn't regular file";
+                    return false;
+                }
+            }
+            catch (const std::filesystem::filesystem_error& e)
+            {
+                error = "Filesystem exception: " + std::string(e.what());
+                return false;
+            }
+        }
+        return true;
     }
 }

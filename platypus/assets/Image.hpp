@@ -55,6 +55,7 @@ namespace platypus
     };
 
     std::string image_format_to_string(ImageFormat format);
+    ImageFormat string_to_image_format(const std::string& str);
     size_t get_image_format_channel_count(ImageFormat format);
     ImageFormat channel_count_to_image_format(size_t channelCount, bool sRGB);
     bool is_image_format_valid(ImageFormat format, int channels);

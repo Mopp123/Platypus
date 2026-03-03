@@ -328,14 +328,5 @@ namespace platypus
             UIElement::OnClickEvent* pOnClickEvent = nullptr,
             bool stretchesParent = true
         );
-
-        /*
-        void update_containers(
-            LayoutUI& ui,
-            UIElement* pParent,
-            UIElement* pElement,
-            const Layout& layout
-        );
-        */
     }
 }

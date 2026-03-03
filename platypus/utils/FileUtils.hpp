@@ -11,4 +11,6 @@ namespace platypus
     // NOTE: Pretty insecure!
     std::vector<char> load_file(const std::string& filepath);
     std::string load_text_file(const std::string& filepath);
+
+    bool validate_file(const std::string& filepath, std::string& error);
 }
