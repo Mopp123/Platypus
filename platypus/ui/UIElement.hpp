@@ -67,13 +67,6 @@ namespace platypus
 
         inline constexpr uint32_t DEFAULT_EFFECT_ON_PARENT_FLAGS = (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY | EffectOnParentFlagBits::INCREMENT_POSITION);
 
-        // TODO: remove below
-        //enum StretchFitContentFlagBits
-        //{
-        //    STRETCH_FIT_CONTENT_HORIZONTALLY = 0x1,
-        //    STRETCH_FIT_CONTENT_VERTICALLY = 0x1 << 1
-        //};
-
         struct Layout
         {
             Vector2f position;
@@ -99,8 +92,6 @@ namespace platypus
 
             Vector4f borderColor = Vector4f(0, 0, 0, 0);
             uint32_t borderThickness = 0;
-
-            //uint32_t stretchFitContentFlags = 0;
         };
 
         class LayoutUI;
@@ -202,7 +193,10 @@ namespace platypus
             bool _isMouseOver = false;
             bool _dragged = false;
             bool _selected = false; // NOTE: this is atm only used by InputField
-            bool _stretchesParent = true;
+
+            // *reset back to false at updatePosition(...)
+            // (since pos update has to be done after scale update)
+            bool _updatePending = false;
 
         public:
             static std::set<uint32_t> s_mouseOverLayers;
@@ -212,8 +206,7 @@ namespace platypus
                 entityID_t entityID,
                 Layout layout,
                 const Font* pFont,
-                OnClickEvent* pOnClickEvent,
-                bool stretchesParent = true
+                OnClickEvent* pOnClickEvent
             );
             ~UIElement();
 
@@ -227,55 +220,13 @@ namespace platypus
             // NOTE: Very shit and inefficient, just testing atm!
             void destroyChildren();
             void destroyChild(UIElement* pChild);
-            // Used to update current element according to child.
-            // Used to set _previousItemPosition, _previousItemScale
-            // and possibly stretching current element to make the child
-            // fit in.
-            //
-            // NOTE: Shouldn't be needed anymore since updateTree(...) and updateStretching(...)
-            // TODO: Delete
-            //void updateFromChild(
-            //    UIElement* pChild,
-            //    const Vector2f& childPosition,
-            //    const Vector2f& childScale
-            //);
 
-            /*
-            static Vector2f calc_position(
-                const Layout& layout,
-                const Layout* pParentLayout,
-                entityID_t parentEntity,
-                const Vector2f& scale,
-                const Vector2f& previousItemPosition,
-                const Vector2f& previousItemScale,
-                bool isFirstChild
-            );
-
-            void updatePosition(
-                const UIElement* pParent,
-                int32_t childIndex = 0
-            );
-
-            void getChildBounds(
-                float& minX, float& maxX,
-                float& minY, float& maxY
-            );
-            void updateStretching(bool& repositionRequired);
-            */
-
-            // Updates the whole UIElement tree.
-            // Does rescaling if stretching is enabled.
-            //  -> in such case repositions all elements also accordingly.
-            // NOTE: Pretty inefficient and awful, but will do for now
-            //void updateTree(
-            //    const UIElement* pParent,
-            //    int32_t childIndex = 0
-            //);
-
-
-            void setScale(const Vector2f& scale);
+            // TODO: Disable modifying scale and position directly
+            //  -> should be rather changed via element's layout!
+            //void setScale(const Vector2f& scale);
+            void setLayoutScale(Vector2f scale);
             Vector2f getGlobalScale() const;
-            void setGlobalPosition(const Vector2f& position);
+            void setLayoutPosition(const Vector2f& position);
             Vector2f getGlobalPosition() const;
             GUITransform* getTransform();
             const GUITransform* getTransform() const;
@@ -288,16 +239,19 @@ namespace platypus
             uint32_t getLayer();
             void setLayer(uint32_t layer);
 
-            void updateScale_TEST();
-            void updatePosition_TEST(
+            // Updates global scales for the whole element tree recursively
+            void updateScale();
+            // Updates global positions for the whole element tree recursively
+            // NOTE: Has to be called AFTER updating all element tree scales using above!
+            void updatePosition(
                 size_t childIndex,
                 const Vector2f& previousItemPosition,
                 const Vector2f& previousItemScale
             );
+            // Updates scales and positions for the whole tree
+            void updateTree();
 
             static uint32_t mouse_over_layer();
-
-            inline void setLayoutScale(Vector2f scale) { _layout.scale = scale; }
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }
@@ -306,7 +260,7 @@ namespace platypus
             inline bool isMouseOver() const { return _isMouseOver; }
             inline void setSelected(bool arg) { _selected = arg; }
             inline bool isSelected() const { return _selected; }
-            inline bool stretchesParent() const { return _stretchesParent; }
+            inline bool isUpdatePending() const { return _updatePending; }
         };
 
 
@@ -317,8 +271,7 @@ namespace platypus
             bool createRenderable,
             ID_t textureID = NULL_ID,
             const Font* pFont = nullptr,
-            UIElement::OnClickEvent* pOnClickEvent = nullptr,
-            bool stretchesParent = true
+            UIElement::OnClickEvent* pOnClickEvent = nullptr
         );
     }
 }

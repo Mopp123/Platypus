@@ -59,6 +59,7 @@ namespace platypus
             int _windowHeight = 0;
 
             std::vector<UIElement*> _rootElements;
+            std::set<UIElement*> _updatedRootElements;
 
         public:
             void init(Scene* pScene, InputManager& inputManager);
@@ -66,6 +67,10 @@ namespace platypus
 
             void addRootElement(UIElement* pElement);
             void removeRootElement(UIElement* pElement);
+
+            void addToUpdatedElements(UIElement* pElement);
+            // Doesn't do anything if no elements' layouts were changed
+            void updateChangedElements();
 
         private:
             float toPercentage(float v1, float v2);

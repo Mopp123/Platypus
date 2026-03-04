@@ -202,6 +202,7 @@ namespace platypus
             );
 
             Layout buttonLayout;
+            buttonLayout.scale = layout.scale;
             buttonLayout.color = layout.color;
             buttonLayout.padding = { 0, 0 };
             buttonLayout.effectOnParentFlags = layout.effectOnParentFlags;

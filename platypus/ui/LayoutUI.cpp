@@ -71,6 +71,29 @@ namespace platypus
             #endif
         }
 
+        void LayoutUI::addToUpdatedElements(UIElement* pElement)
+        {
+            UIElement* pElementRootParent = pElement->getRootParent();
+            if (_updatedRootElements.find(pElementRootParent) != _updatedRootElements.end())
+                return;
+
+            _updatedRootElements.insert(pElementRootParent);
+        }
+
+        void LayoutUI::updateChangedElements()
+        {
+            for (UIElement* pUpdatedRootElement : _updatedRootElements)
+            {
+                pUpdatedRootElement->updateScale_TEST();
+                pUpdatedRootElement->updatePosition_TEST(0, {}, {});
+            }
+
+            //if (!_updatedRootElements.empty())
+            //    Debug::log("___TEST___updated " + std::to_string(_updatedRootElements.size()) + " UIElements");
+
+            _updatedRootElements.clear();
+        }
+
         float LayoutUI::toPercentage(float v1, float v2)
         {
             return (float)((int)(v1 / 100.0f * v2));

@@ -208,7 +208,8 @@ namespace platypus
             );
             pRenderable->text = finalText;
 
-            pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
+            //pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
+            pTextElement->setLayoutScale({ maxLineWidth, charHeight * lineCount });
         }
 
 

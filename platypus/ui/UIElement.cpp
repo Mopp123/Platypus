@@ -102,15 +102,13 @@ namespace platypus
             entityID_t entityID,
             Layout layout,
             const Font* pFont,
-            OnClickEvent* pOnClickEvent,
-            bool stretchesParent
+            OnClickEvent* pOnClickEvent
         ) :
             _uiRef(ui),
             _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
             _layout(layout),
-            _pFont(pFont),
-            _stretchesParent(stretchesParent)
+            _pFont(pFont)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
@@ -157,7 +155,6 @@ namespace platypus
         {
             pChild->_pParent = this;
             _children.push_back(pChild);
-            //updateFromChild(pChild, childPosition, childScale);
         }
 
         void UIElement::destroyChildren()
@@ -197,298 +194,18 @@ namespace platypus
         }
 
         /*
-        void UIElement::updateFromChild(
-            UIElement* pChild,
-            const Vector2f& childPosition,
-            const Vector2f& childScale
-        )
-        {
-            _previousItemPosition = childPosition;
-            _previousItemScale = childScale;
-
-            Vector2f newScale = _layout.scale;
-            Vector2f globalPosition = getGlobalPosition();
-            if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
-            {
-                float childRight = childPosition.x + childScale.x;
-                float ownRight = globalPosition.x + _layout.scale.x - _layout.padding.x;
-                if (childRight > ownRight)
-                {
-                    float stretchX = childRight - ownRight;
-                    newScale.x = _layout.scale.x + stretchX;
-                }
-            }
-            if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
-            {
-                float childBottom = childPosition.y + childScale.y;
-                float ownBottom = globalPosition.y + _layout.scale.y - _layout.padding.y;
-                if (childBottom > ownBottom)
-                {
-                    float stretchY = childBottom - ownBottom;
-                    newScale.y = _layout.scale.y + stretchY;
-                }
-            }
-            if (newScale != _layout.scale)
-                setScale(newScale);
-        }
-        */
-
-        /*
-        Vector2f UIElement::calc_position(
-            const Layout& layout,
-            const Layout* pParentLayout,
-            entityID_t parentEntity,
-            const Vector2f& scale,
-            const Vector2f& previousItemPosition,
-            const Vector2f& previousItemScale,
-            bool isFirstChild
-        )
-        {
-            Vector2f position;
-
-            Application* pApp = Application::get_instance();
-            Window& window = pApp->getWindow();
-            Vector2f parentScale(
-                static_cast<float>(window.getWidth()),
-                static_cast<float>(window.getHeight())
-            );
-            Vector2f parentPosition(0.0f, 0.0f);
-            Vector2f padding = pParentLayout != nullptr ? pParentLayout->padding : Vector2f(0.0f, 0.0f);
-            float elementGap = pParentLayout != nullptr ? pParentLayout->elementGap : 0.0f;
-
-            HorizontalAlignment horizontalAlignment = layout.horizontalAlignment;
-            VerticalAlignment verticalAlignment = pParentLayout != nullptr ? pParentLayout->verticalContentAlignment : layout.verticalAlignment;
-            ExpandElements expandElements = pParentLayout != nullptr ? pParentLayout->expandElements : ExpandElements::DOWN;
-
-            if (pParentLayout)
-            {
-                Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-                GUITransform* pParentTransform = reinterpret_cast<GUITransform*>(
-                    pScene->getComponent(
-                        parentEntity,
-                        ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-                    )
-                );
-                parentPosition = pParentTransform->position;
-                parentScale = pParentTransform->scale;
-            }
-
-            if (horizontalAlignment == HorizontalAlignment::LEFT)
-                position.x = parentPosition.x + padding.x + layout.position.x;
-            if (horizontalAlignment == HorizontalAlignment::RIGHT)
-                position.x = parentPosition.x + parentScale.x - padding.x - scale.x - layout.position.x;
-            if (horizontalAlignment == HorizontalAlignment::CENTER)
-                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + layout.position.x;
-
-            if (verticalAlignment == VerticalAlignment::TOP)
-                position.y = parentPosition.y + padding.y + layout.position.y;
-            if (verticalAlignment == VerticalAlignment::BOTTOM)
-                position.y = parentPosition.y + parentScale.y - padding.y - scale.y - layout.position.y;
-            if (verticalAlignment == VerticalAlignment::CENTER)
-                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + layout.position.y;
-
-            // Advance position if not the first child
-            if (!isFirstChild)
-            {
-                if (expandElements == ExpandElements::RIGHT)
-                    position.x = previousItemPosition.x + previousItemScale.x + elementGap + layout.position.x;
-                else if (expandElements == ExpandElements::DOWN)
-                    position.y = previousItemPosition.y + previousItemScale.y + elementGap + layout.position.y;
-            }
-
-            // Round to integer so don't get weird looking lines...
-            return { std::round(position.x), std::round(position.y) };
-        }
-
-        void UIElement::updatePosition(
-            const UIElement* pParent,
-            int32_t childIndex
-        )
-        {
-            const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
-            entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
-
-            Vector2f prevItemPos;
-            Vector2f prevItemScale;
-            int32_t prevIndex = childIndex - 1;
-            if (prevIndex >= 0)
-            {
-                prevItemPos = pParent->_children[prevIndex]->getGlobalPosition();
-                prevItemScale = pParent->_children[prevIndex]->getGlobalScale();
-            }
-            else if (pParent)
-            {
-                prevItemPos = pParent->getGlobalPosition();
-                prevItemScale = pParentLayout->padding;
-            }
-
-            Vector2f position = calc_position(
-                _layout,
-                pParentLayout,
-                parentEntityID,
-                getGlobalScale(),
-                prevItemPos,
-                prevItemScale,
-                childIndex == 0 //pParent != nullptr ? pParent->getChildren().size() : 0
-            );
-            setGlobalPosition(position);
-
-            for (size_t i = 0; i < _children.size(); ++i)
-                _children[i]->updatePosition(this, i);
-        }
-
-        void UIElement::getChildBounds(
-            float& minX, float& maxX,
-            float& minY, float& maxY
-        )
-        {
-            PLATYPUS_ASSERT(false);
-            for (UIElement* pChild : _children)
-            {
-                if (!pChild->_stretchesParent)
-                    continue;
-
-                Vector2f childPos = pChild->getGlobalPosition();
-                Vector2f childScale = pChild->getGlobalScale();
-
-                float childLeft = childPos.x;
-                float childRight = childPos.x + childScale.x;
-
-                float childTop = childPos.y;
-                float childBottom = childPos.y + childScale.y;
-
-                minX = std::min(minX, childLeft);
-                minY = std::min(minY, childTop);
-                maxX = std::max(maxX, childRight);
-                maxY = std::max(maxY, childBottom);
-
-                pChild->getChildBounds(minX, maxX, minY, maxY);
-            }
-        }
-
-        void UIElement::updateStretching(bool& repositionRequired)
-        {
-            PLATYPUS_ASSERT(false);
-            if (_layout.stretchFitContentFlags > 0)
-            {
-                GUITransform* pTransform = getTransform();
-                Vector2f& posRef = pTransform->position;
-                Vector2f& scaleRef = pTransform->scale;
-                const Vector2f prevPos = posRef;
-                const Vector2f prevScale = scaleRef;
-
-                float minX = posRef.x;
-                float minY = posRef.y;
-                float maxX = std::numeric_limits<float>::min();
-                float maxY = std::numeric_limits<float>::min();
-                getChildBounds(minX, maxX, minY, maxY);
-
-                // if minX or minY goes negative shit gets fucked
-                minX = std::max(minX, 0.0f);
-                minY = std::max(minY, 0.0f);
-                if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
-                {
-                    if (minX < posRef.x)
-                    {
-                        // NOTE: You'd get here by assigning negative values to some child element's
-                        // layout's position!
-                        //
-                        // Why this is an issue:
-                        //  *We'd need to change the element's position here. Then we'd need to
-                        //  prevent the updatePosition(...) to change this position on the "next
-                        //  round's" position updates. In addition to this we'd need to change the
-                        //  child element's layout's position to be correctly in relation to the
-                        //  parent's new position(that was updated here) so it's non negative,
-                        //  because the child's new position is calculated using its' layout's
-                        //  position. Otherwise the child and parent chases each others endlessly and
-                        //  other fuckery...
-                        Debug::log(
-                            "Child element's position on X-axis(" + std::to_string(minX) + ") "
-                            "was less than the parent element's(" + std::to_string(posRef.x) + "). "
-                            "This isn't allowed for horizontally stretching elements!",
-                            Debug::MessageType::PLATYPUS_ERROR
-                        );
-                        PLATYPUS_ASSERT(false);
-                        //posRef.x = minX;
-                    }
-
-                    if ((minX + (maxX - minX)) > (posRef.x + scaleRef.x - _layout.padding.x))
-                        scaleRef.x = maxX - minX + _layout.padding.x;
-                }
-                if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
-                {
-                    if (minY < posRef.y)
-                    {
-                        // *See notes in above, horizontal case's same issue.
-                        Debug::log(
-                            "Child element's position on Y-axis(" + std::to_string(minY) + ") "
-                            "was less than the parent element's(" + std::to_string(posRef.y) + "). "
-                            "This isn't allowed for vertically stretching elements!",
-                            Debug::MessageType::PLATYPUS_ERROR
-                        );
-                        PLATYPUS_ASSERT(false);
-                        //posRef.y = minY;
-                    }
-
-                    if ((minY + (maxY - minY)) > (posRef.y + scaleRef.y - _layout.padding.y))
-                        scaleRef.y = maxY - minY + _layout.padding.y;
-                }
-
-                // If stretching occurs, need to reposition the whole tree
-                if (prevPos != posRef || prevScale != scaleRef)
-                {
-                    repositionRequired = true;
-                    //_layout.scale = scaleRef; // NOTE: Not sure if this causes issues?
-                }
-            }
-
-            for (UIElement* pChild : _children)
-                pChild->updateStretching(repositionRequired);
-        }
-
-        // Updates the whole UIElement tree.
-        // Does rescaling if stretching is enabled.
-        //  -> in such case repositions all elements also accordingly.
-        // NOTE: Pretty inefficient and awful, but will do for now
-        void UIElement::updateTree(
-            const UIElement* pParent,
-            int32_t childIndex
-        )
-        {
-            PLATYPUS_ASSERT(false);
-            // To make this work by specifying pParent, need to
-            // figure out this UIElement's index in the pParent's
-            // _children... quite dumb...
-            if (pParent)
-            {
-                for (size_t i = 0; i < pParent->_children.size(); ++i)
-                {
-                    if (pParent->_children[i] == this)
-                    {
-                        childIndex = static_cast<int32_t>(i);
-                        break;
-                    }
-                }
-            }
-
-            while (true)
-            {
-                // Need to update all positions before potential stretchings
-                // since the element positions affects the stretching
-                updatePosition(pParent, childIndex);
-                bool repositionRequired = false;
-                updateStretching(repositionRequired);
-                if (!repositionRequired)
-                    break;
-            }
-
-        }
-        */
-
         void UIElement::setScale(const Vector2f& scale)
         {
             GUITransform* pTransform = getTransform();
             pTransform->scale = scale;
+        }
+        */
+
+        void UIElement::setLayoutScale(Vector2f scale)
+        {
+            _layout.scale = scale;
+            _uiRef.addToUpdatedElements(this);
+            _updatePending = true;
         }
 
         Vector2f UIElement::getGlobalScale() const
@@ -497,10 +214,18 @@ namespace platypus
             return pTransform->scale;
         }
 
+        /*
         void UIElement::setGlobalPosition(const Vector2f& position)
         {
             GUITransform* pTransform = getTransform();
             pTransform->position = position;
+        }
+        */
+        void UIElement::setLayoutPosition(const Vector2f& position)
+        {
+            _layout.position = position;
+            _uiRef.addToUpdatedElements(this);
+            _updatePending = true;
         }
 
         Vector2f UIElement::getGlobalPosition() const
@@ -631,11 +356,13 @@ namespace platypus
                 pRenderable->layer = layer;
         }
 
-        void UIElement::updateScale_TEST()
+        void UIElement::updateScale()
         {
             if (_children.empty())
             {
-                setScale(_layout.scale);
+                GUITransform* pTransform = getTransform();
+                pTransform->scale = _layout.scale;
+                //setScale(_layout.scale);
                 return;
             }
 
@@ -643,7 +370,7 @@ namespace platypus
             size_t childIndex = 0;
             for (UIElement* pChild : _children)
             {
-                pChild->updateScale_TEST();
+                pChild->updateScale();
                 uint32_t childEffectOnParent = pChild->_layout.effectOnParentFlags;
                 Vector2f childScale = pChild->getGlobalScale();
 
@@ -690,10 +417,11 @@ namespace platypus
                 ++childIndex;
             }
 
-            setScale({
+            GUITransform* pTransform = getTransform();
+            pTransform->scale = {
                 std::max(_layout.scale.x, scale.x),
                 std::max(_layout.scale.y, scale.y)
-            });
+            };
         }
 
 
@@ -719,7 +447,7 @@ namespace platypus
             return result;
         }
 
-        void UIElement::updatePosition_TEST(
+        void UIElement::updatePosition(
             size_t childIndex,
             const Vector2f& previousItemPosition,
             const Vector2f& previousItemScale
@@ -775,27 +503,30 @@ namespace platypus
             {
                 if (expandElements == ExpandElements::DOWN)
                 {
-                    position.y += previousItemPosition.y + previousItemScale.y + elementGap;
-                    position.x = previousItemPosition.x;
+                    position.y += previousItemPosition.y + previousItemScale.y + elementGap + _layout.position.y;
+                    position.x = previousItemPosition.x + _layout.position.x;
                 }
                 else if (expandElements == ExpandElements::RIGHT)
                 {
-                    position.x += previousItemPosition.x + previousItemScale.x + elementGap;
-                    position.y = previousItemPosition.y;
+                    position.x += previousItemPosition.x + previousItemScale.x + elementGap + _layout.position.x;
+                    position.y = previousItemPosition.y + _layout.position.y;
                 }
             }
 
             // Round to integer so don't get weird looking lines...
-            setGlobalPosition({ std::round(position.x), std::round(position.y) });
+            GUITransform* pTransform = getTransform();
+            pTransform->position = { std::round(position.x), std::round(position.y) };
+            //setGlobalPosition({ std::round(position.x), std::round(position.y) });
 
             Vector2f prevItemPosition;
             Vector2f prevItemScale;
             for (size_t i = 0; i < _children.size(); ++i)
             {
-                _children[i]->updatePosition_TEST(i, prevItemPosition, prevItemScale);
+                _children[i]->updatePosition(i, prevItemPosition, prevItemScale);
                 prevItemPosition = _children[i]->getGlobalPosition();
                 prevItemScale = _children[i]->getGlobalScale();
             }
+            _updatePending = false;
         }
 
         uint32_t UIElement::mouse_over_layer()
@@ -814,8 +545,7 @@ namespace platypus
             bool createRenderable,
             ID_t textureID,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClickEvent,
-            bool stretchesParent
+            UIElement::OnClickEvent* pOnClickEvent
         )
         {
             Layout useLayout = layout;
@@ -834,15 +564,6 @@ namespace platypus
             int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
 
             Vector2f position;
-            //Vector2f position = UIElement::calc_position(
-            //    useLayout,
-            //    pParentLayout,
-            //    parentEntityID,
-            //    scale,
-            //    previousItemPosition,
-            //    previousItemScale,
-            //    childIndex == 0
-            //);
 
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             entityID_t entity = pScene->createEntity();
@@ -868,36 +589,13 @@ namespace platypus
                 entity,
                 useLayout,
                 pFont,
-                pOnClickEvent,
-                stretchesParent
+                pOnClickEvent
             );
 
             if (pParent)
             {
-                // TESTING -> initialize parent scale and pos to be able to do stretching
-                // when adding first child element
-                // TODO: Figure out some clever way to deal with this
-                //if (pParent->getGlobalScale().length() == 0)
-                //{
-                //    Debug::log("___TEST___fixing parent scale...");
-                //    Vector2f parentPos = pParent->getGlobalPosition();
-                //    Vector2f newParentScale = scale + (pParentLayout->padding * 2.0f);
-                //    pParent->setScale(newParentScale);
-                //    if (pParentLayout->horizontalAlignment == HorizontalAlignment::CENTER)
-                //        parentPos.x = newParentScale.x * 0.5f - pParentLayout->position.x;
-                //    if (pParentLayout->verticalAlignment == VerticalAlignment::CENTER)
-                //        parentPos.y = newParentScale.y * 0.5f - pParentLayout->position.y;
-
-                //    pParent->setGlobalPosition(parentPos);
-                //}
-
-                // Need to do "stretching" and potential child element repositioning here
-                // so there's no need for explicitly calling the updateTree func elsewhere.
-                // NOTE: This is pretty fucking inefficient and shit!
-                // TODO: Optimize somehow
                 pParent->addChild(pElement, position, scale);
                 UIElement* pRootParent = pElement->getRootParent();
-                //pRootParent->updateTree(nullptr);
                 pRootParent->updateScale_TEST();
                 pRootParent->updatePosition_TEST(0, {}, {});
             }
