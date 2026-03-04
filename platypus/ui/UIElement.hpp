@@ -228,7 +228,6 @@ namespace platypus
             Vector2f getGlobalScale() const;
             void setLayoutPosition(const Vector2f& position);
             Vector2f getGlobalPosition() const;
-            GUITransform* getTransform();
             const GUITransform* getTransform() const;
             GUIRenderable* getRenderable();
             inline UIElement* getParent() const { return _pParent; }
@@ -261,6 +260,9 @@ namespace platypus
             inline void setSelected(bool arg) { _selected = arg; }
             inline bool isSelected() const { return _selected; }
             inline bool isUpdatePending() const { return _updatePending; }
+
+        private:
+            GUITransform* getTransform();
         };
 
 

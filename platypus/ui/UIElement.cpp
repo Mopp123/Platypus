@@ -214,13 +214,6 @@ namespace platypus
             return pTransform->scale;
         }
 
-        /*
-        void UIElement::setGlobalPosition(const Vector2f& position)
-        {
-            GUITransform* pTransform = getTransform();
-            pTransform->position = position;
-        }
-        */
         void UIElement::setLayoutPosition(const Vector2f& position)
         {
             _layout.position = position;
@@ -513,7 +506,6 @@ namespace platypus
             // Round to integer so don't get weird looking lines...
             GUITransform* pTransform = getTransform();
             pTransform->position = { std::round(position.x), std::round(position.y) };
-            //setGlobalPosition({ std::round(position.x), std::round(position.y) });
 
             Vector2f prevItemPosition;
             Vector2f prevItemScale;
