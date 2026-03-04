@@ -204,12 +204,12 @@ namespace platypus
             Layout buttonLayout;
             buttonLayout.color = layout.color;
             buttonLayout.padding = { 0, 0 };
-            buttonLayout.stretchFitContentFlags = layout.stretchFitContentFlags;
+            buttonLayout.effectOnParentFlags = layout.effectOnParentFlags;
 
-            if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
-                buttonLayout.scale.x = layout.scale.x;
-            if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
-                buttonLayout.scale.y = layout.scale.y;
+            //if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
+            //    buttonLayout.scale.x = layout.scale.x;
+            //if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
+            //    buttonLayout.scale.y = layout.scale.y;
 
             buttonLayout.borderColor = layout.borderColor;
             buttonLayout.borderThickness = layout.borderThickness;

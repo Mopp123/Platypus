@@ -19,7 +19,7 @@ namespace platypus
 {
     namespace ui
     {
-        enum class PositionType
+        enum class FlowProperty
         {
             DYNAMIC,
             ABSOLUTE
@@ -57,11 +57,22 @@ namespace platypus
             NORMAL
         };
 
-        enum StretchFitContentFlagBits
+        enum EffectOnParentFlagBits
         {
-            STRETCH_FIT_CONTENT_HORIZONTALLY = 0x1,
-            STRETCH_FIT_CONTENT_VERTICALLY = 0x1 << 1
+            NONE = 0,
+            STRETCH_HORIZONTALLY = 1,
+            STRETCH_VERTICALLY = 1 << 1,
+            INCREMENT_POSITION = 1 << 2
         };
+
+        inline constexpr uint32_t DEFAULT_EFFECT_ON_PARENT_FLAGS = (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY | EffectOnParentFlagBits::INCREMENT_POSITION);
+
+        // TODO: remove below
+        //enum StretchFitContentFlagBits
+        //{
+        //    STRETCH_FIT_CONTENT_HORIZONTALLY = 0x1,
+        //    STRETCH_FIT_CONTENT_VERTICALLY = 0x1 << 1
+        //};
 
         struct Layout
         {
@@ -70,7 +81,7 @@ namespace platypus
             Vector4f color = NULL_COLOR;
             Vector2f padding;
 
-            PositionType positionType = PositionType::DYNAMIC;
+            uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS;
 
             // NOTE: Parent's content alignment override child's own alignment
             HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
@@ -89,7 +100,7 @@ namespace platypus
             Vector4f borderColor = Vector4f(0, 0, 0, 0);
             uint32_t borderThickness = 0;
 
-            uint32_t stretchFitContentFlags = 0;
+            //uint32_t stretchFitContentFlags = 0;
         };
 
         class LayoutUI;
@@ -229,6 +240,7 @@ namespace platypus
             //    const Vector2f& childScale
             //);
 
+            /*
             static Vector2f calc_position(
                 const Layout& layout,
                 const Layout* pParentLayout,
@@ -249,15 +261,16 @@ namespace platypus
                 float& minY, float& maxY
             );
             void updateStretching(bool& repositionRequired);
+            */
 
             // Updates the whole UIElement tree.
             // Does rescaling if stretching is enabled.
             //  -> in such case repositions all elements also accordingly.
             // NOTE: Pretty inefficient and awful, but will do for now
-            void updateTree(
-                const UIElement* pParent,
-                int32_t childIndex = 0
-            );
+            //void updateTree(
+            //    const UIElement* pParent,
+            //    int32_t childIndex = 0
+            //);
 
 
             void setScale(const Vector2f& scale);

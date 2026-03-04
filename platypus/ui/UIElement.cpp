@@ -233,6 +233,7 @@ namespace platypus
         }
         */
 
+        /*
         Vector2f UIElement::calc_position(
             const Layout& layout,
             const Layout* pParentLayout,
@@ -482,6 +483,7 @@ namespace platypus
             }
 
         }
+        */
 
         void UIElement::setScale(const Vector2f& scale)
         {
@@ -637,40 +639,50 @@ namespace platypus
                 return;
             }
 
-            Vector2f scale = _layout.scale;
+            Vector2f scale;
             size_t childIndex = 0;
             for (UIElement* pChild : _children)
             {
                 pChild->updateScale_TEST();
+                uint32_t childEffectOnParent = pChild->_layout.effectOnParentFlags;
                 Vector2f childScale = pChild->getGlobalScale();
 
                 if (_layout.expandElements == ExpandElements::DOWN)
                 {
-                    if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
+                        // NOTE: Shouldn't we take the padding into account here too!?!?
                         if (childScale.x > scale.x)
-                            scale.x = childScale.x;
+                            scale.x = childScale.x + _layout.padding.x * 2.0f;
                     }
 
-
-                    if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
+                    // NOTE: Shouldn't we take the padding into account here too!?!?
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
                         scale.y += childScale.y;
+                        if (childIndex == 0)
+                            scale.y += _layout.padding.y * 2.0f;
+
                         if (childIndex < _children.size() - 1)
                             scale.y += _layout.elementGap;
                     }
                 }
                 else if (_layout.expandElements == ExpandElements::RIGHT)
                 {
-                    if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
+                        // NOTE: Shouldn't we take the padding into account here too!?!?
                         if (childScale.y > scale.y)
-                            scale.y = childScale.y;
+                            scale.y = childScale.y + _layout.padding.y * 2.0f;
                     }
 
-                    if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
+                    // NOTE: Shouldn't we take the padding into account here too!?!?
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
                         scale.x += childScale.x;
+                        if (childIndex == 0)
+                            scale.x += _layout.padding.x * 2.0f;
+
                         if (childIndex < _children.size() - 1)
                             scale.x += _layout.elementGap;
                     }
@@ -678,13 +690,10 @@ namespace platypus
                 ++childIndex;
             }
 
-            if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
-                scale.x += _layout.padding.x * 2.0f;
-            if (_layout.stretchFitContentFlags & StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
-                scale.y += _layout.padding.y * 2.0f;
-            //scale = scale + _layout.padding * 2.0f;
-
-            setScale(scale);
+            setScale({
+                std::max(_layout.scale.x, scale.x),
+                std::max(_layout.scale.y, scale.y)
+            });
         }
 
 
@@ -824,15 +833,16 @@ namespace platypus
             // since we haven't added this new child yet
             int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
 
-            Vector2f position = UIElement::calc_position(
-                useLayout,
-                pParentLayout,
-                parentEntityID,
-                scale,
-                previousItemPosition,
-                previousItemScale,
-                childIndex == 0
-            );
+            Vector2f position;
+            //Vector2f position = UIElement::calc_position(
+            //    useLayout,
+            //    pParentLayout,
+            //    parentEntityID,
+            //    scale,
+            //    previousItemPosition,
+            //    previousItemScale,
+            //    childIndex == 0
+            //);
 
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             entityID_t entity = pScene->createEntity();

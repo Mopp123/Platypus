@@ -16,7 +16,6 @@ namespace platypus
             {
                 // TODO: Get rid of the old UIElement::updateTree(...)
                 //  -> some fixes might be required for the new way tho...
-                PLATYPUS_ASSERT(false);
                 pRootElement->updateScale_TEST();
                 pRootElement->updatePosition_TEST(0, {}, {});
                 //pRootElement->updateTree(nullptr);
