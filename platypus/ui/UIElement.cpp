@@ -362,7 +362,6 @@ namespace platypus
             {
                 GUITransform* pTransform = getTransform();
                 pTransform->scale = _layout.scale;
-                //setScale(_layout.scale);
                 return;
             }
 
@@ -378,8 +377,7 @@ namespace platypus
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
-                        // NOTE: Shouldn't we take the padding into account here too!?!?
-                        if (childScale.x > scale.x)
+                        if (childScale.x > scale.x - _layout.padding.x * 2.0f)
                             scale.x = childScale.x + _layout.padding.x * 2.0f;
                     }
 
@@ -398,8 +396,7 @@ namespace platypus
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
-                        // NOTE: Shouldn't we take the padding into account here too!?!?
-                        if (childScale.y > scale.y)
+                        if (childScale.y > scale.y - _layout.padding.y * 2.0f)
                             scale.y = childScale.y + _layout.padding.y * 2.0f;
                     }
 
@@ -529,6 +526,12 @@ namespace platypus
             _updatePending = false;
         }
 
+        void UIElement::updateTree()
+        {
+            updateScale();
+            updatePosition(0, { }, { });
+        }
+
         uint32_t UIElement::mouse_over_layer()
         {
             if (s_mouseOverLayers.empty())
@@ -596,8 +599,7 @@ namespace platypus
             {
                 pParent->addChild(pElement, position, scale);
                 UIElement* pRootParent = pElement->getRootParent();
-                pRootParent->updateScale_TEST();
-                pRootParent->updatePosition_TEST(0, {}, {});
+                pRootParent->updateTree();
             }
 
             if (!pParent)

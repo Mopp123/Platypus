@@ -50,6 +50,7 @@ namespace platypus
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
+            Debug::log("___TEST___initial text height = " + std::to_string(totalHeight));
             useLayout.scale = { maxLineWidth,  totalHeight };
 
             UIElement* pElement = add_container(ui, pParent, useLayout, false, NULL_ID, pFont);
@@ -181,7 +182,7 @@ namespace platypus
 
             const Layout& parentLayout = pParentElement->getLayout();
             const Font* pFont = pTextElement->getFont();
-            float charHeight = static_cast<float>(pFont->getMaxCharHeight());
+            float charHeight = static_cast<float>(pFont->getFittingHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
@@ -207,8 +208,6 @@ namespace platypus
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             pRenderable->text = finalText;
-
-            //pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
             pTextElement->setLayoutScale({ maxLineWidth, charHeight * lineCount });
         }
 

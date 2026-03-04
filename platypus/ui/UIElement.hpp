@@ -60,9 +60,9 @@ namespace platypus
         enum EffectOnParentFlagBits
         {
             NONE = 0,
-            STRETCH_HORIZONTALLY = 1,
-            STRETCH_VERTICALLY = 1 << 1,
-            INCREMENT_POSITION = 1 << 2
+            STRETCH_HORIZONTALLY = 0x1,
+            STRETCH_VERTICALLY = 0x1 << 1,
+            INCREMENT_POSITION = 0x1 << 2
         };
 
         inline constexpr uint32_t DEFAULT_EFFECT_ON_PARENT_FLAGS = (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY | EffectOnParentFlagBits::INCREMENT_POSITION);

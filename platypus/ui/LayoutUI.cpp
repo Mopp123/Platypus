@@ -1,5 +1,4 @@
 #include "LayoutUI.hpp"
-#include "platypus/ecs/components/Transform.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 
@@ -13,13 +12,7 @@ namespace platypus
             _uiRef._windowWidth = (float)w;
             _uiRef._windowHeight = (float)h;
             for (UIElement* pRootElement : _uiRef._rootElements)
-            {
-                // TODO: Get rid of the old UIElement::updateTree(...)
-                //  -> some fixes might be required for the new way tho...
-                pRootElement->updateScale_TEST();
-                pRootElement->updatePosition_TEST(0, {}, {});
-                //pRootElement->updateTree(nullptr);
-            }
+                pRootElement->updateTree();
         }
 
         LayoutUI::Config LayoutUI::s_config;
@@ -83,13 +76,7 @@ namespace platypus
         void LayoutUI::updateChangedElements()
         {
             for (UIElement* pUpdatedRootElement : _updatedRootElements)
-            {
-                pUpdatedRootElement->updateScale_TEST();
-                pUpdatedRootElement->updatePosition_TEST(0, {}, {});
-            }
-
-            //if (!_updatedRootElements.empty())
-            //    Debug::log("___TEST___updated " + std::to_string(_updatedRootElements.size()) + " UIElements");
+                pUpdatedRootElement->updateTree();
 
             _updatedRootElements.clear();
         }
