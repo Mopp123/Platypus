@@ -414,33 +414,9 @@ namespace platypus
             };
         }
 
-
-        static Vector2f position_in_relation_to(
-            Vector2f pos,
-            HorizontalAlignment horizontalAlignment,
-            VerticalAlignment verticalAlignment,
-            float left, float right,
-            float top, float bottom
-        )
-        {
-            Vector2f result;
-            if (horizontalAlignment == HorizontalAlignment::LEFT)
-                result.x = left + pos.x;
-            if (horizontalAlignment == HorizontalAlignment::RIGHT)
-                result.x = right - pos.x;
-
-            if (verticalAlignment == VerticalAlignment::TOP)
-                result.y = top + pos.y;
-            if (verticalAlignment == VerticalAlignment::BOTTOM)
-                result.y = bottom - pos.y;
-
-            return result;
-        }
-
         void UIElement::updatePosition(
             size_t childIndex,
-            const Vector2f& previousItemPosition,
-            const Vector2f& previousItemScale
+            Vector2f& cumulatedScale
         )
         {
             Vector2f padding;
@@ -472,56 +448,55 @@ namespace platypus
                 parentScale.y = static_cast<float>(window.getHeight());
             }
 
-            if (childIndex == 0)
+            // Get the "origin" pos in relation to parent
+            if (horizontalAlignment == HorizontalAlignment::LEFT)
+                position.x = parentPosition.x + padding.x + _layout.position.x;
+
+            if (horizontalAlignment == HorizontalAlignment::RIGHT)
+                position.x = parentPosition.x + parentScale.x - padding.x - scale.x - _layout.position.x;
+            if (horizontalAlignment == HorizontalAlignment::CENTER)
+                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + _layout.position.x;
+
+            if (verticalAlignment == VerticalAlignment::TOP)
+                position.y = parentPosition.y + padding.y + _layout.position.y;
+            if (verticalAlignment == VerticalAlignment::BOTTOM)
+                position.y = parentPosition.y + parentScale.y - padding.y - scale.y - _layout.position.y;
+            if (verticalAlignment == VerticalAlignment::CENTER)
+                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + _layout.position.y;
+
+            // Add the cumulated elements scale so it goes correctly after the previous element
+            if (expandElements == ExpandElements::DOWN)
             {
-                if (horizontalAlignment == HorizontalAlignment::LEFT)
-                    position.x = parentPosition.x + padding.x + _layout.position.x;
-
-                if (horizontalAlignment == HorizontalAlignment::RIGHT)
-                    position.x = parentPosition.x + parentScale.x - padding.x - scale.x - _layout.position.x;
-                if (horizontalAlignment == HorizontalAlignment::CENTER)
-                    position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + _layout.position.x;
-
-                if (verticalAlignment == VerticalAlignment::TOP)
-                    position.y = parentPosition.y + padding.y + _layout.position.y;
-                if (verticalAlignment == VerticalAlignment::BOTTOM)
-                    position.y = parentPosition.y + parentScale.y - padding.y - scale.y - _layout.position.y;
-                if (verticalAlignment == VerticalAlignment::CENTER)
-                    position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + _layout.position.y;
+                position.y += (cumulatedScale.y) + _layout.position.y;
+                cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
+                if (scale.x > cumulatedScale.x)
+                    cumulatedScale.x = scale.x + padding.x;
             }
-            else
+            else if (expandElements == ExpandElements::RIGHT)
             {
-                if (expandElements == ExpandElements::DOWN)
-                {
-                    position.y += previousItemPosition.y + previousItemScale.y + elementGap + _layout.position.y;
-                    position.x = previousItemPosition.x + _layout.position.x;
-                }
-                else if (expandElements == ExpandElements::RIGHT)
-                {
-                    position.x += previousItemPosition.x + previousItemScale.x + elementGap + _layout.position.x;
-                    position.y = previousItemPosition.y + _layout.position.y;
-                }
+                position.x += (cumulatedScale.x) + _layout.position.x;
+                cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
+                if (scale.y > cumulatedScale.y)
+                    cumulatedScale.y = scale.y + padding.y;
             }
 
             // Round to integer so don't get weird looking lines...
             GUITransform* pTransform = getTransform();
             pTransform->position = { std::round(position.x), std::round(position.y) };
 
-            Vector2f prevItemPosition;
-            Vector2f prevItemScale;
+            // *scale cumulation is always for the immediate children (not for any deeper level!)
+            Vector2f childrenCumulatedScale;
             for (size_t i = 0; i < _children.size(); ++i)
-            {
-                _children[i]->updatePosition(i, prevItemPosition, prevItemScale);
-                prevItemPosition = _children[i]->getGlobalPosition();
-                prevItemScale = _children[i]->getGlobalScale();
-            }
+                _children[i]->updatePosition(i, childrenCumulatedScale);
+
             _updatePending = false;
         }
 
         void UIElement::updateTree()
         {
             updateScale();
-            updatePosition(0, { }, { });
+            Vector2f cumulatedScale;
+            updatePosition(0, cumulatedScale);
         }
 
         uint32_t UIElement::mouse_over_layer()
@@ -587,12 +562,30 @@ namespace platypus
                 pOnClickEvent
             );
 
+            // *Need to update the "tree" even if contains only single element
+            // so that scale and pos is immediately correct..
+            UIElement* pRootParent = nullptr;
             if (pParent)
             {
                 pParent->addChild(pElement, position, scale);
-                UIElement* pRootParent = pElement->getRootParent();
-                pRootParent->updateTree();
+                pRootParent = pElement->getRootParent();
             }
+            else
+            {
+                pRootParent = pElement;
+            }
+            #ifdef PLATYPUS_DEBUG
+            if (!pRootParent)
+            {
+                Debug::log(
+                    "No root parent found for UIElement with entityID: " + std::to_string(pElement->getEntityID()),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            pRootParent->updateTree();
 
             if (!pParent)
                 ui.addRootElement(pElement);

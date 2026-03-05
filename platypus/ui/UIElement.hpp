@@ -244,8 +244,7 @@ namespace platypus
             // NOTE: Has to be called AFTER updating all element tree scales using above!
             void updatePosition(
                 size_t childIndex,
-                const Vector2f& previousItemPosition,
-                const Vector2f& previousItemScale
+                Vector2f& cumulatedScale
             );
             // Updates scales and positions for the whole tree
             void updateTree();
