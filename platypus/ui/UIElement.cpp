@@ -24,16 +24,18 @@ namespace platypus
             {
                 float fx = (float)x;
                 float fy = (float)y;
+                uint32_t elementLayer = _pElement->getLayer();
                 if (fx >= pTransform->position.x && fx <= pTransform->position.x + pTransform->scale.x &&
                     fy >= pTransform->position.y && fy <= pTransform->position.y + pTransform->scale.y)
                 {
-                    UIElement::s_mouseOverLayers.insert(static_cast<uint32_t>(_pElement->getLayer()));
-                    if (UIElement::mouse_over_layer() > _pElement->getLayer())
+
+                    if (UIElement::get_cursor_over_layer() > elementLayer)
                     {
                         // *if it already was mouse over, but picked higher layer
                         //  -> mouse exit
                         if (_pElement->_isMouseOver)
                         {
+                            remove_from_cursor_over_layers(elementLayer);
                             if (_pElement->_pMouseExitEvent)
                                 _pElement->_pMouseExitEvent->func(x, y);
                         }
@@ -43,6 +45,7 @@ namespace platypus
 
                     if (!_pElement->_isMouseOver)
                     {
+                        add_to_cursor_over_layers(elementLayer);
                         if (_pElement->_pMouseEnterEvent)
                             _pElement->_pMouseEnterEvent->func(x, y);
                     }
@@ -54,13 +57,9 @@ namespace platypus
                 }
                 else
                 {
-                    UIElement::s_mouseOverLayers.erase(static_cast<uint32_t>(_pElement->getLayer()));
-
-                    if (UIElement::mouse_over_layer() > _pElement->getLayer())
-                        return;
-
                     if (_pElement->_isMouseOver)
                     {
+                        remove_from_cursor_over_layers(elementLayer);
                         if (_pElement->_pMouseExitEvent)
                             _pElement->_pMouseExitEvent->func(x, y);
                     }
@@ -96,7 +95,7 @@ namespace platypus
         }
 
 
-        std::set<uint32_t> UIElement::s_mouseOverLayers;
+        std::map<uint32_t, size_t> UIElement::s_cursorOverLayers;
         UIElement::UIElement(
             LayoutUI& ui,
             entityID_t entityID,
@@ -304,6 +303,10 @@ namespace platypus
 
         void UIElement::setActive(bool arg)
         {
+            // if cursor was over -> remove from those
+            if (_isMouseOver)
+                remove_from_cursor_over_layers(getLayer());
+
             // *if setting inactive by OnClick func, reset mouseOver
             _isMouseOver = false;
             for (UIElement* pChild : _children)
@@ -499,12 +502,29 @@ namespace platypus
             updatePosition(0, cumulatedScale);
         }
 
-        uint32_t UIElement::mouse_over_layer()
+        uint32_t UIElement::get_cursor_over_layer()
         {
-            if (s_mouseOverLayers.empty())
+            if (s_cursorOverLayers.empty())
                 return 0;
 
-            return *s_mouseOverLayers.rbegin();
+            return s_cursorOverLayers.rbegin()->first;
+        }
+
+        void UIElement::add_to_cursor_over_layers(uint32_t layer)
+        {
+            s_cursorOverLayers[layer] += 1;
+        }
+
+        void UIElement::remove_from_cursor_over_layers(uint32_t layer)
+        {
+            if (s_cursorOverLayers.find(layer) == s_cursorOverLayers.end())
+                return;
+
+            if (s_cursorOverLayers[layer] > 0)
+                s_cursorOverLayers[layer] -= 1;
+
+            if (s_cursorOverLayers[layer] == 0)
+                s_cursorOverLayers.erase(layer);
         }
 
 

@@ -47,8 +47,6 @@ namespace platypus
             const Font* pFont
         );
 
-        // NOTE: Stretches always to fit the text vertically
-        //  -> stretching horizontally is optional
         Button add_button_element(
             LayoutUI& ui,
             UIElement* pParent,

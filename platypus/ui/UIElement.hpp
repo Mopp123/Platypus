@@ -9,7 +9,7 @@
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/assets/Font.hpp"
-#include <vector>
+#include <map>
 
 
 #define NULL_COLOR Vector4f(0, 0, 0, 0)
@@ -199,7 +199,7 @@ namespace platypus
             bool _updatePending = false;
 
         public:
-            static std::set<uint32_t> s_mouseOverLayers;
+            static std::map<uint32_t, size_t> s_cursorOverLayers;
 
             UIElement(
                 LayoutUI& ui,
@@ -249,7 +249,7 @@ namespace platypus
             // Updates scales and positions for the whole tree
             void updateTree();
 
-            static uint32_t mouse_over_layer();
+            static uint32_t get_cursor_over_layer();
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }
@@ -262,6 +262,9 @@ namespace platypus
 
         private:
             GUITransform* getTransform();
+
+            static void add_to_cursor_over_layers(uint32_t layer);
+            static void remove_from_cursor_over_layers(uint32_t layer);
         };
 
 
