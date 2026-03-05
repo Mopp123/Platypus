@@ -52,7 +52,7 @@ namespace platypus
                 );
                 UIElement* pContainer = _inputField.pContainer;
                 bool wasSelected = pContainer->isSelected();
-                if (_inputField.button.pBox->isMouseOver())
+                if (_inputField.button.pBox->isCursorOver())
                 {
                     if (!wasSelected)
                         _inputField.pContainer->setSelected(true);

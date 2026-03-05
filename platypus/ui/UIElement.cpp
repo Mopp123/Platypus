@@ -33,17 +33,17 @@ namespace platypus
                     {
                         // *if it already was mouse over, but picked higher layer
                         //  -> mouse exit
-                        if (_pElement->_isMouseOver)
+                        if (_pElement->_isCursorOver)
                         {
                             remove_from_cursor_over_layers(elementLayer);
                             if (_pElement->_pMouseExitEvent)
                                 _pElement->_pMouseExitEvent->func(x, y);
                         }
-                        _pElement->_isMouseOver = false;
+                        _pElement->_isCursorOver = false;
                         return;
                     }
 
-                    if (!_pElement->_isMouseOver)
+                    if (!_pElement->_isCursorOver)
                     {
                         add_to_cursor_over_layers(elementLayer);
                         if (_pElement->_pMouseEnterEvent)
@@ -53,17 +53,17 @@ namespace platypus
                     if (_pElement->_pMouseOverEvent)
                         _pElement->_pMouseOverEvent->func(x, y);
 
-                    _pElement->_isMouseOver = true;
+                    _pElement->_isCursorOver = true;
                 }
                 else
                 {
-                    if (_pElement->_isMouseOver)
+                    if (_pElement->_isCursorOver)
                     {
                         remove_from_cursor_over_layers(elementLayer);
                         if (_pElement->_pMouseExitEvent)
                             _pElement->_pMouseExitEvent->func(x, y);
                     }
-                    _pElement->_isMouseOver = false;
+                    _pElement->_isCursorOver = false;
                 }
             }
 
@@ -81,7 +81,7 @@ namespace platypus
             if (!_pScene->isEntityActive(_pElement->_entityID))
                 return;
 
-            if (_pElement->_isMouseOver)
+            if (_pElement->_isCursorOver)
             {
                 UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
                 if (pOnClickEvent)
@@ -304,11 +304,11 @@ namespace platypus
         void UIElement::setActive(bool arg)
         {
             // if cursor was over -> remove from those
-            if (_isMouseOver)
+            if (_isCursorOver)
                 remove_from_cursor_over_layers(getLayer());
 
             // *if setting inactive by OnClick func, reset mouseOver
-            _isMouseOver = false;
+            _isCursorOver = false;
             for (UIElement* pChild : _children)
                 pChild->setActive(arg);
 
@@ -350,6 +350,16 @@ namespace platypus
             );
             if (pRenderable)
                 pRenderable->layer = layer;
+        }
+
+        void UIElement::setTreeLayer(uint32_t layer)
+        {
+            GUIRenderable* pRenderable = getRenderable();
+            if (pRenderable)
+                pRenderable->layer = layer;
+
+            for (UIElement* pChild : _children)
+                pChild->setTreeLayer(layer);
         }
 
         void UIElement::updateScale()
@@ -502,6 +512,20 @@ namespace platypus
             updatePosition(0, cumulatedScale);
         }
 
+        bool UIElement::isCursorOverTree() const
+        {
+            if (_isCursorOver)
+                return true;
+
+            for (const UIElement* pChild : _children)
+            {
+                if (pChild->isCursorOverTree())
+                    return true;
+            }
+
+            return false;
+        }
+
         uint32_t UIElement::get_cursor_over_layer()
         {
             if (s_cursorOverLayers.empty())
@@ -543,6 +567,16 @@ namespace platypus
             useLayout.padding.y += useLayout.borderThickness;
             Vector2f scale = useLayout.scale;
 
+            if (useLayout.wordWrap == WordWrap::NORMAL && useLayout.scale.x == 0.0f)
+            {
+                Debug::log(
+                    "Layout was using word wrapping but its' scale was 0. "
+                    "Can't wrap against width of 0...",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
 
             const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
             entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;

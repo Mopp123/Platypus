@@ -190,7 +190,7 @@ namespace platypus
             UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
 
-            bool _isMouseOver = false;
+            bool _isCursorOver = false;
             bool _dragged = false;
             bool _selected = false; // NOTE: this is atm only used by InputField
 
@@ -237,6 +237,7 @@ namespace platypus
 
             uint32_t getLayer();
             void setLayer(uint32_t layer);
+            void setTreeLayer(uint32_t layer);
 
             // Updates global scales for the whole element tree recursively
             void updateScale();
@@ -248,6 +249,9 @@ namespace platypus
             );
             // Updates scales and positions for the whole tree
             void updateTree();
+            // Returns true if cursor is over any element in the tree starting from
+            // the called element (obviously:D)
+            bool isCursorOverTree() const;
 
             static uint32_t get_cursor_over_layer();
 
@@ -255,7 +259,7 @@ namespace platypus
             inline const Layout& getLayout() const { return _layout; }
             inline const Font* getFont() const { return _pFont; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
-            inline bool isMouseOver() const { return _isMouseOver; }
+            inline bool isCursorOver() const { return _isCursorOver; }
             inline void setSelected(bool arg) { _selected = arg; }
             inline bool isSelected() const { return _selected; }
             inline bool isUpdatePending() const { return _updatePending; }
