@@ -193,5 +193,13 @@ namespace platypus
             pBoxRenderable->color = button.originalColor;
             pTextRenderable->color = button.originalTextColor;
         }
+
+
+        void set_button_layer(Button& button, uint32_t layer)
+        {
+            // pBox is the root so can just set that
+            // NOTE: Doesn't work if entity order of the button's box and text changes!
+            button.pBox->setTreeLayer(layer);
+        }
     }
 }

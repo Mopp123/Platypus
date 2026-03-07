@@ -350,6 +350,27 @@ namespace platypus
             );
             if (pRenderable)
                 pRenderable->layer = layer;
+
+            _layout.layer = layer;
+        }
+
+        void UIElement::fetchTreeLayers(std::set<uint32_t>& outLayers)
+        {
+            outLayers.insert(getLayer());
+            for (UIElement* pChild : _children)
+            {
+                pChild->fetchTreeLayers(outLayers);
+            }
+        }
+
+        uint32_t UIElement::getTopTreeLayer()
+        {
+            std::set<uint32_t> allLayers;
+            fetchTreeLayers(allLayers);
+            if (!allLayers.empty())
+                return *allLayers.rbegin();
+
+            return 0;
         }
 
         void UIElement::setTreeLayer(uint32_t layer)
@@ -357,6 +378,8 @@ namespace platypus
             GUIRenderable* pRenderable = getRenderable();
             if (pRenderable)
                 pRenderable->layer = layer;
+
+            _layout.layer = layer;
 
             for (UIElement* pChild : _children)
                 pChild->setTreeLayer(layer);
@@ -480,14 +503,14 @@ namespace platypus
             // Add the cumulated elements scale so it goes correctly after the previous element
             if (expandElements == ExpandElements::DOWN)
             {
-                position.y += (cumulatedScale.y) + _layout.position.y;
+                position.y += (cumulatedScale.y);
                 cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
                 if (scale.x > cumulatedScale.x)
                     cumulatedScale.x = scale.x + padding.x;
             }
             else if (expandElements == ExpandElements::RIGHT)
             {
-                position.x += (cumulatedScale.x) + _layout.position.x;
+                position.x += (cumulatedScale.x);
                 cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
                 if (scale.y > cumulatedScale.y)
                     cumulatedScale.y = scale.y + padding.y;
@@ -606,6 +629,7 @@ namespace platypus
                 pRenderable->textureID = textureID;
                 pRenderable->borderColor = useLayout.borderColor;
                 pRenderable->borderThickness = static_cast<float>(useLayout.borderThickness);
+                pRenderable->layer = useLayout.layer;
             }
 
             UIElement* pElement = new UIElement(

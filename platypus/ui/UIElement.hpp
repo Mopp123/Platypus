@@ -73,6 +73,7 @@ namespace platypus
             Vector2f scale;
             Vector4f color = NULL_COLOR;
             Vector2f padding;
+            uint32_t layer = 0;
 
             uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS;
 
@@ -86,7 +87,6 @@ namespace platypus
             ExpandElements expandElements = ExpandElements::DOWN;
             float elementGap = 0.0f;
             ValueType elementGapType = ValueType::PIXEL;
-            uint32_t layer = 0;
 
             WordWrap wordWrap = WordWrap::NONE;
 
@@ -237,6 +237,9 @@ namespace platypus
 
             uint32_t getLayer();
             void setLayer(uint32_t layer);
+            // returns set of all used layers in the tree
+            void fetchTreeLayers(std::set<uint32_t>& outLayers);
+            uint32_t getTopTreeLayer();
             void setTreeLayer(uint32_t layer);
 
             // Updates global scales for the whole element tree recursively

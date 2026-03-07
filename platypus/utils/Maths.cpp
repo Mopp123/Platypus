@@ -27,6 +27,11 @@ namespace platypus
         return { x + other.x, y + other.y };
     }
 
+    Vector2f Vector2f::operator-(const Vector2f& other) const
+    {
+        return { x - other.x, y - other.y };
+    }
+
     Vector2f Vector2f::operator*(const Vector2f& other) const
     {
         return { x * other.x, y * other.y };
