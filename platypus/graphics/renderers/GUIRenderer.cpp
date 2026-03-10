@@ -215,6 +215,7 @@ namespace platypus
             batch.textureID = NULL_ID;
             batch.count = 0;
         }
+        _toRender.clear();
     }
 
     void GUIRenderer::freeDescriptorSets()
@@ -321,7 +322,6 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(&renderPass);
 
-        //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
         std::vector<std::pair<uint32_t, ID_t>> unusedBatches;
         std::map<uint32_t, std::set<size_t>>::iterator layerIt;
         for (layerIt = _toRender.begin(); layerIt != _toRender.end(); ++layerIt)
@@ -334,7 +334,6 @@ namespace platypus
 
                 if (_batches[*layerBatchIt].count == 0)
                 {
-                    //unusedBatches[layerIt->first].push_back(layerBatchIt);
                     unusedBatches.push_back(std::make_pair(layerIt->first, batchData.textureID));
                     continue;
                 }
@@ -419,32 +418,15 @@ namespace platypus
                 );
                 // "Clear" the batch for next round of submits
                 // NOTE: Might be issue here if shitload of gui stuff
-                //  -> occupied batches gets never really cleared!
-                //  TODO: Truly clear batches at least on scene switch?
+                //  -> occupied batches gets "truly" cleared only on scene switch
                 //      + maybe some clever way to deal with that within the same scene too...
                 batchData.count = 0;
             }
         }
 
         // Erase unused batches
-        //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>>::iterator eraseLayerIt;
-        //for (eraseLayerIt = unusedBatches.begin(); eraseLayerIt != unusedBatches.end(); ++eraseLayerIt)
-        //{
-        //    std::vector<std::set<size_t>::iterator>& layerBatches = eraseLayerIt->second;
-        //    std::vector<std::set<size_t>::iterator>::iterator eraseBatchIt;
-        //    for (eraseBatchIt = layerBatches.begin(); eraseBatchIt != layerBatches.end(); ++eraseBatchIt)
-        //    {
-        //        const BatchData& batchData = _batches[*eraseBatchIt];
-        //        freeBatch(eraseLayerIt->first, batchData.textureID);
-        //        _toRender[eraseLayerIt->first].erase(*eraseBatchIt);
-        //        Debug::log("___TEST___ERASED UNUSED BATCH!");
-        //    }
-        //}
         for (std::pair<uint32_t, ID_t>& toErase : unusedBatches)
-        {
             freeBatch(toErase.first, toErase.second);
-            //Debug::log("___TEST___ERASED UNUSED BATCH!");
-        }
 
         currentCommandBuffer.end();
 
@@ -634,6 +616,7 @@ namespace platypus
             }
         #endif
 
+        Debug::log("___TEST___occupying new batch for layer: " + std::to_string(layer) + " using texture: " + std::to_string(textureID));
         BatchData& batchData = _batches[batchIndex];
         batchData.type = batchType;
         batchData.textureID = textureID;
@@ -656,6 +639,7 @@ namespace platypus
                 "using textureID: " + std::to_string(textureID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
+            PLATYPUS_ASSERT(false);
             return false;
         }
         else if (batchIndex >= _batches.size())
@@ -667,6 +651,7 @@ namespace platypus
                 "using textureID: " + std::to_string(textureID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
+            PLATYPUS_ASSERT(false);
             return false;
         }
 
@@ -685,12 +670,13 @@ namespace platypus
             //PLATYPUS_ASSERT(false);
         }
 
-        //Debug::log(
-        //    "@GUIRenderer::freeBatch "
-        //    "Freed batch from layer: " + std::to_string(layer) +" "
-        //    "using textureID: " + std::to_string(textureID),
-        //    Debug::MessageType::PLATYPUS_WARNING
-        //);
+        Debug::log(
+            "@GUIRenderer::freeBatch "
+            "Freed batch from layer: " + std::to_string(layer) +" "
+            "using textureID: " + std::to_string(textureID) + " "
+            "remaining layer batches: " + std::to_string(_toRender[layer].size()),
+            Debug::MessageType::PLATYPUS_WARNING
+        );
 
         return true;
     }

@@ -87,7 +87,7 @@ namespace platypus
                             s_cursorOverLayers[elementAbsoluteLayer].erase(_pElement->getEntityID());
                             if (s_cursorOverLayers[elementAbsoluteLayer].empty())
                             {
-                                Debug::log("___TEST___erased cursor over layer: " + std::to_string(elementAbsoluteLayer));
+                                //Debug::log("___TEST___erased cursor over layer: " + std::to_string(elementAbsoluteLayer));
                                 s_cursorOverLayers.erase(elementAbsoluteLayer);
                             }
                         }
@@ -115,10 +115,10 @@ namespace platypus
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
 
-                Debug::log(
-                    "___TEST___clicked elem layer: " + std::to_string(_pElement->getAbsoluteLayer()) + " "
-                    "stored cursor over layer: " + std::to_string(get_cursor_over_layer())
-                );
+                //Debug::log(
+                //    "___TEST___clicked elem layer: " + std::to_string(_pElement->getAbsoluteLayer()) + " "
+                //    "stored cursor over layer: " + std::to_string(get_cursor_over_layer())
+                //);
 
                 _pElement->_dragged = true;
             }
@@ -352,7 +352,7 @@ namespace platypus
             // if cursor was over -> remove from those
             if (_isCursorOver)
             {
-                Debug::log("___TEST___removed from cursor over layers");
+                //Debug::log("___TEST___removed from cursor over layers");
                 remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
             }
 
@@ -477,7 +477,6 @@ namespace platypus
         }
 
         void UIElement::updatePosition(
-            size_t childIndex,
             Vector2f& cumulatedScale,
             bool mergeLayerToParent
         )
@@ -555,7 +554,7 @@ namespace platypus
             // *scale cumulation is always for the immediate children (not for any deeper level!)
             Vector2f childrenCumulatedScale;
             for (size_t i = 0; i < _children.size(); ++i)
-                _children[i]->updatePosition(i, childrenCumulatedScale);
+                _children[i]->updatePosition(childrenCumulatedScale);
 
             _updatePending = false;
         }
@@ -564,7 +563,7 @@ namespace platypus
         {
             updateScale();
             Vector2f cumulatedScale;
-            updatePosition(0, cumulatedScale, mergeLayerToParent);
+            updatePosition(cumulatedScale, mergeLayerToParent);
         }
 
         void UIElement::fetchTreeElements(std::vector<UIElement*>& outElements)

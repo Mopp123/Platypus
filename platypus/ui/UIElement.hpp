@@ -252,7 +252,6 @@ namespace platypus
             // Updates global positions for the whole element tree recursively
             // NOTE: Has to be called AFTER updating all element tree scales using above!
             void updatePosition(
-                size_t childIndex,
                 Vector2f& cumulatedScale,
                 bool mergeLayerToParent = false
             );
