@@ -685,12 +685,12 @@ namespace platypus
             //PLATYPUS_ASSERT(false);
         }
 
-        Debug::log(
-            "@GUIRenderer::freeBatch "
-            "Freed batch from layer: " + std::to_string(layer) +" "
-            "using textureID: " + std::to_string(textureID),
-            Debug::MessageType::PLATYPUS_WARNING
-        );
+        //Debug::log(
+        //    "@GUIRenderer::freeBatch "
+        //    "Freed batch from layer: " + std::to_string(layer) +" "
+        //    "using textureID: " + std::to_string(textureID),
+        //    Debug::MessageType::PLATYPUS_WARNING
+        //);
 
         return true;
     }

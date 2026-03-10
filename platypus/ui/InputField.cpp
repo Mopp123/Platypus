@@ -192,12 +192,12 @@ namespace platypus
             );
 
             Layout infoTextLayout;
+            infoTextLayout.color = textColor;
             UIElement* pInfoTextElement = add_text_element(
                 ui,
                 pRootContainer,
                 infoTextLayout,
                 infoText,
-                textColor,
                 pFont
             );
 

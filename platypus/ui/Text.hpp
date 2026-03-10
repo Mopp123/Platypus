@@ -16,7 +16,6 @@ namespace platypus
             UIElement* pParent,
             const Layout& layout,
             const std::string& text,
-            const Vector4f& color,
             const Font* pFont
         );
 

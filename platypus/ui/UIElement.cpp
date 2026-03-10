@@ -20,50 +20,78 @@ namespace platypus
                 _pElement->_entityID,
                 ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
             );
+
             if (pTransform)
             {
                 float fx = (float)x;
                 float fy = (float)y;
-                uint32_t elementLayer = _pElement->getLayer();
+                uint32_t elementAbsoluteLayer = _pElement->getAbsoluteLayer();
                 if (fx >= pTransform->position.x && fx <= pTransform->position.x + pTransform->scale.x &&
                     fy >= pTransform->position.y && fy <= pTransform->position.y + pTransform->scale.y)
                 {
+                    //Debug::log(
+                    //    "___TEST___cursor over element: " + std::to_string(elementAbsoluteLayer) + " "
+                    //    "stored cursor over layer: " + std::to_string(UIElement::get_cursor_over_layer()) + " "
+                    //    "picked layers: " + std::to_string(UIElement::s_cursorOverLayers.size())
+                    //);
+                    s_cursorOverLayers[elementAbsoluteLayer].insert(_pElement->getEntityID());
+                    //if (UIElement::get_cursor_over_layer() < elementAbsoluteLayer)
+                    //{
+                    //    // *if it already was mouse over, but picked higher layer
+                    //    //  -> mouse exit
+                    //    if (_pElement->_isCursorOver)
+                    //    {
+                    //        remove_from_cursor_over_layers(elementAbsoluteLayer);
+                    //        if (_pElement->_pMouseExitEvent)
+                    //            _pElement->_pMouseExitEvent->func(x, y);
+                    //    }
+                    //    _pElement->_isCursorOver = false;
+                    //    return;
+                    //}
 
-                    if (UIElement::get_cursor_over_layer() > elementLayer)
+                    bool isHighestPickedLayer = elementAbsoluteLayer == get_cursor_over_layer();
+                    if (isHighestPickedLayer)
                     {
-                        // *if it already was mouse over, but picked higher layer
-                        //  -> mouse exit
-                        if (_pElement->_isCursorOver)
+                        if (!_pElement->_isCursorOver)
                         {
-                            remove_from_cursor_over_layers(elementLayer);
-                            if (_pElement->_pMouseExitEvent)
-                                _pElement->_pMouseExitEvent->func(x, y);
+                            //add_to_cursor_over_layers(elementAbsoluteLayer);
+                            if (_pElement->_pMouseEnterEvent)
+                                _pElement->_pMouseEnterEvent->func(x, y);
                         }
-                        _pElement->_isCursorOver = false;
-                        return;
-                    }
 
-                    if (!_pElement->_isCursorOver)
+                        if (_pElement->_pMouseOverEvent)
+                            _pElement->_pMouseOverEvent->func(x, y);
+
+                        _pElement->_isCursorOver = true;
+                    }
+                    else if (get_cursor_over_layer() > elementAbsoluteLayer)
                     {
-                        add_to_cursor_over_layers(elementLayer);
-                        if (_pElement->_pMouseEnterEvent)
-                            _pElement->_pMouseEnterEvent->func(x, y);
+                        _pElement->_isCursorOver = false;
                     }
-
-                    if (_pElement->_pMouseOverEvent)
-                        _pElement->_pMouseOverEvent->func(x, y);
-
-                    _pElement->_isCursorOver = true;
                 }
                 else
                 {
                     if (_pElement->_isCursorOver)
                     {
-                        remove_from_cursor_over_layers(elementLayer);
+                        //remove_from_cursor_over_layers(elementAbsoluteLayer);
                         if (_pElement->_pMouseExitEvent)
                             _pElement->_pMouseExitEvent->func(x, y);
                     }
                     _pElement->_isCursorOver = false;
+
+                    if (s_cursorOverLayers.find(elementAbsoluteLayer) != s_cursorOverLayers.end())
+                    {
+                        std::set<entityID_t>& layerEntities = s_cursorOverLayers[elementAbsoluteLayer];
+                        if (layerEntities.find(_pElement->getEntityID()) != layerEntities.end())
+                        {
+                            s_cursorOverLayers[elementAbsoluteLayer].erase(_pElement->getEntityID());
+                            if (s_cursorOverLayers[elementAbsoluteLayer].empty())
+                            {
+                                Debug::log("___TEST___erased cursor over layer: " + std::to_string(elementAbsoluteLayer));
+                                s_cursorOverLayers.erase(elementAbsoluteLayer);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -87,6 +115,11 @@ namespace platypus
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
 
+                Debug::log(
+                    "___TEST___clicked elem layer: " + std::to_string(_pElement->getAbsoluteLayer()) + " "
+                    "stored cursor over layer: " + std::to_string(get_cursor_over_layer())
+                );
+
                 _pElement->_dragged = true;
             }
 
@@ -95,7 +128,7 @@ namespace platypus
         }
 
 
-        std::map<uint32_t, size_t> UIElement::s_cursorOverLayers;
+        std::map<uint32_t, std::set<entityID_t>> UIElement::s_cursorOverLayers;
         UIElement::UIElement(
             LayoutUI& ui,
             entityID_t entityID,
@@ -145,15 +178,28 @@ namespace platypus
             pScene->destroyEntity(_entityID);
         }
 
-        // NOTE: Via current tree updating system, could get rid of this?
-        void UIElement::addChild(
-            UIElement* pChild,
-            const Vector2f& childPosition,
-            const Vector2f& childScale
-        )
+        // *Also updates the whole tree so the scales and positions are
+        // correct immediately.
+        // TODO: get rid of the mergeLayers here
+        void UIElement::addChild(UIElement* pChild, bool mergeLayers)
         {
             pChild->_pParent = this;
             _children.push_back(pChild);
+
+            UIElement* pRootParent = getRootParent();
+
+            #ifdef PLATYPUS_DEBUG
+            if (!pRootParent)
+            {
+                Debug::log(
+                    "No root parent found for UIElement with entityID: " + std::to_string(getEntityID()),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            pRootParent->updateTree();
         }
 
         void UIElement::destroyChildren()
@@ -305,7 +351,10 @@ namespace platypus
         {
             // if cursor was over -> remove from those
             if (_isCursorOver)
-                remove_from_cursor_over_layers(getLayer());
+            {
+                Debug::log("___TEST___removed from cursor over layers");
+                remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
+            }
 
             // *if setting inactive by OnClick func, reset mouseOver
             _isCursorOver = false;
@@ -322,51 +371,28 @@ namespace platypus
             return pScene->isEntityActive(_entityID);
         }
 
-        uint32_t UIElement::getLayer()
+        void UIElement::fetchAbsoluteTreeLayers(std::set<uint32_t>& outLayers)
         {
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
-                pScene->getComponent(
-                    _entityID,
-                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
-                    false,
-                    false
-                )
-            );
-            if (pRenderable)
-                return static_cast<int32_t>(pRenderable->layer);
-
-            return 0;
-        }
-
-        void UIElement::setLayer(uint32_t layer)
-        {
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
-                pScene->getComponent(
-                    _entityID,
-                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-                )
-            );
-            if (pRenderable)
-                pRenderable->layer = layer;
-
-            _layout.layer = layer;
-        }
-
-        void UIElement::fetchTreeLayers(std::set<uint32_t>& outLayers)
-        {
-            outLayers.insert(getLayer());
+            outLayers.insert(getAbsoluteLayer());
             for (UIElement* pChild : _children)
             {
-                pChild->fetchTreeLayers(outLayers);
+                pChild->fetchAbsoluteTreeLayers(outLayers);
+            }
+        }
+
+        void UIElement::fetchAbsoluteTreeLayers(std::map<uint32_t, size_t>& outLayers)
+        {
+            outLayers[getAbsoluteLayer()] += 1;
+            for (UIElement* pChild : _children)
+            {
+                pChild->fetchAbsoluteTreeLayers(outLayers);
             }
         }
 
         uint32_t UIElement::getTopTreeLayer()
         {
             std::set<uint32_t> allLayers;
-            fetchTreeLayers(allLayers);
+            fetchAbsoluteTreeLayers(allLayers);
             if (!allLayers.empty())
                 return *allLayers.rbegin();
 
@@ -452,7 +478,8 @@ namespace platypus
 
         void UIElement::updatePosition(
             size_t childIndex,
-            Vector2f& cumulatedScale
+            Vector2f& cumulatedScale,
+            bool mergeLayerToParent
         )
         {
             Vector2f padding;
@@ -475,6 +502,8 @@ namespace platypus
                 GUITransform* pParentTransform = _pParent->getTransform();
                 parentPosition = pParentTransform->position;
                 parentScale = pParentTransform->scale;
+
+                _absoluteLayer = _pParent->getAbsoluteLayer() + _layout.layer;
             }
             else
             {
@@ -482,7 +511,10 @@ namespace platypus
                 Window& window = pApp->getWindow();
                 parentScale.x = static_cast<float>(window.getWidth());
                 parentScale.y = static_cast<float>(window.getHeight());
+
+                _absoluteLayer = _layout.layer;
             }
+            setRenderLayer(_absoluteLayer);
 
             // Get the "origin" pos in relation to parent
             if (horizontalAlignment == HorizontalAlignment::LEFT)
@@ -528,11 +560,18 @@ namespace platypus
             _updatePending = false;
         }
 
-        void UIElement::updateTree()
+        void UIElement::updateTree(bool mergeLayerToParent)
         {
             updateScale();
             Vector2f cumulatedScale;
-            updatePosition(0, cumulatedScale);
+            updatePosition(0, cumulatedScale, mergeLayerToParent);
+        }
+
+        void UIElement::fetchTreeElements(std::vector<UIElement*>& outElements)
+        {
+            outElements.push_back(this);
+            for (UIElement* pChild : _children)
+                pChild->fetchTreeElements(outElements);
         }
 
         bool UIElement::isCursorOverTree() const
@@ -549,6 +588,12 @@ namespace platypus
             return false;
         }
 
+        void UIElement::setRelativeLayer(uint32_t relativeLayer)
+        {
+            _layout.layer = relativeLayer;
+            _updatePending = true;
+        }
+
         uint32_t UIElement::get_cursor_over_layer()
         {
             if (s_cursorOverLayers.empty())
@@ -557,21 +602,45 @@ namespace platypus
             return s_cursorOverLayers.rbegin()->first;
         }
 
-        void UIElement::add_to_cursor_over_layers(uint32_t layer)
+
+        void UIElement::setRenderLayer(uint32_t renderLayer)
         {
-            s_cursorOverLayers[layer] += 1;
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+                    false,
+                    false
+                )
+            );
+            if (pRenderable)
+                pRenderable->layer = renderLayer;
         }
 
-        void UIElement::remove_from_cursor_over_layers(uint32_t layer)
+        void UIElement::add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID)
         {
-            if (s_cursorOverLayers.find(layer) == s_cursorOverLayers.end())
-                return;
+            // Not sure if it's slower to first search if found, since inserting doesn't
+            // insert if already exists...
+            s_cursorOverLayers[absoluteLayer].insert(entityID);
+        }
 
-            if (s_cursorOverLayers[layer] > 0)
-                s_cursorOverLayers[layer] -= 1;
+        void UIElement::remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID)
+        {
+            std::map<uint32_t, std::set<entityID_t>>::iterator it = s_cursorOverLayers.find(absoluteLayer);
+            if (it != s_cursorOverLayers.end())
+            {
+                std::set<entityID_t>& layerEntities = it->second;
+                if (it->second.find(entityID) != layerEntities.end())
+                {
+                    layerEntities.erase(entityID);
 
-            if (s_cursorOverLayers[layer] == 0)
-                s_cursorOverLayers.erase(layer);
+                    if (layerEntities.empty())
+                        s_cursorOverLayers.erase(absoluteLayer);
+                }
+            }
         }
 
 
@@ -601,17 +670,7 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
 
-            const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
-            entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
-            Vector2f previousItemPosition = pParent != nullptr ? pParent->_previousItemPosition : Vector2f(0, 0);
-            Vector2f previousItemScale = pParent != nullptr ? pParent->_previousItemScale : Vector2f(0, 0);
-
-            // When adding child container, the pParent's child count is the index
-            // since we haven't added this new child yet
-            int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
-
             Vector2f position;
-
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             entityID_t entity = pScene->createEntity();
             GUITransform* pTransform = create_gui_transform(
@@ -619,7 +678,6 @@ namespace platypus
                 position,
                 scale
             );
-
             if (createRenderable)
             {
                 GUIRenderable* pRenderable = create_gui_renderable(
@@ -642,31 +700,16 @@ namespace platypus
 
             // *Need to update the "tree" even if contains only single element
             // so that scale and pos is immediately correct..
-            UIElement* pRootParent = nullptr;
             if (pParent)
             {
-                pParent->addChild(pElement, position, scale);
-                pRootParent = pElement->getRootParent();
+                pParent->addChild(pElement);
             }
             else
             {
-                pRootParent = pElement;
+                pElement->updateTree();
+                if (!pParent)
+                    ui.addRootElement(pElement);
             }
-            #ifdef PLATYPUS_DEBUG
-            if (!pRootParent)
-            {
-                Debug::log(
-                    "No root parent found for UIElement with entityID: " + std::to_string(pElement->getEntityID()),
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            #endif
-            pRootParent->updateTree();
-
-            if (!pParent)
-                ui.addRootElement(pElement);
 
             return pElement;
         }

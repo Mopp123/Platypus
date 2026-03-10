@@ -68,13 +68,13 @@ namespace platypus
             };
 
             Layout textLayout;
+            textLayout.color = originalTextColor;
             UIElement* pContainer = add_container(ui, pParent, layout, true);
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,
                 textLayout,
                 text,
-                originalTextColor,
                 pFont
             );
 
@@ -131,12 +131,12 @@ namespace platypus
             );
 
             Layout textLayout;
+            textLayout.color = textColor;
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,
                 textLayout,
                 text,
-                textColor,
                 pFont
             );
 

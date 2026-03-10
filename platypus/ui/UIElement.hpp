@@ -73,6 +73,10 @@ namespace platypus
             Vector2f scale;
             Vector4f color = NULL_COLOR;
             Vector2f padding;
+
+            // Layer in relation to the parent's layer NOT the actual
+            // used layer for rendering (that gets eventually calculated from the
+            // layout's layer)
             uint32_t layer = 0;
 
             uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS;
@@ -198,8 +202,11 @@ namespace platypus
             // (since pos update has to be done after scale update)
             bool _updatePending = false;
 
+            // *Gets updated @updatePosition(...)
+            uint32_t _absoluteLayer = 0;
+
         public:
-            static std::map<uint32_t, size_t> s_cursorOverLayers;
+            static std::map<uint32_t, std::set<entityID_t>> s_cursorOverLayers;
 
             UIElement(
                 LayoutUI& ui,
@@ -210,12 +217,11 @@ namespace platypus
             );
             ~UIElement();
 
-            // NOTE: Via current tree updating system, could get rid of this?
-            void addChild(
-                UIElement* pChild,
-                const Vector2f& childPosition,
-                const Vector2f& childScale
-            );
+            // *Also updates the whole tree so the scales and positions are
+            // correct immediately.
+            // TODO: get rid of the mergeLayers here
+            void addChild(UIElement* pChild, bool mergeLayers = false);
+
             // Destroys child tree recursively
             // NOTE: Very shit and inefficient, just testing atm!
             void destroyChildren();
@@ -235,10 +241,9 @@ namespace platypus
             void setActive(bool arg);
             bool isActive();
 
-            uint32_t getLayer();
-            void setLayer(uint32_t layer);
             // returns set of all used layers in the tree
-            void fetchTreeLayers(std::set<uint32_t>& outLayers);
+            void fetchAbsoluteTreeLayers(std::set<uint32_t>& outLayers);
+            void fetchAbsoluteTreeLayers(std::map<uint32_t, size_t>& outLayers);
             uint32_t getTopTreeLayer();
             void setTreeLayer(uint32_t layer);
 
@@ -248,15 +253,23 @@ namespace platypus
             // NOTE: Has to be called AFTER updating all element tree scales using above!
             void updatePosition(
                 size_t childIndex,
-                Vector2f& cumulatedScale
+                Vector2f& cumulatedScale,
+                bool mergeLayerToParent = false
             );
             // Updates scales and positions for the whole tree
-            void updateTree();
+            // *mergeLayerToParent sets each child to their parent's layer
+            void updateTree(bool mergeLayerToParent = false);
+
+            void fetchTreeElements(std::vector<UIElement*>& outElements);
             // Returns true if cursor is over any element in the tree starting from
             // the called element (obviously:D)
             bool isCursorOverTree() const;
 
             static uint32_t get_cursor_over_layer();
+
+            void setRelativeLayer(uint32_t relativeLayer);
+            inline uint32_t getRelativeLayer() const { return _layout.layer; }
+            inline uint32_t getAbsoluteLayer() const { return _absoluteLayer; }
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const Layout& getLayout() const { return _layout; }
@@ -267,11 +280,12 @@ namespace platypus
             inline bool isSelected() const { return _selected; }
             inline bool isUpdatePending() const { return _updatePending; }
 
-        private:
-            GUITransform* getTransform();
+            static void add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
+            static void remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
 
-            static void add_to_cursor_over_layers(uint32_t layer);
-            static void remove_from_cursor_over_layers(uint32_t layer);
+        private:
+            void setRenderLayer(uint32_t renderLayer);
+            GUITransform* getTransform();
         };
 
 
