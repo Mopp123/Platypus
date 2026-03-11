@@ -61,6 +61,20 @@ namespace platypus
             UIElement::MouseExitEvent* pOnExit = nullptr
         );
 
+        Button add_button_element(
+            LayoutUI& ui,
+            UIElement* pParent,
+            const Layout& boxLayout,
+            const Layout& textLayout,
+            const Vector4f& highlightColor,
+            const Vector4f& textHighlightColor,
+            const std::string& text,
+            const Font* pFont,
+            UIElement::OnClickEvent* pOnClick,
+            UIElement::MouseEnterEvent* pOnEnter = nullptr,
+            UIElement::MouseExitEvent* pOnExit = nullptr
+        );
+
         void reset_button(const Button& button);
     }
 }

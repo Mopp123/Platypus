@@ -165,6 +165,61 @@ namespace platypus
         }
 
 
+        Button add_button_element(
+            LayoutUI& ui,
+            UIElement* pParent,
+            const Layout& boxLayout,
+            const Layout& textLayout,
+            const Vector4f& highlightColor,
+            const Vector4f& textHighlightColor,
+            const std::string& text,
+            const Font* pFont,
+            UIElement::OnClickEvent* pOnClick,
+            UIElement::MouseEnterEvent* pOnEnter,
+            UIElement::MouseExitEvent* pOnExit
+        )
+        {
+            UIElement* pContainer = add_container(
+                ui,
+                pParent,
+                boxLayout,
+                true, // create renderable
+                NULL_ID, // textureID
+                nullptr, // pFont
+                pOnClick
+            );
+
+            UIElement* pText = add_text_element(
+                ui,
+                pContainer,
+                textLayout,
+                text,
+                pFont
+            );
+
+            Button button = {
+                boxLayout.color,
+                highlightColor,
+                textLayout.color,
+                textHighlightColor,
+                pContainer,
+                pText
+            };
+
+            if (pOnEnter)
+                pContainer->_pMouseEnterEvent = pOnEnter;
+            else
+                pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(button);
+
+            if (pOnExit)
+                pContainer->_pMouseExitEvent = pOnExit;
+            else
+                pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
+
+            return button;
+        }
+
+
         void reset_button(const Button& button)
         {
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();

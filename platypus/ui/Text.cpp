@@ -26,13 +26,25 @@ namespace platypus
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
-            // NOTE: Shouldn't the word wrapping be defined by
-            // this layout instead of the parent?
             std::string finalText;
             if (parentLayout.wordWrap == WordWrap::NONE)
             {
-                maxLineWidth = get_text_scale(text, pFont).x;
-                finalText = text;
+                if (parentLayout.textOverflow == TextOverflow::NONE)
+                {
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        pParent,
+                        pFont,
+                        "",
+                        text,
+                        parentLayout.textOverflow
+                    );
+                }
+
+                maxLineWidth = get_text_scale(finalText, pFont).x;
             }
             else if (parentLayout.wordWrap == WordWrap::NORMAL)
             {
@@ -190,7 +202,21 @@ namespace platypus
             if (parentLayout.wordWrap == WordWrap::NONE)
             {
                 maxLineWidth = get_text_scale(text, pFont).x;
-                finalText = text;
+
+                if (parentLayout.textOverflow == TextOverflow::NONE)
+                {
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        pParentElement,
+                        pFont,
+                        "", // header... which shouldn't probably be used anymore...
+                        text,
+                        parentLayout.textOverflow
+                    );
+                }
             }
             else if (parentLayout.wordWrap == WordWrap::NORMAL)
             {
@@ -212,18 +238,14 @@ namespace platypus
         }
 
 
-        void set_text_overflow_ellipsis(
-            UIElement* pTextElement,
+        std::string strip_text_overflow_ellipsis(
             UIElement* pParentElement,
-            Font* pFont,
+            const Font* pFont,
             const std::string& header,
             const std::string& text,
-            uint8_t stripDirection
+            TextOverflow overflow
         )
         {
-            static const uint8_t s_stripDirEnd = 0;
-            static const uint8_t s_stripDirBegin = 1;
-
             float headerVisualWidth = ui::get_text_scale(header, pFont).x;
             const std::string fullText = header + text;
             const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
@@ -244,11 +266,12 @@ namespace platypus
                 //utf8::iterator<char*> beginIt(pData, pData, pData + size);
                 utf8::iterator<char*> it;
                 utf8::iterator<char*> stopIt;
-                if (stripDirection == s_stripDirBegin)
+                if (overflow == TextOverflow::ELLIPSIS_LEFT)
                 {
                     it = utf8::iterator<char*>(pData + size - 1, pData, pData + size);
                     stopIt = utf8::iterator<char*>(pData, pData, pData + size);
                 }
+                //if (overflow == TextOverflow::ELLIPSIS_RIGHT)
                 else
                 {
                     it = utf8::iterator<char*>(pData, pData, pData + size);
@@ -276,22 +299,17 @@ namespace platypus
                     if (it == stopIt)
                         break;
 
-                    if (stripDirection == s_stripDirBegin)
+                    if (overflow == TextOverflow::ELLIPSIS_LEFT)
                         --it;
                     else
                         ++it;
                 }
-                if (stripDirection == s_stripDirBegin)
+                if (overflow == TextOverflow::ELLIPSIS_LEFT)
                     finalText = header + visualBuffer + util::str::reverse(strippedStr);
                 else
                     finalText = header + strippedStr + visualBuffer;
             }
-
-            ui::set_text(
-                pTextElement,
-                pParentElement,
-                finalText
-            );
+            return finalText;
         }
 
 

@@ -176,6 +176,7 @@ namespace platypus
             LayoutUI& ui,
             UIElement* pParent,
             const Layout& layout,
+            TextOverflow overflow,
             const Vector4f& highlightColor,
             const Vector4f& activeColor,
             const Vector4f& textColor,
@@ -201,26 +202,38 @@ namespace platypus
                 pFont
             );
 
+            if (layout.scale.x == 0.0f || layout.scale.y == 0.0f)
+            {
+                Debug::log(
+                    "Inputted layout's scale was: " + layout.scale.toString() + " "
+                    "InputFields created via this function don't scale with "
+                    "content text element (for testing ellipsis overflow) so you'll "
+                    "need to provide the full scale if the input field in advance!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
             Layout buttonLayout;
+            buttonLayout.textOverflow = overflow;
             buttonLayout.scale = layout.scale;
             buttonLayout.color = layout.color;
             buttonLayout.padding = { 0, 0 };
             buttonLayout.effectOnParentFlags = layout.effectOnParentFlags;
-
-            //if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_HORIZONTALLY)
-            //    buttonLayout.scale.x = layout.scale.x;
-            //if (layout.stretchFitContentFlags != StretchFitContentFlagBits::STRETCH_FIT_CONTENT_VERTICALLY)
-            //    buttonLayout.scale.y = layout.scale.y;
-
             buttonLayout.borderColor = layout.borderColor;
             buttonLayout.borderThickness = layout.borderThickness;
+
+            Layout textLayout;
+            textLayout.color = textColor;
+            textLayout.effectOnParentFlags = 0;
 
             Button buttonElement = add_button_element(
                 ui,
                 pRootContainer,
                 buttonLayout,
+                textLayout,
                 highlightColor,
-                textColor,
                 textHighlightColor,
                 "",
                 pFont,

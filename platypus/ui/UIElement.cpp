@@ -477,19 +477,22 @@ namespace platypus
                 position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + _layout.position.y;
 
             // Add the cumulated elements scale so it goes correctly after the previous element
-            if (expandElements == ExpandElements::DOWN)
+            if (_layout.effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION)
             {
-                position.y += (cumulatedScale.y);
-                cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
-                if (scale.x > cumulatedScale.x)
-                    cumulatedScale.x = scale.x + padding.x;
-            }
-            else if (expandElements == ExpandElements::RIGHT)
-            {
-                position.x += (cumulatedScale.x);
-                cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
-                if (scale.y > cumulatedScale.y)
-                    cumulatedScale.y = scale.y + padding.y;
+                if (expandElements == ExpandElements::DOWN)
+                {
+                    position.y += (cumulatedScale.y);
+                    cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
+                    if (scale.x > cumulatedScale.x)
+                        cumulatedScale.x = scale.x + padding.x;
+                }
+                else if (expandElements == ExpandElements::RIGHT)
+                {
+                    position.x += (cumulatedScale.x);
+                    cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
+                    if (scale.y > cumulatedScale.y)
+                        cumulatedScale.y = scale.y + padding.y;
+                }
             }
 
             // Round to integer so don't get weird looking lines...

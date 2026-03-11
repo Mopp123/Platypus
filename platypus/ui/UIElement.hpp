@@ -57,6 +57,13 @@ namespace platypus
             NORMAL
         };
 
+        enum class TextOverflow
+        {
+            NONE,
+            ELLIPSIS_RIGHT,
+            ELLIPSIS_LEFT
+        };
+
         enum EffectOnParentFlagBits
         {
             NONE = 0,
@@ -93,6 +100,7 @@ namespace platypus
             ValueType elementGapType = ValueType::PIXEL;
 
             WordWrap wordWrap = WordWrap::NONE;
+            TextOverflow textOverflow = TextOverflow::NONE;
 
             Vector4f borderColor = Vector4f(0, 0, 0, 0);
             uint32_t borderThickness = 0;

@@ -87,6 +87,7 @@ namespace platypus
             LayoutUI& ui,
             UIElement* pParent,
             const Layout& layout,
+            TextOverflow overflow,
             const Vector4f& highlightColor,
             const Vector4f& activeColor,
             const Vector4f& textColor,

@@ -48,13 +48,12 @@ namespace platypus
         //
         // NOTE: Inefficient as fuck! +potentially dangerous:D
         //  -> Added to quickly make a filebrowser
-        void set_text_overflow_ellipsis(
-            UIElement* pTextElement,
+        std::string strip_text_overflow_ellipsis(
             UIElement* pParentElement,
-            Font* pFont,
+            const Font* pFont,
             const std::string& header,
             const std::string& text,
-            uint8_t stripDirection = 0
+            TextOverflow overflow = TextOverflow::ELLIPSIS_RIGHT
         );
 
         Vector2f get_char_scale(uint32_t codepoint, const Font* pFont);
