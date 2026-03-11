@@ -219,8 +219,7 @@ namespace platypus
 
             // *Also updates the whole tree so the scales and positions are
             // correct immediately.
-            // TODO: get rid of the mergeLayers here
-            void addChild(UIElement* pChild, bool mergeLayers = false);
+            void addChild(UIElement* pChild);
 
             // Destroys child tree recursively
             // NOTE: Very shit and inefficient, just testing atm!
@@ -245,19 +244,14 @@ namespace platypus
             void fetchAbsoluteTreeLayers(std::set<uint32_t>& outLayers);
             void fetchAbsoluteTreeLayers(std::map<uint32_t, size_t>& outLayers);
             uint32_t getTopTreeLayer();
-            void setTreeLayer(uint32_t layer);
 
             // Updates global scales for the whole element tree recursively
             void updateScale();
             // Updates global positions for the whole element tree recursively
             // NOTE: Has to be called AFTER updating all element tree scales using above!
-            void updatePosition(
-                Vector2f& cumulatedScale,
-                bool mergeLayerToParent = false
-            );
+            void updatePosition(Vector2f& cumulatedScale);
             // Updates scales and positions for the whole tree
-            // *mergeLayerToParent sets each child to their parent's layer
-            void updateTree(bool mergeLayerToParent = false);
+            void updateTree();
 
             void fetchTreeElements(std::vector<UIElement*>& outElements);
             // Returns true if cursor is over any element in the tree starting from

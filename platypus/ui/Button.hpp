@@ -62,6 +62,5 @@ namespace platypus
         );
 
         void reset_button(const Button& button);
-        void set_button_layer(Button& button, uint32_t layer);
     }
 }

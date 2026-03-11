@@ -67,6 +67,7 @@ namespace platypus
 
             void addRootElement(UIElement* pElement);
             void removeRootElement(UIElement* pElement);
+            bool isRootElement(UIElement* pElement) const;
 
             void addToUpdatedElements(UIElement* pElement);
             // Doesn't do anything if no elements' layouts were changed

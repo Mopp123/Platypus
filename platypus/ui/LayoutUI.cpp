@@ -62,6 +62,18 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
             #endif
+            if (_updatedRootElements.find(pElement) != _updatedRootElements.end())
+                _updatedRootElements.erase(pElement);
+        }
+
+        bool LayoutUI::isRootElement(UIElement* pElement) const
+        {
+            for (UIElement* pRootElement : _rootElements)
+            {
+                if (pElement == pRootElement)
+                    return true;
+            }
+            return false;
         }
 
         void LayoutUI::addToUpdatedElements(UIElement* pElement)
