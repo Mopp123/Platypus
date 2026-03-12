@@ -226,7 +226,9 @@ namespace platypus
 
             Layout textLayout;
             textLayout.color = textColor;
-            textLayout.effectOnParentFlags = 0;
+            // NOTE: textLayout.effectOnParentFlags was 0 earlier for some reason...
+            // TODO: Maybe allow defining the text layout separately for the InputField?
+            textLayout.effectOnParentFlags = EffectOnParentFlagBits::STRETCH_VERTICALLY;
 
             Button buttonElement = add_button_element(
                 ui,

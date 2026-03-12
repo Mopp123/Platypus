@@ -71,7 +71,7 @@ namespace platypus { namespace util { namespace str {
         utf8::iterator<char*> beginIt(pData, pData, pData + size);
         utf8::iterator<char*> it(pData + size, pData, pData + size);
         // decrement it immediately so at the beginning of the whole last char,
-        // even if it was more than 1 bytes
+        // even if it was more than 1 byte
         --it;
         while (true)
         {
