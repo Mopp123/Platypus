@@ -13,6 +13,7 @@ namespace platypus
             Button button;
             UIElement* pContainer = nullptr;
             UIElement* pInfoText = nullptr;
+            UIElement* pCursorIndicator = nullptr;
         };
 
         class InputFieldMouseEnterEvent : public UIElement::MouseEnterEvent

@@ -9,6 +9,28 @@ namespace platypus
 {
     namespace ui
     {
+        static void set_input_mode(const InputField& inputField, bool active)
+        {
+            UIElement* pCursorIndicator = inputField.pCursorIndicator;
+            pCursorIndicator->setActive(active);
+            const Button& button = inputField.button;
+            GUIRenderable* pButtonBoxRenderable = button.pBox->getRenderable();
+            if (active)
+            {
+                Vector2f cursorScale = pCursorIndicator->getLayout().scale;
+                // TODO: When adding functionality to select existing chars in the string
+                //  -> make the cursor be the scale of the selected char!
+                const float cursorWidth = 2;
+                pCursorIndicator->setLayoutScale({ cursorWidth, cursorScale.y });
+
+                pButtonBoxRenderable->color = inputField.activeColor;
+            }
+            else
+            {
+                pButtonBoxRenderable->color = button.originalColor;
+            }
+        }
+
         void InputFieldMouseEnterEvent::func(int mx, int my)
         {
             const Button& buttonElement = _inputField.button;
@@ -66,35 +88,9 @@ namespace platypus
                 }
 
                 if (pContainer->isSelected())
-                {
-                    pButtonRenderable->color = _inputField.activeColor;
-
-                    // Add "|" at to the input field to indicate activeness...
-                    UIElement* pTextElement = _inputField.button.pText;
-                    std::string str = pTextElement->getRenderable()->text + "|";
-                    set_text(
-                        pTextElement,
-                        _inputField.button.pBox,
-                        str
-                    );
-                }
-                else
-                {
-                    if (wasSelected)
-                    {
-                        pButtonRenderable->color = buttonElement.originalColor;
-
-                        // Erase the "|"
-                        UIElement* pTextElement = _inputField.button.pText;
-                        std::string& str = pTextElement->getRenderable()->text;
-                        util::str::pop_back_utf8(str);
-                        set_text(
-                            pTextElement,
-                            _inputField.button.pBox,
-                            str
-                        );
-                    }
-                }
+                    set_input_mode(_inputField, true);
+                else if (wasSelected)
+                    set_input_mode(_inputField, false);
             }
         }
 
@@ -105,16 +101,7 @@ namespace platypus
             {
                 UIElement* pTextElement = _inputField.button.pText;
                 std::string& str = pTextElement->getRenderable()->text;
-
-                // First erase the previously added "|"
-                util::str::pop_back_utf8(str);
-
-                // Then add the actual char
                 util::str::append_utf8(codepoint, str);
-
-                // Then add the "|" back
-                str += "|";
-
                 set_text(
                     pTextElement,
                     _inputField.button.pBox,
@@ -132,15 +119,8 @@ namespace platypus
                 std::string& str = pTextElement->getRenderable()->text;
                 if (key == KeyName::KEY_BACKSPACE && action != InputAction::RELEASE)
                 {
-                    // first erase the "|"
-                    util::str::pop_back_utf8(str);
-
                     // Then the actual char
                     util::str::pop_back_utf8(str);
-
-                    // Then put back the "|"
-                    str += "|";
-
                     set_text(
                         pTextElement,
                         _inputField.button.pBox,
@@ -149,24 +129,8 @@ namespace platypus
                 }
                 else if (key == KeyName::KEY_ENTER)
                 {
-                    // Erase the "|"
-                    util::str::pop_back_utf8(str);
-                    set_text(
-                        pTextElement,
-                        _inputField.button.pBox,
-                        str
-                    );
-
                     _inputField.pContainer->setSelected(false);
-
-                    const Button& buttonElement = _inputField.button;
-                    GUIRenderable* pButtonRenderable = reinterpret_cast<GUIRenderable*>(
-                        _pScene->getComponent(
-                            buttonElement.pBox->getEntityID(),
-                            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-                        )
-                    );
-                    pButtonRenderable->color = buttonElement.originalColor;
+                    set_input_mode(_inputField, false);
                 }
             }
         }
@@ -223,12 +187,14 @@ namespace platypus
             buttonLayout.effectOnParentFlags = layout.effectOnParentFlags;
             buttonLayout.borderColor = layout.borderColor;
             buttonLayout.borderThickness = layout.borderThickness;
+            buttonLayout.expandElements = ExpandElements::RIGHT;
 
             Layout textLayout;
             textLayout.color = textColor;
             // NOTE: textLayout.effectOnParentFlags was 0 earlier for some reason...
             // TODO: Maybe allow defining the text layout separately for the InputField?
-            textLayout.effectOnParentFlags = EffectOnParentFlagBits::STRETCH_VERTICALLY;
+            textLayout.effectOnParentFlags = EffectOnParentFlagBits::STRETCH_VERTICALLY |
+                EffectOnParentFlagBits::INCREMENT_POSITION;
 
             Button buttonElement = add_button_element(
                 ui,
@@ -244,11 +210,26 @@ namespace platypus
                 nullptr //UIElement::MouseExitEvent* pOnExit
             );
 
+            // TODO: When adding the functionality to move the cursor behind the
+            // end of the string -> enable more control over the cursor color
+            Layout cursorIndicatorLayout;
+            cursorIndicatorLayout.color = textLayout.color;
+            cursorIndicatorLayout.scale = { 0, static_cast<float>(pFont->getFittingHeight()) };
+            cursorIndicatorLayout.effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
+            UIElement* pCursorIndicator = add_container(
+                ui,
+                buttonElement.pBox,
+                cursorIndicatorLayout,
+                true
+            );
+            pCursorIndicator->setActive(false);
+
             InputField inputField = {
                 activeColor,
                 buttonElement,
                 pRootContainer,
-                pInfoTextElement
+                pInfoTextElement,
+                pCursorIndicator
             };
 
             Application* pApp = Application::get_instance();

@@ -246,6 +246,7 @@ namespace platypus
             TextOverflow overflow
         )
         {
+            PLATYPUS_ASSERT((overflow == TextOverflow::ELLIPSIS_LEFT) || (overflow == TextOverflow::ELLIPSIS_RIGHT));
             float headerVisualWidth = ui::get_text_scale(header, pFont).x;
             const std::string fullText = header + text;
             const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
@@ -268,7 +269,11 @@ namespace platypus
                 utf8::iterator<char*> stopIt;
                 if (overflow == TextOverflow::ELLIPSIS_LEFT)
                 {
-                    it = utf8::iterator<char*>(pData + size - 1, pData, pData + size);
+                    // Need to start past the last element and decrement the it immediately
+                    // if the last char more than 1 byte so were at the actual last element's
+                    // beginning!
+                    it = utf8::iterator<char*>(pData + size, pData, pData + size);
+                    --it;
                     stopIt = utf8::iterator<char*>(pData, pData, pData + size);
                 }
                 //if (overflow == TextOverflow::ELLIPSIS_RIGHT)
