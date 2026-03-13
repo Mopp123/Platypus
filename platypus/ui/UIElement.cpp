@@ -376,6 +376,12 @@ namespace platypus
             {
                 pChild->updateScale();
                 uint32_t childEffectOnParent = pChild->_layout.effectOnParentFlags;
+                // If child has no scaling effect on parent at all,
+                // continue AND DON'T INCREMENT THE childIndex! -> otherwise fucks up slightly
+                // the next child that has effect on parent!
+                if (!(childEffectOnParent & (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY)))
+                    continue;
+
                 Vector2f childScale = pChild->getGlobalScale();
 
                 if (_layout.expandElements == ExpandElements::DOWN)
