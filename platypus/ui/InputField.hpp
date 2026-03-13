@@ -84,6 +84,8 @@ namespace platypus
             virtual void func(unsigned int codepoint);
         };
 
+        // TODO: Allow specifying the "root layout" and
+        // the actual input field box layout separately!
         InputField add_input_field_element(
             LayoutUI& ui,
             UIElement* pParent,

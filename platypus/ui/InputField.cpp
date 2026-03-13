@@ -181,7 +181,15 @@ namespace platypus
 
             Layout buttonLayout;
             buttonLayout.textOverflow = overflow;
-            buttonLayout.scale = layout.scale;
+
+            // Decrement the info width padding and elem gap from the button's width
+            //  -> otherwise its' scale is incorrect in relation to the "root element"
+            float infoWidth = get_text_scale(infoText, pFont).x;
+            buttonLayout.scale = {
+                layout.scale.x - (infoWidth + layout.padding.x * 2.0f + layout.elementGap),
+                layout.scale.y
+            };
+
             buttonLayout.color = layout.color;
             buttonLayout.padding = { 0, 0 };
             buttonLayout.effectOnParentFlags = layout.effectOnParentFlags;
