@@ -223,7 +223,7 @@ namespace platypus
                 const Font* pFont,
                 OnClickEvent* pOnClickEvent
             );
-            ~UIElement();
+            virtual ~UIElement();
 
             // *Also updates the whole tree so the scales and positions are
             // correct immediately.

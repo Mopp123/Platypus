@@ -8,13 +8,6 @@ namespace platypus
 {
     namespace ui
     {
-        class Text : public UIElement
-        {
-            // TODO: Continue here!
-            // NOTE: Not actually sure should Text be a class...
-            //  -> Button and InputField should definitely be tho!
-        };
-
         // NOTE: The layout's scale gets modified to fit the whole text inside it
         //  -> specifying the provided layout's scale is meaningless here!
         // TODO: Make sure string is valid utf8!!!

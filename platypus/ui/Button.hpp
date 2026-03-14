@@ -8,6 +8,42 @@ namespace platypus
 {
     namespace ui
     {
+        class Button : public UIElement
+        {
+        private:
+            Vector4f _originalColor;
+            Vector4f _highlightColor;
+            Vector4f _originalTextColor;
+            Vector4f _textHighlightColor;
+            UIElement* _pText = nullptr;
+
+        public:
+            Button(
+                LayoutUI& ui,
+                UIElement* pParent,
+                const Layout& boxLayout,
+                const Layout& textLayout,
+                const Vector4f& highlightColor,
+                const Vector4f& textHighlightColor,
+                const std::string& text,
+                const Font* pFont,
+                UIElement::OnClickEvent* pOnClick,
+                UIElement::MouseEnterEvent* pOnEnter = nullptr,
+                UIElement::MouseExitEvent* pOnExit = nullptr
+            );
+            ~Button();
+
+            void setColors(
+                const Vector4f& originalColor,
+                const Vector4f& highlightColor,
+                const Vector4f& selectedColor,
+                const Vector4f& textOriginalColor,
+                const Vector4f& textHighlightColor,
+                const Vector4f& textSelectedColor
+            );
+        };
+
+        /*
         struct Button
         {
             Vector4f originalColor;
@@ -18,14 +54,15 @@ namespace platypus
             UIElement* pBox = nullptr;
             UIElement* pText = nullptr;
         };
+        */
 
 
         class ButtonMouseEnterEvent : public UIElement::MouseEnterEvent
         {
         private:
-            Button _button;
+            Button& _buttonRef;
         public:
-            ButtonMouseEnterEvent(Button button) : _button(button) {}
+            ButtonMouseEnterEvent(Button& button) : _buttonRef(button) {}
             virtual void func(int mx, int my);
         };
 
@@ -33,13 +70,14 @@ namespace platypus
         class ButtonMouseExitEvent : public UIElement::MouseExitEvent
         {
         private:
-            Button _button;
+            Button& _buttonRef;
         public:
-            ButtonMouseExitEvent(Button button) : _button(button) {}
+            ButtonMouseExitEvent(Button& button) : _buttonRef(button) {}
             virtual void func(int mx, int my);
         };
 
 
+        /*
         UIElement* add_button_element(
             LayoutUI& ui,
             UIElement* pParent,
@@ -77,5 +115,6 @@ namespace platypus
         );
 
         void reset_button(const Button& button);
+        */
     }
 }
