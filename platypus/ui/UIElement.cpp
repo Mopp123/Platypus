@@ -102,14 +102,14 @@ namespace platypus
         UIElement::UIElement(
             LayoutUI& ui,
             entityID_t entityID,
-            Layout layout,
+            int32_t layoutID,
             const Font* pFont,
             OnClickEvent* pOnClickEvent
         ) :
             _uiRef(ui),
             _pOnClickEvent(pOnClickEvent),
             _entityID(entityID),
-            _layout(layout),
+            _layoutID(layoutID),
             _pFont(pFont)
         {
             Application* pApp = Application::get_instance();
@@ -211,8 +211,38 @@ namespace platypus
 
         void UIElement::setLayoutScale(Vector2f scale)
         {
-            _layout.scale = scale;
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            layout.scale = scale;
             _uiRef.addToUpdatedElements(this);
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutPosition(const Vector2f& position)
+        {
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            layout.position = position;
+            _uiRef.addToUpdatedElements(this);
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutColor(const Vector4f& color)
+        {
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            layout.color = color;
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutHoverColor(const Vector4f& color)
+        {
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            layout.hoverColor = color;
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutSelectedColor(const Vector4f& color)
+        {
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            layout.selectedColor = color;
             _updatePending = true;
         }
 
@@ -220,13 +250,6 @@ namespace platypus
         {
             const GUITransform* pTransform = getTransform();
             return pTransform->scale;
-        }
-
-        void UIElement::setLayoutPosition(const Vector2f& position)
-        {
-            _layout.position = position;
-            _uiRef.addToUpdatedElements(this);
-            _updatePending = true;
         }
 
         Vector2f UIElement::getGlobalPosition() const
@@ -361,12 +384,14 @@ namespace platypus
             return 0;
         }
 
+        // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
         void UIElement::updateScale()
         {
+            Layout& layout = _uiRef.getLayout(_layoutID);
             if (_children.empty())
             {
                 GUITransform* pTransform = getTransform();
-                pTransform->scale = _layout.scale;
+                pTransform->scale = layout.scale;
                 return;
             }
 
@@ -375,7 +400,8 @@ namespace platypus
             for (UIElement* pChild : _children)
             {
                 pChild->updateScale();
-                uint32_t childEffectOnParent = pChild->_layout.effectOnParentFlags;
+                Layout& childLayout = _uiRef.getLayout(pChild->_layoutID);
+                uint32_t childEffectOnParent = childLayout.effectOnParentFlags;
                 // If child has no scaling effect on parent at all,
                 // continue AND DON'T INCREMENT THE childIndex! -> otherwise fucks up slightly
                 // the next child that has effect on parent!
@@ -384,40 +410,40 @@ namespace platypus
 
                 Vector2f childScale = pChild->getGlobalScale();
 
-                if (_layout.expandElements == ExpandElements::DOWN)
+                if (layout.expandElements == ExpandElements::DOWN)
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
-                        if (childScale.x > scale.x - _layout.padding.x * 2.0f)
-                            scale.x = childScale.x + _layout.padding.x * 2.0f;
+                        if (childScale.x > scale.x - layout.padding.x * 2.0f)
+                            scale.x = childScale.x + layout.padding.x * 2.0f;
                     }
 
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
                         scale.y += childScale.y;
                         if (childIndex == 0)
-                            scale.y += _layout.padding.y * 2.0f;
+                            scale.y += layout.padding.y * 2.0f;
 
                         if (childIndex < _children.size() - 1)
-                            scale.y += _layout.elementGap;
+                            scale.y += layout.elementGap;
                     }
                 }
-                else if (_layout.expandElements == ExpandElements::RIGHT)
+                else if (layout.expandElements == ExpandElements::RIGHT)
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
-                        if (childScale.y > scale.y - _layout.padding.y * 2.0f)
-                            scale.y = childScale.y + _layout.padding.y * 2.0f;
+                        if (childScale.y > scale.y - layout.padding.y * 2.0f)
+                            scale.y = childScale.y + layout.padding.y * 2.0f;
                     }
 
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
                         scale.x += childScale.x;
                         if (childIndex == 0)
-                            scale.x += _layout.padding.x * 2.0f;
+                            scale.x += layout.padding.x * 2.0f;
 
                         if (childIndex < _children.size() - 1)
-                            scale.x += _layout.elementGap;
+                            scale.x += layout.elementGap;
                     }
                 }
                 ++childIndex;
@@ -425,16 +451,18 @@ namespace platypus
 
             GUITransform* pTransform = getTransform();
             pTransform->scale = {
-                std::max(_layout.scale.x, scale.x),
-                std::max(_layout.scale.y, scale.y)
+                std::max(layout.scale.x, scale.x),
+                std::max(layout.scale.y, scale.y)
             };
         }
 
+        // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
         void UIElement::updatePosition(Vector2f& cumulatedScale)
         {
+            Layout& layout = _uiRef.getLayout(_layoutID);
             Vector2f padding;
-            HorizontalAlignment horizontalAlignment = _layout.horizontalAlignment;
-            VerticalAlignment verticalAlignment = _layout.verticalAlignment;
+            HorizontalAlignment horizontalAlignment = layout.horizontalAlignment;
+            VerticalAlignment verticalAlignment = layout.verticalAlignment;
             float elementGap = 0.0f;
             ExpandElements expandElements = ExpandElements::DOWN;
             Vector2f parentPosition;
@@ -443,7 +471,7 @@ namespace platypus
             Vector2f position;
             if (_pParent)
             {
-                const Layout& parentLayout = _pParent->_layout;
+                const Layout& parentLayout = _uiRef.getLayout(_pParent->_layoutID);
                 padding = parentLayout.padding;
                 horizontalAlignment = parentLayout.horizontalContentAlignment;
                 verticalAlignment = parentLayout.verticalContentAlignment;
@@ -453,7 +481,7 @@ namespace platypus
                 parentPosition = pParentTransform->position;
                 parentScale = pParentTransform->scale;
 
-                _absoluteLayer = _pParent->getAbsoluteLayer() + _layout.layer;
+                _absoluteLayer = _pParent->getAbsoluteLayer() + layout.layer;
             }
             else
             {
@@ -462,28 +490,28 @@ namespace platypus
                 parentScale.x = static_cast<float>(window.getWidth());
                 parentScale.y = static_cast<float>(window.getHeight());
 
-                _absoluteLayer = _layout.layer;
+                _absoluteLayer = layout.layer;
             }
             setRenderLayer(_absoluteLayer);
 
             // Get the "origin" pos in relation to parent
             if (horizontalAlignment == HorizontalAlignment::LEFT)
-                position.x = parentPosition.x + padding.x + _layout.position.x;
+                position.x = parentPosition.x + padding.x + layout.position.x;
 
             if (horizontalAlignment == HorizontalAlignment::RIGHT)
-                position.x = parentPosition.x + parentScale.x - padding.x - scale.x - _layout.position.x;
+                position.x = parentPosition.x + parentScale.x - padding.x - scale.x - layout.position.x;
             if (horizontalAlignment == HorizontalAlignment::CENTER)
-                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + _layout.position.x;
+                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + layout.position.x;
 
             if (verticalAlignment == VerticalAlignment::TOP)
-                position.y = parentPosition.y + padding.y + _layout.position.y;
+                position.y = parentPosition.y + padding.y + layout.position.y;
             if (verticalAlignment == VerticalAlignment::BOTTOM)
-                position.y = parentPosition.y + parentScale.y - padding.y - scale.y - _layout.position.y;
+                position.y = parentPosition.y + parentScale.y - padding.y - scale.y - layout.position.y;
             if (verticalAlignment == VerticalAlignment::CENTER)
-                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + _layout.position.y;
+                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + layout.position.y;
 
             // Add the cumulated elements scale so it goes correctly after the previous element
-            if (_layout.effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION)
+            if (layout.effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION)
             {
                 if (expandElements == ExpandElements::DOWN)
                 {
@@ -513,6 +541,7 @@ namespace platypus
             _updatePending = false;
         }
 
+        // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
         void UIElement::updateTree()
         {
             updateScale();
@@ -543,8 +572,25 @@ namespace platypus
 
         void UIElement::setRelativeLayer(uint32_t relativeLayer)
         {
-            _layout.layer = relativeLayer;
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            layout.layer = relativeLayer;
             _updatePending = true;
+        }
+
+        uint32_t UIElement::getRelativeLayer() const
+        {
+            Layout& layout = _uiRef.getLayout(_layoutID);
+            return layout.layer;
+        }
+
+        uint32_t UIElement::getAbsoluteLayer() const
+        {
+            return _absoluteLayer;
+        }
+
+        const Layout& UIElement::getLayout() const
+        {
+            return _uiRef.getLayout(_layoutID);
         }
 
         uint32_t UIElement::get_cursor_over_layer()
@@ -607,12 +653,18 @@ namespace platypus
             UIElement::OnClickEvent* pOnClickEvent
         )
         {
-            Layout useLayout = layout;
-            useLayout.padding.x += useLayout.borderThickness;
-            useLayout.padding.y += useLayout.borderThickness;
-            Vector2f scale = useLayout.scale;
+            if (layout.id == -1)
+            {
+                Debug::log(
+                    "Layout's id was invalid(-1). "
+                    "Make sure you have added the layout to the LayoutUI container before using it.",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
 
-            if (useLayout.wordWrap == WordWrap::NORMAL && useLayout.scale.x == 0.0f)
+            if (layout.wordWrap == WordWrap::NORMAL && layout.scale.x == 0.0f)
             {
                 Debug::log(
                     "Layout was using word wrapping but its' scale was 0. "
@@ -629,24 +681,24 @@ namespace platypus
             GUITransform* pTransform = create_gui_transform(
                 entity,
                 position,
-                scale
+                layout.scale
             );
             if (createRenderable)
             {
                 GUIRenderable* pRenderable = create_gui_renderable(
                     entity,
-                    useLayout.color
+                    layout.color
                 );
                 pRenderable->textureID = textureID;
-                pRenderable->borderColor = useLayout.borderColor;
-                pRenderable->borderThickness = static_cast<float>(useLayout.borderThickness);
-                pRenderable->layer = useLayout.layer;
+                pRenderable->borderColor = layout.borderColor;
+                pRenderable->borderThickness = static_cast<float>(layout.borderThickness);
+                pRenderable->layer = layout.layer;
             }
 
             UIElement* pElement = new UIElement(
                 ui,
                 entity,
-                useLayout,
+                layout.id,
                 pFont,
                 pOnClickEvent
             );

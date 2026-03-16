@@ -31,7 +31,10 @@ namespace platypus
     {
         class LayoutUI
         {
-        public:
+        private:
+
+            // TODO: Remove
+            /*
             struct Config
             {
                 Vector4f buttonColor = Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
@@ -41,10 +44,9 @@ namespace platypus
                 Vector4f buttonBorderColor = Vector4f(0, 0, 0, 1);
                 float buttonBorderThickness = 0.0f;
             };
-
             static Config s_config;
+            */
 
-        private:
             class ResizeEvent : public WindowResizeEvent
             {
             public:
@@ -58,6 +60,7 @@ namespace platypus
             int _windowWidth = 0;
             int _windowHeight = 0;
 
+            std::vector<Layout> _layouts;
             std::vector<UIElement*> _rootElements;
             std::set<UIElement*> _updatedRootElements;
 
@@ -72,6 +75,10 @@ namespace platypus
             void addToUpdatedElements(UIElement* pElement);
             // Doesn't do anything if no elements' layouts were changed
             void updateChangedElements();
+
+            // Adds layout to _layouts, sets the inputted layout's id to a valid one
+            void addLayout(Layout& layout);
+            Layout& getLayout(int32_t id);
 
         private:
             float toPercentage(float v1, float v2);

@@ -76,6 +76,8 @@ namespace platypus
 
         struct Layout
         {
+            int32_t id = -1;
+
             Vector2f position;
             Vector2f scale;
             Vector4f color = NULL_COLOR;
@@ -102,7 +104,10 @@ namespace platypus
             WordWrap wordWrap = WordWrap::NONE;
             TextOverflow textOverflow = TextOverflow::NONE;
 
-            Vector4f borderColor = Vector4f(0, 0, 0, 0);
+            Vector4f hoverColor = NULL_COLOR;
+            Vector4f selectedColor = NULL_COLOR;
+
+            Vector4f borderColor = NULL_COLOR;
             uint32_t borderThickness = 0;
         };
 
@@ -197,7 +202,7 @@ namespace platypus
             ElementMouseButtonEvent* _pMouseButtonEvent = nullptr;
 
             entityID_t _entityID = NULL_ENTITY_ID;
-            Layout _layout;
+            int32_t _layoutID = -1;
             const Font* _pFont = nullptr;
             UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
@@ -219,7 +224,7 @@ namespace platypus
             UIElement(
                 LayoutUI& ui,
                 entityID_t entityID,
-                Layout layout,
+                int32_t layoutID,
                 const Font* pFont,
                 OnClickEvent* pOnClickEvent
             );
@@ -238,8 +243,11 @@ namespace platypus
             //  -> should be rather changed via element's layout!
             //void setScale(const Vector2f& scale);
             void setLayoutScale(Vector2f scale);
-            Vector2f getGlobalScale() const;
             void setLayoutPosition(const Vector2f& position);
+            void setLayoutColor(const Vector4f& color);
+            void setLayoutHoverColor(const Vector4f& color);
+            void setLayoutSelectedColor(const Vector4f& color);
+            Vector2f getGlobalScale() const;
             Vector2f getGlobalPosition() const;
             const GUITransform* getTransform() const;
             GUIRenderable* getRenderable();
@@ -254,11 +262,14 @@ namespace platypus
             uint32_t getTopTreeLayer();
 
             // Updates global scales for the whole element tree recursively
+            // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
             void updateScale();
             // Updates global positions for the whole element tree recursively
             // NOTE: Has to be called AFTER updating all element tree scales using above!
+            // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
             void updatePosition(Vector2f& cumulatedScale);
             // Updates scales and positions for the whole tree
+            // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
             void updateTree();
 
             void fetchTreeElements(std::vector<UIElement*>& outElements);
@@ -266,14 +277,16 @@ namespace platypus
             // the called element (obviously:D)
             bool isCursorOverTree() const;
 
-            static uint32_t get_cursor_over_layer();
 
             void setRelativeLayer(uint32_t relativeLayer);
-            inline uint32_t getRelativeLayer() const { return _layout.layer; }
-            inline uint32_t getAbsoluteLayer() const { return _absoluteLayer; }
+            uint32_t getRelativeLayer() const;
+            uint32_t getAbsoluteLayer() const;
+
+            const Layout& getLayout() const;
+
+            static uint32_t get_cursor_over_layer();
 
             inline const entityID_t getEntityID() const { return _entityID; }
-            inline const Layout& getLayout() const { return _layout; }
             inline const Font* getFont() const { return _pFont; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
             inline bool isCursorOver() const { return _isCursorOver; }

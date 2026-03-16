@@ -9,7 +9,6 @@ namespace platypus
     {
         struct InputField
         {
-            Vector4f activeColor;
             Button button;
             UIElement* pContainer = nullptr;
             UIElement* pInfoText = nullptr;

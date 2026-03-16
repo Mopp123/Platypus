@@ -15,6 +15,7 @@ namespace platypus
             pCursorIndicator->setActive(active);
             const Button& button = inputField.button;
             GUIRenderable* pButtonBoxRenderable = button.pBox->getRenderable();
+            const Layout& boxLayout = button.pBox->getLayout();
             if (active)
             {
                 Vector2f cursorScale = pCursorIndicator->getLayout().scale;
@@ -22,12 +23,11 @@ namespace platypus
                 //  -> make the cursor be the scale of the selected char!
                 const float cursorWidth = 2;
                 pCursorIndicator->setLayoutScale({ cursorWidth, cursorScale.y });
-
-                pButtonBoxRenderable->color = inputField.activeColor;
+                pButtonBoxRenderable->color = boxLayout.selectedColor;
             }
             else
             {
-                pButtonBoxRenderable->color = button.originalColor;
+                pButtonBoxRenderable->color = boxLayout.color;
             }
         }
 
@@ -41,7 +41,7 @@ namespace platypus
                 )
             );
             if (pButtonRenderable && !_inputField.pContainer->isSelected())
-                pButtonRenderable->color = buttonElement.highlightColor;
+                pButtonRenderable->color = buttonElement.pBox->getLayout().hoverColor;
         }
 
 
@@ -55,9 +55,7 @@ namespace platypus
                 )
             );
             if (pButtonRenderable && !_inputField.pContainer->isSelected())
-            {
-                pButtonRenderable->color = buttonElement.originalColor;
-            }
+                pButtonRenderable->color = buttonElement.pBox->getLayout().color;
         }
 
 
@@ -209,8 +207,6 @@ namespace platypus
                 pRootContainer,
                 buttonLayout,
                 textLayout,
-                highlightColor,
-                textHighlightColor,
                 "",
                 pFont,
                 nullptr, //UIElement::OnClickEvent* pOnClick,
@@ -233,7 +229,6 @@ namespace platypus
             pCursorIndicator->setActive(false);
 
             InputField inputField = {
-                activeColor,
                 buttonElement,
                 pRootContainer,
                 pInfoTextElement,
