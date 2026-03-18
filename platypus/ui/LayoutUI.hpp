@@ -121,9 +121,7 @@ namespace platypus
             // Doesn't do anything if no elements' layouts were changed
             void updateChangedElements();
 
-            // Adds layout to _layouts, sets the inputted layout's id to a valid one
-            void addLayout(Layout& layout);
-            Layout& getLayout(int32_t id);
+            Layout* getLayout(int32_t id);
 
         private:
             float toPercentage(float v1, float v2);

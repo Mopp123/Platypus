@@ -14,22 +14,22 @@ namespace platypus
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& layout,
+            const Layout* pLayout,
             const std::string& text,
             const Font* pFont
         )
         {
-            Layout parentLayout;
+            Layout* pParentLayout = nullptr;
             if (pParent)
-                parentLayout = pParent->getLayout();
+                pParentLayout = pParent->getLayout();
 
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
             std::string finalText;
-            if (parentLayout.wordWrap == WordWrap::NONE)
+            if (pParentLayout->wordWrap == WordWrap::NONE)
             {
-                if (parentLayout.textOverflow == TextOverflow::NONE)
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
                 {
                     finalText = text;
                 }
@@ -40,13 +40,13 @@ namespace platypus
                         pFont,
                         "",
                         text,
-                        parentLayout.textOverflow
+                        pParentLayout->textOverflow
                     );
                 }
 
                 maxLineWidth = get_text_scale(finalText, pFont).x;
             }
-            else if (parentLayout.wordWrap == WordWrap::NORMAL)
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
             {
                 finalText = wrap_text(
                     text,
@@ -57,13 +57,12 @@ namespace platypus
                 );
             }
 
-            Layout useLayout = layout;
             // NOTE: If word wrapping, this scale isn't really usable for anything, since
             // it's just w*h rect and doesn't hold info about specific line sizes...
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
-            useLayout.scale = { maxLineWidth,  totalHeight };
+            pLayout->scale = { maxLineWidth,  totalHeight };
 
             UIElement* pElement = add_container(ui, pParent, useLayout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(

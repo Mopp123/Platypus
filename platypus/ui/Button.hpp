@@ -78,8 +78,8 @@ namespace platypus
         Button add_button_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& boxLayout,
-            const Layout& textLayout,
+            const Layout* pBoxLayout,
+            const Layout* pTextLayout,
             const std::string& text,
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,

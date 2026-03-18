@@ -33,7 +33,7 @@ namespace platypus
         Layout* LayoutUI::createLayout()
         {
             _layouts.push_back({});
-            return _layouts[_layouts.size() - 1];
+            return &_layouts[_layouts.size() - 1];
         }
 
         void LayoutUI::addRootElement(UIElement* pElement)
@@ -98,23 +98,7 @@ namespace platypus
             _updatedRootElements.clear();
         }
 
-        void LayoutUI::addLayout(Layout& layout)
-        {
-            if (layout.id != -1)
-            {
-                Debug::log(
-                    "layout's id " + std::to_string(layout.id) + " was already set. "
-                    "You might have already added this layout to the LayoutUI container.",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            layout.id = static_cast<int32_t>(_layouts.size());
-            _layouts.push_back(layout);
-        }
-
-        Layout& LayoutUI::getLayout(int32_t id)
+        Layout* LayoutUI::getLayout(int32_t id)
         {
             if (id == -1 || id >= _layouts.size())
             {
@@ -126,7 +110,7 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
             }
-            return _layouts[static_cast<size_t>(id)];
+            return &_layouts[static_cast<size_t>(id)];
         }
 
         float LayoutUI::toPercentage(float v1, float v2)

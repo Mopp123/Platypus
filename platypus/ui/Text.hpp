@@ -9,12 +9,14 @@ namespace platypus
     namespace ui
     {
         // NOTE: The layout's scale gets modified to fit the whole text inside it
-        //  -> specifying the provided layout's scale is meaningless here!
+        //  -> specifying the provided layout's scale in advance is meaningless here!
+        // TODO: spawn separate Layout instance for this specific Text element (in order to
+        // override the original layout's scale to match this specific Text's visual scale)
         // TODO: Make sure string is valid utf8!!!
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& layout,
+            Layout* pLayout,
             const std::string& text,
             const Font* pFont
         );

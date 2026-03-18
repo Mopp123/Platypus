@@ -75,6 +75,7 @@ namespace platypus
         inline constexpr uint32_t DEFAULT_EFFECT_ON_PARENT_FLAGS = (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY | EffectOnParentFlagBits::INCREMENT_POSITION);
 
         class LayoutUI;
+        class Layout;
         class UIElement
         {
         private:
@@ -245,7 +246,7 @@ namespace platypus
             uint32_t getRelativeLayer() const;
             uint32_t getAbsoluteLayer() const;
 
-            const Layout& getLayout() const;
+            Layout* getLayout() const;
 
             static uint32_t get_cursor_over_layer();
 
@@ -269,7 +270,7 @@ namespace platypus
         UIElement* add_container(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& layout,
+            const Layout* pLayout,
             bool createRenderable,
             ID_t textureID = NULL_ID,
             const Font* pFont = nullptr,

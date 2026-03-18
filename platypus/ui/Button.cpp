@@ -48,8 +48,8 @@ namespace platypus
         Button add_button_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& boxLayout,
-            const Layout& textLayout,
+            const Layout* pBoxLayout,
+            const Layout* pTextLayout,
             const std::string& text,
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,
@@ -60,7 +60,7 @@ namespace platypus
             UIElement* pContainer = add_container(
                 ui,
                 pParent,
-                boxLayout,
+                pBoxLayout,
                 true, // create renderable
                 NULL_ID, // textureID
                 nullptr, // pFont
@@ -70,7 +70,7 @@ namespace platypus
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,
-                textLayout,
+                pTextLayout,
                 text,
                 pFont
             );
