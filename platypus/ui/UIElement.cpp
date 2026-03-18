@@ -547,6 +547,11 @@ namespace platypus
             updateScale();
             Vector2f cumulatedScale;
             updatePosition(cumulatedScale);
+            Debug::log(
+                "___TEST___updated tree for element. "
+                "scale: " + getTransform()->scale.toString() + " "
+                "pos: " + getTransform()->position.toString()
+            );
         }
 
         void UIElement::fetchTreeElements(std::vector<UIElement*>& outElements)

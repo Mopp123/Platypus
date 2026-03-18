@@ -29,6 +29,49 @@ namespace platypus
 {
     namespace ui
     {
+        struct Layout
+        {
+        private:
+            friend class LayoutUI;
+            Layout()
+            {}
+
+        public:
+            int32_t id = -1;
+
+            Vector2f position;
+            Vector2f scale;
+            Vector4f color = NULL_COLOR;
+            Vector2f padding;
+
+            // Layer in relation to the parent's layer NOT the actual
+            // used layer for rendering (that gets eventually calculated from the
+            // layout's layer)
+            uint32_t layer = 0;
+
+            uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS;
+
+            // NOTE: Parent's content alignment override child's own alignment
+            HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
+            VerticalAlignment verticalAlignment = VerticalAlignment::TOP;
+
+            HorizontalAlignment horizontalContentAlignment = HorizontalAlignment::LEFT;
+            VerticalAlignment verticalContentAlignment = VerticalAlignment::TOP;
+
+            ExpandElements expandElements = ExpandElements::DOWN;
+            float elementGap = 0.0f;
+            ValueType elementGapType = ValueType::PIXEL;
+
+            WordWrap wordWrap = WordWrap::NONE;
+            TextOverflow textOverflow = TextOverflow::NONE;
+
+            Vector4f hoverColor = NULL_COLOR;
+            Vector4f selectedColor = NULL_COLOR;
+
+            Vector4f borderColor = NULL_COLOR;
+            uint32_t borderThickness = 0;
+        };
+
         class LayoutUI
         {
         private:
@@ -67,6 +110,8 @@ namespace platypus
         public:
             void init(Scene* pScene, InputManager& inputManager);
             ~LayoutUI();
+
+            Layout* createLayout();
 
             void addRootElement(UIElement* pElement);
             void removeRootElement(UIElement* pElement);

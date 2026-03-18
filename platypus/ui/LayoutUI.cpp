@@ -30,6 +30,12 @@ namespace platypus
                 delete pElement;
         }
 
+        Layout* LayoutUI::createLayout()
+        {
+            _layouts.push_back({});
+            return _layouts[_layouts.size() - 1];
+        }
+
         void LayoutUI::addRootElement(UIElement* pElement)
         {
             _rootElements.push_back(pElement);
