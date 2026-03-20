@@ -88,7 +88,7 @@ namespace platypus
         InputField add_input_field_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& layout,
+            const Layout* pLayout,
             TextOverflow overflow,
             const Vector4f& highlightColor,
             const Vector4f& activeColor,

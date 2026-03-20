@@ -57,9 +57,16 @@ namespace platypus
         class ButtonMouseEnterEvent : public UIElement::MouseEnterEvent
         {
         private:
-            Button& _buttonRef;
+            UIElement* _pButtonBoxElement = nullptr;
+            UIElement* _pButtonTextElement = nullptr;
         public:
-            ButtonMouseEnterEvent(Button& button) : _buttonRef(button) {}
+            ButtonMouseEnterEvent(
+                UIElement* pButtonBoxElement,
+                UIElement* pButtonTextElement
+            ) :
+                _pButtonBoxElement(pButtonBoxElement),
+                _pButtonTextElement(pButtonTextElement)
+            {}
             virtual void func(int mx, int my);
         };
 
@@ -67,9 +74,16 @@ namespace platypus
         class ButtonMouseExitEvent : public UIElement::MouseExitEvent
         {
         private:
-            Button& _buttonRef;
+            UIElement* _pButtonBoxElement = nullptr;
+            UIElement* _pButtonTextElement = nullptr;
         public:
-            ButtonMouseExitEvent(Button& button) : _buttonRef(button) {}
+            ButtonMouseExitEvent(
+                UIElement* pButtonBoxElement,
+                UIElement* pButtonTextElement
+            ) :
+                _pButtonBoxElement(pButtonBoxElement),
+                _pButtonTextElement(pButtonTextElement)
+            {}
             virtual void func(int mx, int my);
         };
 
@@ -79,7 +93,10 @@ namespace platypus
             LayoutUI& ui,
             UIElement* pParent,
             const Layout* pBoxLayout,
-            const Layout* pTextLayout,
+            const Vector4f& textColor,
+            const Vector4f& textHoverColor,
+            const Vector4f& textSelectedColor,
+            uint32_t textEffectOnParentFlags,
             const std::string& text,
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,

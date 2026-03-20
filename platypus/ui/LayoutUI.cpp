@@ -1,6 +1,7 @@
 #include "LayoutUI.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
+#include <cstring>
 
 
 namespace platypus
@@ -28,12 +29,29 @@ namespace platypus
         {
             for (UIElement* pElement : _rootElements)
                 delete pElement;
+
+            for (Layout* pLayout : _layouts)
+                delete pLayout;
         }
 
         Layout* LayoutUI::createLayout()
         {
-            _layouts.push_back({});
-            return &_layouts[_layouts.size() - 1];
+            size_t layoutID = _layouts.size();
+            Layout* pLayout = new Layout;
+            pLayout->id = layoutID;
+            _layouts.push_back(pLayout);
+            return pLayout;
+        }
+
+        void LayoutUI::copyLayoutAspects(Layout* pTarget, const Layout* pSource)
+        {
+            int32_t originalID = pTarget->id;
+            memcpy(
+                reinterpret_cast<void*>(pTarget),
+                reinterpret_cast<const void*>(pSource),
+                sizeof(Layout)
+            );
+            pTarget->id = originalID;
         }
 
         void LayoutUI::addRootElement(UIElement* pElement)
@@ -110,7 +128,7 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
             }
-            return &_layouts[static_cast<size_t>(id)];
+            return _layouts[static_cast<size_t>(id)];
         }
 
         float LayoutUI::toPercentage(float v1, float v2)

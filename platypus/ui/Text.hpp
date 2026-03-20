@@ -8,17 +8,17 @@ namespace platypus
 {
     namespace ui
     {
-        // NOTE: The layout's scale gets modified to fit the whole text inside it
-        //  -> specifying the provided layout's scale in advance is meaningless here!
-        // TODO: spawn separate Layout instance for this specific Text element (in order to
-        // override the original layout's scale to match this specific Text's visual scale)
-        // TODO: Make sure string is valid utf8!!!
+        // NOTE: Creates new layout for the text in which the scale gets modified to fit the
+        // whole text inside it
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
-            Layout* pLayout,
+            const Vector4f& color,
+            const Vector4f& hoverColor,
+            const Vector4f& selectedColor,
             const std::string& text,
-            const Font* pFont
+            const Font* pFont,
+            uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS
         );
 
         // NOTE: VERY inefficient!

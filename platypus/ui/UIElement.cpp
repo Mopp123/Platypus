@@ -211,38 +211,38 @@ namespace platypus
 
         void UIElement::setLayoutScale(Vector2f scale)
         {
-            Layout& layout = _uiRef.getLayout(_layoutID);
-            layout.scale = scale;
+            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            pLayout->scale = scale;
             _uiRef.addToUpdatedElements(this);
             _updatePending = true;
         }
 
         void UIElement::setLayoutPosition(const Vector2f& position)
         {
-            Layout& layout = _uiRef.getLayout(_layoutID);
-            layout.position = position;
+            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            pLayout->position = position;
             _uiRef.addToUpdatedElements(this);
             _updatePending = true;
         }
 
         void UIElement::setLayoutColor(const Vector4f& color)
         {
-            Layout& layout = _uiRef.getLayout(_layoutID);
-            layout.color = color;
+            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            pLayout->color = color;
             _updatePending = true;
         }
 
         void UIElement::setLayoutHoverColor(const Vector4f& color)
         {
-            Layout& layout = _uiRef.getLayout(_layoutID);
-            layout.hoverColor = color;
+            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            pLayout->hoverColor = color;
             _updatePending = true;
         }
 
         void UIElement::setLayoutSelectedColor(const Vector4f& color)
         {
-            Layout& layout = _uiRef.getLayout(_layoutID);
-            layout.selectedColor = color;
+            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            pLayout->selectedColor = color;
             _updatePending = true;
         }
 

@@ -13,35 +13,35 @@ namespace platypus
         {
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef.pBox->getEntityID(),
+                _pButtonBoxElement->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             GUIRenderable* pTextRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef.pText->getEntityID(),
+                _pButtonTextElement->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
 
             if (pBoxRenderable)
-                pBoxRenderable->color = _buttonRef.pBox->getLayout().hoverColor;
+                pBoxRenderable->color = _pButtonBoxElement->getLayout()->hoverColor;
             if (pTextRenderable)
-                pTextRenderable->color = _buttonRef.pText->getLayout().hoverColor;
+                pTextRenderable->color = _pButtonTextElement->getLayout()->hoverColor;
         }
 
         void ButtonMouseExitEvent::func(int mx, int my)
         {
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef.pBox->getEntityID(),
+                _pButtonBoxElement->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             GUIRenderable* pTextRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef.pText->getEntityID(),
+                _pButtonTextElement->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             if (pBoxRenderable)
-                pBoxRenderable->color = _buttonRef.pBox->getLayout().color;
+                pBoxRenderable->color = _pButtonBoxElement->getLayout()->color;
             if (pTextRenderable)
-                pTextRenderable->color = _buttonRef.pText->getLayout().color;
+                pTextRenderable->color = _pButtonTextElement->getLayout()->color;
         }
 
 
@@ -49,7 +49,10 @@ namespace platypus
             LayoutUI& ui,
             UIElement* pParent,
             const Layout* pBoxLayout,
-            const Layout* pTextLayout,
+            const Vector4f& textColor,
+            const Vector4f& textHoverColor,
+            const Vector4f& textSelectedColor,
+            uint32_t textEffectOnParentFlags,
             const std::string& text,
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,
@@ -70,9 +73,12 @@ namespace platypus
             UIElement* pText = add_text_element(
                 ui,
                 pContainer,
-                pTextLayout,
+                textColor,
+                textHoverColor,
+                textSelectedColor,
                 text,
-                pFont
+                pFont,
+                textEffectOnParentFlags
             );
 
             Button button = {
@@ -83,12 +89,12 @@ namespace platypus
             if (pOnEnter)
                 pContainer->_pMouseEnterEvent = pOnEnter;
             else
-                pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(button);
+                pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(pContainer, pText);
 
             if (pOnExit)
                 pContainer->_pMouseExitEvent = pOnExit;
             else
-                pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(button);
+                pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(pContainer, pText);
 
             return button;
         }
@@ -118,8 +124,8 @@ namespace platypus
             #endif
             GUIRenderable* pBoxRenderable = button.pBox->getRenderable();
             GUIRenderable* pTextRenderable = button.pText->getRenderable();
-            pBoxRenderable->color = button.pBox->getLayout().color;
-            pTextRenderable->color = button.pText->getLayout().color;
+            pBoxRenderable->color = button.pBox->getLayout()->color;
+            pTextRenderable->color = button.pText->getLayout()->color;
         }
     }
 }

@@ -15,19 +15,19 @@ namespace platypus
             pCursorIndicator->setActive(active);
             const Button& button = inputField.button;
             GUIRenderable* pButtonBoxRenderable = button.pBox->getRenderable();
-            const Layout& boxLayout = button.pBox->getLayout();
+            const Layout* pBoxLayout = button.pBox->getLayout();
             if (active)
             {
-                Vector2f cursorScale = pCursorIndicator->getLayout().scale;
+                Vector2f cursorScale = pCursorIndicator->getLayout()->scale;
                 // TODO: When adding functionality to select existing chars in the string
                 //  -> make the cursor be the scale of the selected char!
                 const float cursorWidth = 2;
                 pCursorIndicator->setLayoutScale({ cursorWidth, cursorScale.y });
-                pButtonBoxRenderable->color = boxLayout.selectedColor;
+                pButtonBoxRenderable->color = pBoxLayout->selectedColor;
             }
             else
             {
-                pButtonBoxRenderable->color = boxLayout.color;
+                pButtonBoxRenderable->color = pBoxLayout->color;
             }
         }
 
@@ -41,7 +41,7 @@ namespace platypus
                 )
             );
             if (pButtonRenderable && !_inputField.pContainer->isSelected())
-                pButtonRenderable->color = buttonElement.pBox->getLayout().hoverColor;
+                pButtonRenderable->color = buttonElement.pBox->getLayout()->hoverColor;
         }
 
 
@@ -55,7 +55,7 @@ namespace platypus
                 )
             );
             if (pButtonRenderable && !_inputField.pContainer->isSelected())
-                pButtonRenderable->color = buttonElement.pBox->getLayout().color;
+                pButtonRenderable->color = buttonElement.pBox->getLayout()->color;
         }
 
 
@@ -137,7 +137,7 @@ namespace platypus
         InputField add_input_field_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout& layout,
+            const Layout* pLayout,
             TextOverflow overflow,
             const Vector4f& highlightColor,
             const Vector4f& activeColor,
@@ -150,24 +150,24 @@ namespace platypus
             UIElement* pRootContainer = add_container(
                 ui,
                 pParent,
-                layout,
+                pLayout,
                 false
             );
 
-            Layout infoTextLayout;
-            infoTextLayout.color = textColor;
             UIElement* pInfoTextElement = add_text_element(
                 ui,
                 pRootContainer,
-                infoTextLayout,
+                textColor,
+                textColor, // hover color
+                textColor, // selected color
                 infoText,
                 pFont
             );
 
-            if (layout.scale.x == 0.0f || layout.scale.y == 0.0f)
+            if (pLayout->scale.x == 0.0f || pLayout->scale.y == 0.0f)
             {
                 Debug::log(
-                    "Inputted layout's scale was: " + layout.scale.toString() + " "
+                    "Inputted layout's scale was: " + pLayout->scale.toString() + " "
                     "InputFields created via this function don't scale with "
                     "content text element (for testing ellipsis overflow) so you'll "
                     "need to provide the full scale if the input field in advance!",
@@ -177,36 +177,37 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
 
-            Layout buttonLayout;
-            buttonLayout.textOverflow = overflow;
+            Layout* pButtonLayout = ui.createLayout();
+            pButtonLayout->textOverflow = overflow;
 
             // Decrement the info width padding and elem gap from the button's width
             //  -> otherwise its' scale is incorrect in relation to the "root element"
             float infoWidth = get_text_scale(infoText, pFont).x;
-            buttonLayout.scale = {
-                layout.scale.x - (infoWidth + layout.padding.x * 2.0f + layout.elementGap),
-                layout.scale.y
+            pButtonLayout->scale = {
+                pLayout->scale.x - (infoWidth + pLayout->padding.x * 2.0f + pLayout->elementGap),
+                pLayout->scale.y
             };
 
-            buttonLayout.color = layout.color;
-            buttonLayout.padding = { 0, 0 };
-            buttonLayout.effectOnParentFlags = layout.effectOnParentFlags;
-            buttonLayout.borderColor = layout.borderColor;
-            buttonLayout.borderThickness = layout.borderThickness;
-            buttonLayout.expandElements = ExpandElements::RIGHT;
+            pButtonLayout->color = pLayout->color;
+            pButtonLayout->padding = { 0, 0 };
+            pButtonLayout->effectOnParentFlags = pLayout->effectOnParentFlags;
+            pButtonLayout->borderColor = pLayout->borderColor;
+            pButtonLayout->borderThickness = pLayout->borderThickness;
+            pButtonLayout->expandElements = ExpandElements::RIGHT;
 
-            Layout textLayout;
-            textLayout.color = textColor;
             // NOTE: textLayout.effectOnParentFlags was 0 earlier for some reason...
             // TODO: Maybe allow defining the text layout separately for the InputField?
-            textLayout.effectOnParentFlags = EffectOnParentFlagBits::STRETCH_VERTICALLY |
+            uint32_t buttonTextEffectOnParentFlags = EffectOnParentFlagBits::STRETCH_VERTICALLY |
                 EffectOnParentFlagBits::INCREMENT_POSITION;
 
             Button buttonElement = add_button_element(
                 ui,
                 pRootContainer,
-                buttonLayout,
-                textLayout,
+                pButtonLayout,
+                textColor,
+                textHighlightColor,
+                textHighlightColor, // selected color
+                buttonTextEffectOnParentFlags,
                 "",
                 pFont,
                 nullptr, //UIElement::OnClickEvent* pOnClick,
@@ -216,14 +217,14 @@ namespace platypus
 
             // TODO: When adding the functionality to move the cursor behind the
             // end of the string -> enable more control over the cursor color
-            Layout cursorIndicatorLayout;
-            cursorIndicatorLayout.color = textLayout.color;
-            cursorIndicatorLayout.scale = { 0, static_cast<float>(pFont->getFittingHeight()) };
-            cursorIndicatorLayout.effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
+            Layout* pCursorIndicatorLayout = ui.createLayout();
+            pCursorIndicatorLayout->color = textColor;
+            pCursorIndicatorLayout->scale = { 0, static_cast<float>(pFont->getFittingHeight()) };
+            pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
             UIElement* pCursorIndicator = add_container(
                 ui,
                 buttonElement.pBox,
-                cursorIndicatorLayout,
+                pCursorIndicatorLayout,
                 true
             );
             pCursorIndicator->setActive(false);

@@ -14,9 +14,12 @@ namespace platypus
         UIElement* add_text_element(
             LayoutUI& ui,
             UIElement* pParent,
-            const Layout* pLayout,
+            const Vector4f& color,
+            const Vector4f& hoverColor,
+            const Vector4f& selectedColor,
             const std::string& text,
-            const Font* pFont
+            const Font* pFont,
+            uint32_t effectOnParentFlags
         )
         {
             Layout* pParentLayout = nullptr;
@@ -62,14 +65,19 @@ namespace platypus
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
+            Layout* pLayout = ui.createLayout();
             pLayout->scale = { maxLineWidth,  totalHeight };
+            pLayout->color = color;
+            pLayout->hoverColor = hoverColor;
+            pLayout->selectedColor = selectedColor;
+            pLayout->effectOnParentFlags = effectOnParentFlags;
 
-            UIElement* pElement = add_container(ui, pParent, useLayout, false, NULL_ID, pFont);
+            UIElement* pElement = add_container(ui, pParent, pLayout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(
                 pElement->getEntityID(),
                 pFont->getTextureID(),
                 pFont->getID(),
-                useLayout.color,
+                pLayout->color,
                 { 0, 0, 0, 0 }, // border color
                 0.0f, // border thickness
                 { 0, 0 }, // texture offset
@@ -93,9 +101,9 @@ namespace platypus
             size_t& outLineCount
         )
         {
-            const Layout& parentLayout = pParentElement->getLayout();
+            const Layout* pParentLayout = pParentElement->getLayout();
             #ifdef PLATYPUS_DEBUG
-            if (parentLayout.wordWrap != WordWrap::NORMAL)
+            if (pParentLayout->wordWrap != WordWrap::NORMAL)
             {
                 Debug::log(
                     "@ui::wrap_text "
@@ -110,7 +118,7 @@ namespace platypus
             outLineCount = 1;
             std::string wrappedText;
 
-            float parentLayoutWidth = parentLayout.scale.x - parentLayout.padding.x;
+            float parentLayoutWidth = pParentLayout->scale.x - pParentLayout->padding.x;
 
             std::istringstream stream(text);
             std::string word;
@@ -120,7 +128,7 @@ namespace platypus
             while (getline(stream, word, ' '))
                 words.push_back(word);
 
-            float lineWidth = parentLayout.padding.x;
+            float lineWidth = pParentLayout->padding.x;
             float spaceWidth = get_char_scale(0x20, pFont).x;
             for (size_t i = 0; i < words.size(); ++i)
             {
@@ -130,7 +138,7 @@ namespace platypus
                 bool lastWord = i == words.size() - 1;
 
                 // If single word goes out of bounds split into 2 words
-                if (parentLayout.padding.x + wordWidth >= parentLayoutWidth)
+                if (pParentLayout->padding.x + wordWidth >= parentLayoutWidth)
                 {
                     const size_t wordSize = str.size();
                     const char* pWordData = reinterpret_cast<const char*>(str.data());
@@ -144,7 +152,7 @@ namespace platypus
                         uint32_t codepoint = (uint32_t)*charIt;
                         const float charWidth = get_char_scale(codepoint, pFont).x;
                         partialWordWidth += charWidth;
-                        if (parentLayout.padding.x + partialWordWidth < parentLayoutWidth)
+                        if (pParentLayout->padding.x + partialWordWidth < parentLayoutWidth)
                         {
                             util::str::append_utf8(codepoint, s1);
                         }
@@ -165,7 +173,7 @@ namespace platypus
                 if (lineWidth + wordWidth >= parentLayoutWidth)
                 {
                     wrappedText += '\n';
-                    lineWidth = parentLayout.padding.x;
+                    lineWidth = pParentLayout->padding.x;
                     ++outLineCount;
                 }
 
@@ -191,18 +199,18 @@ namespace platypus
             // TODO: Make App, SceneManager and Scene accessing safer here!
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
 
-            const Layout& parentLayout = pParentElement->getLayout();
+            const Layout* pParentLayout = pParentElement->getLayout();
             const Font* pFont = pTextElement->getFont();
             float charHeight = static_cast<float>(pFont->getFittingHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
             std::string finalText;
-            if (parentLayout.wordWrap == WordWrap::NONE)
+            if (pParentLayout->wordWrap == WordWrap::NONE)
             {
                 maxLineWidth = get_text_scale(text, pFont).x;
 
-                if (parentLayout.textOverflow == TextOverflow::NONE)
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
                 {
                     finalText = text;
                 }
@@ -213,11 +221,11 @@ namespace platypus
                         pFont,
                         "", // header... which shouldn't probably be used anymore...
                         text,
-                        parentLayout.textOverflow
+                        pParentLayout->textOverflow
                     );
                 }
             }
-            else if (parentLayout.wordWrap == WordWrap::NORMAL)
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
             {
                 finalText = wrap_text(
                     text,
@@ -251,9 +259,9 @@ namespace platypus
             const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
 
             std::string finalText;
-            const Layout& parentLayout = pParentElement->getLayout();
+            const Layout* pParentLayout = pParentElement->getLayout();
             const float parentWidth = pParentElement->getGlobalScale().x;
-            const float parentContentWidth = parentWidth - parentLayout.padding.x * 2;
+            const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2;
             if (fullVisualWidth < parentContentWidth)
             {
                 finalText = header + text;

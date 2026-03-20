@@ -2,6 +2,7 @@
 
 #include "platypus/utils/Maths.hpp"
 #include "platypus/core/Scene.hpp"
+#include "platypus/core/Debug.hpp"
 #include "UIElement.hpp"
 #include <vector>
 
@@ -29,7 +30,7 @@ namespace platypus
 {
     namespace ui
     {
-        struct Layout
+        class Layout
         {
         private:
             friend class LayoutUI;
@@ -37,6 +38,8 @@ namespace platypus
             {}
 
         public:
+            Layout& operator=(const Layout& other) = delete;
+
             int32_t id = -1;
 
             Vector2f position;
@@ -103,7 +106,7 @@ namespace platypus
             int _windowWidth = 0;
             int _windowHeight = 0;
 
-            std::vector<Layout> _layouts;
+            std::vector<Layout*> _layouts;
             std::vector<UIElement*> _rootElements;
             std::set<UIElement*> _updatedRootElements;
 
@@ -112,6 +115,7 @@ namespace platypus
             ~LayoutUI();
 
             Layout* createLayout();
+            void copyLayoutAspects(Layout* pTarget, const Layout* pSource);
 
             void addRootElement(UIElement* pElement);
             void removeRootElement(UIElement* pElement);
