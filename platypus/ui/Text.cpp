@@ -254,8 +254,11 @@ namespace platypus
         )
         {
             PLATYPUS_ASSERT((overflow == TextOverflow::ELLIPSIS_LEFT) || (overflow == TextOverflow::ELLIPSIS_RIGHT));
-            float headerVisualWidth = ui::get_text_scale(header, pFont).x;
             const std::string fullText = header + text;
+            if (fullText.empty())
+                return fullText;
+
+            float headerVisualWidth = ui::get_text_scale(header, pFont).x;
             const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
 
             std::string finalText;

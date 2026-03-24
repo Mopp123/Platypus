@@ -384,7 +384,8 @@ namespace platypus
             return 0;
         }
 
-        // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
+        // NOTE: Newly incorporated borderThickness might not work properly
+        //  -> not fully tested!
         void UIElement::updateScale()
         {
             Layout* pLayout = _uiRef.getLayout(_layoutID);
@@ -414,15 +415,15 @@ namespace platypus
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
-                        if (childScale.x > scale.x - pLayout->padding.x * 2.0f)
-                            scale.x = childScale.x + pLayout->padding.x * 2.0f;
+                        if (childScale.x > scale.x - pLayout->padding.x * 2.0f - pLayout->borderThickness * 2.0f)
+                            scale.x = childScale.x + pLayout->padding.x * 2.0f + pLayout->borderThickness * 2.0f;
                     }
 
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
                         scale.y += childScale.y;
                         if (childIndex == 0)
-                            scale.y += pLayout->padding.y * 2.0f;
+                            scale.y += pLayout->padding.y * 2.0f + pLayout->borderThickness * 2.0f;
 
                         if (childIndex < _children.size() - 1)
                             scale.y += pLayout->elementGap;
@@ -432,15 +433,15 @@ namespace platypus
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
                     {
-                        if (childScale.y > scale.y - pLayout->padding.y * 2.0f)
-                            scale.y = childScale.y + pLayout->padding.y * 2.0f;
+                        if (childScale.y > scale.y - pLayout->padding.y * 2.0f - pLayout->borderThickness * 2.0f)
+                            scale.y = childScale.y + pLayout->padding.y * 2.0f + pLayout->borderThickness * 2.0f;
                     }
 
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
                     {
                         scale.x += childScale.x;
                         if (childIndex == 0)
-                            scale.x += pLayout->padding.x * 2.0f;
+                            scale.x += pLayout->padding.x * 2.0f + pLayout->borderThickness * 2.0f;
 
                         if (childIndex < _children.size() - 1)
                             scale.x += pLayout->elementGap;
@@ -456,11 +457,13 @@ namespace platypus
             };
         }
 
-        // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
+        // NOTE: Newly incorporated borderThickness might not work properly
+        //  -> not fully tested!
         void UIElement::updatePosition(Vector2f& cumulatedScale)
         {
             Layout* pLayout = _uiRef.getLayout(_layoutID);
             Vector2f padding;
+            float borderThickness = 0.0f;
             HorizontalAlignment horizontalAlignment = pLayout->horizontalAlignment;
             VerticalAlignment verticalAlignment = pLayout->verticalAlignment;
             float elementGap = 0.0f;
@@ -496,17 +499,17 @@ namespace platypus
 
             // Get the "origin" pos in relation to parent
             if (horizontalAlignment == HorizontalAlignment::LEFT)
-                position.x = parentPosition.x + padding.x + pLayout->position.x;
+                position.x = parentPosition.x + padding.x + borderThickness + pLayout->position.x;
 
             if (horizontalAlignment == HorizontalAlignment::RIGHT)
-                position.x = parentPosition.x + parentScale.x - padding.x - scale.x - pLayout->position.x;
+                position.x = parentPosition.x + parentScale.x - padding.x - borderThickness - scale.x - pLayout->position.x;
             if (horizontalAlignment == HorizontalAlignment::CENTER)
                 position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + pLayout->position.x;
 
             if (verticalAlignment == VerticalAlignment::TOP)
-                position.y = parentPosition.y + padding.y + pLayout->position.y;
+                position.y = parentPosition.y + padding.y + borderThickness + pLayout->position.y;
             if (verticalAlignment == VerticalAlignment::BOTTOM)
-                position.y = parentPosition.y + parentScale.y - padding.y - scale.y - pLayout->position.y;
+                position.y = parentPosition.y + parentScale.y - padding.y - borderThickness - scale.y - pLayout->position.y;
             if (verticalAlignment == VerticalAlignment::CENTER)
                 position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + pLayout->position.y;
 
@@ -518,14 +521,14 @@ namespace platypus
                     position.y += (cumulatedScale.y);
                     cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
                     if (scale.x > cumulatedScale.x)
-                        cumulatedScale.x = scale.x + padding.x;
+                        cumulatedScale.x = scale.x + padding.x + borderThickness;
                 }
                 else if (expandElements == ExpandElements::RIGHT)
                 {
                     position.x += (cumulatedScale.x);
                     cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
                     if (scale.y > cumulatedScale.y)
-                        cumulatedScale.y = scale.y + padding.y;
+                        cumulatedScale.y = scale.y + padding.y + borderThickness;
                 }
             }
 
