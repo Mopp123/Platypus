@@ -1,5 +1,5 @@
 #include "UIElement.hpp"
-#include "LayoutUI.hpp"
+#include "UIManager.hpp"
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/core/Application.hpp"
@@ -100,25 +100,87 @@ namespace platypus
 
         std::map<uint32_t, std::set<entityID_t>> UIElement::s_cursorOverLayers;
         UIElement::UIElement(
-            LayoutUI& ui,
-            entityID_t entityID,
-            int32_t layoutID,
-            const Font* pFont,
-            OnClickEvent* pOnClickEvent
+            UIManager& uiManager,
+            const Layout* pLayout,
+            bool createRenderable,
+            ID_t textureID,
+            OnClickEvent* pOnClickEvent,
+            bool ignoreInput
         ) :
-            _uiRef(ui),
+            _managerRef(uiManager),
             _pOnClickEvent(pOnClickEvent),
-            _entityID(entityID),
-            _layoutID(layoutID),
-            _pFont(pFont)
+            _layoutID(pLayout->id)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-            InputManager& inputManager = pApp->getInputManager();
-            _pCursorPosEvent = new ElementCursorPosEvent(pScene, this);
-            _pMouseButtonEvent = new ElementMouseButtonEvent(pScene, this);
-            inputManager.addCursorPosEvent(_pCursorPosEvent);
-            inputManager.addMouseButtonEvent(_pMouseButtonEvent);
+
+            // Currently not allowing any mouse input for Text elements.
+            // TODO: There should rather be a way to specify this explicitly.
+            //  -> for example we'll eventually want to highlight and copy text, etc with mouse...
+            if (!ignoreInput)
+            {
+                InputManager& inputManager = pApp->getInputManager();
+                _pCursorPosEvent = new ElementCursorPosEvent(pScene, this);
+                _pMouseButtonEvent = new ElementMouseButtonEvent(pScene, this);
+                inputManager.addCursorPosEvent(_pCursorPosEvent);
+                inputManager.addMouseButtonEvent(_pMouseButtonEvent);
+            }
+
+            if (pLayout->id == -1)
+            {
+                Debug::log(
+                    "Layout's id was invalid(-1). "
+                    "Make sure you have added the layout to the UIManager container before using it.",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            if (pLayout->wordWrap == WordWrap::NORMAL && pLayout->scale.x == 0.0f)
+            {
+                Debug::log(
+                    "Layout was using word wrapping but its' scale was 0. "
+                    "Can't wrap against width of 0...",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            _entityID = pScene->createEntity();
+            GUITransform* pTransform = create_gui_transform(
+                _entityID,
+                { 0, 0 }, // The actual position is eventually figured out by updatePosition()
+                pLayout->scale
+            );
+            if (createRenderable)
+            {
+                GUIRenderable* pRenderable = create_gui_renderable(
+                    _entityID,
+                    pLayout->color
+                );
+                pRenderable->textureID = textureID;
+                pRenderable->borderColor = pLayout->borderColor;
+                pRenderable->borderThickness = static_cast<float>(pLayout->borderThickness);
+                pRenderable->layer = pLayout->layer;
+            }
+
+            // *Need to update the "tree" even if contains only single element
+            // so that scale and pos is immediately correct..
+            // NOTE: Currently done by UIManager when creating UIElement...
+            // not sure if that works tho...
+            /*
+            if (pParent)
+            {
+                pParent->addChild(this);
+            }
+            else
+            {
+                updateTree();
+                _managerRef.addRootElement(this);
+            }
+            */
         }
 
         UIElement::~UIElement()
@@ -153,8 +215,8 @@ namespace platypus
         void UIElement::addChild(UIElement* pChild)
         {
             // If child was previously root -> make not anymore
-            if (_uiRef.isRootElement(pChild))
-                _uiRef.removeRootElement(pChild);
+            if (_managerRef.isRootElement(pChild))
+                _managerRef.removeRootElement(pChild);
 
             pChild->_pParent = this;
             _children.push_back(pChild);
@@ -211,37 +273,37 @@ namespace platypus
 
         void UIElement::setLayoutScale(Vector2f scale)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->scale = scale;
-            _uiRef.addToUpdatedElements(this);
+            _managerRef.addToUpdatedElements(this);
             _updatePending = true;
         }
 
         void UIElement::setLayoutPosition(const Vector2f& position)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->position = position;
-            _uiRef.addToUpdatedElements(this);
+            _managerRef.addToUpdatedElements(this);
             _updatePending = true;
         }
 
         void UIElement::setLayoutColor(const Vector4f& color)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->color = color;
             _updatePending = true;
         }
 
         void UIElement::setLayoutHoverColor(const Vector4f& color)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->hoverColor = color;
             _updatePending = true;
         }
 
         void UIElement::setLayoutSelectedColor(const Vector4f& color)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->selectedColor = color;
             _updatePending = true;
         }
@@ -388,7 +450,7 @@ namespace platypus
         //  -> not fully tested!
         void UIElement::updateScale()
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             if (_children.empty())
             {
                 GUITransform* pTransform = getTransform();
@@ -401,7 +463,7 @@ namespace platypus
             for (UIElement* pChild : _children)
             {
                 pChild->updateScale();
-                Layout* pChildLayout = _uiRef.getLayout(pChild->_layoutID);
+                Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);
                 uint32_t childEffectOnParent = pChildLayout->effectOnParentFlags;
                 // If child has no scaling effect on parent at all,
                 // continue AND DON'T INCREMENT THE childIndex! -> otherwise fucks up slightly
@@ -461,7 +523,7 @@ namespace platypus
         //  -> not fully tested!
         void UIElement::updatePosition(Vector2f& cumulatedScale)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             Vector2f padding;
             float borderThickness = 0.0f;
             HorizontalAlignment horizontalAlignment = pLayout->horizontalAlignment;
@@ -474,7 +536,7 @@ namespace platypus
             Vector2f position;
             if (_pParent)
             {
-                const Layout* pParentLayout = _uiRef.getLayout(_pParent->_layoutID);
+                const Layout* pParentLayout = _managerRef.getLayout(_pParent->_layoutID);
                 padding = pParentLayout->padding;
                 horizontalAlignment = pParentLayout->horizontalContentAlignment;
                 verticalAlignment = pParentLayout->verticalContentAlignment;
@@ -575,14 +637,14 @@ namespace platypus
 
         void UIElement::setRelativeLayer(uint32_t relativeLayer)
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->layer = relativeLayer;
             _updatePending = true;
         }
 
         uint32_t UIElement::getRelativeLayer() const
         {
-            Layout* pLayout = _uiRef.getLayout(_layoutID);
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
             return pLayout->layer;
         }
 
@@ -593,7 +655,7 @@ namespace platypus
 
         Layout* UIElement::getLayout() const
         {
-            return _uiRef.getLayout(_layoutID);
+            return _managerRef.getLayout(_layoutID);
         }
 
         uint32_t UIElement::get_cursor_over_layer()
@@ -646,6 +708,8 @@ namespace platypus
         }
 
 
+        // TODO: remove below
+        /*
         UIElement* add_container(
             LayoutUI& ui,
             UIElement* pParent,
@@ -721,5 +785,6 @@ namespace platypus
 
             return pElement;
         }
+        */
     }
 }

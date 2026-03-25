@@ -8,78 +8,19 @@
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
-#include "platypus/assets/Font.hpp"
 #include <map>
-
-
-#define NULL_COLOR Vector4f(0, 0, 0, 0)
 
 
 namespace platypus
 {
     namespace ui
     {
-        enum class FlowProperty
-        {
-            DYNAMIC,
-            ABSOLUTE
-        };
-
-        enum class ValueType
-        {
-            PIXEL,
-            PERCENT
-        };
-
-        enum class HorizontalAlignment
-        {
-            LEFT,
-            CENTER,
-            RIGHT
-        };
-
-        enum class VerticalAlignment
-        {
-            TOP,
-            CENTER,
-            BOTTOM
-        };
-
-        enum class ExpandElements
-        {
-            DOWN,
-            RIGHT
-        };
-
-        enum class WordWrap
-        {
-            NONE,
-            NORMAL
-        };
-
-        enum class TextOverflow
-        {
-            NONE,
-            ELLIPSIS_RIGHT,
-            ELLIPSIS_LEFT
-        };
-
-        enum EffectOnParentFlagBits
-        {
-            NONE = 0,
-            STRETCH_HORIZONTALLY = 0x1,
-            STRETCH_VERTICALLY = 0x1 << 1,
-            INCREMENT_POSITION = 0x1 << 2
-        };
-
-        inline constexpr uint32_t DEFAULT_EFFECT_ON_PARENT_FLAGS = (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY | EffectOnParentFlagBits::INCREMENT_POSITION);
-
-        class LayoutUI;
+        class UIManager;
         class Layout;
         class UIElement
         {
-        private:
-            LayoutUI& _uiRef;
+        protected:
+            UIManager& _managerRef;
 
         public:
             class MouseEnterEvent
@@ -126,8 +67,8 @@ namespace platypus
             DragEvent* _pDragEvent = nullptr;
             OnClickEvent* _pOnClickEvent = nullptr;
 
-        private:
-            friend class LayoutUI;
+        protected:
+            friend class UIManager;
 
             class ElementCursorPosEvent : public CursorPosEvent
             {
@@ -167,7 +108,7 @@ namespace platypus
 
             entityID_t _entityID = NULL_ENTITY_ID;
             int32_t _layoutID = -1;
-            const Font* _pFont = nullptr;
+            // NOTE: Parent is currently set by UIManager when creating the UIElement if necessary
             UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
 
@@ -182,16 +123,17 @@ namespace platypus
             // *Gets updated @updatePosition(...)
             uint32_t _absoluteLayer = 0;
 
+            UIElement(
+                UIManager& uiManager,
+                const Layout* pLayout,
+                bool createRenderable,
+                ID_t textureID,
+                OnClickEvent* pOnClickEvent,
+                bool ignoreInput = false
+            );
+
         public:
             static std::map<uint32_t, std::set<entityID_t>> s_cursorOverLayers;
-
-            UIElement(
-                LayoutUI& ui,
-                entityID_t entityID,
-                int32_t layoutID,
-                const Font* pFont,
-                OnClickEvent* pOnClickEvent
-            );
             virtual ~UIElement();
 
             // *Also updates the whole tree so the scales and positions are
@@ -203,9 +145,6 @@ namespace platypus
             void destroyChildren();
             void destroyChild(UIElement* pChild);
 
-            // TODO: Disable modifying scale and position directly
-            //  -> should be rather changed via element's layout!
-            //void setScale(const Vector2f& scale);
             void setLayoutScale(Vector2f scale);
             void setLayoutPosition(const Vector2f& position);
             void setLayoutColor(const Vector4f& color);
@@ -226,14 +165,11 @@ namespace platypus
             uint32_t getTopTreeLayer();
 
             // Updates global scales for the whole element tree recursively
-            // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
             void updateScale();
             // Updates global positions for the whole element tree recursively
             // NOTE: Has to be called AFTER updating all element tree scales using above!
-            // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
             void updatePosition(Vector2f& cumulatedScale);
             // Updates scales and positions for the whole tree
-            // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
             void updateTree();
 
             void fetchTreeElements(std::vector<UIElement*>& outElements);
@@ -251,7 +187,6 @@ namespace platypus
             static uint32_t get_cursor_over_layer();
 
             inline const entityID_t getEntityID() const { return _entityID; }
-            inline const Font* getFont() const { return _pFont; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
             inline bool isCursorOver() const { return _isCursorOver; }
             inline void setSelected(bool arg) { _selected = arg; }
@@ -261,20 +196,9 @@ namespace platypus
             static void add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
             static void remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
 
-        private:
+        protected:
             void setRenderLayer(uint32_t renderLayer);
             GUITransform* getTransform();
         };
-
-
-        UIElement* add_container(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const Layout* pLayout,
-            bool createRenderable,
-            ID_t textureID = NULL_ID,
-            const Font* pFont = nullptr,
-            UIElement::OnClickEvent* pOnClickEvent = nullptr
-        );
     }
 }

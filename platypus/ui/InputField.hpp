@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Layout.hpp"
 #include "Button.hpp"
 
 
@@ -7,11 +8,12 @@ namespace platypus
 {
     namespace ui
     {
+        class UIManager;
         struct InputField
         {
-            Button button;
+            Button* pButton;
             UIElement* pContainer = nullptr;
-            UIElement* pInfoText = nullptr;
+            Text* pInfoText = nullptr;
             UIElement* pCursorIndicator = nullptr;
         };
 
@@ -86,12 +88,10 @@ namespace platypus
         // TODO: Allow specifying the "root layout" and
         // the actual input field box layout separately!
         InputField add_input_field_element(
-            LayoutUI& ui,
+            UIManager& uiManager,
             UIElement* pParent,
             const Layout* pLayout,
             TextOverflow overflow,
-            const Vector4f& highlightColor,
-            const Vector4f& activeColor,
             const Vector4f& textColor,
             const Vector4f& textHighlightColor,
             const std::string& infoText,

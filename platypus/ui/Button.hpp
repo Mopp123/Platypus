@@ -1,96 +1,68 @@
 #pragma once
 
 #include "UIElement.hpp"
-#include "LayoutUI.hpp"
+#include "Text.hpp"
 
 
 namespace platypus
 {
     namespace ui
     {
-        /*
+        class UIManager;
         class Button : public UIElement
         {
         private:
-            Vector4f _originalColor = { 0.2f, 0.2f, 0.2f, 1.0f };
-            Vector4f _highlightColor = { 0.3f, 0.3f, 0.3f, 1.0f };
-            Vector4f _originalTextColor = { 0.85f, 0.85f, 0.85f, 1.0f };
-            Vector4f _textHighlightColor = { 1, 1, 1, 1 };
-            Vector4f _borderColor = { 0.28f, 0.28f, 0.28f, 1.0f };
-            float _borderThickness = 1.0f;
-            UIElement* _pText = nullptr;
+            // NOTE: WARNING! Not sure if these MouseEnter and Exit events' names
+            // are ambiguous here, since UIElement has those too...
+            //  ...that should be separate namespace tho?
+            class MouseEnterEvent : public UIElement::MouseEnterEvent
+            {
+            private:
+                Button& _buttonRef;
+
+            public:
+                MouseEnterEvent(Button& button) : _buttonRef(button) { }
+                virtual void func(int mx, int my);
+            };
+
+            class MouseExitEvent : public UIElement::MouseExitEvent
+            {
+            private:
+                Button& _buttonRef;
+
+            public:
+                MouseExitEvent(Button& button) : _buttonRef(button) { }
+                virtual void func(int mx, int my);
+            };
+
+            Text* _pText = nullptr;
 
         public:
             Button(
-                LayoutUI& ui,
-                UIElement* pParent,
-                const Layout& boxLayout,
-                const Layout& textLayout,
-                const Vector4f& highlightColor,
-                const Vector4f& textHighlightColor,
+                UIManager& uiManager,
+                const Layout* pLayout,
+                const Vector4f& textColor,
+                const Vector4f& textHoverColor,
+                const Vector4f& textSelectedColor,
+                uint32_t textEffectOnParentFlags,
                 const std::string& text,
                 const Font* pFont,
                 UIElement::OnClickEvent* pOnClick,
                 UIElement::MouseEnterEvent* pOnEnter = nullptr,
                 UIElement::MouseExitEvent* pOnExit = nullptr
             );
-            ~Button();
+            ~Button() { }
 
-            void setColors(
-                const Vector4f& originalColor,
-                const Vector4f& highlightColor,
-                const Vector4f& selectedColor,
-                const Vector4f& textOriginalColor,
-                const Vector4f& textHighlightColor,
-                const Vector4f& textSelectedColor
-            );
-        };
-        */
-
-        struct Button
-        {
-            UIElement* pBox = nullptr;
-            UIElement* pText = nullptr;
+            void reset();
+            inline Text* getText() { return _pText; }
         };
 
-
-        class ButtonMouseEnterEvent : public UIElement::MouseEnterEvent
-        {
-        private:
-            UIElement* _pButtonBoxElement = nullptr;
-            UIElement* _pButtonTextElement = nullptr;
-        public:
-            ButtonMouseEnterEvent(
-                UIElement* pButtonBoxElement,
-                UIElement* pButtonTextElement
-            ) :
-                _pButtonBoxElement(pButtonBoxElement),
-                _pButtonTextElement(pButtonTextElement)
-            {}
-            virtual void func(int mx, int my);
-        };
-
-
-        class ButtonMouseExitEvent : public UIElement::MouseExitEvent
-        {
-        private:
-            UIElement* _pButtonBoxElement = nullptr;
-            UIElement* _pButtonTextElement = nullptr;
-        public:
-            ButtonMouseExitEvent(
-                UIElement* pButtonBoxElement,
-                UIElement* pButtonTextElement
-            ) :
-                _pButtonBoxElement(pButtonBoxElement),
-                _pButtonTextElement(pButtonTextElement)
-            {}
-            virtual void func(int mx, int my);
-        };
 
 
         // TODO: Replace all above button creation with this!
+        /*
         Button add_button_element(
-            LayoutUI& ui,
+            UIManager& uiManager,
             UIElement* pParent,
             const Layout* pBoxLayout,
             const Vector4f& textColor,
@@ -104,6 +76,7 @@ namespace platypus
             UIElement::MouseExitEvent* pOnExit = nullptr
         );
 
-        void reset_button(const Button& button);
+        void reset_button(const Button* pButton);
+        */
     }
 }

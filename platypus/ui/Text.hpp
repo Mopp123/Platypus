@@ -1,26 +1,46 @@
 #pragma once
 
 #include "UIElement.hpp"
-#include "LayoutUI.hpp"
+#include "Layout.hpp"
+#include "platypus/assets/Font.hpp"
+#include <string>
 
 
 namespace platypus
 {
     namespace ui
     {
-        // NOTE: Creates new layout for the text in which the scale gets modified to fit the
-        // whole text inside it
-        UIElement* add_text_element(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const Vector4f& color,
-            const Vector4f& hoverColor,
-            const Vector4f& selectedColor,
-            const std::string& text,
-            const Font* pFont,
-            uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS
-        );
+        class UIManager;
+        class Text : public UIElement
+        {
+        protected:
+            friend class UIManager;
+        private:
+            const Font* _pFont = nullptr;
 
+        protected:
+            Text(
+                UIManager& uiManager,
+                UIElement* pParent,
+                const Font* pFont,
+                const Vector4f& color,
+                const Vector4f& hoverColor,
+                const Vector4f& selectedColor,
+                const std::string& txt,
+                uint32_t effectOnParentFlags
+            );
+            ~Text() { }
+
+        public:
+            void set(
+                UIElement* pParentElement,
+                const std::string& text
+            );
+
+            inline const Font* getFont() const { return _pFont; }
+        };
+
+        // TODO: Make below members of Text class!
         // NOTE: VERY inefficient!
         // DO NOT USE if editing some text, like input field
         //  -> those should modify just the parts that are
@@ -31,12 +51,6 @@ namespace platypus
             const UIElement* pParentElement,
             float& outMaxLineWidth,
             size_t& outLineCount
-        );
-
-        void set_text(
-            UIElement* pTextElement,
-            UIElement* pParentElement,
-            const std::string& text
         );
 
         // Forces text to fit inside the parent.
@@ -55,7 +69,8 @@ namespace platypus
             const Font* pFont,
             const std::string& header,
             const std::string& text,
-            TextOverflow overflow = TextOverflow::ELLIPSIS_RIGHT
+            TextOverflow overflow, //= TextOverflow::ELLIPSIS_RIGHT
+            float* pOutWidth = nullptr
         );
 
         Vector2f get_char_scale(uint32_t codepoint, const Font* pFont);

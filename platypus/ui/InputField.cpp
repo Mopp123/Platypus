@@ -1,4 +1,5 @@
 #include "InputField.hpp"
+#include "UIManager.hpp"
 #include "Text.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
@@ -13,9 +14,9 @@ namespace platypus
         {
             UIElement* pCursorIndicator = inputField.pCursorIndicator;
             pCursorIndicator->setActive(active);
-            const Button& button = inputField.button;
-            GUIRenderable* pButtonBoxRenderable = button.pBox->getRenderable();
-            const Layout* pBoxLayout = button.pBox->getLayout();
+            Button* pButton = inputField.pButton;
+            GUIRenderable* pButtonBoxRenderable = pButton->getRenderable();
+            const Layout* pBoxLayout = pButton->getLayout();
             if (active)
             {
                 Vector2f cursorScale = pCursorIndicator->getLayout()->scale;
@@ -33,29 +34,29 @@ namespace platypus
 
         void InputFieldMouseEnterEvent::func(int mx, int my)
         {
-            const Button& buttonElement = _inputField.button;
+            Button* pButton = _inputField.pButton;
             GUIRenderable* pButtonRenderable = reinterpret_cast<GUIRenderable*>(
                 _pScene->getComponent(
-                    buttonElement.pBox->getEntityID(),
+                    pButton->getEntityID(),
                     ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
                 )
             );
             if (pButtonRenderable && !_inputField.pContainer->isSelected())
-                pButtonRenderable->color = buttonElement.pBox->getLayout()->hoverColor;
+                pButtonRenderable->color = pButton->getLayout()->hoverColor;
         }
 
 
         void InputFieldMouseExitEvent::func(int mx, int my)
         {
-            const Button& buttonElement = _inputField.button;
+            Button* pButton = _inputField.pButton;
             GUIRenderable* pButtonRenderable = reinterpret_cast<GUIRenderable*>(
                 _pScene->getComponent(
-                    buttonElement.pBox->getEntityID(),
+                    pButton->getEntityID(),
                     ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
                 )
             );
             if (pButtonRenderable && !_inputField.pContainer->isSelected())
-                pButtonRenderable->color = buttonElement.pBox->getLayout()->color;
+                pButtonRenderable->color = pButton->getLayout()->color;
         }
 
 
@@ -63,16 +64,9 @@ namespace platypus
         {
             if (button == MouseButtonName::MOUSE_LEFT && action == InputAction::PRESS)
             {
-                const Button& buttonElement = _inputField.button;
-                GUIRenderable* pButtonRenderable = reinterpret_cast<GUIRenderable*>(
-                    _pScene->getComponent(
-                        buttonElement.pBox->getEntityID(),
-                        ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-                    )
-                );
                 UIElement* pContainer = _inputField.pContainer;
                 bool wasSelected = pContainer->isSelected();
-                if (_inputField.button.pBox->isCursorOver())
+                if (_inputField.pButton->isCursorOver())
                 {
                     if (!wasSelected)
                         _inputField.pContainer->setSelected(true);
@@ -97,12 +91,11 @@ namespace platypus
         {
             if (_inputField.pContainer->isSelected())
             {
-                UIElement* pTextElement = _inputField.button.pText;
-                std::string& str = pTextElement->getRenderable()->text;
+                Text* pText = _inputField.pButton->getText();
+                std::string& str = pText->getRenderable()->text;
                 util::str::append_utf8(codepoint, str);
-                set_text(
-                    pTextElement,
-                    _inputField.button.pBox,
+                pText->set(
+                    _inputField.pButton,
                     str
                 );
             }
@@ -113,15 +106,14 @@ namespace platypus
         {
             if (_inputField.pContainer->isSelected())
             {
-                UIElement* pTextElement = _inputField.button.pText;
-                std::string& str = pTextElement->getRenderable()->text;
+                Text* pText = _inputField.pButton->getText();
+                std::string& str = pText->getRenderable()->text;
                 if (key == KeyName::KEY_BACKSPACE && action != InputAction::RELEASE)
                 {
                     // Then the actual char
                     util::str::pop_back_utf8(str);
-                    set_text(
-                        pTextElement,
-                        _inputField.button.pBox,
+                    pText->set(
+                        _inputField.pButton,
                         str
                     );
                 }
@@ -135,33 +127,29 @@ namespace platypus
 
 
         InputField add_input_field_element(
-            LayoutUI& ui,
+            UIManager& uiManager,
             UIElement* pParent,
             const Layout* pLayout,
             TextOverflow overflow,
-            const Vector4f& highlightColor,
-            const Vector4f& activeColor,
             const Vector4f& textColor,
             const Vector4f& textHighlightColor,
             const std::string& infoText,
             const Font* pFont
         )
         {
-            UIElement* pRootContainer = add_container(
-                ui,
+            UIElement* pRootContainer = uiManager.createElement(
                 pParent,
                 pLayout,
                 false
             );
 
-            UIElement* pInfoTextElement = add_text_element(
-                ui,
+            Text* pInfoTextElement = uiManager.createText(
                 pRootContainer,
+                pFont,
                 textColor,
                 textColor, // hover color
                 textColor, // selected color
-                infoText,
-                pFont
+                infoText
             );
 
             if (pLayout->scale.x == 0.0f || pLayout->scale.y == 0.0f)
@@ -177,7 +165,7 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
 
-            Layout* pButtonLayout = ui.createLayout();
+            Layout* pButtonLayout = uiManager.createLayout();
             pButtonLayout->textOverflow = overflow;
 
             // Decrement the info width padding and elem gap from the button's width
@@ -187,8 +175,24 @@ namespace platypus
                 pLayout->scale.x - (infoWidth + pLayout->padding.x * 2.0f + pLayout->elementGap),
                 pLayout->scale.y
             };
+            if (pButtonLayout->scale.x <= 0)
+            {
+                Debug::log(
+                    "Layout's width: " + std::to_string(pLayout->scale.x) + " too small "
+                    "for holding info text with width: " + std::to_string(infoWidth) + " using "
+                    "padding.x: "+ std::to_string(pLayout->padding.x) + " and "
+                    "element gap: " + std::to_string(pLayout->elementGap) + " "
+                    "(NOTE: The given layout's width is the complete width, starting from the info text to "
+                    "the end of the input field! NOT THE INPUT BOX'S WIDTH!)",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
 
             pButtonLayout->color = pLayout->color;
+            pButtonLayout->hoverColor = pLayout->hoverColor;
+            pButtonLayout->selectedColor = pLayout->selectedColor;
             pButtonLayout->padding = { 0, 0 };
             pButtonLayout->effectOnParentFlags = pLayout->effectOnParentFlags;
             pButtonLayout->borderColor = pLayout->borderColor;
@@ -200,8 +204,7 @@ namespace platypus
             uint32_t buttonTextEffectOnParentFlags = EffectOnParentFlagBits::STRETCH_VERTICALLY |
                 EffectOnParentFlagBits::INCREMENT_POSITION;
 
-            Button buttonElement = add_button_element(
-                ui,
+            Button* pButton = uiManager.createButton(
                 pRootContainer,
                 pButtonLayout,
                 textColor,
@@ -217,20 +220,19 @@ namespace platypus
 
             // TODO: When adding the functionality to move the cursor behind the
             // end of the string -> enable more control over the cursor color
-            Layout* pCursorIndicatorLayout = ui.createLayout();
+            Layout* pCursorIndicatorLayout = uiManager.createLayout();
             pCursorIndicatorLayout->color = textColor;
             pCursorIndicatorLayout->scale = { 0, static_cast<float>(pFont->getFittingHeight()) };
             pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
-            UIElement* pCursorIndicator = add_container(
-                ui,
-                buttonElement.pBox,
+            UIElement* pCursorIndicator = uiManager.createElement(
+                pButton,
                 pCursorIndicatorLayout,
                 true
             );
             pCursorIndicator->setActive(false);
 
             InputField inputField = {
-                buttonElement,
+                pButton,
                 pRootContainer,
                 pInfoTextElement,
                 pCursorIndicator
@@ -239,9 +241,14 @@ namespace platypus
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
 
-            // Disgusting but need to do this this way for now...
-            buttonElement.pBox->_pMouseEnterEvent = new InputFieldMouseEnterEvent(pScene, inputField);
-            buttonElement.pBox->_pMouseExitEvent = new InputFieldMouseExitEvent(pScene, inputField);
+            // ABSOLUTELY DISGUSTING but need to do this this way for now...
+            //  -> The previous ones need to be deleted before assigning these new ones!!!
+            if (pButton->_pMouseEnterEvent)
+                delete pButton->_pMouseEnterEvent;
+            if (pButton->_pMouseExitEvent)
+                delete pButton->_pMouseExitEvent;
+            pButton->_pMouseEnterEvent = new InputFieldMouseEnterEvent(pScene, inputField);
+            pButton->_pMouseExitEvent = new InputFieldMouseExitEvent(pScene, inputField);
 
             InputManager& inputManager = pApp->getInputManager();
             inputManager.addMouseButtonEvent(new InputFieldMouseButtonEvent(pScene, inputField));
@@ -254,8 +261,9 @@ namespace platypus
 
         std::string get_input_field_content(InputField inputField)
         {
+            Text* pContentText = inputField.pButton->getText();
             #ifdef PLATYPUS_DEBUG
-            if (!inputField.button.pText)
+            if (!pContentText)
             {
                 Debug::log(
                     "Input field's text element was nullptr!",
@@ -265,7 +273,7 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
                 return "";
             }
-            if (!inputField.button.pText->getRenderable())
+            if (!pContentText->getRenderable())
             {
                 Debug::log(
                     "Input field's text element's renderable component was nullptr!",
@@ -276,7 +284,7 @@ namespace platypus
                 return "";
             }
             #endif
-            return inputField.button.pText->getRenderable()->text;
+            return inputField.pButton->getText()->getRenderable()->text;
         }
     }
 }

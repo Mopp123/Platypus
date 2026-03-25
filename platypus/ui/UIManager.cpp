@@ -1,4 +1,4 @@
-#include "LayoutUI.hpp"
+#include "UIManager.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
@@ -8,7 +8,7 @@ namespace platypus
 {
     namespace ui
     {
-        void LayoutUI::ResizeEvent::func(int w, int h)
+        void UIManager::ResizeEvent::func(int w, int h)
         {
             _uiRef._windowWidth = (float)w;
             _uiRef._windowHeight = (float)h;
@@ -16,7 +16,7 @@ namespace platypus
                 pRootElement->updateTree();
         }
 
-        void LayoutUI::init(Scene* pScene, InputManager& inputManager)
+        void UIManager::init(Scene* pScene, InputManager& inputManager)
         {
             _pScene = pScene;
             inputManager.addWindowResizeEvent(new ResizeEvent(*this));
@@ -25,7 +25,7 @@ namespace platypus
             window.getSurfaceExtent(&_windowWidth, &_windowHeight);
         }
 
-        LayoutUI::~LayoutUI()
+        UIManager::~UIManager()
         {
             for (UIElement* pElement : _rootElements)
                 delete pElement;
@@ -34,7 +34,7 @@ namespace platypus
                 delete pLayout;
         }
 
-        Layout* LayoutUI::createLayout()
+        Layout* UIManager::createLayout()
         {
             size_t layoutID = _layouts.size();
             Layout* pLayout = new Layout;
@@ -43,7 +43,7 @@ namespace platypus
             return pLayout;
         }
 
-        void LayoutUI::copyLayoutAspects(Layout* pTarget, const Layout* pSource)
+        void UIManager::copyLayoutAspects(Layout* pTarget, const Layout* pSource)
         {
             int32_t originalID = pTarget->id;
             memcpy(
@@ -54,12 +54,12 @@ namespace platypus
             pTarget->id = originalID;
         }
 
-        void LayoutUI::addRootElement(UIElement* pElement)
+        void UIManager::addRootElement(UIElement* pElement)
         {
             _rootElements.push_back(pElement);
         }
 
-        void LayoutUI::removeRootElement(UIElement* pElement)
+        void UIManager::removeRootElement(UIElement* pElement)
         {
             int32_t eraseIndex = -1;
             for (size_t i = 0; i < _rootElements.size(); ++i)
@@ -89,7 +89,7 @@ namespace platypus
                 _updatedRootElements.erase(pElement);
         }
 
-        bool LayoutUI::isRootElement(UIElement* pElement) const
+        bool UIManager::isRootElement(UIElement* pElement) const
         {
             for (UIElement* pRootElement : _rootElements)
             {
@@ -99,7 +99,7 @@ namespace platypus
             return false;
         }
 
-        void LayoutUI::addToUpdatedElements(UIElement* pElement)
+        void UIManager::addToUpdatedElements(UIElement* pElement)
         {
             UIElement* pElementRootParent = pElement->getRootParent();
             if (_updatedRootElements.find(pElementRootParent) != _updatedRootElements.end())
@@ -108,7 +108,7 @@ namespace platypus
             _updatedRootElements.insert(pElementRootParent);
         }
 
-        void LayoutUI::updateChangedElements()
+        void UIManager::updateChangedElements()
         {
             for (UIElement* pUpdatedRootElement : _updatedRootElements)
                 pUpdatedRootElement->updateTree();
@@ -116,7 +116,7 @@ namespace platypus
             _updatedRootElements.clear();
         }
 
-        Layout* LayoutUI::getLayout(int32_t id)
+        Layout* UIManager::getLayout(int32_t id)
         {
             if (id == -1 || id >= _layouts.size())
             {
@@ -131,7 +131,110 @@ namespace platypus
             return _layouts[static_cast<size_t>(id)];
         }
 
-        float LayoutUI::toPercentage(float v1, float v2)
+        UIElement* UIManager::createElement(
+            UIElement* pParent,
+            const Layout* pLayout,
+            bool createRenderable,
+            ID_t textureID,
+            UIElement::OnClickEvent* pOnClickEvent
+        )
+        {
+            UIElement* pElement = new UIElement(
+                *this,
+                pLayout,
+                createRenderable,
+                textureID,
+                pOnClickEvent
+            );
+            // *Need to update the "tree" even if contains only single element
+            // so that scale and pos is immediately correct..
+            if (pParent)
+            {
+                pParent->addChild(pElement);
+            }
+            else
+            {
+                pElement->updateTree();
+                addRootElement(pElement);
+            }
+            return pElement;
+        }
+
+        Text* UIManager::createText(
+            UIElement* pParent,
+            const Font* pFont,
+            const Vector4f& color,
+            const Vector4f& hoverColor,
+            const Vector4f& selectedColor,
+            const std::string& txt,
+            uint32_t effectOnParentFlags
+        )
+        {
+            Text* pText = new Text(
+                *this,
+                pParent,
+                pFont,
+                color,
+                hoverColor,
+                selectedColor,
+                txt,
+                effectOnParentFlags
+            );
+
+            if (pParent)
+            {
+                pParent->addChild(pText);
+            }
+            else
+            {
+                pText->updateTree();
+                addRootElement(pText);
+            }
+            return pText;
+        }
+
+        Button* UIManager::createButton(
+            UIElement* pParent,
+            const Layout* pLayout,
+            const Vector4f& textColor,
+            const Vector4f& textHoverColor,
+            const Vector4f& textSelectedColor,
+            uint32_t textEffectOnParentFlags,
+            const std::string& text,
+            const Font* pFont,
+            UIElement::OnClickEvent* pOnClick,
+            UIElement::MouseEnterEvent* pOnEnter,
+            UIElement::MouseExitEvent* pOnExit
+        )
+        {
+            Button* pButton = new Button(
+                *this,
+                pLayout,
+                textColor,
+                textHoverColor,
+                textSelectedColor,
+                textEffectOnParentFlags,
+                text,
+                pFont,
+                pOnClick,
+                pOnEnter,
+                pOnExit
+            );
+
+            if (pParent)
+            {
+                pParent->addChild(pButton);
+            }
+            else
+            {
+                pButton->updateTree();
+                addRootElement(pButton);
+            }
+
+            return pButton;
+        }
+
+        float UIManager::toPercentage(float v1, float v2)
         {
             return (float)((int)(v1 / 100.0f * v2));
         }

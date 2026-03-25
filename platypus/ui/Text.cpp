@@ -1,4 +1,5 @@
 #include "Text.hpp"
+#include "UIManager.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
@@ -11,20 +12,28 @@ namespace platypus
 {
     namespace ui
     {
-        UIElement* add_text_element(
-            LayoutUI& ui,
+        Text::Text(
+            UIManager& uiManager,
             UIElement* pParent,
+            const Font* pFont,
             const Vector4f& color,
             const Vector4f& hoverColor,
             const Vector4f& selectedColor,
-            const std::string& text,
-            const Font* pFont,
+            const std::string& txt,
             uint32_t effectOnParentFlags
-        )
+        ) :
+            UIElement(
+                uiManager,
+                uiManager.createLayout(), // Need to create for inherited UIElement -> will be modified here immediately tho!
+                false,
+                NULL_ID,
+                nullptr,
+                true
+            ),
+            _pFont(pFont)
         {
-            Layout* pParentLayout = nullptr;
-            if (pParent)
-                pParentLayout = pParent->getLayout();
+            Layout* pLayout = uiManager.getLayout(_layoutID);
+            Layout* pParentLayout = (pParent ? pParent->getLayout() : nullptr);
 
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
@@ -34,7 +43,8 @@ namespace platypus
             {
                 if (pParentLayout->textOverflow == TextOverflow::NONE)
                 {
-                    finalText = text;
+                    finalText = txt;
+                    maxLineWidth = get_text_scale(finalText, pFont).x;
                 }
                 else
                 {
@@ -42,17 +52,16 @@ namespace platypus
                         pParent,
                         pFont,
                         "",
-                        text,
-                        pParentLayout->textOverflow
+                        txt,
+                        pParentLayout->textOverflow,
+                        &maxLineWidth
                     );
                 }
-
-                maxLineWidth = get_text_scale(finalText, pFont).x;
             }
             else if (pParentLayout->wordWrap == WordWrap::NORMAL)
             {
                 finalText = wrap_text(
-                    text,
+                    txt,
                     pFont,
                     pParent,
                     maxLineWidth,
@@ -65,16 +74,14 @@ namespace platypus
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
-            Layout* pLayout = ui.createLayout();
             pLayout->scale = { maxLineWidth,  totalHeight };
             pLayout->color = color;
             pLayout->hoverColor = hoverColor;
             pLayout->selectedColor = selectedColor;
             pLayout->effectOnParentFlags = effectOnParentFlags;
 
-            UIElement* pElement = add_container(ui, pParent, pLayout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(
-                pElement->getEntityID(),
+                _entityID,
                 pFont->getTextureID(),
                 pFont->getID(),
                 pLayout->color,
@@ -85,9 +92,61 @@ namespace platypus
                 true, // isText?
                 finalText
             );
-
-            return pElement;
         }
+
+        void Text::set(
+            UIElement* pParentElement,
+            const std::string& text
+        )
+        {
+            PLATYPUS_ASSERT(pParentElement);
+
+            // TODO: Make App, SceneManager and Scene accessing safer here!
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const Layout* pParentLayout = pParentElement->getLayout();
+            float charHeight = static_cast<float>(_pFont->getFittingHeight());
+            float maxLineWidth = 0.0f;
+            size_t lineCount = 1;
+
+            std::string finalText;
+            if (pParentLayout->wordWrap == WordWrap::NONE)
+            {
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
+                {
+                    maxLineWidth = get_text_scale(text, _pFont).x;
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        pParentElement,
+                        _pFont,
+                        "", // header... which shouldn't probably be used anymore...
+                        text,
+                        pParentLayout->textOverflow,
+                        &maxLineWidth
+                    );
+                }
+            }
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
+            {
+                finalText = wrap_text(
+                    text,
+                    _pFont,
+                    pParentElement,
+                    maxLineWidth,
+                    lineCount
+                );
+            }
+
+            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+            );
+            pRenderable->text = finalText;
+            setLayoutScale({ maxLineWidth, charHeight * lineCount });
+        }
+
 
         // NOTE: VERY inefficient!
         // DO NOT USE if editing some text, like input field
@@ -190,6 +249,8 @@ namespace platypus
             return wrappedText;
         }
 
+        // TODO: remove
+        /*
         void set_text(
             UIElement* pTextElement,
             UIElement* pParentElement,
@@ -243,6 +304,7 @@ namespace platypus
             pRenderable->text = finalText;
             pTextElement->setLayoutScale({ maxLineWidth, charHeight * lineCount });
         }
+        */
 
 
         std::string strip_text_overflow_ellipsis(
@@ -250,81 +312,91 @@ namespace platypus
             const Font* pFont,
             const std::string& header,
             const std::string& text,
-            TextOverflow overflow
+            TextOverflow overflow,
+            float* pOutWidth
         )
         {
             PLATYPUS_ASSERT((overflow == TextOverflow::ELLIPSIS_LEFT) || (overflow == TextOverflow::ELLIPSIS_RIGHT));
             const std::string fullText = header + text;
             if (fullText.empty())
+            {
+                if (pOutWidth)
+                    *pOutWidth = 0.0f;
                 return fullText;
+            }
 
-            float headerVisualWidth = ui::get_text_scale(header, pFont).x;
             const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
 
-            std::string finalText;
             const Layout* pParentLayout = pParentElement->getLayout();
             const float parentWidth = pParentElement->getGlobalScale().x;
             const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2;
             if (fullVisualWidth < parentContentWidth)
             {
-                finalText = header + text;
+                if (pOutWidth)
+                    *pOutWidth = fullVisualWidth;
+                return header + text;
             }
+
+            const size_t size = text.size();
+            char* pData = (char*)text.data();
+            //utf8::iterator<char*> it(pData + size - 1, pData, pData + size);
+            //utf8::iterator<char*> beginIt(pData, pData, pData + size);
+            utf8::iterator<char*> it;
+            utf8::iterator<char*> stopIt;
+            if (overflow == TextOverflow::ELLIPSIS_LEFT)
+            {
+                // Need to start past the last element and decrement the it immediately
+                // if the last char more than 1 byte so were at the actual last element's
+                // beginning!
+                it = utf8::iterator<char*>(pData + size, pData, pData + size);
+                --it;
+                stopIt = utf8::iterator<char*>(pData, pData, pData + size);
+            }
+            //if (overflow == TextOverflow::ELLIPSIS_RIGHT)
             else
             {
-                const size_t size = text.size();
-                char* pData = (char*)text.data();
-                //utf8::iterator<char*> it(pData + size - 1, pData, pData + size);
-                //utf8::iterator<char*> beginIt(pData, pData, pData + size);
-                utf8::iterator<char*> it;
-                utf8::iterator<char*> stopIt;
-                if (overflow == TextOverflow::ELLIPSIS_LEFT)
-                {
-                    // Need to start past the last element and decrement the it immediately
-                    // if the last char more than 1 byte so were at the actual last element's
-                    // beginning!
-                    it = utf8::iterator<char*>(pData + size, pData, pData + size);
-                    --it;
-                    stopIt = utf8::iterator<char*>(pData, pData, pData + size);
-                }
-                //if (overflow == TextOverflow::ELLIPSIS_RIGHT)
-                else
-                {
-                    it = utf8::iterator<char*>(pData, pData, pData + size);
-                    stopIt = utf8::iterator<char*>(pData + size - 1, pData, pData + size);
-                }
-
-                const std::string visualBuffer = "...";
-                const float visualBufferWidth = ui::get_text_scale(visualBuffer, pFont).x;
-
-                float currentWidth = headerVisualWidth + visualBufferWidth;
-                std::string strippedStr;
-                while (true)
-                {
-                    uint32_t codepoint = static_cast<uint32_t>(*it);
-                    std::string charStr;
-                    util::str::append_utf8(codepoint, charStr);
-                    float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
-                    currentWidth += charVisualWidth;
-
-                    if (currentWidth < parentContentWidth)
-                    {
-                        util::str::append_utf8(codepoint, strippedStr);
-                    }
-
-                    if (it == stopIt)
-                        break;
-
-                    if (overflow == TextOverflow::ELLIPSIS_LEFT)
-                        --it;
-                    else
-                        ++it;
-                }
-                if (overflow == TextOverflow::ELLIPSIS_LEFT)
-                    finalText = header + visualBuffer + util::str::reverse(strippedStr);
-                else
-                    finalText = header + strippedStr + visualBuffer;
+                it = utf8::iterator<char*>(pData, pData, pData + size);
+                stopIt = utf8::iterator<char*>(pData + size, pData, pData + size);
+                // Need to decrement the stopIt to get the actual last elem ( similar thing
+                // to the above case -> last elem might not be pData + size - 1, if its more
+                // than one bytes!)
+                --stopIt;
             }
-            return finalText;
+
+            const std::string visualBuffer = "...";
+            const float visualBufferWidth = ui::get_text_scale(visualBuffer, pFont).x;
+
+            float headerVisualWidth = ui::get_text_scale(header, pFont).x;
+            float currentWidth = headerVisualWidth + visualBufferWidth;
+            std::string strippedStr;
+            while (true)
+            {
+                uint32_t codepoint = static_cast<uint32_t>(*it);
+                std::string charStr;
+                util::str::append_utf8(codepoint, charStr);
+                float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
+
+                if (currentWidth + charVisualWidth < parentContentWidth)
+                {
+                    currentWidth += charVisualWidth;
+                    util::str::append_utf8(codepoint, strippedStr);
+                }
+
+                if (it == stopIt)
+                    break;
+
+                if (overflow == TextOverflow::ELLIPSIS_LEFT)
+                    --it;
+                else
+                    ++it;
+            }
+
+            if (pOutWidth)
+                *pOutWidth = currentWidth;
+            if (overflow == TextOverflow::ELLIPSIS_LEFT)
+                return header + visualBuffer + util::str::reverse(strippedStr);
+            else
+                return header + strippedStr + visualBuffer;
         }
 
 

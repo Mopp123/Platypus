@@ -234,6 +234,17 @@ namespace platypus
         const GUIRenderable* pRenderable = (const GUIRenderable*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
+
+        size_t requiredBatchElements = 1;
+        if (pRenderable->isText)
+        {
+            requiredBatchElements = util::str::length_utf8(pRenderable->text);
+            // TODO: Maybe set the text renderable inactive completely if its str == empty
+            //  -> doesn't need to come all the way here fuckin' around...
+            if (requiredBatchElements == 0)
+                return;
+        }
+
         const GUITransform* pTransform = (const GUITransform*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
@@ -244,10 +255,6 @@ namespace platypus
         {
             textureID = pAssetManager->getWhiteTexture()->getID();
         }
-
-        size_t requiredBatchElements = 1;
-        if (pRenderable->isText)
-            requiredBatchElements = util::str::length_utf8(pRenderable->text);
 
         int batchIndex = findExistingBatchIndex(
             pRenderable->layer,
