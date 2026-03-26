@@ -405,8 +405,7 @@ namespace platypus
 
         void UIElement::setActive(bool arg)
         {
-            // if cursor was over -> remove from those
-            if (_isCursorOver)
+            if (!arg)
                 remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
 
             // *if setting inactive by OnClick func, reset mouseOver

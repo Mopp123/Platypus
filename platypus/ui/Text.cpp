@@ -33,15 +33,22 @@ namespace platypus
             _pFont(pFont)
         {
             Layout* pLayout = uiManager.getLayout(_layoutID);
-            Layout* pParentLayout = (pParent ? pParent->getLayout() : nullptr);
+            WordWrap useWordWrap = WordWrap::NONE;
+            TextOverflow useTextOverflow = TextOverflow::NONE;
+            if (pParent)
+            {
+                const Layout* pParentLayout = pParent->getLayout();
+                useWordWrap = pParentLayout->wordWrap;
+                useTextOverflow = pParentLayout->textOverflow;
+            }
 
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
             std::string finalText;
-            if (pParentLayout->wordWrap == WordWrap::NONE)
+            if (useWordWrap == WordWrap::NONE)
             {
-                if (pParentLayout->textOverflow == TextOverflow::NONE)
+                if (useTextOverflow == TextOverflow::NONE)
                 {
                     finalText = txt;
                     maxLineWidth = get_text_scale(finalText, pFont).x;
@@ -53,12 +60,12 @@ namespace platypus
                         pFont,
                         "",
                         txt,
-                        pParentLayout->textOverflow,
+                        useTextOverflow,
                         &maxLineWidth
                     );
                 }
             }
-            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
+            else if (useWordWrap == WordWrap::NORMAL)
             {
                 finalText = wrap_text(
                     txt,
