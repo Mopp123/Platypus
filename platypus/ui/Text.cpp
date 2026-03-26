@@ -28,7 +28,7 @@ namespace platypus
                 false,
                 NULL_ID,
                 nullptr,
-                true
+                true // NOTE: All mouse input is ignored for Text atm!! TODO: ALLOW MORE CONTROL OVER THIS!
             ),
             _pFont(pFont)
         {

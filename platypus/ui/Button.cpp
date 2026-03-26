@@ -75,7 +75,6 @@ namespace platypus
                 text,
                 textEffectOnParentFlags
             );
-            _pText->setRelativeLayer(1);
 
             if (pOnEnter)
                 _pMouseEnterEvent = pOnEnter;

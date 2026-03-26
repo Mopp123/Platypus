@@ -219,6 +219,14 @@ namespace platypus
                 _managerRef.removeRootElement(pChild);
 
             pChild->_pParent = this;
+            // NOTE: DANGER! WARNING!
+            // All child elements will be put one layer above their parent so it is quaranteed
+            // that they are rendered above the parent!
+            //  -> This results in more draw calls!
+            //  -> This may result in more fuck ups in the future!
+            //  *This was to progress forward with the shitty editor thing...
+            pChild->setRelativeLayer(1);
+
             _children.push_back(pChild);
             UIElement* pRootParent = getRootParent();
             #ifdef PLATYPUS_DEBUG
