@@ -9,95 +9,107 @@ namespace platypus
     namespace ui
     {
         class UIManager;
-        struct InputField
-        {
-            Button* pButton;
-            UIElement* pContainer = nullptr;
-            Text* pInfoText = nullptr;
-            UIElement* pCursorIndicator = nullptr;
-        };
-
-        class InputFieldMouseEnterEvent : public UIElement::MouseEnterEvent
+        class InputField : public UIElement
         {
         private:
-            Scene* _pScene = nullptr;
-            InputField _inputField;
+            class MouseEnterEvent : public UIElement::MouseEnterEvent
+            {
+            private:
+                Scene* _pScene = nullptr;
+                InputField& _inputFieldRef;
+            public:
+                MouseEnterEvent(Scene* pScene, InputField& inputField) :
+                    _pScene(pScene),
+                    _inputFieldRef(inputField)
+                {}
+                virtual void func(int mx, int my);
+            };
+
+
+            class MouseExitEvent : public UIElement::MouseExitEvent
+            {
+            private:
+                Scene* _pScene = nullptr;
+                InputField& _inputFieldRef;
+            public:
+                MouseExitEvent(Scene* pScene, InputField& inputField) :
+                    _pScene(pScene),
+                    _inputFieldRef(inputField)
+                {}
+                virtual void func(int mx, int my);
+            };
+
+
+            class InputFieldMouseButtonEvent : public MouseButtonEvent
+            {
+            private:
+                Scene* _pScene = nullptr;
+                InputField& _inputFieldRef;
+            public:
+                InputFieldMouseButtonEvent(Scene* pScene, InputField& inputField) :
+                    _pScene(pScene),
+                    _inputFieldRef(inputField)
+                {}
+                ~InputFieldMouseButtonEvent() {}
+                virtual void func(MouseButtonName button, InputAction action, int mods);
+            };
+
+
+            class InputFieldKeyEvent: public KeyEvent
+            {
+            private:
+                Scene* _pScene = nullptr;
+                InputField& _inputFieldRef;
+            public:
+                InputFieldKeyEvent(Scene* pScene, InputField& inputField) :
+                    _pScene(pScene),
+                    _inputFieldRef(inputField)
+                {}
+                ~InputFieldKeyEvent() {};
+                virtual void func(KeyName key, int scancode, InputAction action, int mods);
+            };
+
+
+            class InputFieldCharInputEvent : public CharInputEvent
+            {
+            private:
+                InputField& _inputFieldRef;
+            public:
+                InputFieldCharInputEvent(InputField& inputField) : _inputFieldRef(inputField) {}
+                ~InputFieldCharInputEvent() {};
+                virtual void func(unsigned int codepoint);
+            };
+
+            Button* _pButton = nullptr;
+            Text* _pInfoText = nullptr;
+            UIElement* _pCursorIndicator = nullptr;
+
+        protected:
+            friend class UIManager;
+
+            // TODO: Allow specifying the "root layout" and
+            // the actual input field box layout separately!
+            // NOTE: Above comment -> why? for what purpose??
+            InputField(
+                UIManager& uiManager,
+                const Layout* pLayout,
+                TextOverflow overflow,
+                const Vector4f& textColor,
+                const Vector4f& textHighlightColor,
+                const std::string& infoText,
+                const Font* pFont
+            );
+            ~InputField() { }
+
         public:
-            InputFieldMouseEnterEvent(Scene* pScene, InputField inputField) :
-                _pScene(pScene),
-                _inputField(inputField)
-            {}
-            virtual void func(int mx, int my);
-        };
+            std::string getContent();
+            void setContent(const std::string& text);
 
+            inline Button* getButton() { return _pButton; }
+            inline Text* getInfoText() { return _pInfoText; }
 
-        class InputFieldMouseExitEvent : public UIElement::MouseExitEvent
-        {
         private:
-            Scene* _pScene = nullptr;
-            InputField _inputField;
-        public:
-            InputFieldMouseExitEvent(Scene* pScene, InputField inputField) :
-                _pScene(pScene),
-                _inputField(inputField)
-            {}
-            virtual void func(int mx, int my);
+            void setInputMode(bool active);
         };
-
-
-        class InputFieldMouseButtonEvent : public MouseButtonEvent
-        {
-        private:
-            Scene* _pScene = nullptr;
-            InputField _inputField;
-        public:
-            InputFieldMouseButtonEvent(Scene* pScene, InputField inputField) :
-                _pScene(pScene),
-                _inputField(inputField)
-            {}
-            ~InputFieldMouseButtonEvent() {}
-            virtual void func(MouseButtonName button, InputAction action, int mods);
-        };
-
-
-        class InputFieldKeyEvent: public KeyEvent
-        {
-        private:
-            Scene* _pScene = nullptr;
-            InputField _inputField;
-        public:
-            InputFieldKeyEvent(Scene* pScene, InputField inputField) :
-                _pScene(pScene),
-                _inputField(inputField)
-            {}
-            ~InputFieldKeyEvent() {};
-            virtual void func(KeyName key, int scancode, InputAction action, int mods);
-        };
-
-
-        class InputFieldCharInputEvent : public CharInputEvent
-        {
-        private:
-            InputField _inputField;
-        public:
-            InputFieldCharInputEvent(InputField inputField) : _inputField(inputField) {}
-            ~InputFieldCharInputEvent() {};
-            virtual void func(unsigned int codepoint);
-        };
-
-        // TODO: Allow specifying the "root layout" and
-        // the actual input field box layout separately!
-        InputField add_input_field_element(
-            UIManager& uiManager,
-            UIElement* pParent,
-            const Layout* pLayout,
-            TextOverflow overflow,
-            const Vector4f& textColor,
-            const Vector4f& textHighlightColor,
-            const std::string& infoText,
-            const Font* pFont
-        );
-
-        std::string get_input_field_content(InputField inputField);
     }
 }

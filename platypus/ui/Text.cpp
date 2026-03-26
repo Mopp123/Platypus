@@ -101,6 +101,7 @@ namespace platypus
             );
         }
 
+        // TODO: Replace this with the new one!
         void Text::set(
             UIElement* pParentElement,
             const std::string& text
@@ -141,6 +142,56 @@ namespace platypus
                     text,
                     _pFont,
                     pParentElement,
+                    maxLineWidth,
+                    lineCount
+                );
+            }
+
+            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+            );
+            pRenderable->text = finalText;
+            setLayoutScale({ maxLineWidth, charHeight * lineCount });
+        }
+
+        void Text::set(const std::string& text)
+        {
+            PLATYPUS_ASSERT(_pParent);
+
+            // TODO: Make App, SceneManager and Scene accessing safer here!
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const Layout* pParentLayout = _pParent->getLayout();
+            float charHeight = static_cast<float>(_pFont->getFittingHeight());
+            float maxLineWidth = 0.0f;
+            size_t lineCount = 1;
+
+            std::string finalText;
+            if (pParentLayout->wordWrap == WordWrap::NONE)
+            {
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
+                {
+                    maxLineWidth = get_text_scale(text, _pFont).x;
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        _pParent,
+                        _pFont,
+                        "", // header... which shouldn't probably be used anymore...
+                        text,
+                        pParentLayout->textOverflow,
+                        &maxLineWidth
+                    );
+                }
+            }
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
+            {
+                finalText = wrap_text(
+                    text,
+                    _pFont,
+                    _pParent,
                     maxLineWidth,
                     lineCount
                 );

@@ -2,11 +2,11 @@
 
 #include "platypus/utils/Maths.hpp"
 #include "platypus/core/Scene.hpp"
-#include "platypus/core/Debug.hpp"
 #include "Layout.hpp"
 #include "UIElement.hpp"
 #include "Text.hpp"
 #include "Button.hpp"
+#include "InputField.hpp"
 #include <vector>
 
 /*
@@ -100,6 +100,16 @@ namespace platypus
                 UIElement::OnClickEvent* pOnClick,
                 UIElement::MouseEnterEvent* pOnEnter = nullptr,
                 UIElement::MouseExitEvent* pOnExit = nullptr
+            );
+
+            InputField* createInputField(
+                UIElement* pParent,
+                const Layout* pLayout,
+                TextOverflow overflow,
+                const Vector4f& textColor,
+                const Vector4f& textHighlightColor,
+                const std::string& infoText,
+                const Font* pFont
             );
 
         private:

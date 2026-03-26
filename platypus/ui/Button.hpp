@@ -37,7 +37,10 @@ namespace platypus
 
             Text* _pText = nullptr;
 
-        public:
+        protected:
+            friend class UIManager;
+
+            // Protected since some other UIElement may extend this
             Button(
                 UIManager& uiManager,
                 const Layout* pLayout,
@@ -52,6 +55,8 @@ namespace platypus
                 UIElement::MouseExitEvent* pOnExit = nullptr
             );
             ~Button() { }
+
+        public:
 
             void reset();
             inline Text* getText() { return _pText; }

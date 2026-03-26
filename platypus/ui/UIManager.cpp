@@ -230,8 +230,39 @@ namespace platypus
                 pButton->updateTree();
                 addRootElement(pButton);
             }
-
             return pButton;
+        }
+
+        InputField* UIManager::createInputField(
+            UIElement* pParent,
+            const Layout* pLayout,
+            TextOverflow overflow,
+            const Vector4f& textColor,
+            const Vector4f& textHighlightColor,
+            const std::string& infoText,
+            const Font* pFont
+        )
+        {
+            InputField* pInputField = new InputField(
+                *this,
+                pLayout,
+                overflow,
+                textColor,
+                textHighlightColor,
+                infoText,
+                pFont
+            );
+
+            if (pParent)
+            {
+                pParent->addChild(pInputField);
+            }
+            else
+            {
+                pInputField->updateTree();
+                addRootElement(pInputField);
+            }
+            return pInputField;
         }
 
         float UIManager::toPercentage(float v1, float v2)

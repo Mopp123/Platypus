@@ -13,12 +13,12 @@ namespace platypus
         class UIManager;
         class Text : public UIElement
         {
-        protected:
-            friend class UIManager;
         private:
             const Font* _pFont = nullptr;
 
         protected:
+            friend class UIManager;
+            // Protected since some other UIElement may extend this
             Text(
                 UIManager& uiManager,
                 UIElement* pParent,
@@ -36,11 +36,12 @@ namespace platypus
                 UIElement* pParentElement,
                 const std::string& text
             );
+            // TODO: replace above with below!
+            void set(const std::string& text);
 
             inline const Font* getFont() const { return _pFont; }
         };
 
-        // TODO: Make below members of Text class!
         // NOTE: VERY inefficient!
         // DO NOT USE if editing some text, like input field
         //  -> those should modify just the parts that are
