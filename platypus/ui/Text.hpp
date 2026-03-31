@@ -19,6 +19,9 @@ namespace platypus
         protected:
             friend class UIManager;
             // Protected since some other UIElement may extend this
+            // TODO: Don't create new layout for each Text
+            //  -> rather specify same layout for multiple Texts and have some "individual scale"
+            //  for each UIElement (could the existing global scale be enough?)
             Text(
                 UIManager& uiManager,
                 UIElement* pParent,

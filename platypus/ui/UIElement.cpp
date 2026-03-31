@@ -219,6 +219,12 @@ namespace platypus
                 _managerRef.removeRootElement(pChild);
 
             pChild->_pParent = this;
+
+            // Want to make the child inactive only in case this is inactive
+            //  -> might want to add child elements that are inactive but this being active
+            if (!isActive())
+                pChild->setActive(false);
+
             // NOTE: DANGER! WARNING!
             // All child elements will be put one layer above their parent so it is quaranteed
             // that they are rendered above the parent!
@@ -469,6 +475,10 @@ namespace platypus
             size_t childIndex = 0;
             for (UIElement* pChild : _children)
             {
+                // NOTE: Not sure if this fucks something up?
+                if (!pChild->isActive())
+                    continue;
+
                 pChild->updateScale();
                 Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);
                 uint32_t childEffectOnParent = pChildLayout->effectOnParentFlags;
@@ -479,7 +489,6 @@ namespace platypus
                     continue;
 
                 Vector2f childScale = pChild->getGlobalScale();
-
                 if (pLayout->expandElements == ExpandElements::DOWN)
                 {
                     if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
@@ -583,6 +592,10 @@ namespace platypus
                 position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + pLayout->position.y;
 
             // Add the cumulated elements scale so it goes correctly after the previous element
+            // UPDATE TO BELOW: Even if the current elem doesn't affect pos, its own positioning
+            // should take the cumulated pos/scale into account!
+            // TODO: Remove below commented out section...
+            /*
             if (pLayout->effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION)
             {
                 if (expandElements == ExpandElements::DOWN)
@@ -595,6 +608,28 @@ namespace platypus
                 else if (expandElements == ExpandElements::RIGHT)
                 {
                     position.x += (cumulatedScale.x);
+                    cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
+                    if (scale.y > cumulatedScale.y)
+                        cumulatedScale.y = scale.y + padding.y + borderThickness;
+                }
+            }
+            */
+            bool incrementPos = pLayout->effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION;
+            if (expandElements == ExpandElements::DOWN)
+            {
+                position.y += (cumulatedScale.y);
+                if (incrementPos)
+                {
+                    cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
+                    if (scale.x > cumulatedScale.x)
+                        cumulatedScale.x = scale.x + padding.x + borderThickness;
+                }
+            }
+            else if (expandElements == ExpandElements::RIGHT)
+            {
+                position.x += (cumulatedScale.x);
+                if (incrementPos)
+                {
                     cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
                     if (scale.y > cumulatedScale.y)
                         cumulatedScale.y = scale.y + padding.y + borderThickness;
