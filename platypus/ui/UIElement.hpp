@@ -112,9 +112,13 @@ namespace platypus
             UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
 
+            void(*_pOnAddChild)(void*) = nullptr;
+            void* _pOnAddChildUserData = nullptr;
+
             bool _isCursorOver = false;
             bool _dragged = false;
             bool _selected = false; // NOTE: this is atm only used by InputField
+            bool _groupRoot = false;
 
             // *reset back to false at updatePosition(...)
             // (since pos update has to be done after scale update)
@@ -136,6 +140,9 @@ namespace platypus
             static std::map<uint32_t, std::set<entityID_t>> s_cursorOverLayers;
             virtual ~UIElement();
 
+            inline void setGroupRoot_TEST(bool arg) { _groupRoot = arg; }
+
+            void configureOnAddChild(void(*pFunc)(void*), void* pUserData);
             // *Also updates the whole tree so the scales and positions are
             // correct immediately.
             void addChild(UIElement* pChild);
@@ -177,6 +184,8 @@ namespace platypus
             // the called element (obviously:D)
             bool isCursorOverTree() const;
 
+            // Sets the tree selected and updates correct colors according to layout
+            void setSelected(bool arg);
 
             void setRelativeLayer(uint32_t relativeLayer);
             uint32_t getRelativeLayer() const;
@@ -189,7 +198,6 @@ namespace platypus
             inline const entityID_t getEntityID() const { return _entityID; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
             inline bool isCursorOver() const { return _isCursorOver; }
-            inline void setSelected(bool arg) { _selected = arg; }
             inline bool isSelected() const { return _selected; }
             inline bool isUpdatePending() const { return _updatePending; }
 

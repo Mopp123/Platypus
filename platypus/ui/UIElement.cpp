@@ -90,6 +90,12 @@ namespace platypus
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
 
+                if (_pElement->_pParent->_groupRoot)
+                {
+                    for (UIElement* pGroupElement : _pElement->_pParent->_children)
+                        pGroupElement->setSelected(pGroupElement == _pElement);
+                }
+
                 _pElement->_dragged = true;
             }
 
@@ -210,6 +216,12 @@ namespace platypus
             pScene->destroyEntity(_entityID);
         }
 
+        void UIElement::configureOnAddChild(void(*pFunc)(void*), void* pUserData)
+        {
+            _pOnAddChild = pFunc;
+            _pOnAddChildUserData = pUserData;
+        }
+
         // *Also updates the whole tree so the scales and positions are
         // correct immediately.
         void UIElement::addChild(UIElement* pChild)
@@ -247,6 +259,9 @@ namespace platypus
             }
             #endif
             pRootParent->updateTree();
+
+            if (_pOnAddChild)
+                (*_pOnAddChild)(_pOnAddChildUserData);
         }
 
         void UIElement::destroyChildren()
@@ -550,6 +565,7 @@ namespace platypus
             Vector2f parentScale;
             Vector2f scale = getGlobalScale();
             Vector2f position;
+            Vector2f rootBorderTEST;
             if (_pParent)
             {
                 const Layout* pParentLayout = _managerRef.getLayout(_pParent->_layoutID);
@@ -561,6 +577,7 @@ namespace platypus
                 GUITransform* pParentTransform = _pParent->getTransform();
                 parentPosition = pParentTransform->position;
                 parentScale = pParentTransform->scale;
+                borderThickness = pParentLayout->borderThickness;
 
                 _absoluteLayer = _pParent->getAbsoluteLayer() + pLayout->layer;
             }
@@ -675,6 +692,30 @@ namespace platypus
             }
 
             return false;
+        }
+
+        void UIElement::setSelected(bool arg)
+        {
+            _selected = arg;
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+                    false,
+                    false
+                )
+            );
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            if (pRenderable)
+            {
+                if (_selected)
+                    pRenderable->color = pLayout->selectedColor;
+                else
+                    pRenderable->color = pLayout->color;
+            }
+            for (UIElement* pChild : _children)
+                pChild->setSelected(_selected);
         }
 
         void UIElement::setRelativeLayer(uint32_t relativeLayer)

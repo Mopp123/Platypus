@@ -39,10 +39,17 @@ namespace platypus
                 _buttonRef._pText->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
-            if (pBoxRenderable)
+
+            if (_buttonRef.isSelected())
+            {
+                pBoxRenderable->color = _buttonRef.getLayout()->selectedColor;
+                pTextRenderable->color = _buttonRef._pText->getLayout()->selectedColor;
+            }
+            else
+            {
                 pBoxRenderable->color = _buttonRef.getLayout()->color;
-            if (pTextRenderable)
                 pTextRenderable->color = _buttonRef._pText->getLayout()->color;
+            }
         }
 
         Button::Button(
