@@ -236,6 +236,16 @@ namespace platypus
 
         void InputField::setInputMode(bool active)
         {
+            // NOTE: ISSUE! WTF!?!?!?!
+            //  -> cursor is visible sometimes when the input field is NOT ACTIVE and
+            //  disappears when it IS ACTIVE!!!
+            // Possible reasons:
+            //  *is this part of a "group" (which is fucked up anyways atm...)?
+            //
+            //  CONTINUE HERE!
+            PLATYPUS_ASSERT(false);
+            Debug::log("___TEST___setting input field activation: " + std::to_string(active));
+
             _pCursorIndicator->setActive(active);
             GUIRenderable* pButtonBoxRenderable = _pButton->getRenderable();
             const Layout* pBoxLayout = _pButton->getLayout();
