@@ -90,10 +90,14 @@ namespace platypus
                 if (pOnClickEvent)
                     pOnClickEvent->func(button, action);
 
-                if (_pElement->_pParent->_groupRoot)
+                UIElement* pParent = _pElement->_pParent;
+                if (pParent)
                 {
-                    for (UIElement* pGroupElement : _pElement->_pParent->_children)
-                        pGroupElement->setSelected(pGroupElement == _pElement);
+                    if (pParent->_groupRoot)
+                    {
+                        for (UIElement* pGroupElement : pParent->_children)
+                            pGroupElement->setSelected(pGroupElement == _pElement);
+                    }
                 }
 
                 _pElement->_dragged = true;
