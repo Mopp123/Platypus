@@ -234,6 +234,9 @@ namespace platypus
             if (_managerRef.isRootElement(pChild))
                 _managerRef.removeRootElement(pChild);
 
+            if (pChild->_pParent)
+                pChild->_pParent->removeChild(pChild);
+
             pChild->_pParent = this;
 
             // Want to make the child inactive only in case this is inactive
@@ -266,6 +269,30 @@ namespace platypus
 
             if (_pOnAddChild)
                 (*_pOnAddChild)(_pOnAddChildUserData);
+        }
+
+        void UIElement::removeChild(UIElement* pChild)
+        {
+            int32_t childIndex = -1;
+            for (size_t i = 0; i < _children.size(); ++i)
+            {
+                if (pChild == _children[i])
+                {
+                    childIndex = static_cast<int32_t>(i);
+                    break;
+                }
+            }
+            if (childIndex == -1)
+            {
+                Debug::log(
+                    "Child element not found!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            pChild->_pParent = nullptr;
+            _children.erase(_children.begin() + childIndex);
         }
 
         void UIElement::destroyChildren()

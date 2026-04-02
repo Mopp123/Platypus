@@ -146,6 +146,7 @@ namespace platypus
             // *Also updates the whole tree so the scales and positions are
             // correct immediately.
             void addChild(UIElement* pChild);
+            void removeChild(UIElement* pChild);
 
             // Destroys child tree recursively
             // NOTE: Very shit and inefficient, just testing atm!
