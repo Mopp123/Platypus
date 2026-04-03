@@ -5,6 +5,7 @@
 
 
 #define NULL_COLOR Vector4f(0, 0, 0, 0)
+#define ERROR_COLOR Vector4f(1, 0, 1, 1)
 
 
 namespace platypus
@@ -105,8 +106,8 @@ namespace platypus
             WordWrap wordWrap = WordWrap::NONE;
             TextOverflow textOverflow = TextOverflow::NONE;
 
-            Vector4f hoverColor = NULL_COLOR;
-            Vector4f selectedColor = NULL_COLOR;
+            Vector4f hoverColor = ERROR_COLOR;
+            Vector4f selectedColor = ERROR_COLOR;
 
             Vector4f borderColor = NULL_COLOR;
             uint32_t borderThickness = 0;

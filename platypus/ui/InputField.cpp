@@ -34,6 +34,7 @@ namespace platypus
             int mods
         )
         {
+            std::string entityIDStr = std::to_string(_inputFieldRef._entityID);
             if (button == MouseButtonName::MOUSE_LEFT && action == InputAction::PRESS)
             {
                 bool wasSelected = _inputFieldRef.isSelected();
@@ -45,9 +46,7 @@ namespace platypus
                         _inputFieldRef.setSelected(false);
                 }
                 else
-                {
                     _inputFieldRef.setSelected(false);
-                }
 
                 if (_inputFieldRef.isSelected())
                     _inputFieldRef.setInputMode(true);
@@ -197,13 +196,22 @@ namespace platypus
             // end of the string -> enable more control over the cursor color
             Layout* pCursorIndicatorLayout = uiManager.createLayout();
             pCursorIndicatorLayout->color = textColor;
-            pCursorIndicatorLayout->scale = { 0, static_cast<float>(pFont->getFittingHeight()) };
+            // NOTE: THE ISSUE WAS THAT SELECTED COLOR WASN'T SPECIFIED -> RESULTS IN TRANSPARENT COLOR!!!
+            pCursorIndicatorLayout->hoverColor = textColor;
+            pCursorIndicatorLayout->selectedColor = textColor;
+            pCursorIndicatorLayout->scale = { _cursorWidth, static_cast<float>(pFont->getFittingHeight()) };
             pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
             _pCursorIndicator = uiManager.createElement(
                 _pButton,
                 pCursorIndicatorLayout,
                 true
             );
+            // NOTE: CONTINUE HERE!
+            //  -> due to UIElement setActive recursion, this currently is unable to set the
+            //  cursor indicator to be in inactive state when ever this InputField gets set in
+            //  active state
+            //  TODO: plz do something about this?
+            PLATYPUS_ASSERT(false)
             _pCursorIndicator->setActive(false);
 
             Application* pApp = Application::get_instance();
@@ -243,8 +251,6 @@ namespace platypus
             //  *is this part of a "group" (which is fucked up anyways atm...)?
             //
             //  CONTINUE HERE!
-            PLATYPUS_ASSERT(false);
-            Debug::log("___TEST___setting input field activation: " + std::to_string(active));
 
             _pCursorIndicator->setActive(active);
             GUIRenderable* pButtonBoxRenderable = _pButton->getRenderable();
@@ -254,8 +260,7 @@ namespace platypus
                 Vector2f cursorScale = _pCursorIndicator->getLayout()->scale;
                 // TODO: When adding functionality to select existing chars in the string
                 //  -> make the cursor be the scale of the selected char!
-                const float cursorWidth = 2;
-                _pCursorIndicator->setLayoutScale({ cursorWidth, cursorScale.y });
+                _pCursorIndicator->setLayoutScale({ _cursorWidth, cursorScale.y });
                 pButtonBoxRenderable->color = pBoxLayout->selectedColor;
             }
             else

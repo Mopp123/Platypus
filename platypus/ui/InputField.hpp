@@ -80,6 +80,7 @@ namespace platypus
                 virtual void func(unsigned int codepoint);
             };
 
+            float _cursorWidth = 2.0f;
             Button* _pButton = nullptr;
             Text* _pInfoText = nullptr;
             UIElement* _pCursorIndicator = nullptr;
