@@ -164,7 +164,7 @@ namespace platypus
             GUIRenderable* getRenderable();
             inline UIElement* getParent() const { return _pParent; }
             UIElement* getRootParent();
-            void setActive(bool arg);
+            virtual void setActive(bool arg);
             bool isActive();
 
             // returns set of all used layers in the tree

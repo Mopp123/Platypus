@@ -211,7 +211,6 @@ namespace platypus
             //  cursor indicator to be in inactive state when ever this InputField gets set in
             //  active state
             //  TODO: plz do something about this?
-            PLATYPUS_ASSERT(false)
             _pCursorIndicator->setActive(false);
 
             Application* pApp = Application::get_instance();
@@ -230,6 +229,26 @@ namespace platypus
             inputManager.addMouseButtonEvent(new InputFieldMouseButtonEvent(pScene, *this));
             inputManager.addCharInputEvent(new InputFieldCharInputEvent(*this));
             inputManager.addKeyEvent(new InputFieldKeyEvent(pScene, *this));
+        }
+
+        // Needed to override this to make the cursor indicator not show until
+        // actually inputting to the field...
+        // -> this otherwise does just exactly the same as UIElement's setActive
+        //  -> quite dumb... TODO: Plz do something about this...
+        void InputField::setActive(bool arg)
+        {
+            if (!arg)
+                remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
+
+            _isCursorOver = false;
+            _dragged = false;
+            for (UIElement* pChild : _children)
+                pChild->setActive(arg);
+
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            pScene->setEntityActive(_entityID, arg);
+
+            _pCursorIndicator->setActive(false);
         }
 
         std::string InputField::getContent()

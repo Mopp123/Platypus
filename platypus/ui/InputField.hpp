@@ -102,6 +102,12 @@ namespace platypus
             );
             ~InputField() { }
 
+            // Needed to override this to make the cursor indicator not show until
+            // actually inputting to the field...
+            // -> this otherwise does just exactly the same as UIElement's setActive
+            //  -> quite dumb... TODO: Plz do something about this...
+            virtual void setActive(bool arg) override;
+
         public:
             std::string getContent();
             void setContent(const std::string& text);
