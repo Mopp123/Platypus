@@ -57,6 +57,9 @@ namespace platypus
             ~Button() { }
 
         public:
+            // Currently almost the same as UIElement's setActive but this also resets
+            // the button's colors... dumb...
+            virtual void setActive(bool arg) override;
 
             void reset();
             inline Text* getText() { return _pText; }

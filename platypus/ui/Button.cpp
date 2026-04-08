@@ -94,6 +94,25 @@ namespace platypus
                 _pMouseExitEvent = new Button::MouseExitEvent(*this);
         }
 
+        // Currently almost the same as UIElement's setActive but this also resets
+        // the button's colors... dumb...
+        void Button::setActive(bool arg)
+        {
+            reset();
+            if (!arg)
+                remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
+
+            // *if setting inactive by OnClick func, reset mouseOver
+            // NOTE: This might be an issue if setting active and cursor immediately over?
+            _isCursorOver = false;
+            _dragged = false;
+            for (UIElement* pChild : _children)
+                pChild->setActive(arg);
+
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            pScene->setEntityActive(_entityID, arg);
+        }
+
         void Button::reset()
         {
             #ifdef PLATYPUS_DEBUG

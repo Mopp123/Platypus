@@ -90,6 +90,7 @@ namespace platypus
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 
+        bool assetExists(ID_t assetID) const;
         bool assetExists(ID_t assetID, AssetType type) const;
         Asset* getAsset(ID_t assetID) const;
         Asset* getAsset(ID_t assetID, AssetType type) const;
@@ -98,6 +99,9 @@ namespace platypus
         void makePersistent(Asset* pAsset);
         // For adding asset that wasn't created using the AssetManager
         void addExternalPersistentAsset(Asset* pAsset);
+
+        // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
+        void destroyAsset(ID_t assetID);
         void destroyPersistentAsset(ID_t assetID);
 
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }

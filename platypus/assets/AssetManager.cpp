@@ -487,6 +487,15 @@ namespace platypus
         return pFont;
     }
 
+    bool AssetManager::assetExists(ID_t assetID) const
+    {
+        std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
+        if (it != _assets.end())
+            return true;
+
+        return false;
+    }
+
     bool AssetManager::assetExists(ID_t assetID, AssetType type) const
     {
         std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
@@ -562,8 +571,37 @@ namespace platypus
         makePersistent(pAsset);
     }
 
+    // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
+    void AssetManager::destroyAsset(ID_t assetID)
+    {
+        if (_assets.find(assetID) == _assets.end())
+        {
+            Debug::log(
+                "Asset id: " + std::to_string(assetID) + " not found",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        delete _assets[assetID];
+        _assets.erase(assetID);
+
+        if (_persistentAssets.find(assetID) != _persistentAssets.end())
+            _persistentAssets.erase(assetID);
+    }
+
     void AssetManager::destroyPersistentAsset(ID_t assetID)
     {
+        if (_persistentAssets.find(assetID) == _persistentAssets.end())
+        {
+            Debug::log(
+                "Asset with id: " + std::to_string(assetID) + " wasn't marked as persistent",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
         delete _assets[assetID];
         _assets.erase(assetID);
         _persistentAssets.erase(assetID);
