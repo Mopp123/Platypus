@@ -95,8 +95,7 @@ namespace platypus
                 UIManager& uiManager,
                 const Layout* pLayout,
                 TextOverflow overflow,
-                const Vector4f& textColor,
-                const Vector4f& textHighlightColor,
+                const Layout::Colors& textColors,
                 const std::string& infoText,
                 const Font* pFont
             );

@@ -26,9 +26,7 @@ namespace platypus
                 UIManager& uiManager,
                 UIElement* pParent,
                 const Font* pFont,
-                const Vector4f& color,
-                const Vector4f& hoverColor,
-                const Vector4f& selectedColor,
+                const Layout::Colors colors,
                 const std::string& txt,
                 uint32_t effectOnParentFlags
             );

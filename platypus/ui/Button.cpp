@@ -23,9 +23,9 @@ namespace platypus
             );
 
             if (pBoxRenderable)
-                pBoxRenderable->color = _buttonRef.getLayout()->hoverColor;
+                pBoxRenderable->color = _buttonRef.getLayout()->colors.hover;
             if (pTextRenderable)
-                pTextRenderable->color = _buttonRef._pText->getLayout()->hoverColor;
+                pTextRenderable->color = _buttonRef._pText->getLayout()->colors.hover;
         }
 
         void Button::MouseExitEvent::func(int mx, int my)
@@ -42,22 +42,20 @@ namespace platypus
 
             if (_buttonRef.isSelected())
             {
-                pBoxRenderable->color = _buttonRef.getLayout()->selectedColor;
-                pTextRenderable->color = _buttonRef._pText->getLayout()->selectedColor;
+                pBoxRenderable->color = _buttonRef.getLayout()->colors.selected;
+                pTextRenderable->color = _buttonRef._pText->getLayout()->colors.selected;
             }
             else
             {
-                pBoxRenderable->color = _buttonRef.getLayout()->color;
-                pTextRenderable->color = _buttonRef._pText->getLayout()->color;
+                pBoxRenderable->color = _buttonRef.getLayout()->colors.base;
+                pTextRenderable->color = _buttonRef._pText->getLayout()->colors.base;
             }
         }
 
         Button::Button(
             UIManager& uiManager,
             const Layout* pLayout,
-            const Vector4f& textColor,
-            const Vector4f& textHoverColor,
-            const Vector4f& textSelectedColor,
+            const Layout::Colors& textColors,
             uint32_t textEffectOnParentFlags,
             const std::string& text,
             const Font* pFont,
@@ -76,9 +74,7 @@ namespace platypus
             _pText = uiManager.createText(
                 this,
                 pFont,
-                textColor,
-                textHoverColor,
-                textSelectedColor,
+                textColors,
                 text,
                 textEffectOnParentFlags
             );
@@ -128,89 +124,8 @@ namespace platypus
             #endif
             GUIRenderable* pBoxRenderable = getRenderable();
             GUIRenderable* pTextRenderable = _pText->getRenderable();
-            pBoxRenderable->color = getLayout()->color;
-            pTextRenderable->color = _pText->getLayout()->color;
+            pBoxRenderable->color = getLayout()->colors.base;
+            pTextRenderable->color = _pText->getLayout()->colors.base;
         }
-        /*
-        Button add_button_element(
-            UIManager& uiManager,
-            UIElement* pParent,
-            const Layout* pBoxLayout,
-            const Vector4f& textColor,
-            const Vector4f& textHoverColor,
-            const Vector4f& textSelectedColor,
-            uint32_t textEffectOnParentFlags,
-            const std::string& text,
-            const Font* pFont,
-            UIElement::OnClickEvent* pOnClick,
-            UIElement::MouseEnterEvent* pOnEnter,
-            UIElement::MouseExitEvent* pOnExit
-        )
-        {
-            UIElement* pContainer = uiManager.createElement(
-                pParent,
-                pBoxLayout,
-                true, // create renderable
-                NULL_ID, // textureID
-                pOnClick
-            );
-
-            Text* pText = uiManager.createText(
-                pContainer,
-                pFont,
-                textColor,
-                textHoverColor,
-                textSelectedColor,
-                text,
-                textEffectOnParentFlags
-            );
-
-            Button button = {
-                pContainer,
-                pText
-            };
-
-            if (pOnEnter)
-                pContainer->_pMouseEnterEvent = pOnEnter;
-            else
-                pContainer->_pMouseEnterEvent = new ButtonMouseEnterEvent(pContainer, pText);
-
-            if (pOnExit)
-                pContainer->_pMouseExitEvent = pOnExit;
-            else
-                pContainer->_pMouseExitEvent = new ButtonMouseExitEvent(pContainer, pText);
-
-            return button;
-        }
-
-
-        void reset_button(const Button& button)
-        {
-            #ifdef PLATYPUS_DEBUG
-            if (!button.pBox)
-            {
-                Debug::log(
-                    "Button's box element was nullptr",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            if (!button.pText)
-            {
-                Debug::log(
-                    "No button's text element was nullptr",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            #endif
-            GUIRenderable* pBoxRenderable = button.pBox->getRenderable();
-            GUIRenderable* pTextRenderable = button.pText->getRenderable();
-            pBoxRenderable->color = button.pBox->getLayout()->color;
-            pTextRenderable->color = button.pText->getLayout()->color;
-        }
-        */
     }
 }

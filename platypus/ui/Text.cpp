@@ -16,9 +16,7 @@ namespace platypus
             UIManager& uiManager,
             UIElement* pParent,
             const Font* pFont,
-            const Vector4f& color,
-            const Vector4f& hoverColor,
-            const Vector4f& selectedColor,
+            const Layout::Colors colors,
             const std::string& txt,
             uint32_t effectOnParentFlags
         ) :
@@ -82,16 +80,15 @@ namespace platypus
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
             pLayout->scale = { maxLineWidth,  totalHeight };
-            pLayout->color = color;
-            pLayout->hoverColor = hoverColor;
-            pLayout->selectedColor = selectedColor;
+
+            pLayout->colors = colors;
             pLayout->effectOnParentFlags = effectOnParentFlags;
 
             GUIRenderable* pTextRenderable = create_gui_renderable(
                 _entityID,
                 pFont->getTextureID(),
                 pFont->getID(),
-                pLayout->color,
+                pLayout->colors.base,
                 { 0, 0, 0, 0 }, // border color
                 0.0f, // border thickness
                 { 0, 0 }, // texture offset

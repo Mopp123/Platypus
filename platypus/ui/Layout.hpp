@@ -70,6 +70,16 @@ namespace platypus
 
         class Layout
         {
+        public:
+            // TODO: Add selectedBorder color?
+            struct Colors
+            {
+                Vector4f base =     NULL_COLOR;
+                Vector4f hover =    NULL_COLOR;
+                Vector4f selected = NULL_COLOR;
+                Vector4f border =   NULL_COLOR;
+            };
+
         private:
             friend class UIManager;
             Layout()
@@ -82,7 +92,8 @@ namespace platypus
 
             Vector2f position;
             Vector2f scale;
-            Vector4f color = NULL_COLOR;
+            Colors colors;
+
             Vector2f padding;
 
             // Layer in relation to the parent's layer NOT the actual
@@ -106,10 +117,6 @@ namespace platypus
             WordWrap wordWrap = WordWrap::NONE;
             TextOverflow textOverflow = TextOverflow::NONE;
 
-            Vector4f hoverColor = ERROR_COLOR;
-            Vector4f selectedColor = ERROR_COLOR;
-
-            Vector4f borderColor = NULL_COLOR;
             uint32_t borderThickness = 0;
         };
     }

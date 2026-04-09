@@ -15,7 +15,7 @@ namespace platypus
             Button* pButton = _inputFieldRef._pButton;
             GUIRenderable* pButtonRenderable = pButton->getRenderable();
             if (pButtonRenderable && !_inputFieldRef.isSelected())
-                pButtonRenderable->color = pButton->getLayout()->hoverColor;
+                pButtonRenderable->color = pButton->getLayout()->colors.hover;
         }
 
 
@@ -24,7 +24,7 @@ namespace platypus
             Button* pButton = _inputFieldRef._pButton;
             GUIRenderable* pButtonRenderable = pButton->getRenderable();
             if (pButtonRenderable && !_inputFieldRef.isSelected())
-                pButtonRenderable->color = pButton->getLayout()->color;
+                pButtonRenderable->color = pButton->getLayout()->colors.base;
         }
 
 
@@ -103,8 +103,7 @@ namespace platypus
             UIManager& uiManager,
             const Layout* pLayout,
             TextOverflow overflow,
-            const Vector4f& textColor,
-            const Vector4f& textHighlightColor,
+            const Layout::Colors& textColors,
             const std::string& infoText,
             const Font* pFont
         ) :
@@ -120,9 +119,7 @@ namespace platypus
             _pInfoText = uiManager.createText(
                 this,
                 pFont,
-                textColor,
-                textColor, // hover color
-                textColor, // selected color
+                textColors,
                 infoText
             );
 
@@ -164,12 +161,9 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
 
-            pButtonLayout->color = pLayout->color;
-            pButtonLayout->hoverColor = pLayout->hoverColor;
-            pButtonLayout->selectedColor = pLayout->selectedColor;
+            pButtonLayout->colors = pLayout->colors;
             pButtonLayout->padding = { 0, 0 };
             pButtonLayout->effectOnParentFlags = pLayout->effectOnParentFlags;
-            pButtonLayout->borderColor = pLayout->borderColor;
             pButtonLayout->borderThickness = pLayout->borderThickness;
             pButtonLayout->expandElements = ExpandElements::RIGHT;
 
@@ -181,9 +175,7 @@ namespace platypus
             _pButton = uiManager.createButton(
                 this,
                 pButtonLayout,
-                textColor,
-                textHighlightColor,
-                textHighlightColor, // selected color
+                textColors,
                 buttonTextEffectOnParentFlags,
                 "",
                 pFont,
@@ -195,10 +187,7 @@ namespace platypus
             // TODO: When adding the functionality to move the cursor behind the
             // end of the string -> enable more control over the cursor color
             Layout* pCursorIndicatorLayout = uiManager.createLayout();
-            pCursorIndicatorLayout->color = textColor;
-            // NOTE: THE ISSUE WAS THAT SELECTED COLOR WASN'T SPECIFIED -> RESULTS IN TRANSPARENT COLOR!!!
-            pCursorIndicatorLayout->hoverColor = textColor;
-            pCursorIndicatorLayout->selectedColor = textColor;
+            pCursorIndicatorLayout->colors = textColors;
             pCursorIndicatorLayout->scale = { _cursorWidth, static_cast<float>(pFont->getFittingHeight()) };
             pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
             _pCursorIndicator = uiManager.createElement(
@@ -280,11 +269,11 @@ namespace platypus
                 // TODO: When adding functionality to select existing chars in the string
                 //  -> make the cursor be the scale of the selected char!
                 _pCursorIndicator->setLayoutScale({ _cursorWidth, cursorScale.y });
-                pButtonBoxRenderable->color = pBoxLayout->selectedColor;
+                pButtonBoxRenderable->color = pBoxLayout->colors.selected;
             }
             else
             {
-                pButtonBoxRenderable->color = pBoxLayout->color;
+                pButtonBoxRenderable->color = pBoxLayout->colors.base;
             }
         }
     }

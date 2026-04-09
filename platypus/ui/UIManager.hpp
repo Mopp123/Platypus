@@ -81,9 +81,7 @@ namespace platypus
             Text* createText(
                 UIElement* pParent,
                 const Font* pFont,
-                const Vector4f& color,
-                const Vector4f& hoverColor,
-                const Vector4f& selectedColor,
+                const Layout::Colors& colors,
                 const std::string& txt,
                 uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS
             );
@@ -91,9 +89,7 @@ namespace platypus
             Button* createButton(
                 UIElement* pParent,
                 const Layout* pLayout,
-                const Vector4f& textColor,
-                const Vector4f& textHoverColor,
-                const Vector4f& textSelectedColor,
+                const Layout::Colors& textColors,
                 uint32_t textEffectOnParentFlags,
                 const std::string& text,
                 const Font* pFont,
@@ -106,8 +102,7 @@ namespace platypus
                 UIElement* pParent,
                 const Layout* pLayout,
                 TextOverflow overflow,
-                const Vector4f& textColor,
-                const Vector4f& textHighlightColor,
+                const Layout::Colors& textColors,
                 const std::string& infoText,
                 const Font* pFont
             );

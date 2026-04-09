@@ -44,9 +44,7 @@ namespace platypus
             Button(
                 UIManager& uiManager,
                 const Layout* pLayout,
-                const Vector4f& textColor,
-                const Vector4f& textHoverColor,
-                const Vector4f& textSelectedColor,
+                const Layout::Colors& textColors,
                 uint32_t textEffectOnParentFlags,
                 const std::string& text,
                 const Font* pFont,

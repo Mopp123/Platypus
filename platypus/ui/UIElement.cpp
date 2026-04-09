@@ -168,10 +168,10 @@ namespace platypus
             {
                 GUIRenderable* pRenderable = create_gui_renderable(
                     _entityID,
-                    pLayout->color
+                    pLayout->colors.base
                 );
                 pRenderable->textureID = textureID;
-                pRenderable->borderColor = pLayout->borderColor;
+                pRenderable->borderColor = pLayout->colors.border;
                 pRenderable->borderThickness = static_cast<float>(pLayout->borderThickness);
                 pRenderable->layer = pLayout->layer;
             }
@@ -350,21 +350,21 @@ namespace platypus
         void UIElement::setLayoutColor(const Vector4f& color)
         {
             Layout* pLayout = _managerRef.getLayout(_layoutID);
-            pLayout->color = color;
+            pLayout->colors.base = color;
             _updatePending = true;
         }
 
         void UIElement::setLayoutHoverColor(const Vector4f& color)
         {
             Layout* pLayout = _managerRef.getLayout(_layoutID);
-            pLayout->hoverColor = color;
+            pLayout->colors.hover = color;
             _updatePending = true;
         }
 
         void UIElement::setLayoutSelectedColor(const Vector4f& color)
         {
             Layout* pLayout = _managerRef.getLayout(_layoutID);
-            pLayout->selectedColor = color;
+            pLayout->colors.selected = color;
             _updatePending = true;
         }
 
@@ -741,9 +741,9 @@ namespace platypus
             if (pRenderable)
             {
                 if (_selected)
-                    pRenderable->color = pLayout->selectedColor;
+                    pRenderable->color = pLayout->colors.selected;
                 else
-                    pRenderable->color = pLayout->color;
+                    pRenderable->color = pLayout->colors.base;
             }
             for (UIElement* pChild : _children)
                 pChild->setSelected(_selected);
