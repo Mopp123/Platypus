@@ -94,9 +94,11 @@ namespace platypus
         // the button's colors... dumb...
         void Button::setActive(bool arg)
         {
-            reset();
             if (!arg)
+            {
+                reset();
                 remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
+            }
 
             // *if setting inactive by OnClick func, reset mouseOver
             // NOTE: This might be an issue if setting active and cursor immediately over?

@@ -231,7 +231,11 @@ namespace platypus
             TextOverflow overflow,
             const Layout::Colors& textColors,
             const std::string& infoText,
-            const Font* pFont
+            const Font* pFont,
+            void(*pUserOnClickFunc)(void*),
+            void* pOnClickUserData,
+            void(*pOnInputCharFunc)(const std::string&, void*),
+            void* pOnInputCharUserData
         )
         {
             InputField* pInputField = new InputField(
@@ -240,7 +244,11 @@ namespace platypus
                 overflow,
                 textColors,
                 infoText,
-                pFont
+                pFont,
+                pUserOnClickFunc,
+                pOnClickUserData,
+                pOnInputCharFunc,
+                pOnInputCharUserData
             );
 
             if (pParent)

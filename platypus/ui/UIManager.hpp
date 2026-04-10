@@ -104,7 +104,11 @@ namespace platypus
                 TextOverflow overflow,
                 const Layout::Colors& textColors,
                 const std::string& infoText,
-                const Font* pFont
+                const Font* pFont,
+                void(*pUserOnClickFunc)(void*) = nullptr,
+                void* pOnClickUserData = nullptr,
+                void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
+                void* pOnInputCharUserData = nullptr
             );
 
         private:

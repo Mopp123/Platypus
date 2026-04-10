@@ -49,9 +49,16 @@ namespace platypus
                     _inputFieldRef.setSelected(false);
 
                 if (_inputFieldRef.isSelected())
+                {
                     _inputFieldRef.setInputMode(true);
+                }
                 else if (wasSelected)
+                {
                     _inputFieldRef.setInputMode(false);
+                }
+
+                if (_inputFieldRef._pUserOnClickFunc)
+                    (*_inputFieldRef._pUserOnClickFunc)(_inputFieldRef._pOnClickUserData);
             }
         }
 
@@ -74,6 +81,12 @@ namespace platypus
                         _inputFieldRef._pButton,
                         str
                     );
+
+                    // NOTE: WARNING!
+                    //  THIS IS ABSOLUTELY DISGUSTING AND INEFFICIENT TO DO THE THING I
+                    //  INITIALLY INTENDED TO DO HERE WITH THIS!
+                    if (_inputFieldRef._pOnInputCharFunc)
+                        (*_inputFieldRef._pOnInputCharFunc)(str, _inputFieldRef._pOnInputCharUserData);
                 }
                 else if (key == KeyName::KEY_ENTER)
                 {
@@ -95,6 +108,12 @@ namespace platypus
                     _inputFieldRef._pButton,
                     str
                 );
+
+                // NOTE: WARNING!
+                //  THIS IS ABSOLUTELY DISGUSTING AND INEFFICIENT TO DO THE THING I
+                //  INITIALLY INTENDED TO DO HERE WITH THIS!
+                if (_inputFieldRef._pOnInputCharFunc)
+                    (*_inputFieldRef._pOnInputCharFunc)(str, _inputFieldRef._pOnInputCharUserData);
             }
         }
 
@@ -105,7 +124,11 @@ namespace platypus
             TextOverflow overflow,
             const Layout::Colors& textColors,
             const std::string& infoText,
-            const Font* pFont
+            const Font* pFont,
+            void(*pUserOnClickFunc)(void*),
+            void* pOnClickUserData,
+            void(*pOnInputCharFunc)(const std::string&, void*),
+            void* pOnInputCharUserData
         ) :
             UIElement(
                uiManager,
@@ -114,7 +137,12 @@ namespace platypus
                NULL_ID,
                nullptr,
                false
-            )
+            ),
+            _pUserOnClickFunc(pUserOnClickFunc),
+            _pOnClickUserData(pOnClickUserData),
+
+            _pOnInputCharFunc(pOnInputCharFunc),
+            _pOnInputCharUserData(pOnInputCharUserData)
         {
             _pInfoText = uiManager.createText(
                 this,
@@ -141,24 +169,31 @@ namespace platypus
 
             // Decrement the info width padding and elem gap from the button's width
             //  -> otherwise its' scale is incorrect in relation to the "root element"
-            float infoWidth = get_text_scale(infoText, pFont).x;
-            pButtonLayout->scale = {
-                pLayout->scale.x - (infoWidth + pLayout->padding.x * 2.0f + pLayout->elementGap),
-                pLayout->scale.y
-            };
-            if (pButtonLayout->scale.x <= 0)
+            if (pLayout->expandElements == ui::ExpandElements::RIGHT)
             {
-                Debug::log(
-                    "Layout's width: " + std::to_string(pLayout->scale.x) + " too small "
-                    "for holding info text with width: " + std::to_string(infoWidth) + " using "
-                    "padding.x: "+ std::to_string(pLayout->padding.x) + " and "
-                    "element gap: " + std::to_string(pLayout->elementGap) + " "
-                    "(NOTE: The given layout's width is the complete width, starting from the info text to "
-                    "the end of the input field! NOT THE INPUT BOX'S WIDTH!)",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
+                float infoWidth = get_text_scale(infoText, pFont).x;
+                pButtonLayout->scale = {
+                    pLayout->scale.x - (infoWidth + pLayout->padding.x * 2.0f + pLayout->elementGap),
+                    pLayout->scale.y
+                };
+                if (pButtonLayout->scale.x <= 0)
+                {
+                    Debug::log(
+                        "Layout's width: " + std::to_string(pLayout->scale.x) + " too small "
+                        "for holding info text with width: " + std::to_string(infoWidth) + " using "
+                        "padding.x: "+ std::to_string(pLayout->padding.x) + " and "
+                        "element gap: " + std::to_string(pLayout->elementGap) + " "
+                        "(NOTE: The given layout's width is the complete width, starting from the info text to "
+                        "the end of the input field! NOT THE INPUT BOX'S WIDTH!)",
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+            }
+            else
+            {
+                pButtonLayout->scale = pLayout->scale;
             }
 
             pButtonLayout->colors = pLayout->colors;
@@ -184,8 +219,8 @@ namespace platypus
                 nullptr //UIElement::MouseExitEvent* pOnExit
             );
 
-            // TODO: When adding the functionality to move the cursor behind the
-            // end of the string -> enable more control over the cursor color
+            // TODO: When adding the functionality to move the cursor, instead of being at the
+            // end of the string -> enable more control over the cursor color (+blinking etc?)
             Layout* pCursorIndicatorLayout = uiManager.createLayout();
             pCursorIndicatorLayout->colors = textColors;
             pCursorIndicatorLayout->scale = { _cursorWidth, static_cast<float>(pFont->getFittingHeight()) };
@@ -195,11 +230,9 @@ namespace platypus
                 pCursorIndicatorLayout,
                 true
             );
-            // NOTE: CONTINUE HERE!
-            //  -> due to UIElement setActive recursion, this currently is unable to set the
-            //  cursor indicator to be in inactive state when ever this InputField gets set in
-            //  active state
-            //  TODO: plz do something about this?
+            // NOTE:
+            //  -> due to UIElement setActive recursion, activation and deactivation of cursor
+            //  indicator needs to be handled in the overridden setActive(bool)!
             _pCursorIndicator->setActive(false);
 
             Application* pApp = Application::get_instance();
