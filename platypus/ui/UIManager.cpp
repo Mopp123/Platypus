@@ -232,8 +232,6 @@ namespace platypus
             const Layout::Colors& textColors,
             const std::string& infoText,
             const Font* pFont,
-            void(*pUserOnClickFunc)(void*),
-            void* pOnClickUserData,
             void(*pOnInputCharFunc)(const std::string&, void*),
             void* pOnInputCharUserData
         )
@@ -245,8 +243,6 @@ namespace platypus
                 textColors,
                 infoText,
                 pFont,
-                pUserOnClickFunc,
-                pOnClickUserData,
                 pOnInputCharFunc,
                 pOnInputCharUserData
             );

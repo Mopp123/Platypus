@@ -56,9 +56,6 @@ namespace platypus
                 {
                     _inputFieldRef.setInputMode(false);
                 }
-
-                if (_inputFieldRef._pUserOnClickFunc)
-                    (*_inputFieldRef._pUserOnClickFunc)(_inputFieldRef._pOnClickUserData);
             }
         }
 
@@ -125,8 +122,6 @@ namespace platypus
             const Layout::Colors& textColors,
             const std::string& infoText,
             const Font* pFont,
-            void(*pUserOnClickFunc)(void*),
-            void* pOnClickUserData,
             void(*pOnInputCharFunc)(const std::string&, void*),
             void* pOnInputCharUserData
         ) :
@@ -138,9 +133,6 @@ namespace platypus
                nullptr,
                false
             ),
-            _pUserOnClickFunc(pUserOnClickFunc),
-            _pOnClickUserData(pOnClickUserData),
-
             _pOnInputCharFunc(pOnInputCharFunc),
             _pOnInputCharUserData(pOnInputCharUserData)
         {

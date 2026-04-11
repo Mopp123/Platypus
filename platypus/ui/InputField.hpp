@@ -85,9 +85,6 @@ namespace platypus
             Text* _pInfoText = nullptr;
             UIElement* _pCursorIndicator = nullptr;
 
-            void(*_pUserOnClickFunc)(void*);
-            void* _pOnClickUserData = nullptr;
-
             void(*_pOnInputCharFunc)(const std::string&, void*);
             void* _pOnInputCharUserData = nullptr;
 
@@ -104,8 +101,6 @@ namespace platypus
                 const Layout::Colors& textColors,
                 const std::string& infoText,
                 const Font* pFont,
-                void(*pUserOnClickFunc)(void*) = nullptr,
-                void* pOnClickUserData = nullptr,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );
