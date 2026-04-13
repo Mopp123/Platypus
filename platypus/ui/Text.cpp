@@ -385,7 +385,7 @@ namespace platypus
             const Layout* pParentLayout = pParentElement->getLayout();
             const float parentWidth = pParentElement->getGlobalScale().x;
             const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2;
-            if (fullVisualWidth < parentContentWidth)
+            if (fullVisualWidth <= parentContentWidth)
             {
                 if (pOutWidth)
                     *pOutWidth = fullVisualWidth;
@@ -431,7 +431,7 @@ namespace platypus
                 util::str::append_utf8(codepoint, charStr);
                 float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
 
-                if (currentWidth + charVisualWidth < parentContentWidth)
+                if (currentWidth + charVisualWidth <= parentContentWidth)
                 {
                     currentWidth += charVisualWidth;
                     util::str::append_utf8(codepoint, strippedStr);
