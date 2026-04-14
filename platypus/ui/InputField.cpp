@@ -147,7 +147,7 @@ namespace platypus
             {
                 Debug::log(
                     "Inputted layout's scale was: " + pLayout->scale.toString() + " "
-                    "InputFields created via this function don't scale with "
+                    "InputFields created with this constructor doesn't scale with "
                     "content text element (for testing ellipsis overflow) so you'll "
                     "need to provide the full scale if the input field in advance!",
                     PLATYPUS_CURRENT_FUNC_NAME,

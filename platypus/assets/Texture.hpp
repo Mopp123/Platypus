@@ -41,6 +41,8 @@ namespace platypus
         bool _mipmapping = false;
 
     public:
+        // NOTE: Had to add default constructor for editor -> THIS MIGHT FUCK SHIT UP!
+        TextureSampler() {}
         TextureSampler(
             TextureSamplerFilterMode filterMode,
             TextureSamplerAddressMode addressMode,

@@ -96,7 +96,8 @@ namespace platypus
         {
             if (!arg)
             {
-                reset();
+                // NOTE: resetting the button's color to base kind of fucks up some stuff...
+                //reset();
                 remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
             }
 
