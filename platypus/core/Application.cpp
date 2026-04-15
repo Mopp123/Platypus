@@ -140,7 +140,13 @@ namespace platypus
         // NOTE: Need to destroy assets before destroying MasterRenderer because
         // some rely on descriptor pool that's living in the MasterRenderer atm!
         _pAssetManager->destroyAssets(true);
-        // NOTE: Why the fuck was this commented out earlier!?!?!
+        // CURRENT ISSUE HERE!!
+        // ->MasterRenderer's cleanUp() destroys its' persistent assets(offscreen textures)
+        // BUT the above line already destroyed them!
+        //  -> Don't remember when this started to be an issue
+        //      -> MITÄ VITTUA!!??!
+        // CONTINUE HERE!
+        PLATYPUS_ASSERT(false);
         _pMasterRenderer->cleanUp();
         _inputManager.destroyEvents();
 
