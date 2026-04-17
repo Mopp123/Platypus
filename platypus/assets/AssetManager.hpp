@@ -20,6 +20,11 @@ namespace platypus
         std::unordered_map<ID_t, Asset*> _assets;
         std::unordered_map<ID_t, Asset*> _persistentAssets;
 
+        // TODO: Maybe get rid of the image data after the textures are created...
+        //  -> images are never used after that?
+        Image* _pWhiteImage = nullptr;
+        Image* _pBlackImage = nullptr;
+        Image* _pZeroImage = nullptr;
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
         Texture* _pZeroTexture = nullptr;
@@ -27,7 +32,10 @@ namespace platypus
     public:
         AssetManager();
         ~AssetManager();
-        void destroyAssets(bool destroyPersistentAssets = false);
+        void destroyAssets();
+        // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
+        void destroyAsset(ID_t assetID);
+        //void destroyPersistentAsset(ID_t assetID);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
         Image* loadImage(const std::string& filepath, ImageFormat format);
@@ -100,10 +108,7 @@ namespace platypus
         // For adding asset that wasn't created using the AssetManager
         void addExternalPersistentAsset(Asset* pAsset);
 
-        // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
-        void destroyAsset(ID_t assetID);
-        void destroyPersistentAsset(ID_t assetID);
-
+        inline size_t getAssetTotalCount() const { return _assets.size(); }
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
         inline Texture* getZeroTexture() const { return _pZeroTexture; }
@@ -114,5 +119,7 @@ namespace platypus
             ID_t assetID,
             AssetType requiredType
         );
+
+        void destroyDefaultAssets();
     };
 }

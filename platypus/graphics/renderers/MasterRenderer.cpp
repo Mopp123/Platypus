@@ -464,8 +464,8 @@ namespace platypus
         _pOpaqueFramebuffer = nullptr;
         _pTransparentFramebuffer = nullptr;
 
-        Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pColorAttachment->getID());
-        Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pDepthAttachment->getID());
+        Application::get_instance()->getAssetManager()->destroyAsset(_pColorAttachment->getID());
+        Application::get_instance()->getAssetManager()->destroyAsset(_pDepthAttachment->getID());
         _pColorAttachment = nullptr;
         _pDepthAttachment = nullptr;
 

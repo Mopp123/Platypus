@@ -38,6 +38,9 @@ namespace platypus
     {
     private:
         Swapchain& _swapchainRef;
+        // NOTE: MasterRenderer shouldn't own DescriptorPool
+        // since, for example some Assets are using it too...
+        //  -> issue how MasterRenderer and AssetManager gets destroyed!
         DescriptorPool _descriptorPool;
         Batcher _batcher;
         std::vector<CommandBuffer> _primaryCommandBuffers;
@@ -67,6 +70,7 @@ namespace platypus
         Framebuffer* _pTransparentFramebuffer = nullptr;
 
         uint32_t _shadowmapWidth = 2048;
+        // TODO: Get rid of that fucking dumb RenderPassInstance thing?
         RenderPassInstance _shadowPassInstance;
         DescriptorSetLayout _shadowmapDescriptorSetLayout;
 

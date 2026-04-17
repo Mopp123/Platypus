@@ -11,16 +11,17 @@ namespace platypus
     {
         // Create black and white default textures
         PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
-        Image* pWhiteImage = createImage(whitePixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
-        _persistentAssets[pWhiteImage->getID()] = pWhiteImage;
+        _pWhiteImage = createImage(whitePixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
 
         PE_ubyte blackPixels[4] = { 0, 0, 0, 255 };
-        Image* pBlackImage = createImage(blackPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
-        _persistentAssets[pBlackImage->getID()] = pBlackImage;
+        _pBlackImage = createImage(blackPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
 
         PE_ubyte zeroPixels[4] = { 0, 0, 0, 0 };
-        Image* pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
-        _persistentAssets[pZeroImage->getID()] = pZeroImage;
+        _pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
+
+        _persistentAssets[_pWhiteImage->getID()] = _pWhiteImage;
+        _persistentAssets[_pBlackImage->getID()] = _pBlackImage;
+        _persistentAssets[_pZeroImage->getID()] = _pZeroImage;
 
         TextureSampler defaultTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -29,15 +30,15 @@ namespace platypus
             0
         );
         _pWhiteTexture = createTexture(
-            pWhiteImage->getID(),
+            _pWhiteImage->getID(),
             defaultTextureSampler
         );
         _pBlackTexture = createTexture(
-            pBlackImage->getID(),
+            _pBlackImage->getID(),
             defaultTextureSampler
         );
         _pZeroTexture = createTexture(
-            pZeroImage->getID(),
+            _pZeroImage->getID(),
             defaultTextureSampler
         );
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
@@ -47,11 +48,13 @@ namespace platypus
 
     AssetManager::~AssetManager()
     {
+        destroyDefaultAssets();
         if (!_assets.empty())
         {
             Debug::log(
                 "All assets haven't yet been destroyed!"
-                " Remaining assets: " + std::to_string(_assets.size()),
+                " Remaining assets: " + std::to_string(_assets.size()) + " "
+                "from which " + std::to_string(_persistentAssets.size()) + " were persistent.",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -59,23 +62,15 @@ namespace platypus
         }
     }
 
-    void AssetManager::destroyAssets(bool destroyPersistentAssets)
+    void AssetManager::destroyAssets()
     {
         std::unordered_map<ID_t, Asset*>::iterator it;
         for (it = _assets.begin(); it != _assets.end(); ++it)
         {
-            if (destroyPersistentAssets)
-            {
+            if (_persistentAssets.find(it->first) == _persistentAssets.end())
                 delete it->second;
-            }
-            else if (_persistentAssets.find(it->first) == _persistentAssets.end())
-            {
-                delete it->second;
-            }
         }
         _assets.clear();
-        if (destroyPersistentAssets)
-            _persistentAssets.clear();
 
         // Re add persistent assets to assets
         std::unordered_map<ID_t, Asset*>::iterator persistentIt;
@@ -84,6 +79,45 @@ namespace platypus
 
         Debug::log("Assets destroyed");
     }
+
+    // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
+    void AssetManager::destroyAsset(ID_t assetID)
+    {
+        if (_assets.find(assetID) == _assets.end())
+        {
+            Debug::log(
+                "Asset id: " + std::to_string(assetID) + " not found",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        delete _assets[assetID];
+        _assets.erase(assetID);
+
+        if (_persistentAssets.find(assetID) != _persistentAssets.end())
+            _persistentAssets.erase(assetID);
+    }
+
+    // TODO: delete below?
+    /*
+    void AssetManager::destroyPersistentAsset(ID_t assetID)
+    {
+        if (_persistentAssets.find(assetID) == _persistentAssets.end())
+        {
+            Debug::log(
+                "Asset with id: " + std::to_string(assetID) + " wasn't marked as persistent",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        delete _assets[assetID];
+        _assets.erase(assetID);
+        _persistentAssets.erase(assetID);
+    }
+    */
 
     Image* AssetManager::createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format)
     {
@@ -563,48 +597,13 @@ namespace platypus
     void AssetManager::makePersistent(Asset* pAsset)
     {
         _persistentAssets[pAsset->getID()] = pAsset;
+        Debug::log("___TEST___made asset persistent. Persistent asset count: " + std::to_string(_persistentAssets.size()));
     }
 
     void AssetManager::addExternalPersistentAsset(Asset* pAsset)
     {
         _assets[pAsset->getID()] = pAsset;
         makePersistent(pAsset);
-    }
-
-    // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
-    void AssetManager::destroyAsset(ID_t assetID)
-    {
-        if (_assets.find(assetID) == _assets.end())
-        {
-            Debug::log(
-                "Asset id: " + std::to_string(assetID) + " not found",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-        delete _assets[assetID];
-        _assets.erase(assetID);
-
-        if (_persistentAssets.find(assetID) != _persistentAssets.end())
-            _persistentAssets.erase(assetID);
-    }
-
-    void AssetManager::destroyPersistentAsset(ID_t assetID)
-    {
-        if (_persistentAssets.find(assetID) == _persistentAssets.end())
-        {
-            Debug::log(
-                "Asset with id: " + std::to_string(assetID) + " wasn't marked as persistent",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        delete _assets[assetID];
-        _assets.erase(assetID);
-        _persistentAssets.erase(assetID);
     }
 
     bool AssetManager::validateAsset(
@@ -640,5 +639,25 @@ namespace platypus
             return false;
         }
         return true;
+    }
+
+    void AssetManager::destroyDefaultAssets()
+    {
+        std::vector<ID_t> toDestroy = {
+            _pWhiteTexture->getID(),
+            _pBlackTexture->getID(),
+            _pZeroTexture->getID(),
+
+            _pWhiteImage->getID(),
+            _pBlackImage->getID(),
+            _pZeroImage->getID()
+        };
+
+        for (ID_t id : toDestroy)
+        {
+            delete _assets[id];
+            _assets.erase(id);
+            _persistentAssets.erase(id);
+        }
     }
 }
