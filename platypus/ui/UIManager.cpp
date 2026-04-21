@@ -225,6 +225,36 @@ namespace platypus
             return pButton;
         }
 
+        Checkbox* UIManager::createCheckbox(
+            UIElement* pParent,
+            const Layout* pLayout,
+            const Layout* pButtonLayout,
+            const Layout::Colors& textColors,
+            const std::string& text,
+            const Font* pFont
+        )
+        {
+            Checkbox* pCheckbox = new Checkbox(
+                *this,
+                pLayout,
+                pButtonLayout,
+                textColors,
+                text,
+                pFont
+            );
+
+            if (pParent)
+            {
+                pParent->addChild(pCheckbox);
+            }
+            else
+            {
+                pCheckbox->updateTree();
+                addRootElement(pCheckbox);
+            }
+            return pCheckbox;
+        }
+
         InputField* UIManager::createInputField(
             UIElement* pParent,
             const Layout* pLayout,

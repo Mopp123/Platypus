@@ -6,6 +6,7 @@
 #include "UIElement.hpp"
 #include "Text.hpp"
 #include "Button.hpp"
+#include "Checkbox.hpp"
 #include "InputField.hpp"
 #include <vector>
 
@@ -96,6 +97,15 @@ namespace platypus
                 UIElement::OnClickEvent* pOnClick,
                 UIElement::MouseEnterEvent* pOnEnter = nullptr,
                 UIElement::MouseExitEvent* pOnExit = nullptr
+            );
+
+            Checkbox* createCheckbox(
+                UIElement* pParent,
+                const Layout* pLayout,
+                const Layout* pButtonLayout,
+                const Layout::Colors& textColors,
+                const std::string& text,
+                const Font* pFont
             );
 
             InputField* createInputField(

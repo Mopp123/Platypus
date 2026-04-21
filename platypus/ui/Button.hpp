@@ -62,27 +62,5 @@ namespace platypus
             void reset();
             inline Text* getText() { return _pText; }
         };
-
-
-
-        // TODO: Replace all above button creation with this!
-        /*
-        Button add_button_element(
-            UIManager& uiManager,
-            UIElement* pParent,
-            const Layout* pBoxLayout,
-            const Vector4f& textColor,
-            const Vector4f& textHoverColor,
-            const Vector4f& textSelectedColor,
-            uint32_t textEffectOnParentFlags,
-            const std::string& text,
-            const Font* pFont,
-            UIElement::OnClickEvent* pOnClick,
-            UIElement::MouseEnterEvent* pOnEnter = nullptr,
-            UIElement::MouseExitEvent* pOnExit = nullptr
-        );
-
-        void reset_button(const Button* pButton);
-        */
     }
 }
