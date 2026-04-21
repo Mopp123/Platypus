@@ -431,11 +431,11 @@ namespace platypus
                 util::str::append_utf8(codepoint, charStr);
                 float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
 
-                if (currentWidth + charVisualWidth <= parentContentWidth)
-                {
-                    currentWidth += charVisualWidth;
-                    util::str::append_utf8(codepoint, strippedStr);
-                }
+                if (currentWidth + charVisualWidth > parentContentWidth)
+                    break;
+
+                currentWidth += charVisualWidth;
+                util::str::append_utf8(codepoint, strippedStr);
 
                 if (it == stopIt)
                     break;
@@ -449,9 +449,13 @@ namespace platypus
             if (pOutWidth)
                 *pOutWidth = currentWidth;
             if (overflow == TextOverflow::ELLIPSIS_LEFT)
+            {
                 return header + visualBuffer + util::str::reverse(strippedStr);
+            }
             else
+            {
                 return header + strippedStr + visualBuffer;
+            }
         }
 
 
