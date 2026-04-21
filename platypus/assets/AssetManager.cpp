@@ -521,6 +521,49 @@ namespace platypus
         return pFont;
     }
 
+    const TextureSampler* AssetManager::createTextureSampler(
+        TextureSamplerFilterMode filterMode,
+        TextureSamplerAddressMode addressMode,
+        bool useMipmapping
+    )
+    {
+        if (getTextureSampler(filterMode, addressMode, useMipmapping))
+        {
+            Debug::log(
+                "Texture sampler with given properties already exists!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        _textureSamplers.push_back({
+            filterMode,
+            addressMode,
+            useMipmapping,
+            0
+        });
+        return &_textureSamplers[_textureSamplers.size() - 1];
+    }
+
+    const TextureSampler* AssetManager::getTextureSampler(
+        TextureSamplerFilterMode filterMode,
+        TextureSamplerAddressMode addressMode,
+        bool useMipmapping
+    )
+    {
+        for (size_t i = 0; i < _textureSamplers.size(); ++i)
+        {
+            const TextureSampler& sampler = _textureSamplers[i];
+            if (sampler.getFilterMode() == filterMode &&
+                sampler.getAddressMode() == addressMode &&
+                sampler.isMipmapped() == useMipmapping)
+            {
+                return &_textureSamplers[i];
+            }
+        }
+        return nullptr;
+    }
+
     bool AssetManager::assetExists(ID_t assetID) const
     {
         std::unordered_map<ID_t, Asset*>::const_iterator it = _assets.find(assetID);
@@ -597,7 +640,6 @@ namespace platypus
     void AssetManager::makePersistent(Asset* pAsset)
     {
         _persistentAssets[pAsset->getID()] = pAsset;
-        Debug::log("___TEST___made asset persistent. Persistent asset count: " + std::to_string(_persistentAssets.size()));
     }
 
     void AssetManager::addExternalPersistentAsset(Asset* pAsset)

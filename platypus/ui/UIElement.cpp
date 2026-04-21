@@ -521,9 +521,10 @@ namespace platypus
             size_t childIndex = 0;
             for (UIElement* pChild : _children)
             {
-                // NOTE: Not sure if this fucks something up?
-                if (!pChild->isActive())
-                    continue;
+                // NOTE: Below actually fucks stuff up!
+                // Don't remember why was that added in the first place...
+                //if (!pChild->isActive())
+                //    continue;
 
                 pChild->updateScale();
                 Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);

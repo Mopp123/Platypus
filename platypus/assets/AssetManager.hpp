@@ -19,6 +19,7 @@ namespace platypus
     private:
         std::unordered_map<ID_t, Asset*> _assets;
         std::unordered_map<ID_t, Asset*> _persistentAssets;
+        std::vector<TextureSampler> _textureSamplers;
 
         // TODO: Maybe get rid of the image data after the textures are created...
         //  -> images are never used after that?
@@ -97,6 +98,18 @@ namespace platypus
             const KeyframeAnimationData& keyframes
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
+
+        const TextureSampler* createTextureSampler(
+            TextureSamplerFilterMode filterMode,
+            TextureSamplerAddressMode addressMode,
+            bool useMipmapping
+        );
+
+        const TextureSampler* getTextureSampler(
+            TextureSamplerFilterMode filterMode,
+            TextureSamplerAddressMode addressMode,
+            bool useMipmapping
+        );
 
         bool assetExists(ID_t assetID) const;
         bool assetExists(ID_t assetID, AssetType type) const;
