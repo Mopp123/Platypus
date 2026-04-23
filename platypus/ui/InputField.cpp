@@ -117,8 +117,8 @@ namespace platypus
 
         InputField::InputField(
             UIManager& uiManager,
-            const Layout* pLayout,
-            TextOverflow overflow,
+            const Layout* pRootLayout,
+            const Layout* pFieldLayout,
             const Layout::Colors& textColors,
             const std::string& infoText,
             const Font* pFont,
@@ -127,7 +127,7 @@ namespace platypus
         ) :
             UIElement(
                uiManager,
-               pLayout,
+               pRootLayout,
                false,
                NULL_ID,
                nullptr,
@@ -143,56 +143,16 @@ namespace platypus
                 infoText
             );
 
-            if (pLayout->scale.x == 0.0f || pLayout->scale.y == 0.0f)
+            if (pFieldLayout->textOverflow != TextOverflow::NONE  && (pFieldLayout->scale.x == 0.0f || pFieldLayout->scale.y == 0.0f))
             {
                 Debug::log(
-                    "Inputted layout's scale was: " + pLayout->scale.toString() + " "
-                    "InputFields created with this constructor doesn't scale with "
-                    "content text element (for testing ellipsis overflow) so you'll "
-                    "need to provide the full scale if the input field in advance!",
+                    "Input field layout was using text overflow, but its scale was: " + pFieldLayout->scale.toString() + ". "
+                    "The scale must be larger!",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
             }
-
-            Layout* pButtonLayout = uiManager.createLayout();
-            pButtonLayout->textOverflow = overflow;
-
-            // Decrement the info width padding and elem gap from the button's width
-            //  -> otherwise its' scale is incorrect in relation to the "root element"
-            if (pLayout->expandElements == ui::ExpandElements::RIGHT)
-            {
-                float infoWidth = get_text_scale(infoText, pFont).x;
-                pButtonLayout->scale = {
-                    pLayout->scale.x - (infoWidth + pLayout->padding.x * 2.0f + pLayout->elementGap),
-                    pLayout->scale.y
-                };
-                if (pButtonLayout->scale.x <= 0)
-                {
-                    Debug::log(
-                        "Layout's width: " + std::to_string(pLayout->scale.x) + " too small "
-                        "for holding info text with width: " + std::to_string(infoWidth) + " using "
-                        "padding.x: "+ std::to_string(pLayout->padding.x) + " and "
-                        "element gap: " + std::to_string(pLayout->elementGap) + " "
-                        "(NOTE: The given layout's width is the complete width, starting from the info text to "
-                        "the end of the input field! NOT THE INPUT BOX'S WIDTH!)",
-                        PLATYPUS_CURRENT_FUNC_NAME,
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                }
-            }
-            else
-            {
-                pButtonLayout->scale = pLayout->scale;
-            }
-
-            pButtonLayout->colors = pLayout->colors;
-            pButtonLayout->padding = { 0, 0 };
-            pButtonLayout->effectOnParentFlags = pLayout->effectOnParentFlags;
-            pButtonLayout->borderThickness = pLayout->borderThickness;
-            pButtonLayout->expandElements = ExpandElements::RIGHT;
 
             // NOTE: textLayout.effectOnParentFlags was 0 earlier for some reason...
             // TODO: Maybe allow defining the text layout separately for the InputField?
@@ -201,7 +161,7 @@ namespace platypus
 
             _pButton = uiManager.createButton(
                 this,
-                pButtonLayout,
+                pFieldLayout,
                 textColors,
                 buttonTextEffectOnParentFlags,
                 "",

@@ -110,8 +110,8 @@ namespace platypus
 
             InputField* createInputField(
                 UIElement* pParent,
-                const Layout* pLayout,
-                TextOverflow overflow,
+                const Layout* pRootLayout,
+                const Layout* pFieldLayout,
                 const Layout::Colors& textColors,
                 const std::string& infoText,
                 const Font* pFont,

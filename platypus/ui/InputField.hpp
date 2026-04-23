@@ -91,13 +91,10 @@ namespace platypus
         protected:
             friend class UIManager;
 
-            // TODO: Allow specifying the "root layout" and
-            // the actual input field box layout separately!
-            // NOTE: Above comment -> why? for what purpose??
             InputField(
                 UIManager& uiManager,
-                const Layout* pLayout,
-                TextOverflow overflow,
+                const Layout* pRootLayout,
+                const Layout* pFieldLayout,
                 const Layout::Colors& textColors,
                 const std::string& infoText,
                 const Font* pFont,
@@ -106,13 +103,13 @@ namespace platypus
             );
             ~InputField() { }
 
+        public:
             // Needed to override this to make the cursor indicator not show until
             // actually inputting to the field...
             // -> this otherwise does just exactly the same as UIElement's setActive
             //  -> quite dumb... TODO: Plz do something about this...
             virtual void setActive(bool arg) override;
 
-        public:
             std::string getContent();
             void setContent(const std::string& text);
 

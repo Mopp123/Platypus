@@ -257,8 +257,8 @@ namespace platypus
 
         InputField* UIManager::createInputField(
             UIElement* pParent,
-            const Layout* pLayout,
-            TextOverflow overflow,
+            const Layout* pRootLayout,
+            const Layout* pFieldLayout,
             const Layout::Colors& textColors,
             const std::string& infoText,
             const Font* pFont,
@@ -268,8 +268,8 @@ namespace platypus
         {
             InputField* pInputField = new InputField(
                 *this,
-                pLayout,
-                overflow,
+                pRootLayout,
+                pFieldLayout,
                 textColors,
                 infoText,
                 pFont,

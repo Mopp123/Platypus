@@ -384,7 +384,7 @@ namespace platypus
 
             const Layout* pParentLayout = pParentElement->getLayout();
             const float parentWidth = pParentElement->getGlobalScale().x;
-            const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2;
+            const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2 - pParentLayout->borderThickness * 2.0f;
             if (fullVisualWidth <= parentContentWidth)
             {
                 if (pOutWidth)
@@ -431,7 +431,8 @@ namespace platypus
                 util::str::append_utf8(codepoint, charStr);
                 float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
 
-                if (currentWidth + charVisualWidth > parentContentWidth)
+                // NOTE: Should maybe allow adding this char tho?
+                if (currentWidth + charVisualWidth >= parentContentWidth)
                     break;
 
                 currentWidth += charVisualWidth;
