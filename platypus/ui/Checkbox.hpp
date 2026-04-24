@@ -25,9 +25,11 @@ namespace platypus
         public:
             Checkbox(
                 UIManager& uiManager,
+                UIElement* pParent,
                 const Layout* pLayout,
-                const Layout* pButtonLayout,
-                const Layout::Colors& textColors,
+                const Layout* pTextLayout,
+                const Layout* pButtonBoxLayout,
+                const Layout* pButtonTextLayout,
                 const std::string& text,
                 const Font* pFont
             );

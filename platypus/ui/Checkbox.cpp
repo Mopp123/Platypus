@@ -15,33 +15,36 @@ namespace platypus
 
         Checkbox::Checkbox(
             UIManager& uiManager,
+            UIElement* pParent,
             const Layout* pLayout,
-            const Layout* pButtonLayout,
-            const Layout::Colors& textColors,
+            const Layout* pTextLayout,
+            const Layout* pButtonBoxLayout,
+            const Layout* pButtonTextLayout,
             const std::string& text,
             const Font* pFont
         ) :
             UIElement(
                 uiManager,
+                pParent,
                 pLayout,
                 false,
                 NULL_ID,
+                nullptr,
                 nullptr,
                 false // ignore input?
             )
         {
             _pText = uiManager.createText(
                 this,
+                pTextLayout,
                 pFont,
-                textColors,
                 text
             );
 
             _pButton = uiManager.createButton(
                 this,
-                pButtonLayout,
-                textColors,
-                0, // text effect on parent
+                pButtonBoxLayout,
+                pButtonTextLayout,
                 "",
                 pFont,
                 new OnSelect(*this)

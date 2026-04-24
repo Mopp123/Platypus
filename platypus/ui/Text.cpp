@@ -15,22 +15,21 @@ namespace platypus
         Text::Text(
             UIManager& uiManager,
             UIElement* pParent,
+            const Layout* pLayout,
             const Font* pFont,
-            const Layout::Colors colors,
-            const std::string& txt,
-            uint32_t effectOnParentFlags
+            const std::string& txt
         ) :
             UIElement(
                 uiManager,
-                uiManager.createLayout(), // Need to create for inherited UIElement -> will be modified here immediately tho!
+                pParent,
+                pLayout, // Need to create for inherited UIElement -> will be modified here immediately tho!
                 false,
                 NULL_ID,
+                pFont,
                 nullptr,
                 true // NOTE: All mouse input is ignored for Text atm!! TODO: ALLOW MORE CONTROL OVER THIS!
-            ),
-            _pFont(pFont)
+            )
         {
-            Layout* pLayout = uiManager.getLayout(_layoutID);
             WordWrap useWordWrap = WordWrap::NONE;
             TextOverflow useTextOverflow = TextOverflow::NONE;
             if (pParent)
@@ -79,10 +78,7 @@ namespace platypus
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
             float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
-            pLayout->scale = { maxLineWidth,  totalHeight };
-
-            pLayout->colors = colors;
-            pLayout->effectOnParentFlags = effectOnParentFlags;
+            overrideScale({ maxLineWidth,  totalHeight });
 
             GUIRenderable* pTextRenderable = create_gui_renderable(
                 _entityID,
@@ -96,6 +92,10 @@ namespace platypus
                 true, // isText?
                 finalText
             );
+            // Not sure is this necessary while creating?
+            //  -> might need it because overriding the scale for text
+            //      -> plz test
+            //triggerFullTreeUpdate();
         }
 
         // TODO: Replace this with the new one!
@@ -149,7 +149,9 @@ namespace platypus
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             pRenderable->text = finalText;
-            setLayoutScale({ maxLineWidth, charHeight * lineCount });
+
+            overrideScale({ maxLineWidth, charHeight * lineCount });
+            triggerFullTreeUpdate();
         }
 
         void Text::set(const std::string& text)
@@ -199,7 +201,9 @@ namespace platypus
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             pRenderable->text = finalText;
-            setLayoutScale({ maxLineWidth, charHeight * lineCount });
+
+            overrideScale({ maxLineWidth, charHeight * lineCount });
+            triggerFullTreeUpdate();
         }
 
 

@@ -93,9 +93,12 @@ namespace platypus
 
             InputField(
                 UIManager& uiManager,
-                const Layout* pRootLayout,
+                UIElement* pParent,
+                const Layout* pLayout,
+                const Layout* pTextLayout,
                 const Layout* pFieldLayout,
-                const Layout::Colors& textColors,
+                const Layout* pFieldTextLayout,
+                const Layout* pCursorIndicatorLayout,
                 const std::string& infoText,
                 const Font* pFont,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,

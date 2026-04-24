@@ -1,4 +1,5 @@
 #include "UIManager.hpp"
+#include "DefaultLayoutFactory.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
@@ -16,13 +17,34 @@ namespace platypus
                 pRootElement->updateTree();
         }
 
-        void UIManager::init(Scene* pScene, InputManager& inputManager)
+        void UIManager::init(Scene* pScene, InputManager& inputManager, Font* pDefaultFont)
         {
             _pScene = pScene;
             inputManager.addWindowResizeEvent(new ResizeEvent(*this));
 
             Window& window = Application::get_instance()->getWindow();
             window.getSurfaceExtent(&_windowWidth, &_windowHeight);
+
+            create_default_text_layout(
+                *this,
+                &_pDefaultTextLayout
+            );
+            create_default_button_layout(
+                *this,
+                &_pDefaultButtontLayout,
+                &_pDefaultButtonTextLayout
+            );
+            create_default_checkbox_layout(
+                *this,
+                &_pDefaultCheckboxLayout
+            );
+            create_default_input_field_layout(
+                *this,
+                pDefaultFont,
+                &_pDefaultInputFieldRootLayout,
+                &_pDefaultInputFieldLayout,
+                &_pDefaultInputFieldCursorLayout
+            );
         }
 
         UIManager::~UIManager()
@@ -141,18 +163,16 @@ namespace platypus
         {
             UIElement* pElement = new UIElement(
                 *this,
+                pParent,
                 pLayout,
                 createRenderable,
                 textureID,
+                nullptr, // font
                 pOnClickEvent
             );
             // *Need to update the "tree" even if contains only single element
             // so that scale and pos is immediately correct..
-            if (pParent)
-            {
-                pParent->addChild(pElement);
-            }
-            else
+            if (!pParent)
             {
                 pElement->updateTree();
                 addRootElement(pElement);
@@ -162,26 +182,20 @@ namespace platypus
 
         Text* UIManager::createText(
             UIElement* pParent,
+            const Layout* pLayout,
             const Font* pFont,
-            const Layout::Colors& colors,
-            const std::string& txt,
-            uint32_t effectOnParentFlags
+            const std::string& txt
         )
         {
             Text* pText = new Text(
                 *this,
                 pParent,
+                pLayout,
                 pFont,
-                colors,
-                txt,
-                effectOnParentFlags
+                txt
             );
 
-            if (pParent)
-            {
-                pParent->addChild(pText);
-            }
-            else
+            if (!pParent)
             {
                 pText->updateTree();
                 addRootElement(pText);
@@ -189,11 +203,24 @@ namespace platypus
             return pText;
         }
 
+        Text* UIManager::createText(
+            UIElement* pParent,
+            const Font* pFont,
+            const std::string& txt
+        )
+        {
+            return createText(
+                pParent,
+                _pDefaultTextLayout,
+                pFont,
+                txt
+            );
+        }
+
         Button* UIManager::createButton(
             UIElement* pParent,
             const Layout* pLayout,
-            const Layout::Colors& textColors,
-            uint32_t textEffectOnParentFlags,
+            const Layout* pTextLayout,
             const std::string& text,
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,
@@ -203,9 +230,9 @@ namespace platypus
         {
             Button* pButton = new Button(
                 *this,
+                pParent,
                 pLayout,
-                textColors,
-                textEffectOnParentFlags,
+                pTextLayout,
                 text,
                 pFont,
                 pOnClick,
@@ -213,11 +240,7 @@ namespace platypus
                 pOnExit
             );
 
-            if (pParent)
-            {
-                pParent->addChild(pButton);
-            }
-            else
+            if (!pParent)
             {
                 pButton->updateTree();
                 addRootElement(pButton);
@@ -225,29 +248,49 @@ namespace platypus
             return pButton;
         }
 
+        Button* UIManager::createButton(
+            UIElement* pParent,
+            const std::string& text,
+            const Font* pFont,
+            UIElement::OnClickEvent* pOnClick,
+            UIElement::MouseEnterEvent* pOnEnter,
+            UIElement::MouseExitEvent* pOnExit
+        )
+        {
+            return createButton(
+                pParent,
+                _pDefaultButtontLayout,
+                _pDefaultButtonTextLayout,
+                text,
+                pFont,
+                pOnClick,
+                pOnEnter,
+                pOnExit
+            );
+        }
+
         Checkbox* UIManager::createCheckbox(
             UIElement* pParent,
             const Layout* pLayout,
+            const Layout* pTextLayout,
             const Layout* pButtonLayout,
-            const Layout::Colors& textColors,
+            const Layout* pButtonTextLayout,
             const std::string& text,
             const Font* pFont
         )
         {
             Checkbox* pCheckbox = new Checkbox(
                 *this,
+                pParent,
                 pLayout,
+                pTextLayout,
                 pButtonLayout,
-                textColors,
+                pButtonTextLayout,
                 text,
                 pFont
             );
 
-            if (pParent)
-            {
-                pParent->addChild(pCheckbox);
-            }
-            else
+            if (!pParent)
             {
                 pCheckbox->updateTree();
                 addRootElement(pCheckbox);
@@ -255,11 +298,30 @@ namespace platypus
             return pCheckbox;
         }
 
+        Checkbox* UIManager::createCheckbox(
+            UIElement* pParent,
+            const std::string& text,
+            const Font* pFont
+        )
+        {
+            return createCheckbox(
+                pParent,
+                _pDefaultCheckboxLayout,
+                _pDefaultTextLayout,
+                _pDefaultButtontLayout,
+                _pDefaultButtonTextLayout,
+                text,
+                pFont
+            );
+        }
+
         InputField* UIManager::createInputField(
             UIElement* pParent,
-            const Layout* pRootLayout,
+            const Layout* pLayout,
+            const Layout* pTextLayout,
             const Layout* pFieldLayout,
-            const Layout::Colors& textColors,
+            const Layout* pFieldTextLayout,
+            const Layout* pCursorIndicatorLayout,
             const std::string& infoText,
             const Font* pFont,
             void(*pOnInputCharFunc)(const std::string&, void*),
@@ -268,25 +330,46 @@ namespace platypus
         {
             InputField* pInputField = new InputField(
                 *this,
-                pRootLayout,
+                pParent,
+                pLayout,
+                pTextLayout,
                 pFieldLayout,
-                textColors,
+                pFieldTextLayout,
+                pCursorIndicatorLayout,
                 infoText,
                 pFont,
                 pOnInputCharFunc,
                 pOnInputCharUserData
             );
 
-            if (pParent)
-            {
-                pParent->addChild(pInputField);
-            }
-            else
+            if (!pParent)
             {
                 pInputField->updateTree();
                 addRootElement(pInputField);
             }
             return pInputField;
+        }
+
+        InputField* UIManager::createInputField(
+            UIElement* pParent,
+            const std::string& infoText,
+            const Font* pFont,
+            void(*pOnInputCharFunc)(const std::string&, void*),
+            void* pOnInputCharUserData
+        )
+        {
+            return createInputField(
+                pParent,
+                _pDefaultInputFieldRootLayout,
+                _pDefaultTextLayout,
+                _pDefaultInputFieldLayout,
+                _pDefaultTextLayout, // NOTE: maybe want to have separate layout for input field's text?
+                _pDefaultInputFieldCursorLayout,
+                infoText,
+                pFont,
+                pOnInputCharFunc,
+                pOnInputCharUserData
+            );
         }
 
         float UIManager::toPercentage(float v1, float v2)

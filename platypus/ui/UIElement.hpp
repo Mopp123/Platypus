@@ -5,6 +5,8 @@
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/InputEvent.hpp"
 
+#include "platypus/assets/Font.hpp"
+
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
@@ -108,6 +110,11 @@ namespace platypus
 
             entityID_t _entityID = NULL_ENTITY_ID;
             int32_t _layoutID = -1;
+            const Font* _pFont = nullptr;
+
+            bool _overrideScale = false;
+            Vector2f _overrideScaleValue;
+
             // NOTE: Parent is currently set by UIManager when creating the UIElement if necessary
             UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
@@ -129,9 +136,11 @@ namespace platypus
 
             UIElement(
                 UIManager& uiManager,
+                UIElement* pParent,
                 const Layout* pLayout,
                 bool createRenderable,
                 ID_t textureID,
+                const Font* pFont,
                 OnClickEvent* pOnClickEvent,
                 bool ignoreInput = false
             );
@@ -180,6 +189,8 @@ namespace platypus
             // Updates scales and positions for the whole tree
             void updateTree();
 
+            void triggerFullTreeUpdate();
+
             void fetchTreeElements(std::vector<UIElement*>& outElements);
             // Returns true if cursor is over any element in the tree starting from
             // the called element (obviously:D)
@@ -197,6 +208,7 @@ namespace platypus
             static uint32_t get_cursor_over_layer();
 
             inline const entityID_t getEntityID() const { return _entityID; }
+            inline void overrideScale(const Vector2f& scale) { _overrideScale = true; _overrideScaleValue = scale; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
             inline bool isCursorOver() const { return _isCursorOver; }
             inline bool isSelected() const { return _selected; }

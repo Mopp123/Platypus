@@ -43,9 +43,9 @@ namespace platypus
             // Protected since some other UIElement may extend this
             Button(
                 UIManager& uiManager,
+                UIElement* pParent,
                 const Layout* pLayout,
-                const Layout::Colors& textColors,
-                uint32_t textEffectOnParentFlags,
+                const Layout* pTextLayout,
                 const std::string& text,
                 const Font* pFont,
                 UIElement::OnClickEvent* pOnClick,

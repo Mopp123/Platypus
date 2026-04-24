@@ -6,4 +6,5 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/Checkbox.cpp
     ${CMAKE_CURRENT_LIST_DIR}/InputField.cpp
     ${CMAKE_CURRENT_LIST_DIR}/UIManager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/DefaultLayoutFactory.cpp
 )

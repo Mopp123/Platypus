@@ -50,12 +50,21 @@ namespace platypus
             int _windowWidth = 0;
             int _windowHeight = 0;
 
+            Layout* _pDefaultTextLayout = nullptr;
+            Layout* _pDefaultButtontLayout = nullptr;
+            Layout* _pDefaultButtonTextLayout = nullptr;
+            Layout* _pDefaultCheckboxLayout = nullptr;
+
+            Layout* _pDefaultInputFieldRootLayout = nullptr;
+            Layout* _pDefaultInputFieldLayout = nullptr;
+            Layout* _pDefaultInputFieldCursorLayout = nullptr;
+
             std::vector<Layout*> _layouts;
             std::vector<UIElement*> _rootElements;
             std::set<UIElement*> _updatedRootElements;
 
         public:
-            void init(Scene* pScene, InputManager& inputManager);
+            void init(Scene* pScene, InputManager& inputManager, Font* pDefaultFont);
             ~UIManager();
 
             Layout* createLayout();
@@ -81,17 +90,30 @@ namespace platypus
 
             Text* createText(
                 UIElement* pParent,
+                const Layout* pLayout,
                 const Font* pFont,
-                const Layout::Colors& colors,
-                const std::string& txt,
-                uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS
+                const std::string& txt
+            );
+
+            Text* createText(
+                UIElement* pParent,
+                const Font* pFont,
+                const std::string& txt
             );
 
             Button* createButton(
                 UIElement* pParent,
                 const Layout* pLayout,
-                const Layout::Colors& textColors,
-                uint32_t textEffectOnParentFlags,
+                const Layout* pTextLayout,
+                const std::string& text,
+                const Font* pFont,
+                UIElement::OnClickEvent* pOnClick,
+                UIElement::MouseEnterEvent* pOnEnter = nullptr,
+                UIElement::MouseExitEvent* pOnExit = nullptr
+            );
+
+            Button* createButton(
+                UIElement* pParent,
                 const std::string& text,
                 const Font* pFont,
                 UIElement::OnClickEvent* pOnClick,
@@ -102,22 +124,41 @@ namespace platypus
             Checkbox* createCheckbox(
                 UIElement* pParent,
                 const Layout* pLayout,
+                const Layout* pTextLayout,
                 const Layout* pButtonLayout,
-                const Layout::Colors& textColors,
+                const Layout* pButtonTextLayout,
+                const std::string& text,
+                const Font* pFont
+            );
+
+            Checkbox* createCheckbox(
+                UIElement* pParent,
                 const std::string& text,
                 const Font* pFont
             );
 
             InputField* createInputField(
                 UIElement* pParent,
-                const Layout* pRootLayout,
+                const Layout* pLayout,
+                const Layout* pTextLayout,
                 const Layout* pFieldLayout,
-                const Layout::Colors& textColors,
+                const Layout* pFieldTextLayout,
+                const Layout* pCursorIndicatorLayout,
                 const std::string& infoText,
                 const Font* pFont,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );
+
+            InputField* createInputField(
+                UIElement* pParent,
+                const std::string& infoText,
+                const Font* pFont,
+                void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
+                void* pOnInputCharUserData = nullptr
+            );
+
+            inline const Layout* getDefaultButtonTextLayout() { return _pDefaultButtonTextLayout; }
 
         private:
             float toPercentage(float v1, float v2);

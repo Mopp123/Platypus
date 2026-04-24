@@ -13,9 +13,6 @@ namespace platypus
         class UIManager;
         class Text : public UIElement
         {
-        private:
-            const Font* _pFont = nullptr;
-
         protected:
             friend class UIManager;
             // Protected since some other UIElement may extend this
@@ -25,10 +22,9 @@ namespace platypus
             Text(
                 UIManager& uiManager,
                 UIElement* pParent,
+                const Layout* pLayout,
                 const Font* pFont,
-                const Layout::Colors colors,
-                const std::string& txt,
-                uint32_t effectOnParentFlags
+                const std::string& txt
             );
             ~Text() { }
 

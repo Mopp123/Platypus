@@ -117,9 +117,12 @@ namespace platypus
 
         InputField::InputField(
             UIManager& uiManager,
-            const Layout* pRootLayout,
+            UIElement* pParent,
+            const Layout* pLayout,
+            const Layout* pTextLayout,
             const Layout* pFieldLayout,
-            const Layout::Colors& textColors,
+            const Layout* pFieldTextLayout,
+            const Layout* pCursorIndicatorLayout,
             const std::string& infoText,
             const Font* pFont,
             void(*pOnInputCharFunc)(const std::string&, void*),
@@ -127,9 +130,11 @@ namespace platypus
         ) :
             UIElement(
                uiManager,
-               pRootLayout,
+               pParent,
+               pLayout,
                false,
                NULL_ID,
+               nullptr,
                nullptr,
                false
             ),
@@ -138,8 +143,8 @@ namespace platypus
         {
             _pInfoText = uiManager.createText(
                 this,
+                pTextLayout,
                 pFont,
-                textColors,
                 infoText
             );
 
@@ -162,8 +167,7 @@ namespace platypus
             _pButton = uiManager.createButton(
                 this,
                 pFieldLayout,
-                textColors,
-                buttonTextEffectOnParentFlags,
+                pFieldTextLayout,
                 "",
                 pFont,
                 nullptr, //UIElement::OnClickEvent* pOnClick,
@@ -173,10 +177,10 @@ namespace platypus
 
             // TODO: When adding the functionality to move the cursor, instead of being at the
             // end of the string -> enable more control over the cursor color (+blinking etc?)
-            Layout* pCursorIndicatorLayout = uiManager.createLayout();
-            pCursorIndicatorLayout->colors = textColors;
-            pCursorIndicatorLayout->scale = { _cursorWidth, static_cast<float>(pFont->getFittingHeight()) };
-            pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
+            //Layout* pCursorIndicatorLayout = uiManager.createLayout();
+            //pCursorIndicatorLayout->colors = textColors;
+            //pCursorIndicatorLayout->scale = { _cursorWidth, static_cast<float>(pFont->getFittingHeight()) };
+            //pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
             _pCursorIndicator = uiManager.createElement(
                 _pButton,
                 pCursorIndicatorLayout,
@@ -251,6 +255,7 @@ namespace platypus
             if (active)
             {
                 Vector2f cursorScale = _pCursorIndicator->getLayout()->scale;
+                // NOTE: Why the fuck is cursor indicator's scale modified here!??!!?
                 // TODO: When adding functionality to select existing chars in the string
                 //  -> make the cursor be the scale of the selected char!
                 _pCursorIndicator->setLayoutScale({ _cursorWidth, cursorScale.y });

@@ -54,9 +54,9 @@ namespace platypus
 
         Button::Button(
             UIManager& uiManager,
+            UIElement* pParent,
             const Layout* pLayout,
-            const Layout::Colors& textColors,
-            uint32_t textEffectOnParentFlags,
+            const Layout* pTextLayout,
             const std::string& text,
             const Font* pFont,
             UIElement::OnClickEvent* pOnClick,
@@ -65,18 +65,19 @@ namespace platypus
         ) :
             UIElement(
                 uiManager,
+                pParent,
                 pLayout,
                 true,
                 NULL_ID,
+                nullptr,
                 pOnClick
             )
         {
             _pText = uiManager.createText(
                 this,
+                pTextLayout,
                 pFont,
-                textColors,
-                text,
-                textEffectOnParentFlags
+                text
             );
 
             if (pOnEnter)

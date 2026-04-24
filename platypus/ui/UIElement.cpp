@@ -111,15 +111,18 @@ namespace platypus
         std::map<uint32_t, std::set<entityID_t>> UIElement::s_cursorOverLayers;
         UIElement::UIElement(
             UIManager& uiManager,
+            UIElement* pParent,
             const Layout* pLayout,
             bool createRenderable,
             ID_t textureID,
+            const Font* pFont,
             OnClickEvent* pOnClickEvent,
             bool ignoreInput
         ) :
             _managerRef(uiManager),
             _pOnClickEvent(pOnClickEvent),
-            _layoutID(pLayout->id)
+            _layoutID(pLayout->id),
+            _pFont(pFont)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
@@ -174,6 +177,11 @@ namespace platypus
                 pRenderable->borderColor = pLayout->colors.border;
                 pRenderable->borderThickness = static_cast<float>(pLayout->borderThickness);
                 pRenderable->layer = pLayout->layer;
+            }
+
+            if (pParent)
+            {
+                pParent->addChild(this);
             }
 
             // *Need to update the "tree" even if contains only single element
@@ -335,7 +343,7 @@ namespace platypus
         {
             Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->scale = scale;
-            _managerRef.addToUpdatedElements(this);
+            _managerRef.addToUpdatedElements(getRootParent());
             _updatePending = true;
         }
 
@@ -343,7 +351,7 @@ namespace platypus
         {
             Layout* pLayout = _managerRef.getLayout(_layoutID);
             pLayout->position = position;
-            _managerRef.addToUpdatedElements(this);
+            _managerRef.addToUpdatedElements(getRootParent());
             _updatePending = true;
         }
 
@@ -509,10 +517,16 @@ namespace platypus
         //  -> not fully tested!
         void UIElement::updateScale()
         {
+            GUITransform* pTransform = getTransform();
+            if (_overrideScale)
+            {
+                pTransform->scale = _overrideScaleValue;
+                return;
+            }
+
             Layout* pLayout = _managerRef.getLayout(_layoutID);
             if (_children.empty())
             {
-                GUITransform* pTransform = getTransform();
                 pTransform->scale = pLayout->scale;
                 return;
             }
@@ -575,7 +589,6 @@ namespace platypus
                 ++childIndex;
             }
 
-            GUITransform* pTransform = getTransform();
             pTransform->scale = {
                 std::max(pLayout->scale.x, scale.x),
                 std::max(pLayout->scale.y, scale.y)
@@ -703,6 +716,12 @@ namespace platypus
             updateScale();
             Vector2f cumulatedScale;
             updatePosition(cumulatedScale);
+        }
+
+        void UIElement::triggerFullTreeUpdate()
+        {
+            _managerRef.addToUpdatedElements(getRootParent());
+            _updatePending = true;
         }
 
         void UIElement::fetchTreeElements(std::vector<UIElement*>& outElements)
