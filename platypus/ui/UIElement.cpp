@@ -589,10 +589,25 @@ namespace platypus
                 ++childIndex;
             }
 
+
             pTransform->scale = {
                 std::max(pLayout->scale.x, scale.x),
                 std::max(pLayout->scale.y, scale.y)
             };
+        }
+
+        void UIElement::updateInheritedScale(Vector2f parentScale)
+        {
+            Layout* pLayout = getLayout();
+
+            GUITransform* pTransform = getTransform();
+            if (pLayout->inheritParentFlags & InheritParentFlagBits::WIDTH)
+                pTransform->scale.x = parentScale.x;
+            if (pLayout->inheritParentFlags & InheritParentFlagBits::HEIGHT)
+                pTransform->scale.y = parentScale.y;
+
+            for (UIElement* pChild : _children)
+                pChild->updateInheritedScale(pTransform->scale);
         }
 
         // NOTE: Newly incorporated borderThickness might not work properly
@@ -710,10 +725,10 @@ namespace platypus
             _updatePending = false;
         }
 
-        // NOTE: BORDER THICKNESS IS NO MORE PART OF PADDING!
         void UIElement::updateTree()
         {
             updateScale();
+            updateInheritedScale(getTransform()->scale);
             Vector2f cumulatedScale;
             updatePosition(cumulatedScale);
         }

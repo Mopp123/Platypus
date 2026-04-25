@@ -92,10 +92,7 @@ namespace platypus
                 true, // isText?
                 finalText
             );
-            // Not sure is this necessary while creating?
-            //  -> might need it because overriding the scale for text
-            //      -> plz test
-            //triggerFullTreeUpdate();
+            triggerFullTreeUpdate();
         }
 
         // TODO: Replace this with the new one!

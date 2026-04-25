@@ -49,6 +49,7 @@ namespace platypus
                 pFont,
                 new OnSelect(*this)
             );
+            triggerFullTreeUpdate();
         }
 
         void Checkbox::setChecked(bool arg)

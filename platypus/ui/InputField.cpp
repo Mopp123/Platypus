@@ -207,6 +207,8 @@ namespace platypus
             inputManager.addMouseButtonEvent(new InputFieldMouseButtonEvent(pScene, *this));
             inputManager.addCharInputEvent(new InputFieldCharInputEvent(*this));
             inputManager.addKeyEvent(new InputFieldKeyEvent(pScene, *this));
+
+            triggerFullTreeUpdate();
         }
 
         // Needed to override this to make the cursor indicator not show until

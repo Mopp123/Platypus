@@ -50,13 +50,20 @@ namespace platypus
             int _windowWidth = 0;
             int _windowHeight = 0;
 
+            // TODO: Unfuck below! This shit is getting out of hand... once again...
             Layout* _pDefaultTextLayout = nullptr;
-            Layout* _pDefaultButtontLayout = nullptr;
+            Layout* _pDefaultNonStretchTextLayout = nullptr;
+
+            Layout* _pDefaultButtonLayout = nullptr;
             Layout* _pDefaultButtonTextLayout = nullptr;
             Layout* _pDefaultCheckboxLayout = nullptr;
+            Layout* _pDefaultCheckboxBoxLayout = nullptr;
 
             Layout* _pDefaultInputFieldRootLayout = nullptr;
             Layout* _pDefaultInputFieldLayout = nullptr;
+            Layout* _pDefaultHorizontalInputFieldRootLayout = nullptr;
+            Layout* _pDefaultHorizontalInputFieldLayout = nullptr;
+
             Layout* _pDefaultInputFieldCursorLayout = nullptr;
 
             std::vector<Layout*> _layouts;
@@ -154,11 +161,16 @@ namespace platypus
                 UIElement* pParent,
                 const std::string& infoText,
                 const Font* pFont,
+                ExpandElements fieldDirection, // is the field to the left or below the info txt
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );
 
-            inline const Layout* getDefaultButtonTextLayout() { return _pDefaultButtonTextLayout; }
+            inline const Layout* getDefaultTextLayout() const { return _pDefaultTextLayout; }
+            inline const Layout* getDefaultNonStretchTextLayout() const { return _pDefaultNonStretchTextLayout; }
+            inline const Layout* getDefaultButtonLayout() const { return _pDefaultButtonLayout; }
+            inline const Layout* getDefaultButtonTextLayout() const { return _pDefaultButtonTextLayout; }
+            inline const Layout* getDefaultInputFieldCursorLayout() const { return _pDefaultInputFieldCursorLayout; }
 
         private:
             float toPercentage(float v1, float v2);

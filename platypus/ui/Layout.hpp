@@ -65,6 +65,12 @@ namespace platypus
             INCREMENT_POSITION = 0x1 << 2
         };
 
+        enum InheritParentFlagBits
+        {
+            WIDTH = 0x1,
+            HEIGHT = 0x1 << 1
+        };
+
         inline constexpr uint32_t DEFAULT_EFFECT_ON_PARENT_FLAGS = (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY | EffectOnParentFlagBits::INCREMENT_POSITION);
 
 
@@ -102,6 +108,7 @@ namespace platypus
             uint32_t layer = 0;
 
             uint32_t effectOnParentFlags = DEFAULT_EFFECT_ON_PARENT_FLAGS;
+            uint32_t inheritParentFlags = 0;
 
             // NOTE: Parent's content alignment override child's own alignment
             HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;

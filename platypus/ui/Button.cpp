@@ -89,6 +89,10 @@ namespace platypus
                 _pMouseExitEvent = pOnExit;
             else
                 _pMouseExitEvent = new Button::MouseExitEvent(*this);
+
+            // Need to update full tree since after adding the
+            // text element, the scale changes
+            triggerFullTreeUpdate();
         }
 
         // Currently almost the same as UIElement's setActive but this also resets

@@ -27,22 +27,43 @@ namespace platypus
 
             create_default_text_layout(
                 *this,
+                DEFAULT_EFFECT_ON_PARENT_FLAGS,
                 &_pDefaultTextLayout
+            );
+            create_default_text_layout(
+                *this,
+                EffectOnParentFlagBits::INCREMENT_POSITION | EffectOnParentFlagBits::STRETCH_VERTICALLY,
+                &_pDefaultNonStretchTextLayout
             );
             create_default_button_layout(
                 *this,
-                &_pDefaultButtontLayout,
+                &_pDefaultButtonLayout,
                 &_pDefaultButtonTextLayout
             );
             create_default_checkbox_layout(
                 *this,
-                &_pDefaultCheckboxLayout
+                pDefaultFont,
+                &_pDefaultCheckboxLayout,
+                &_pDefaultCheckboxBoxLayout
+            );
+
+            create_default_input_field_layout(
+                *this,
+                pDefaultFont,
+                ExpandElements::DOWN,
+                &_pDefaultInputFieldRootLayout,
+                &_pDefaultInputFieldLayout
             );
             create_default_input_field_layout(
                 *this,
                 pDefaultFont,
-                &_pDefaultInputFieldRootLayout,
-                &_pDefaultInputFieldLayout,
+                ExpandElements::RIGHT,
+                &_pDefaultHorizontalInputFieldRootLayout,
+                &_pDefaultHorizontalInputFieldLayout
+            );
+            create_default_input_field_cursor_layout(
+                *this,
+                pDefaultFont,
                 &_pDefaultInputFieldCursorLayout
             );
         }
@@ -259,7 +280,7 @@ namespace platypus
         {
             return createButton(
                 pParent,
-                _pDefaultButtontLayout,
+                _pDefaultButtonLayout,
                 _pDefaultButtonTextLayout,
                 text,
                 pFont,
@@ -308,7 +329,7 @@ namespace platypus
                 pParent,
                 _pDefaultCheckboxLayout,
                 _pDefaultTextLayout,
-                _pDefaultButtontLayout,
+                _pDefaultCheckboxBoxLayout,
                 _pDefaultButtonTextLayout,
                 text,
                 pFont
@@ -354,16 +375,20 @@ namespace platypus
             UIElement* pParent,
             const std::string& infoText,
             const Font* pFont,
+            ExpandElements fieldDirection, // is the field to the left or below the info txt
             void(*pOnInputCharFunc)(const std::string&, void*),
             void* pOnInputCharUserData
         )
         {
+            Layout* pRootLayout = fieldDirection == ExpandElements::DOWN ? _pDefaultInputFieldRootLayout : _pDefaultHorizontalInputFieldRootLayout;
+            Layout* pFieldLayout = fieldDirection == ExpandElements::DOWN ? _pDefaultInputFieldLayout : _pDefaultHorizontalInputFieldLayout;
+
             return createInputField(
                 pParent,
-                _pDefaultInputFieldRootLayout,
+                pRootLayout,
                 _pDefaultTextLayout,
-                _pDefaultInputFieldLayout,
-                _pDefaultTextLayout, // NOTE: maybe want to have separate layout for input field's text?
+                pFieldLayout,
+                _pDefaultNonStretchTextLayout,
                 _pDefaultInputFieldCursorLayout,
                 infoText,
                 pFont,
