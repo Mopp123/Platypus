@@ -113,7 +113,9 @@ namespace platypus
             //  -> quite dumb... TODO: Plz do something about this...
             virtual void setActive(bool arg) override;
 
-            std::string getContent();
+            std::string getContent() const;
+            bool getContentFloat(float& outValue) const;
+            bool getContentVector2f(Vector2f& outValue) const;
             void setContent(const std::string& text);
 
             inline Button* getButton() { return _pButton; }

@@ -172,6 +172,7 @@ namespace platypus
             inline Layout* getDefaultButtonLayout() { return _pDefaultButtonLayout; }
             inline const Layout* getDefaultButtonTextLayout() const { return _pDefaultButtonTextLayout; }
             inline const Layout* getDefaultInputFieldLayout() const { return _pDefaultInputFieldLayout; }
+            inline const Layout* getDefaultInputFieldRootLayout() const { return _pDefaultInputFieldRootLayout; }
             inline const Layout* getDefaultInputFieldCursorLayout() const { return _pDefaultInputFieldCursorLayout; }
 
         private:

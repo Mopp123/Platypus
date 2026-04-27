@@ -4,6 +4,7 @@
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/utils/StringUtils.hpp"
+#include <stdexcept>
 
 
 namespace platypus
@@ -227,9 +228,54 @@ namespace platypus
             _pCursorIndicator->setActive(false);
         }
 
-        std::string InputField::getContent()
+        std::string InputField::getContent() const
         {
             return _pButton->getText()->getRenderable()->text;
+        }
+
+        bool InputField::getContentFloat(float& outValue) const
+        {
+            const std::string content = getContent();
+            try
+            {
+                outValue = std::stof(content);
+                return true;
+            }
+            catch (const std::invalid_argument& e)
+            {
+                Debug::log(
+                    "Failed to convert " + content + " to float",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+            return false;
+        }
+
+        bool InputField::getContentVector2f(Vector2f& outValue) const
+        {
+            std::string content = getContent();
+            util::str::trim_spaces(content);
+
+            size_t commaPos = content.find(",");
+            std::string xStr = content.substr(0, commaPos);
+            std::string yStr = content.substr(commaPos + 1, std::string::npos);
+
+            try
+            {
+                outValue.x = std::stof(xStr);
+                outValue.y = std::stof(yStr);
+                return true;
+            }
+            catch (const std::invalid_argument& e)
+            {
+                Debug::log(
+                    "Failed to convert " + content + " to Vector2f",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+            return false;
         }
 
         void InputField::setContent(const std::string& text)
