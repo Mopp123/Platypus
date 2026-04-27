@@ -144,8 +144,8 @@ namespace platypus
             _pInfoText = uiManager.createText(
                 this,
                 pTextLayout,
-                pFont,
-                infoText
+                infoText,
+                pFont
             );
 
             if (pFieldLayout->textOverflow != TextOverflow::NONE  && (pFieldLayout->scale.x == 0.0f || pFieldLayout->scale.y == 0.0f))
@@ -177,10 +177,6 @@ namespace platypus
 
             // TODO: When adding the functionality to move the cursor, instead of being at the
             // end of the string -> enable more control over the cursor color (+blinking etc?)
-            //Layout* pCursorIndicatorLayout = uiManager.createLayout();
-            //pCursorIndicatorLayout->colors = textColors;
-            //pCursorIndicatorLayout->scale = { _cursorWidth, static_cast<float>(pFont->getFittingHeight()) };
-            //pCursorIndicatorLayout->effectOnParentFlags = EffectOnParentFlagBits::INCREMENT_POSITION;
             _pCursorIndicator = uiManager.createElement(
                 _pButton,
                 pCursorIndicatorLayout,

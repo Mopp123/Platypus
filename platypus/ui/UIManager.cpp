@@ -204,8 +204,8 @@ namespace platypus
         Text* UIManager::createText(
             UIElement* pParent,
             const Layout* pLayout,
-            const Font* pFont,
-            const std::string& txt
+            const std::string& txt,
+            const Font* pFont
         )
         {
             Text* pText = new Text(
@@ -226,15 +226,15 @@ namespace platypus
 
         Text* UIManager::createText(
             UIElement* pParent,
-            const Font* pFont,
-            const std::string& txt
+            const std::string& txt,
+            const Font* pFont
         )
         {
             return createText(
                 pParent,
                 _pDefaultTextLayout,
-                pFont,
-                txt
+                txt,
+                pFont
             );
         }
 

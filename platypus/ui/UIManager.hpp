@@ -98,14 +98,14 @@ namespace platypus
             Text* createText(
                 UIElement* pParent,
                 const Layout* pLayout,
-                const Font* pFont,
-                const std::string& txt
+                const std::string& txt,
+                const Font* pFont
             );
 
             Text* createText(
                 UIElement* pParent,
-                const Font* pFont,
-                const std::string& txt
+                const std::string& txt,
+                const Font* pFont
             );
 
             Button* createButton(
@@ -169,7 +169,9 @@ namespace platypus
             inline const Layout* getDefaultTextLayout() const { return _pDefaultTextLayout; }
             inline const Layout* getDefaultNonStretchTextLayout() const { return _pDefaultNonStretchTextLayout; }
             inline const Layout* getDefaultButtonLayout() const { return _pDefaultButtonLayout; }
+            inline Layout* getDefaultButtonLayout() { return _pDefaultButtonLayout; }
             inline const Layout* getDefaultButtonTextLayout() const { return _pDefaultButtonTextLayout; }
+            inline const Layout* getDefaultInputFieldLayout() const { return _pDefaultInputFieldLayout; }
             inline const Layout* getDefaultInputFieldCursorLayout() const { return _pDefaultInputFieldCursorLayout; }
 
         private:

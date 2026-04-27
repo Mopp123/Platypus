@@ -76,8 +76,8 @@ namespace platypus
             _pText = uiManager.createText(
                 this,
                 pTextLayout,
-                pFont,
-                text
+                text,
+                pFont
             );
 
             if (pOnEnter)

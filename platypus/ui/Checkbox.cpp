@@ -37,8 +37,8 @@ namespace platypus
             _pText = uiManager.createText(
                 this,
                 pTextLayout,
-                pFont,
-                text
+                text,
+                pFont
             );
 
             _pButton = uiManager.createButton(
@@ -54,16 +54,8 @@ namespace platypus
 
         void Checkbox::setChecked(bool arg)
         {
-            if (!_pButton->isSelected())
-            {
-                _pButton->getText()->set("X");
-                _pButton->setSelected(true);
-            }
-            else
-            {
-                _pButton->getText()->set("");
-                _pButton->setSelected(false);
-            }
+            _pButton->setSelected(arg);
+            _pButton->getText()->set(arg ? "X" : "");
         }
 
         bool Checkbox::isChecked() const

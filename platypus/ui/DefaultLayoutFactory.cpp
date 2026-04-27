@@ -34,10 +34,12 @@ namespace platypus
                 { 0.2f, 0.2f, 0.2f, 1.0f },
                 { 0.3f, 0.3f, 0.3f, 1.0f },
                 { 0.1f, 0.1f, 0.1f, 1.0f },
-                { 0.2f, 0.2f, 0.2f, 1.0f }
+                { 0.125f, 0.125f, 0.125f, 1.0f }
             };
             pBoxLayout->padding = { 2, 2 };
             pBoxLayout->borderThickness = 1.0f;
+            pBoxLayout->horizontalContentAlignment = ui::HorizontalAlignment::CENTER;
+            pBoxLayout->verticalContentAlignment = ui::VerticalAlignment::CENTER;
 
             Layout* pTextLayout = uiManager.createLayout();
             pTextLayout->colors = {
@@ -65,8 +67,8 @@ namespace platypus
             pBoxLayout->colors = {
                 { 0.2f, 0.2f, 0.2f, 1.0f },
                 { 0.3f, 0.3f, 0.3f, 1.0f },
-                { 0.1f, 0.1f, 0.1f, 1.0f },
-                { 0.2f, 0.2f, 0.2f, 1.0f }
+                { 0.175f, 0.175f, 0.175f, 1.0f },
+                { 0.125f, 0.125f, 0.125f, 1.0f }
             };
             Vector2f defaultBoxTextScale = get_text_scale(std::string("X"), pDefaultFont);
             float useScale = std::max(defaultBoxTextScale.x, defaultBoxTextScale.y);
@@ -74,6 +76,7 @@ namespace platypus
             pBoxLayout->horizontalContentAlignment = HorizontalAlignment::CENTER;
             pBoxLayout->verticalContentAlignment = VerticalAlignment::CENTER;
             pBoxLayout->padding = { 1, 1 };
+            pBoxLayout->borderThickness = 1.0f;
 
             *ppLayout = pLayout;
             *ppBoxLayout = pBoxLayout;

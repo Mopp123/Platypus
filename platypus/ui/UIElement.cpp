@@ -537,8 +537,8 @@ namespace platypus
             {
                 // NOTE: Below actually fucks stuff up!
                 // Don't remember why was that added in the first place...
-                //if (!pChild->isActive())
-                //    continue;
+                if (!pChild->isActive())
+                    continue;
 
                 pChild->updateScale();
                 Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);
