@@ -81,11 +81,12 @@ namespace platypus
             int width,
             int height,
             int channels,
-            ImageFormat format
+            ImageFormat format,
+            ID_t id = NULL_ID
         );
         ~Image();
 
-        static Image* load_image(const std::string& filepath, ImageFormat format);
+        static Image* load_image(const std::string& filepath, ImageFormat format, ID_t id = NULL_ID);
         int getColorChannelValue(
             uint32_t x,
             uint32_t y,

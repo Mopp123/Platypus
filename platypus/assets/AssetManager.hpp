@@ -19,7 +19,9 @@ namespace platypus
     private:
         std::unordered_map<ID_t, Asset*> _assets;
         std::unordered_map<ID_t, Asset*> _persistentAssets;
-        std::vector<TextureSampler> _textureSamplers;
+        // NOTE: Currently these exist throughout the lifetime of the program
+        //  -> there's only a couple of sampler property combinations so.. why the fuck not...
+        std::vector<TextureSampler*> _textureSamplers;
 
         // TODO: Maybe get rid of the image data after the textures are created...
         //  -> images are never used after that?
@@ -39,23 +41,24 @@ namespace platypus
         //void destroyPersistentAsset(ID_t assetID);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
-        Image* loadImage(const std::string& filepath, ImageFormat format);
+        Image* loadImage(const std::string& filepath, ImageFormat format, ID_t id = NULL_ID);
         Texture* createTexture(
             ID_t imageID,
-            const TextureSampler& sampler,
-            uint32_t textureAtlasRows = 1 // NOTE: This ended up never being used?
+            const TextureSampler* pSampler,
+            uint32_t textureAtlasRows = 1
         );
         Texture* createTexture(
             ID_t imageID,
             TextureSamplerFilterMode filterMode,
             TextureSamplerAddressMode addressMode,
-            bool useMipmapping
+            bool useMipmapping,
+            uint32_t textureAtlasRows = 1
         );
         Texture* loadTexture(
             const std::string& filepath,
             ImageFormat format,
-            const TextureSampler& sampler,
-            uint32_t textureAtlasRows = 1 // NOTE: This ended up never being used?
+            const TextureSampler* pSampler,
+            uint32_t textureAtlasRows = 1
         );
         Material* createMaterial(
             ID_t blendmapTextureID,
@@ -112,6 +115,12 @@ namespace platypus
         );
 
         const TextureSampler* getTextureSampler(
+            TextureSamplerFilterMode filterMode,
+            TextureSamplerAddressMode addressMode,
+            bool useMipmapping
+        ) const;
+
+        const TextureSampler* getOrCreateTextureSampler(
             TextureSamplerFilterMode filterMode,
             TextureSamplerAddressMode addressMode,
             bool useMipmapping

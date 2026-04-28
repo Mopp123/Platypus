@@ -80,7 +80,7 @@ namespace platypus
             _shadowPass,
             _shadowmapWidth,
             _shadowmapWidth,
-            _offscreenTextureSampler,
+            &_offscreenTextureSampler,
             false
         ),
         _shadowmapDescriptorSetLayout(
@@ -405,7 +405,7 @@ namespace platypus
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
         _pColorAttachment = new Texture(
             TextureType::COLOR_TEXTURE,
-            _offscreenTextureSampler,
+            &_offscreenTextureSampler,
             _offscreenColorFormat,
             swapchainExtent.width,
             swapchainExtent.height
@@ -414,7 +414,7 @@ namespace platypus
 
         _pDepthAttachment = new Texture(
             TextureType::DEPTH_TEXTURE,
-            _offscreenTextureSampler,
+            &_offscreenTextureSampler,
             _offscreenDepthFormat,
             swapchainExtent.width,
             swapchainExtent.height

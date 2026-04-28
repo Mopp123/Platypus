@@ -1,6 +1,5 @@
 #include "Serialization.hpp"
 #include "Application.hpp"
-#include "platypus/assets/AssetManager.hpp"
 #include "Debug.hpp"
 #include <string>
 #include <cstring>
@@ -15,17 +14,22 @@ namespace platypus
             PLATYPUS_ASSERT(assetName.size() < metadata_name_size);
             const std::string& filepath = pImage->getFilepath();
             PLATYPUS_ASSERT(filepath.size() < metadata_filepath_size);
-            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
 
             ImageMetadata data;
             data.format = pImage->getFormat();
-            data.persistent = static_cast<uint32_t>(pAssetManager->isPersistent(pImage->getID()));
+            data.persistent = static_cast<uint32_t>(pImage->isPersistent());
             memset(data.name, 0, metadata_name_size);
             memset(data.filepath, 0, metadata_filepath_size);
             memcpy(data.name, assetName.data(), assetName.size());
             memcpy(data.filepath, filepath.data(), filepath.size());
             return data;
         }
+
+        //TextureMetadata get_texture_metadata(const Texture* pTexture, const std::string& assetName)
+        //{
+        //    PLATYPUS_ASSERT(assetName.size() < metadata_name_size);
+        //    PLATYPUS_ASSERT(pTexture->getImage()->getID() != NULL_ID);
+        //}
 
         std::vector<char> serialize_image_metadata(ImageMetadata data)
         {

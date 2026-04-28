@@ -23,23 +23,23 @@ namespace platypus
         _persistentAssets[_pBlackImage->getID()] = _pBlackImage;
         _persistentAssets[_pZeroImage->getID()] = _pZeroImage;
 
-        TextureSampler defaultTextureSampler(
+        const TextureSampler* pDefaultTextureSampler = createTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            1,
-            0
+            true
         );
+
         _pWhiteTexture = createTexture(
             _pWhiteImage->getID(),
-            defaultTextureSampler
+            pDefaultTextureSampler
         );
         _pBlackTexture = createTexture(
             _pBlackImage->getID(),
-            defaultTextureSampler
+            pDefaultTextureSampler
         );
         _pZeroTexture = createTexture(
             _pZeroImage->getID(),
-            defaultTextureSampler
+            pDefaultTextureSampler
         );
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
@@ -49,6 +49,10 @@ namespace platypus
     AssetManager::~AssetManager()
     {
         destroyDefaultAssets();
+
+        for (TextureSampler* pSampler : _textureSamplers)
+            delete pSampler;
+
         if (!_assets.empty())
         {
             Debug::log(
@@ -159,9 +163,9 @@ namespace platypus
         return pImage;
     }
 
-    Image* AssetManager::loadImage(const std::string& filepath, ImageFormat format)
+    Image* AssetManager::loadImage(const std::string& filepath, ImageFormat format, ID_t id)
     {
-        Image* pImage = Image::load_image(filepath, format);
+        Image* pImage = Image::load_image(filepath, format, id);
         if (!pImage)
         {
             Debug::log(
@@ -177,7 +181,7 @@ namespace platypus
 
     Texture* AssetManager::createTexture(
         ID_t imageID,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         uint32_t textureAtlasRows
     )
     {
@@ -195,7 +199,7 @@ namespace platypus
 
         Texture* pTexture = new Texture(
             pImage,
-            sampler,
+            pSampler,
             textureAtlasRows
         );
         _assets[pTexture->getID()] = pTexture;
@@ -206,20 +210,21 @@ namespace platypus
         ID_t imageID,
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
-        bool useMipmapping
+        bool useMipmapping,
+        uint32_t textureAtlasRows
     )
     {
         const TextureSampler* pSampler = getTextureSampler(filterMode, addressMode, useMipmapping);
         if (!pSampler)
             pSampler = createTextureSampler(filterMode, addressMode, useMipmapping);
 
-        return createTexture(imageID, *pSampler);
+        return createTexture(imageID, pSampler, textureAtlasRows);
     }
 
     Texture* AssetManager::loadTexture(
         const std::string& filepath,
         ImageFormat format,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         uint32_t textureAtlasRows
     )
     {
@@ -233,7 +238,7 @@ namespace platypus
             );
             return nullptr;
         }
-        return createTexture(pImage->getID(), sampler, textureAtlasRows);
+        return createTexture(pImage->getID(), pSampler, textureAtlasRows);
     }
 
     Material* AssetManager::createMaterial(
@@ -550,32 +555,62 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        _textureSamplers.push_back({
+        TextureSampler* pSampler = new TextureSampler(
             filterMode,
             addressMode,
             useMipmapping,
             0
-        });
-        return &_textureSamplers[_textureSamplers.size() - 1];
+        );
+        //_textureSamplers.push_back({
+        //    filterMode,
+        //    addressMode,
+        //    useMipmapping,
+        //    0
+        //});
+        //return &_textureSamplers[_textureSamplers.size() - 1];
+        _textureSamplers.push_back(pSampler);
+        return pSampler;
     }
 
     const TextureSampler* AssetManager::getTextureSampler(
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
         bool useMipmapping
-    )
+    ) const
     {
         for (size_t i = 0; i < _textureSamplers.size(); ++i)
         {
-            const TextureSampler& sampler = _textureSamplers[i];
-            if (sampler.getFilterMode() == filterMode &&
-                sampler.getAddressMode() == addressMode &&
-                sampler.isMipmapped() == useMipmapping)
+            const TextureSampler* pSampler = _textureSamplers[i];
+            if (pSampler->getFilterMode() == filterMode &&
+                pSampler->getAddressMode() == addressMode &&
+                pSampler->isMipmapped() == useMipmapping)
             {
-                return &_textureSamplers[i];
+                return _textureSamplers[i];
             }
         }
         return nullptr;
+    }
+
+    const TextureSampler* AssetManager::getOrCreateTextureSampler(
+        TextureSamplerFilterMode filterMode,
+        TextureSamplerAddressMode addressMode,
+        bool useMipmapping
+    )
+    {
+        const TextureSampler* pSampler = getTextureSampler(
+            filterMode,
+            addressMode,
+            useMipmapping
+        );
+        if (!pSampler)
+        {
+            pSampler = createTextureSampler(
+                filterMode,
+                addressMode,
+                useMipmapping
+            );
+        }
+        return pSampler;
     }
 
     bool AssetManager::assetExists(ID_t assetID) const

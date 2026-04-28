@@ -443,19 +443,15 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        _pImpl = std::make_shared<TextureSamplerImpl>();
+        _pImpl = new TextureSamplerImpl;
         _pImpl->handle = handle;
     }
 
-    TextureSampler::TextureSampler(const TextureSampler& other) :
-        _pImpl(other._pImpl),
-        _filterMode(other._filterMode),
-        _addressMode(other._addressMode),
-        _mipmapping(other._mipmapping)
-    {}
-
     TextureSampler::~TextureSampler()
-    {}
+    {
+        if (_pImpl)
+            delete _pImpl;
+    }
 
 
     Texture::Texture(ImageFormat format) :
@@ -467,13 +463,13 @@ namespace platypus
 
     Texture::Texture(
         TextureType type,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         ImageFormat format,
         uint32_t width,
         uint32_t height
     ):
         Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pSamplerImpl(sampler.getImpl()),
+        _pSampler(pSampler),
         _imageFormat(format)
     {
         VkFormat vkImageFormat = to_vk_format(format);
@@ -544,12 +540,12 @@ namespace platypus
 
     Texture::Texture(
         const Image* pImage,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
         _pImage(pImage),
-        _pSamplerImpl(sampler.getImpl()),
+        _pSampler(pSampler),
         _atlasRowCount(atlasRowCount)
     {
         ImageFormat imageFormat = _pImage->getFormat();
@@ -618,7 +614,7 @@ namespace platypus
 
         VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         uint32_t mipLevelCount = 1;
-        if (sampler.isMipmapped())
+        if (_pSampler->isMipmapped())
         {
             mipLevelCount = (uint32_t)(std::floor(
                 std::log2(std::max(imageWidth, imageHeight))
@@ -698,7 +694,7 @@ namespace platypus
                 imageWidth,
                 imageHeight,
                 mipLevelCount,
-                to_vk_sampler_filter_mode(sampler.getFilterMode())
+                to_vk_sampler_filter_mode(_pSampler->getFilterMode())
             );
         }
         else

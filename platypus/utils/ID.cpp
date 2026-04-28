@@ -7,17 +7,21 @@
 
 namespace platypus
 {
+    unsigned int ID::s_seed = 4276;
     std::set<ID_t> ID::s_usedIDs;
     bool ID::s_initialized = false;
+
+    void ID::init()
+    {
+        std::srand(s_seed);
+        s_initialized = true;
+    }
 
     // NOTE: Could be done better...
     ID_t ID::generate()
     {
         if (!s_initialized)
-        {
-            std::srand((unsigned int)time(nullptr));
-            s_initialized = true;
-        }
+            init();
 
         ID_t id = 0;
         while ((s_usedIDs.find(id) != s_usedIDs.end()) || id == NULL_ID)
@@ -32,6 +36,37 @@ namespace platypus
         s_usedIDs.insert(id);
 
         return id;
+    }
+
+    bool ID::occupy(ID_t id)
+    {
+        if (id == NULL_ID)
+        {
+            Debug::log(
+                "Can't occupy NULL_ID explicitly!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+
+        if (!s_initialized)
+            init();
+
+        if (s_usedIDs.find(id) != s_usedIDs.end())
+        {
+            Debug::log(
+                "ID: " + std::to_string(id) + " was already in use!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+
+        s_usedIDs.insert(id);
+        return true;
     }
 
     void ID::erase(ID_t idToErase)

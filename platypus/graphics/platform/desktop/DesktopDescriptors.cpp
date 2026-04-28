@@ -184,7 +184,7 @@ namespace platypus
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             imageInfo.imageView = pTexture->getImpl()->imageView;
-            imageInfo.sampler = pTexture->getSamplerImpl()->handle;
+            imageInfo.sampler = pTexture->getTextureSampler()->getImpl()->handle;
         }
         else
         {
@@ -539,7 +539,11 @@ namespace platypus
                     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                 imageInfo.imageView = pTexture->getImpl()->imageView;
-                imageInfo.sampler = pTexture->getSamplerImpl()->handle;
+                PLATYPUS_ASSERT(pTexture);
+                PLATYPUS_ASSERT(pTexture->getTextureSampler());
+                PLATYPUS_ASSERT(pTexture->getTextureSampler()->getImpl());
+                PLATYPUS_ASSERT(pTexture->getTextureSampler()->getImpl()->handle);
+                imageInfo.sampler = pTexture->getTextureSampler()->getImpl()->handle;
             }
             else
             {

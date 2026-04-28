@@ -50,17 +50,16 @@ void WaterTestScene::init()
     );
 
 
-    TextureSampler textureSampler(
+    const TextureSampler* pTextureSampler = pAssetManager->getOrCreateTextureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
-        true,
-        0
+        true
     );
     ImageFormat texImageFormat = ImageFormat::R8G8B8A8_SRGB;
     Texture* pBlendmapTexture = pAssetManager->loadTexture(
         "assets/textures/terrain/Blendmap2.png",
         ImageFormat::R8G8B8A8_UNORM,
-        textureSampler
+        pTextureSampler
     );
     std::vector<std::string> diffuseTexturePaths = {
         "assets/textures/terrain/ground_dry2_d.png",
@@ -87,19 +86,19 @@ void WaterTestScene::init()
     std::vector<ID_t> diffuseTextures = loadTextures(
         pAssetManager,
         texImageFormat,
-        textureSampler,
+        pTextureSampler,
         diffuseTexturePaths
     );
     std::vector<ID_t> specularTextures = loadTextures(
         pAssetManager,
         texImageFormat,
-        textureSampler,
+        pTextureSampler,
         specularTexturePaths
     );
     std::vector<ID_t> normalTextures = loadTextures(
         pAssetManager,
         ImageFormat::R8G8B8A8_UNORM,
-        textureSampler,
+        pTextureSampler,
         normalTexturePaths
     );
 
@@ -152,12 +151,12 @@ void WaterTestScene::init()
     Texture* pWaterTexture = pAssetManager->loadTexture(
         "assets/textures/Water.png",
         ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
+        pTextureSampler
     );
     Texture* pWaterDistortionTexture = pAssetManager->loadTexture(
         "assets/textures/DistortionMap.png",
         ImageFormat::R8G8B8A8_UNORM,
-        textureSampler
+        pTextureSampler
     );
 
     Material* pWaterMaterial = pAssetManager->createMaterial(

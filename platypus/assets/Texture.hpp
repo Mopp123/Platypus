@@ -35,7 +35,7 @@ namespace platypus
     class TextureSampler
     {
     private:
-        std::shared_ptr<TextureSamplerImpl> _pImpl = nullptr;
+        TextureSamplerImpl* _pImpl = nullptr;
         TextureSamplerFilterMode _filterMode;
         TextureSamplerAddressMode _addressMode;
         bool _mipmapping = false;
@@ -50,11 +50,11 @@ namespace platypus
             uint32_t anisotropicFiltering
         );
         ~TextureSampler();
-        TextureSampler(const TextureSampler& other);
+        TextureSampler(const TextureSampler& other) = delete;
 
         inline TextureSamplerFilterMode getFilterMode() const { return _filterMode; }
         inline TextureSamplerAddressMode getAddressMode() const { return _addressMode; }
-        inline const std::shared_ptr<TextureSamplerImpl>& getImpl() const { return _pImpl; }
+        inline const TextureSamplerImpl* getImpl() const { return _pImpl; }
         inline bool isMipmapped() const { return _mipmapping; }
     };
 
@@ -65,7 +65,8 @@ namespace platypus
     private:
         TextureImpl* _pImpl = nullptr;
         const Image* _pImage = nullptr;
-        std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
+        // TODO: Replace above completely with the sampler ptr and test that it works!
+        const TextureSampler* _pSampler = nullptr;
         uint32_t _atlasRowCount = 1;
         ImageFormat _imageFormat = ImageFormat::NONE;
 
@@ -76,14 +77,14 @@ namespace platypus
         Texture(ImageFormat format);
         Texture(
             TextureType type,
-            const TextureSampler& sampler,
+            const TextureSampler* pSampler,
             ImageFormat format,
             uint32_t width,
             uint32_t height
         );
         Texture(
             const Image* pImage,
-            const TextureSampler& sampler,
+            const TextureSampler* pSampler,
             uint32_t atlasRowCount = 1
         );
         Texture(const Texture&) = delete;
@@ -91,7 +92,7 @@ namespace platypus
 
         inline const TextureImpl* getImpl() const { return _pImpl; }
         inline TextureImpl* getImpl() { return _pImpl; }
-        inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
+        inline const TextureSampler* getTextureSampler() const { return _pSampler; }
         inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
         inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
         inline const Image* getImage() const { return _pImage; }

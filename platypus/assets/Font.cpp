@@ -213,12 +213,9 @@ namespace platypus
 
         Texture* pTexture = pAssetManager->createTexture(
             _imageID,
-            TextureSampler(
-                TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
-                TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-                1,
-                0
-            ),
+            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+            TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            1,
             textureAtlasRowCount
         );
         _textureID = pTexture->getID();

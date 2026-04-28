@@ -22,14 +22,12 @@ namespace platypus
 
         struct TextureMetadata
         {
-            Vector2f offset;
-            Vector2f scale;
             TextureSamplerFilterMode filterMode;
             TextureSamplerAddressMode addressMode;
             uint32_t useMipmapping = 0;
             uint32_t persistent = 0;
+            ID_t imageID = NULL_ID;
             char name[metadata_name_size];
-            char image[metadata_name_size];
         };
 
         // Size without possible struct mem padding
@@ -38,13 +36,14 @@ namespace platypus
             metadata_name_size +
             metadata_filepath_size;
 
-        constexpr size_t texture_metadata_file_size = sizeof(Vector2f) * 2 +
-            sizeof(TextureSamplerFilterMode) +
+        constexpr size_t texture_metadata_file_size = sizeof(TextureSamplerFilterMode) +
             sizeof(TextureSamplerAddressMode) +
             sizeof(uint32_t) * 2 +
-            metadata_name_size * 2;
+            sizeof(ID_t) +
+            metadata_name_size;
 
         ImageMetadata get_image_metadata(const Image* pImage, const std::string& assetName);
+        //TextureMetadata get_texture_metadata(const Texture* pTexture, const std::string& assetName);
 
         std::vector<char> serialize_image_metadata(ImageMetadata data);
         ImageMetadata deserialize_image_metadata(size_t dataSize, void* pData);

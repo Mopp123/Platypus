@@ -1,4 +1,7 @@
 #include "Asset.hpp"
+#include "platypus/core/Application.hpp"
+#include "AssetManager.hpp"
+
 
 namespace platypus
 {
@@ -17,14 +20,23 @@ namespace platypus
         }
     }
 
-    Asset::Asset(AssetType type) :
+    Asset::Asset(AssetType type, ID_t id) :
         _type(type)
     {
-        _id = ID::generate();
+        if (id != NULL_ID)
+            ID::occupy(id);
+        else
+            _id = ID::generate();
     }
 
     Asset::~Asset()
     {
         ID::erase(_id);
+    }
+
+    bool Asset::isPersistent() const
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        return pAssetManager->isPersistent(_id);
     }
 }

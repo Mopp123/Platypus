@@ -9,13 +9,13 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t framebufferWidth,
         uint32_t framebufferHeight,
-        const TextureSampler& textureSampler,
+        const TextureSampler* pTextureSampler,
         bool useWindowDimensions
     ) :
         _renderPassRef(renderPass),
         _framebufferWidth(framebufferWidth),
         _framebufferHeight(framebufferHeight),
-        _textureSampler(textureSampler),
+        _pTextureSampler(pTextureSampler),
         _useWindowDimensions(useWindowDimensions)
     {
     }
@@ -37,7 +37,7 @@ namespace platypus
         {
             _pColorAttachment = new Texture(
                 TextureType::COLOR_TEXTURE,
-                _textureSampler,
+                _pTextureSampler,
                 _renderPassRef.getColorFormat(),
                 _framebufferWidth,
                 _framebufferHeight
@@ -49,7 +49,7 @@ namespace platypus
         {
             _pDepthAttachment = new Texture(
                 TextureType::DEPTH_TEXTURE,
-                _textureSampler,
+                _pTextureSampler,
                 _renderPassRef.getDepthFormat(),
                 _framebufferWidth,
                 _framebufferHeight

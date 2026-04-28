@@ -45,8 +45,11 @@ namespace platypus
     public:
         Asset() = delete;
         Asset(const Asset&) = delete;
-        Asset(AssetType type);
+        Asset(AssetType type, ID_t id = NULL_ID);
         virtual ~Asset();
+
+        // TODO: Maybe this should be member var of Asset..?
+        bool isPersistent() const;
 
         inline ID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }

@@ -97,12 +97,12 @@ namespace platypus
     {
     }
 
-    TextureSampler::TextureSampler(const TextureSampler& other) :
-        _filterMode(other._filterMode),
-        _addressMode(other._addressMode),
-        _mipmapping(other._mipmapping)
-    {
-    }
+    //TextureSampler::TextureSampler(const TextureSampler& other) :
+    //    _filterMode(other._filterMode),
+    //    _addressMode(other._addressMode),
+    //    _mipmapping(other._mipmapping)
+    //{
+    //}
 
 
     Texture::Texture(ImageFormat format) :
@@ -114,12 +114,13 @@ namespace platypus
 
     Texture::Texture(
         TextureType type,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         ImageFormat format,
         uint32_t width,
         uint32_t height
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE)
+        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        _pSampler(pSampler)
     {
         GLint glInternalFormat = 0;
         GLenum glFormat = 0;
@@ -154,7 +155,7 @@ namespace platypus
         ));
 
         // Address mode
-        switch (sampler.getAddressMode())
+        switch (_pSampler->getAddressMode())
         {
             case TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT :
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
@@ -185,14 +186,14 @@ namespace platypus
         }
 
         // NOTE: Not sure if should allowing mipmapping with framebuffer attachment textures...
-        if (sampler.isMipmapped())
+        if (_pSampler->isMipmapped())
         {
-            if(sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if(_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -202,12 +203,12 @@ namespace platypus
         }
         else
         {
-            if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -222,11 +223,12 @@ namespace platypus
 
     Texture::Texture(
         const Image* pImage,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         uint32_t atlasRowCount
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE),
         _pImage(pImage),
+        _pSampler(pSampler),
         _atlasRowCount(atlasRowCount)
     {
         ImageFormat imageFormat = _pImage->getFormat();
@@ -287,7 +289,7 @@ namespace platypus
         ));
 
         // Address mode
-        switch (sampler.getAddressMode())
+        switch (_pSampler->getAddressMode())
         {
             case TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT :
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
@@ -317,14 +319,14 @@ namespace platypus
                 break;
         }
 
-        if (sampler.isMipmapped())
+        if (_pSampler->isMipmapped())
         {
-            if(sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if(_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -334,12 +336,12 @@ namespace platypus
         }
         else
         {
-            if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));

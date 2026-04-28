@@ -116,7 +116,7 @@ void BaseScene::updateBase()
 std::vector<ID_t> BaseScene::loadTextures(
     AssetManager* pAssetManager,
     ImageFormat imageFormat,
-    TextureSampler sampler,
+    const TextureSampler* pSampler,
     std::vector<std::string> filepaths
 )
 {
@@ -129,7 +129,7 @@ std::vector<ID_t> BaseScene::loadTextures(
             textureID = pAssetManager->loadTexture(
                 path,
                 imageFormat,
-                sampler
+                pSampler
             )->getID();
         }
         textures.push_back(textureID);
@@ -151,16 +151,15 @@ Material* BaseScene::createMeshMaterial(
     if (repeatTexture)
         addressMode = TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT;
 
-    TextureSampler textureSampler(
+    const TextureSampler* pSampler = pAssetManager->getOrCreateTextureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         addressMode,
-        true,
-        0
+        true
     );
     Texture* pTexture = pAssetManager->loadTexture(
         textureFilepath,
         ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
+        pSampler
     );
     Material* pMaterial = pAssetManager->createMaterial(
         NULL_ID,

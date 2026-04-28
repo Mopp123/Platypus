@@ -32,7 +32,7 @@ public:
     std::vector<ID_t> loadTextures(
         platypus::AssetManager* pAssetManager,
         platypus::ImageFormat imageFormat,
-        platypus::TextureSampler sampler,
+        const platypus::TextureSampler* pSampler,
         std::vector<std::string> filepaths
     );
 

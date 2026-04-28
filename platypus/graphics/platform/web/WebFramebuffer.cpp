@@ -59,16 +59,9 @@ namespace platypus
             std::unordered_map<ID_t, uint32_t>::const_iterator existingIt = s_boundFramebufferAttachments.find(_pDepthAttachment->getID());
             if (existingIt != s_boundFramebufferAttachments.end())
             {
-                // TODO: Some way to get sampler from input attachments
-                TextureSampler sampler(
-                    TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR,
-                    TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-                    false,
-                    0
-                );
                 pCopyDepthAttachment = new Texture(
                     TextureType::DEPTH_TEXTURE,
-                    sampler,
+                    _pDepthAttachment->getTextureSampler(),
                     _pDepthAttachment->getImageFormat(),
                     width,
                     height

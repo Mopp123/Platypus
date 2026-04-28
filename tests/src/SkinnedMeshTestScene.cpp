@@ -116,22 +116,21 @@ void SkinnedMeshTestScene::init()
     _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
     _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
 
-    TextureSampler textureSampler(
+    const TextureSampler* pTextureSampler = pAssetManager->getOrCreateTextureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
-        true,
-        0
+        true
     );
 
     Texture* pDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/characterTest.png",
         ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
+        pTextureSampler
     );
     Texture* pBoxDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/DiffuseTest.png",
         ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
+        pTextureSampler
     );
 
     Material* pMaterial = pAssetManager->createMaterial(

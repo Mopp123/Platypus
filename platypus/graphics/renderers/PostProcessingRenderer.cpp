@@ -272,7 +272,7 @@ namespace platypus
 
         Texture* pColorStageAttachment = new Texture(
             TextureType::COLOR_TEXTURE,
-            _textureSampler,
+            &_textureSampler,
             _colorImageFormat,
             swapchainExtent.width,
             swapchainExtent.height
@@ -294,7 +294,7 @@ namespace platypus
 
         Texture* pHorizontalBlurStageAttachment = new Texture(
             TextureType::COLOR_TEXTURE,
-            _textureSampler,
+            &_textureSampler,
             _colorImageFormat,
             blurFramebufferWidth,
             blurFramebufferHeight
@@ -313,7 +313,7 @@ namespace platypus
 
         Texture* pVerticalBlurStageAttachment = new Texture(
             TextureType::COLOR_TEXTURE,
-            _textureSampler,
+            &_textureSampler,
             _colorImageFormat,
             blurFramebufferWidth,
             blurFramebufferHeight
