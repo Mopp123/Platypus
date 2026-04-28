@@ -202,6 +202,20 @@ namespace platypus
         return pTexture;
     }
 
+    Texture* AssetManager::createTexture(
+        ID_t imageID,
+        TextureSamplerFilterMode filterMode,
+        TextureSamplerAddressMode addressMode,
+        bool useMipmapping
+    )
+    {
+        const TextureSampler* pSampler = getTextureSampler(filterMode, addressMode, useMipmapping);
+        if (!pSampler)
+            pSampler = createTextureSampler(filterMode, addressMode, useMipmapping);
+
+        return createTexture(imageID, *pSampler);
+    }
+
     Texture* AssetManager::loadTexture(
         const std::string& filepath,
         ImageFormat format,
@@ -646,6 +660,11 @@ namespace platypus
     {
         _assets[pAsset->getID()] = pAsset;
         makePersistent(pAsset);
+    }
+
+    bool AssetManager::isPersistent(ID_t assetID) const
+    {
+        return _persistentAssets.find(assetID) != _persistentAssets.end();
     }
 
     bool AssetManager::validateAsset(

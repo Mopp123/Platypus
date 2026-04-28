@@ -43,13 +43,19 @@ namespace platypus
         Texture* createTexture(
             ID_t imageID,
             const TextureSampler& sampler,
-            uint32_t textureAtlasRows = 1
+            uint32_t textureAtlasRows = 1 // NOTE: This ended up never being used?
+        );
+        Texture* createTexture(
+            ID_t imageID,
+            TextureSamplerFilterMode filterMode,
+            TextureSamplerAddressMode addressMode,
+            bool useMipmapping
         );
         Texture* loadTexture(
             const std::string& filepath,
             ImageFormat format,
             const TextureSampler& sampler,
-            uint32_t textureAtlasRows = 1
+            uint32_t textureAtlasRows = 1 // NOTE: This ended up never being used?
         );
         Material* createMaterial(
             ID_t blendmapTextureID,
@@ -120,6 +126,8 @@ namespace platypus
         void makePersistent(Asset* pAsset);
         // For adding asset that wasn't created using the AssetManager
         void addExternalPersistentAsset(Asset* pAsset);
+
+        bool isPersistent(ID_t assetID) const;
 
         inline size_t getAssetTotalCount() const { return _assets.size(); }
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }

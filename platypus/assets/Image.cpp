@@ -227,6 +227,7 @@ namespace platypus
             return nullptr;
         }
         Image* pImage = new Image(pStbImageData, width, height, channels, format);
+        pImage->_filepath = filepath;
         stbi_image_free(pStbImageData);
         return pImage;
     }

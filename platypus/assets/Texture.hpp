@@ -9,13 +9,13 @@
 
 namespace platypus
 {
-    enum class TextureSamplerFilterMode
+    enum class TextureSamplerFilterMode : uint32_t
     {
         SAMPLER_FILTER_MODE_LINEAR,
         SAMPLER_FILTER_MODE_NEAR
     };
 
-    enum class TextureSamplerAddressMode
+    enum class TextureSamplerAddressMode : uint32_t
     {
         SAMPLER_ADDRESS_MODE_REPEAT,
         SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,

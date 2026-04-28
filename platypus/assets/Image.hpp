@@ -8,7 +8,7 @@
 
 namespace platypus
 {
-    enum class ImageFormat
+    enum class ImageFormat : uint32_t
     {
         NONE,
 
@@ -72,6 +72,7 @@ namespace platypus
         int _height = -1;
         int _channels = -1;
         ImageFormat _format;
+        std::string _filepath;
 
     public:
         // NOTE: pData gets copied here, ownership doesn't transfer!
@@ -90,6 +91,8 @@ namespace platypus
             uint32_t y,
             uint32_t channelIndex
         ) const;
+
+        inline const std::string& getFilepath() const { return _filepath; }
 
         inline ImageImpl* getImpl() { return _pImpl; }
         inline const PE_ubyte* getData() const { return _pData; }
