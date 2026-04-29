@@ -31,6 +31,7 @@ namespace platypus
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
         Texture* _pZeroTexture = nullptr;
+        std::set<ID_t> _defaultAssets;
 
     public:
         AssetManager();
@@ -41,24 +42,32 @@ namespace platypus
         //void destroyPersistentAsset(ID_t assetID);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
-        Image* loadImage(const std::string& filepath, ImageFormat format, ID_t id = NULL_ID);
+        Image* loadImage(
+            const std::string& filepath,
+            ImageFormat format,
+            const std::string& name = "",
+            ID_t id = NULL_ID
+        );
         Texture* createTexture(
             ID_t imageID,
             const TextureSampler* pSampler,
-            uint32_t textureAtlasRows = 1
+            const std::string& name = "",
+            ID_t id = NULL_ID
         );
         Texture* createTexture(
             ID_t imageID,
             TextureSamplerFilterMode filterMode,
             TextureSamplerAddressMode addressMode,
             bool useMipmapping,
-            uint32_t textureAtlasRows = 1
+            const std::string& name = "",
+            ID_t id = NULL_ID
         );
         Texture* loadTexture(
             const std::string& filepath,
             ImageFormat format,
             const TextureSampler* pSampler,
-            uint32_t textureAtlasRows = 1
+            const std::string& name = "",
+            ID_t id = NULL_ID
         );
         Material* createMaterial(
             ID_t blendmapTextureID,
@@ -130,7 +139,7 @@ namespace platypus
         bool assetExists(ID_t assetID, AssetType type) const;
         Asset* getAsset(ID_t assetID) const;
         Asset* getAsset(ID_t assetID, AssetType type) const;
-        std::vector<Asset*> getAssets(AssetType type) const;
+        std::vector<Asset*> getAssets(AssetType type, bool excludeInternalDefaults = false) const;
 
         void makePersistent(Asset* pAsset);
         // For adding asset that wasn't created using the AssetManager

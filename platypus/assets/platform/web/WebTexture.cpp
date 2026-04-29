@@ -224,12 +224,12 @@ namespace platypus
     Texture::Texture(
         const Image* pImage,
         const TextureSampler* pSampler,
-        uint32_t atlasRowCount
+        const std::string& name,
+        ID_t id
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        Asset(AssetType::ASSET_TYPE_TEXTURE, name, id),
         _pImage(pImage),
-        _pSampler(pSampler),
-        _atlasRowCount(atlasRowCount)
+        _pSampler(pSampler)
     {
         ImageFormat imageFormat = _pImage->getFormat();
         if (!is_image_format_valid(imageFormat, pImage->getChannels()))

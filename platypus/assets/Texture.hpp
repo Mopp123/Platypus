@@ -22,6 +22,9 @@ namespace platypus
         SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
     };
 
+    std::string texture_sampler_filter_mode_to_string(TextureSamplerFilterMode mode);
+    std::string texture_sampler_address_mode_to_string(TextureSamplerAddressMode mode);
+
     enum class TextureType
     {
         NONE,
@@ -85,7 +88,8 @@ namespace platypus
         Texture(
             const Image* pImage,
             const TextureSampler* pSampler,
-            uint32_t atlasRowCount = 1
+            const std::string& name = "",
+            ID_t id = NULL_ID
         );
         Texture(const Texture&) = delete;
         ~Texture();

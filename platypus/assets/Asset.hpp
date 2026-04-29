@@ -41,11 +41,12 @@ namespace platypus
     private:
         ID_t _id = NULL_ID;
         AssetType _type = AssetType::ASSET_TYPE_NONE;
+        std::string _name;
 
     public:
         Asset() = delete;
         Asset(const Asset&) = delete;
-        Asset(AssetType type, ID_t id = NULL_ID);
+        Asset(AssetType type, const std::string& name = "", ID_t id = NULL_ID);
         virtual ~Asset();
 
         // TODO: Maybe this should be member var of Asset..?
@@ -53,5 +54,6 @@ namespace platypus
 
         inline ID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }
+        inline const std::string& getName() const { return _name; }
     };
 }

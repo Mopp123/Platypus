@@ -20,8 +20,9 @@ namespace platypus
         }
     }
 
-    Asset::Asset(AssetType type, ID_t id) :
-        _type(type)
+    Asset::Asset(AssetType type, const std::string& name, ID_t id) :
+        _type(type),
+        _name(name)
     {
         if (id != NULL_ID)
             ID::occupy(id);

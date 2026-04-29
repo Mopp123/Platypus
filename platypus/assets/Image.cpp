@@ -190,9 +190,10 @@ namespace platypus
         int height,
         int channels,
         ImageFormat format,
+        const std::string& name,
         ID_t id
     ) :
-        Asset(AssetType::ASSET_TYPE_IMAGE, id),
+        Asset(AssetType::ASSET_TYPE_IMAGE, name, id),
         _width(width),
         _height(height),
         _channels(channels),
@@ -212,7 +213,12 @@ namespace platypus
             delete[] _pData;
     }
 
-    Image* Image::load_image(const std::string& filepath, ImageFormat format, ID_t id)
+    Image* Image::load_image(
+        const std::string& filepath,
+        ImageFormat format,
+        const std::string& name,
+        ID_t id
+    )
     {
         int width = 0;
         int height = 0;
@@ -227,7 +233,7 @@ namespace platypus
             stbi_image_free(pStbImageData);
             return nullptr;
         }
-        Image* pImage = new Image(pStbImageData, width, height, channels, format, id);
+        Image* pImage = new Image(pStbImageData, width, height, channels, format, name, id);
         pImage->_filepath = filepath;
         stbi_image_free(pStbImageData);
         return pImage;

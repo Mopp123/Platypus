@@ -215,9 +215,9 @@ namespace platypus
             _imageID,
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            1,
-            textureAtlasRowCount
+            true // use mipmapping? -> NOTE: Why are we mipmapping this?
         );
+        pTexture->setAtlasRowCount(textureAtlasRowCount);
         _textureID = pTexture->getID();
 
         _textureAtlasRowCount = textureAtlasRowCount;

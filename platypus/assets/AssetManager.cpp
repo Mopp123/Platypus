@@ -23,6 +23,10 @@ namespace platypus
         _persistentAssets[_pBlackImage->getID()] = _pBlackImage;
         _persistentAssets[_pZeroImage->getID()] = _pZeroImage;
 
+        _defaultAssets.insert(_pWhiteImage->getID());
+        _defaultAssets.insert(_pBlackImage->getID());
+        _defaultAssets.insert(_pZeroImage->getID());
+
         const TextureSampler* pDefaultTextureSampler = createTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
             TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -44,6 +48,10 @@ namespace platypus
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
         _persistentAssets[_pZeroTexture->getID()] = _pZeroTexture;
+
+        _defaultAssets.insert(_pWhiteTexture->getID());
+        _defaultAssets.insert(_pBlackTexture->getID());
+        _defaultAssets.insert(_pZeroTexture->getID());
     }
 
     AssetManager::~AssetManager()
@@ -163,9 +171,14 @@ namespace platypus
         return pImage;
     }
 
-    Image* AssetManager::loadImage(const std::string& filepath, ImageFormat format, ID_t id)
+    Image* AssetManager::loadImage(
+        const std::string& filepath,
+        ImageFormat format,
+        const std::string& name,
+        ID_t id
+    )
     {
-        Image* pImage = Image::load_image(filepath, format, id);
+        Image* pImage = Image::load_image(filepath, format, name, id);
         if (!pImage)
         {
             Debug::log(
@@ -182,7 +195,8 @@ namespace platypus
     Texture* AssetManager::createTexture(
         ID_t imageID,
         const TextureSampler* pSampler,
-        uint32_t textureAtlasRows
+        const std::string& name,
+        ID_t id
     )
     {
         Image* pImage = (Image*)getAsset(imageID, AssetType::ASSET_TYPE_IMAGE);
@@ -200,7 +214,8 @@ namespace platypus
         Texture* pTexture = new Texture(
             pImage,
             pSampler,
-            textureAtlasRows
+            name,
+            id
         );
         _assets[pTexture->getID()] = pTexture;
         return pTexture;
@@ -211,21 +226,23 @@ namespace platypus
         TextureSamplerFilterMode filterMode,
         TextureSamplerAddressMode addressMode,
         bool useMipmapping,
-        uint32_t textureAtlasRows
+        const std::string& name,
+        ID_t id
     )
     {
         const TextureSampler* pSampler = getTextureSampler(filterMode, addressMode, useMipmapping);
         if (!pSampler)
             pSampler = createTextureSampler(filterMode, addressMode, useMipmapping);
 
-        return createTexture(imageID, pSampler, textureAtlasRows);
+        return createTexture(imageID, pSampler, name, id);
     }
 
     Texture* AssetManager::loadTexture(
         const std::string& filepath,
         ImageFormat format,
         const TextureSampler* pSampler,
-        uint32_t textureAtlasRows
+        const std::string& name,
+        ID_t id
     )
     {
         Image* pImage = loadImage(filepath, format);
@@ -238,7 +255,7 @@ namespace platypus
             );
             return nullptr;
         }
-        return createTexture(pImage->getID(), pSampler, textureAtlasRows);
+        return createTexture(pImage->getID(), pSampler, name, id);
     }
 
     Material* AssetManager::createMaterial(
@@ -675,13 +692,21 @@ namespace platypus
         return it->second;
     }
 
-    std::vector<Asset*> AssetManager::getAssets(AssetType type) const
+    std::vector<Asset*> AssetManager::getAssets(AssetType type, bool excludeInternalDefaults) const
     {
         std::vector<Asset*> foundAssets;
         for (const auto& asset : _assets)
         {
             if (asset.second->getType() == type)
+            {
+                Asset* pAsset = asset.second;
+                if (excludeInternalDefaults)
+                {
+                    if (_defaultAssets.find(pAsset->getID()) != _defaultAssets.end())
+                        continue;
+                }
                 foundAssets.push_back(asset.second);
+            }
         }
         return foundAssets;
     }
