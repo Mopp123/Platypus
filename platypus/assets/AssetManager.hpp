@@ -82,6 +82,8 @@ namespace platypus
             bool receiveShadows,
             bool transparent,
             bool shadeless,
+            const std::string& name = "",
+            ID_t id = NULL_ID,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );

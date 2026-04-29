@@ -7,6 +7,9 @@
 #include "platypus/graphics/Pipeline.hpp"
 #include <unordered_map>
 
+
+// TODO: IMPORTANT: Replace below definition with something better!
+//  -> That's textures per channel, NOT channel count!
 #define PE_MAX_MATERIAL_TEX_CHANNELS 5
 
 
@@ -89,6 +92,8 @@ namespace platypus
             bool receiveShadows = false,
             bool transparent = false,
             bool shadeless = false,
+            const std::string& name = "",
+            ID_t id = NULL_ID,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );
@@ -114,10 +119,19 @@ namespace platypus
         Texture* getNormalTexture(size_t channel) const;
         std::vector<Texture*> getTextures() const;
 
+        ID_t getDiffuseTextureID(size_t channel) const;
+        ID_t getSpecularTextureID(size_t channel) const;
+        ID_t getNormalTextureID(size_t channel) const;
+
         void setLightingProperties(float specularStrength, float shininess, bool shadeless);
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
 
         Pipeline* getPipeline(MeshType meshType);
+
+        inline ID_t getBlendmapTextureID() const { return _blendmapTextureID; }
+        inline const ID_t* getDiffuseTextureIDs() const { return _diffuseTextureIDs; }
+        inline const ID_t* getSpecularTextureIDs() const { return _specularTextureIDs; }
+        inline const ID_t* getNormalTextureIDs() const { return _normalTextureIDs; }
 
         inline bool hasBlendmap() const { return _blendmapTextureID != NULL_ID; }
         inline bool hasNormalMap() const { return _normalTextureIDs[0] != NULL_ID; }

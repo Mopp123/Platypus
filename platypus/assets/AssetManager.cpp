@@ -271,6 +271,8 @@ namespace platypus
         bool receiveShadows,
         bool transparent,
         bool shadeless,
+        const std::string& name,
+        ID_t id,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     )
@@ -318,6 +320,8 @@ namespace platypus
             receiveShadows,
             transparent,
             shadeless,
+            name,
+            id,
             customVertexShaderFilename,
             customFragmentShaderFilename
         );
@@ -347,6 +351,8 @@ namespace platypus
             false, // receive shadow
             false, // transparent
             false, // shadeless
+            "",    // name
+            NULL_ID, // id
             "",
             ""
         );

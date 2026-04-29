@@ -27,10 +27,12 @@ namespace platypus
         bool receiveShadows,
         bool transparent,
         bool shadeless,
+        const std::string& name,
+        ID_t id,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     ) :
-        Asset(AssetType::ASSET_TYPE_MATERIAL),
+        Asset(AssetType::ASSET_TYPE_MATERIAL, name, id),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
@@ -45,9 +47,9 @@ namespace platypus
     {
         validateTextureCounts();
 
-        memset(_diffuseTextureIDs, 0, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
-        memset(_specularTextureIDs, 0, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
-        memset(_normalTextureIDs, 0, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_diffuseTextureIDs, NULL_ID, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_specularTextureIDs, NULL_ID, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_normalTextureIDs, NULL_ID, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
 
         memcpy(_diffuseTextureIDs, pDiffuseTextureIDs, sizeof(ID_t) * _diffuseTextureCount);
         memcpy(_specularTextureIDs, pSpecularTextureIDs, sizeof(ID_t) * _specularTextureCount);
@@ -542,6 +544,51 @@ namespace platypus
         }
 
         return textures;
+    }
+
+    ID_t Material::getDiffuseTextureID(size_t channel) const
+    {
+        if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "Texture channel(" + std::to_string(channel) + ") out of bounds! "
+                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per channel.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return _diffuseTextureIDs[channel];
+    }
+
+    ID_t Material::getSpecularTextureID(size_t channel) const
+    {
+        if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "Texture channel(" + std::to_string(channel) + ") out of bounds! "
+                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per channel.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return _specularTextureIDs[channel];
+    }
+
+    ID_t Material::getNormalTextureID(size_t channel) const
+    {
+        if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "Texture channel(" + std::to_string(channel) + ") out of bounds! "
+                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per channel.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return _normalTextureIDs[channel];
     }
 
     void Material::setLightingProperties(float specularStrength, float shininess, bool shadeless)
