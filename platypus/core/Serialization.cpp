@@ -9,6 +9,59 @@ namespace platypus
 {
     namespace serialization
     {
+        std::string image_metadata_to_string(const ImageMetadata& data)
+        {
+            std::string name(data.name);
+            std::string filepath(data.filepath);
+            return name + "\n"
+                "   format = " + image_format_to_string(data.format) + "\n"
+                "   filepath = " + filepath + "\n"
+                "   persistent = " + std::to_string(data.persistent);
+        }
+
+        std::string texture_metadata_to_string(const TextureMetadata& data)
+        {
+            std::string name(data.name);
+            return name + "\n"
+                "   filterMode = " + texture_sampler_filter_mode_to_string(data.filterMode) + "\n"
+                "   addressMode = " + texture_sampler_address_mode_to_string(data.addressMode) + "\n"
+                "   useMipmapping = " + std::to_string(data.useMipmapping) + "\n"
+                "   imageID = " + std::to_string(data.imageID) + "\n"
+                "   persistent = " + std::to_string(data.persistent);
+        }
+
+        std::string material_metadata_to_string(const MaterialMetadata& data)
+        {
+            std::string name(data.name);
+
+            std::string str = name + "\n"
+                "   specularStrength = " + std::to_string(data.specularStrength) + "\n"
+                "   specularShininess = " + std::to_string(data.shininess) + "\n"
+                "   textureOffset = " + data.textureOffset.toString() + "\n"
+                "   textureScale = " + data.textureScale.toString() + "\n"
+                "   castShadows = " + std::to_string(data.castShadows) + "\n"
+                "   receiveShadows = " + std::to_string(data.receiveShadows) + "\n"
+                "   transparent = " + std::to_string(data.transparent) + "\n"
+                "   shadeless = " + std::to_string(data.shadeless) + "\n"
+                "   blendmapTextureID = " + std::to_string(data.blendmapTextureID) + "\n"
+                "   diffuseTextureIDs\n";
+
+            for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
+                str += "        [" + std::to_string(i) + "] = " + std::to_string(data.diffuseTextureIDs[i]) + "\n";
+
+            str += "    diffuseTextureIDs\n";
+            for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
+                str += "        [" + std::to_string(i) + "] = " + std::to_string(data.specularTextureIDs[i]) + "\n";
+
+            str += "    normalTextureIDs\n";
+            for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
+                str += "        [" + std::to_string(i) + "] = " + std::to_string(data.normalTextureIDs[i]) + "\n";
+
+            str += "    persistent = " + std::to_string(data.persistent);
+
+            return str;
+        }
+
         ImageMetadata get_image_metadata(const Image* pImage)
         {
             const std::string& assetName = pImage->getName();
@@ -80,7 +133,7 @@ namespace platypus
                 channelTexturesSize
             );
             memcpy(
-                data.specularTextureIDs,
+                data.normalTextureIDs,
                 pMaterial->getNormalTextureIDs(),
                 channelTexturesSize
             );
@@ -271,6 +324,8 @@ namespace platypus
                 &data.name,
                 metadata_name_size
             );
+            pos += metadata_name_size;
+            PLATYPUS_ASSERT(pos == material_metadata_serialized_size);
 
             return serializedData;
         }
@@ -498,11 +553,13 @@ namespace platypus
             memcpy(fullMetadata.data(), &imageAssetCountU32, sizeof(uint32_t));
             memcpy(
                 fullMetadata.data() + sizeof(uint32_t),
-                &textureAssetCountU32, sizeof(uint32_t)
+                &textureAssetCountU32,
+                sizeof(uint32_t)
             );
             memcpy(
                 fullMetadata.data() + sizeof(uint32_t) * 2,
-                &materialAssetCountU32, sizeof(uint32_t)
+                &materialAssetCountU32,
+                sizeof(uint32_t)
             );
 
             for (size_t i = 0; i < imageAssetCount; ++i)
@@ -588,7 +645,7 @@ namespace platypus
                 {
                     PLATYPUS_ASSERT(pos + material_metadata_serialized_size <= dataSize);
                     MaterialMetadata metadata = deserialize_material_metadata(
-                        texture_metadata_serialized_size,
+                        material_metadata_serialized_size,
                         reinterpret_cast<char*>(pData) + pos
                     );
                     outMaterials.push_back(metadata);

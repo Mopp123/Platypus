@@ -65,8 +65,12 @@ namespace platypus
             sizeof(Vector2f) * 2 +
             sizeof(uint8_t) * 5 +
             sizeof(ID_t) +
-            sizeof(ID) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
+            sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
             metadata_name_size;
+
+        std::string image_metadata_to_string(const ImageMetadata& data);
+        std::string texture_metadata_to_string(const TextureMetadata& data);
+        std::string material_metadata_to_string(const MaterialMetadata& data);
 
         ImageMetadata get_image_metadata(const Image* pImage);
         TextureMetadata get_texture_metadata(const Texture* pTexture);
