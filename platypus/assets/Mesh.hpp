@@ -39,7 +39,9 @@ namespace platypus
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
             const Matrix4f& transformationMatrix,
-            Pose bindPose
+            Pose bindPose,
+            const std::string& name = "",
+            ID_t id = NULL_ID
         );
 
         ~Mesh();

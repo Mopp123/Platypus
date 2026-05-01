@@ -13,7 +13,8 @@ namespace platypus
     {
         constexpr size_t metadata_name_size = 32;
         constexpr size_t metadata_filepath_size = 64;
-        constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 3;
+        constexpr size_t metadata_model_max_meshes = 8;
+        constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 4;
         struct ImageMetadata
         {
             ImageFormat format;
@@ -68,21 +69,39 @@ namespace platypus
             sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
             metadata_name_size;
 
+        struct ModelMetadata
+        {
+            uint8_t instanced = 0;
+            uint8_t persistent = 0;
+            ID_t meshIDs[metadata_model_max_meshes];
+            char name[metadata_name_size];
+            char filepath[metadata_filepath_size];
+        };
+
+        constexpr size_t model_metadata_serialized_size = sizeof(uint8_t) * 2 +
+            sizeof(ID_t) * metadata_model_max_meshes +
+            metadata_name_size +
+            metadata_filepath_size;
+
         std::string image_metadata_to_string(const ImageMetadata& data);
         std::string texture_metadata_to_string(const TextureMetadata& data);
         std::string material_metadata_to_string(const MaterialMetadata& data);
+        std::string model_metadata_to_string(const ModelMetadata& data);
 
         ImageMetadata get_image_metadata(const Image* pImage);
         TextureMetadata get_texture_metadata(const Texture* pTexture);
         MaterialMetadata get_material_metadata(const Material* pMaterial);
+        ModelMetadata get_model_metadata(const Model* pModel);
 
         std::vector<char> serialize_image_metadata(ImageMetadata data);
         std::vector<char> serialize_texture_metadata(TextureMetadata data);
         std::vector<char> serialize_material_metadata(MaterialMetadata data);
+        std::vector<char> serialize_model_metadata(ModelMetadata data);
 
         ImageMetadata deserialize_image_metadata(size_t dataSize, void* pData);
         TextureMetadata deserialize_texture_metadata(size_t dataSize, void* pData);
         MaterialMetadata deserialize_material_metadata(size_t dataSize, void* pData);
+        ModelMetadata deserialize_model_metadata(size_t dataSize, void* pData);
 
         std::vector<char> serialize_assets(const std::vector<Asset*>& assets);
         void deserialize_assets(
@@ -90,7 +109,8 @@ namespace platypus
             void* pData,
             std::vector<ImageMetadata>& outImages,
             std::vector<TextureMetadata>& outTextures,
-            std::vector<MaterialMetadata>& outMaterials
+            std::vector<MaterialMetadata>& outMaterials,
+            std::vector<ModelMetadata>& outModels
         );
     }
 }

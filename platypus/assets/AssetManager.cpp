@@ -400,8 +400,8 @@ namespace platypus
         if (!load_gltf_model(filepath, loadedMeshes, loadedAnimations))
         {
             Debug::log(
-                "@AssetManager::loadModel "
                 "Failed to load model using filepath: " + filepath,
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -433,10 +433,10 @@ namespace platypus
                  meshData.vertexBufferLayout != VertexBufferLayout::get_common_static_tangent_layout())
             {
                 Debug::log(
-                    "@AssetManager::loadModel "
                     "This function is ment to load static meshes only! "
                     "Vertex buffer layout read from file " + filepath + " wasn't "
                     "suitable for static rendering (differs from 'static' and 'static_tangent' layouts)",
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -444,9 +444,9 @@ namespace platypus
             if (!meshData.bindPose.joints.empty())
             {
                 Debug::log(
-                    "@AssetManager::loadModel "
                     "This function is ment to load static meshes only! "
                     "File " + filepath + " contained bind pose data!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -463,7 +463,7 @@ namespace platypus
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
         }
-        Model* pModel = new Model(createdMeshes);
+        Model* pModel = new Model(filepath, instanced, createdMeshes);
         _assets[pModel->getID()] = pModel;
         return pModel;
     }
@@ -477,8 +477,8 @@ namespace platypus
         if (!load_gltf_model(filepath, loadedMeshes, outAnimations))
         {
             Debug::log(
-                "@AssetManager::loadModel "
                 "Failed to load model using filepath: " + filepath,
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -517,7 +517,89 @@ namespace platypus
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
         }
-        Model* pModel = new Model(createdMeshes);
+        Model* pModel = new Model(filepath, false, createdMeshes);
+        _assets[pModel->getID()] = pModel;
+        return pModel;
+    }
+
+    Model* AssetManager::loadModel(
+        const std::string& filepath,
+        std::vector<KeyframeAnimationData>& outAnimations,
+        bool instanced,
+        const std::string& name,
+        ID_t modelID,
+        std::vector<ID_t> meshIDs
+    )
+    {
+        std::vector<MeshData> loadedMeshes;
+        if (!load_gltf_model(filepath, loadedMeshes, outAnimations))
+        {
+            Debug::log(
+                "Failed to load model using filepath: " + filepath,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+
+        if (!outAnimations.empty() && instanced)
+        {
+            Debug::log(
+                "Instancing not supported for skinned meshes",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+
+        std::vector<Mesh*> createdMeshes;
+        for (size_t i = 0; i < loadedMeshes.size(); ++i)
+        {
+            const MeshData& meshData = loadedMeshes[i];
+            Buffer* pVertexBuffer = new Buffer(
+                (void*)meshData.vertexBufferData.rawData.data(),
+                meshData.vertexBufferData.elementSize,
+                meshData.vertexBufferData.length,
+                BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+            MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
+            Buffer* pIndexBuffer = new Buffer(
+                (void*)useIndexBuffer.rawData.data(),
+                useIndexBuffer.elementSize,
+                useIndexBuffer.length,
+                BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+                BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+                false
+            );
+
+            MeshType meshType = MeshType::MESH_TYPE_STATIC;
+            if (instanced)
+                meshType = MeshType::MESH_TYPE_STATIC_INSTANCED;
+            else if (!outAnimations.empty())
+                meshType = MeshType::MESH_TYPE_SKINNED;
+
+            ID_t meshID = NULL_ID;
+            if (i < meshIDs.size())
+                meshID = meshIDs[i];
+
+            Mesh* pMesh = new Mesh(
+                meshType,
+                meshData.vertexBufferLayout,
+                pVertexBuffer,
+                pIndexBuffer,
+                meshData.transformationMatrix,
+                meshData.bindPose,
+                meshData.name,
+                meshID
+            );
+            _assets[pMesh->getID()] = pMesh;
+            createdMeshes.push_back(pMesh);
+        }
+        Model* pModel = new Model(filepath, instanced, createdMeshes, name, modelID);
         _assets[pModel->getID()] = pModel;
         return pModel;
     }

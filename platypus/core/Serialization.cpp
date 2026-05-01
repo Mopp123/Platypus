@@ -62,6 +62,22 @@ namespace platypus
             return str;
         }
 
+        std::string model_metadata_to_string(const ModelMetadata& data)
+        {
+            std::string name(data.name);
+            std::string filepath(data.filepath);
+
+            std::string str = name + "\n";
+            str += "    " + filepath + "\n";
+            str += "    instanced = " + std::to_string(data.instanced) + "\n";
+
+            str += "    meshIDs\n";
+            for (size_t i = 0; i < metadata_model_max_meshes; ++i)
+                str += "        [" + std::to_string(i) + "] = " + std::to_string(data.meshIDs[i]) + "\n";
+
+            return str;
+        }
+
         ImageMetadata get_image_metadata(const Image* pImage)
         {
             const std::string& assetName = pImage->getName();
@@ -139,6 +155,34 @@ namespace platypus
             );
 
             memcpy(data.name, assetName.data(), assetName.size());
+
+            return data;
+        }
+
+        ModelMetadata get_model_metadata(const Model* pModel)
+        {
+            const std::string& assetName = pModel->getName();
+            PLATYPUS_ASSERT(assetName.size() < metadata_name_size);
+            const std::string& filepath = pModel->getFilepath();
+            PLATYPUS_ASSERT(filepath.size() < metadata_filepath_size);
+
+            ModelMetadata data;
+            data.instanced = static_cast<bool>(pModel->isInstanced());
+            data.persistent = static_cast<bool>(pModel->isPersistent());
+
+            memset(data.meshIDs, NULL_ID, sizeof(ID_t) * metadata_model_max_meshes);
+            memset(data.name, 0, metadata_name_size);
+            memset(data.filepath, 0, metadata_filepath_size);
+
+            const std::vector<Mesh*> meshes = pModel->getMeshes();
+            for (size_t i = 0; i < meshes.size(); ++i)
+            {
+                ID_t meshID = meshes[i]->getID();
+                memcpy(data.meshIDs + i, &meshID, sizeof(ID_t));
+            }
+
+            memcpy(data.name, assetName.data(), assetName.size());
+            memcpy(data.filepath, filepath.data(), filepath.size());
 
             return data;
         }
@@ -326,6 +370,51 @@ namespace platypus
             );
             pos += metadata_name_size;
             PLATYPUS_ASSERT(pos == material_metadata_serialized_size);
+
+            return serializedData;
+        }
+
+        std::vector<char> serialize_model_metadata(ModelMetadata data)
+        {
+            std::vector<char> serializedData(model_metadata_serialized_size);
+            memcpy(
+                serializedData.data(),
+                &data.instanced,
+                sizeof(uint8_t)
+            );
+            size_t pos = sizeof(uint8_t);
+
+            memcpy(
+                serializedData.data() + pos,
+                &data.persistent,
+                sizeof(uint8_t)
+            );
+            pos += sizeof(uint8_t);
+
+            for (size_t i = 0; i < metadata_model_max_meshes; ++i)
+            {
+                memcpy(
+                    serializedData.data() + pos,
+                    &(data.meshIDs[i]),
+                    sizeof(ID_t)
+                );
+                pos += sizeof(ID_t);
+            }
+
+            memcpy(
+                serializedData.data() + pos,
+                &data.name,
+                metadata_name_size
+            );
+            pos += metadata_name_size;
+
+            memcpy(
+                serializedData.data() + pos,
+                &data.filepath,
+                metadata_filepath_size
+            );
+            pos += metadata_filepath_size;
+            PLATYPUS_ASSERT(pos == model_metadata_serialized_size);
 
             return serializedData;
         }
@@ -519,11 +608,59 @@ namespace platypus
             return metadata;
         }
 
+        ModelMetadata deserialize_model_metadata(size_t dataSize, void* pData)
+        {
+            PLATYPUS_ASSERT(dataSize == model_metadata_serialized_size);
+
+            ModelMetadata metadata;
+            memcpy(
+                &metadata.instanced,
+                pData,
+                sizeof(uint8_t)
+            );
+            size_t pos = sizeof(uint8_t);
+
+            memcpy(
+                &metadata.persistent,
+                reinterpret_cast<char*>(pData) + pos,
+                sizeof(uint8_t)
+            );
+            pos += sizeof(uint8_t);
+
+            for (size_t i = 0; i < metadata_model_max_meshes; ++i)
+            {
+                memcpy(
+                    &(metadata.meshIDs[i]),
+                    reinterpret_cast<char*>(pData) + pos,
+                    sizeof(ID_t)
+                );
+                pos += sizeof(ID_t);
+            }
+
+            memcpy(
+                &metadata.name,
+                reinterpret_cast<char*>(pData) + pos,
+                metadata_name_size
+            );
+            pos += metadata_name_size;
+
+            memcpy(
+                &metadata.filepath,
+                reinterpret_cast<char*>(pData) + pos,
+                metadata_filepath_size
+            );
+            pos += metadata_filepath_size;
+
+            PLATYPUS_ASSERT(pos == model_metadata_serialized_size);
+            return metadata;
+        }
+
         /*
             Byte offsets:
                 0 (4 bytes) = image count
                 4 (4 bytes) = texture count
                 8 (4 bytes) = material count
+                12 (4 bytes) = model count
         */
         std::vector<char> serialize_assets(const std::vector<Asset*>& assets)
         {
@@ -532,6 +669,7 @@ namespace platypus
             std::vector<const Image*> imageAssets;
             std::vector<const Texture*> textureAssets;
             std::vector<const Material*> materialAssets;
+            std::vector<const Model*> modelAssets;
             for (const Asset* pAsset : assets)
             {
                 if (pAsset->getType() == AssetType::ASSET_TYPE_IMAGE)
@@ -540,14 +678,18 @@ namespace platypus
                     textureAssets.push_back(reinterpret_cast<const Texture*>(pAsset));
                 else if (pAsset->getType() == AssetType::ASSET_TYPE_MATERIAL)
                     materialAssets.push_back(reinterpret_cast<const Material*>(pAsset));
+                else if (pAsset->getType() == AssetType::ASSET_TYPE_MODEL)
+                    modelAssets.push_back(reinterpret_cast<const Model*>(pAsset));
             }
             const size_t imageAssetCount = imageAssets.size();
             const size_t textureAssetCount = textureAssets.size();
             const size_t materialAssetCount = materialAssets.size();
+            const size_t modelAssetCount = modelAssets.size();
 
             const uint32_t imageAssetCountU32 = static_cast<uint32_t>(imageAssetCount);
             const uint32_t textureAssetCountU32 = static_cast<uint32_t>(textureAssetCount);
             const uint32_t materialAssetCountU32 = static_cast<uint32_t>(materialAssetCount);
+            const uint32_t modelAssetCountU32 = static_cast<uint32_t>(modelAssetCount);
 
             // Write header containing counts for each asset type
             memcpy(fullMetadata.data(), &imageAssetCountU32, sizeof(uint32_t));
@@ -559,6 +701,11 @@ namespace platypus
             memcpy(
                 fullMetadata.data() + sizeof(uint32_t) * 2,
                 &materialAssetCountU32,
+                sizeof(uint32_t)
+            );
+            memcpy(
+                fullMetadata.data() + sizeof(uint32_t) * 3,
+                &modelAssetCountU32,
                 sizeof(uint32_t)
             );
 
@@ -585,6 +732,14 @@ namespace platypus
                 );
                 fullMetadata.insert(fullMetadata.end(), materialMetadata.begin(), materialMetadata.end());
             }
+
+            for (size_t i = 0; i < modelAssetCount; ++i)
+            {
+                std::vector<char> modelMetadata = serialize_model_metadata(
+                    get_model_metadata(modelAssets[i])
+                );
+                fullMetadata.insert(fullMetadata.end(), modelMetadata.begin(), modelMetadata.end());
+            }
             return fullMetadata;
         }
 
@@ -593,13 +748,15 @@ namespace platypus
             void* pData,
             std::vector<ImageMetadata>& outImages,
             std::vector<TextureMetadata>& outTextures,
-            std::vector<MaterialMetadata>& outMaterials
+            std::vector<MaterialMetadata>& outMaterials,
+            std::vector<ModelMetadata>& outModels
         )
         {
             PLATYPUS_ASSERT(dataSize >= serialized_assets_header_size);
             uint32_t imageCount = 0;
             uint32_t textureCount = 0;
             uint32_t materialCount = 0;
+            uint32_t modelCount = 0;
             memcpy(&imageCount, pData, sizeof(uint32_t));
             memcpy(
                 &textureCount,
@@ -611,12 +768,20 @@ namespace platypus
                 reinterpret_cast<char*>(pData) + sizeof(uint32_t) * 2,
                 sizeof(uint32_t)
             );
+            memcpy(
+                &modelCount,
+                reinterpret_cast<char*>(pData) + sizeof(uint32_t) * 3,
+                sizeof(uint32_t)
+            );
 
             uint32_t textureSectionBegin = serialized_assets_header_size + imageCount * image_metadata_serialized_size;
             uint32_t textureSectionEnd = textureSectionBegin + textureCount * texture_metadata_serialized_size;
 
             uint32_t materialSectionBegin = textureSectionEnd;
             uint32_t materialSectionEnd = materialSectionBegin + materialCount * material_metadata_serialized_size;
+
+            uint32_t modelSectionBegin = materialSectionEnd;
+            uint32_t modelSectionEnd = modelSectionBegin + modelCount * model_metadata_serialized_size;
 
             size_t pos = serialized_assets_header_size;
             while (pos < dataSize)
@@ -650,6 +815,16 @@ namespace platypus
                     );
                     outMaterials.push_back(metadata);
                     pos += material_metadata_serialized_size;
+                }
+                else if (pos >= modelSectionBegin && pos < modelSectionEnd)
+                {
+                    PLATYPUS_ASSERT(pos + model_metadata_serialized_size <= dataSize);
+                    ModelMetadata metadata = deserialize_model_metadata(
+                        model_metadata_serialized_size,
+                        reinterpret_cast<char*>(pData) + pos
+                    );
+                    outModels.push_back(metadata);
+                    pos += model_metadata_serialized_size;
                 }
             }
         }

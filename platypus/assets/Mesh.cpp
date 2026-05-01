@@ -24,9 +24,11 @@ namespace platypus
         Buffer* pVertexBuffer,
         Buffer* pIndexBuffer,
         const Matrix4f& transformationMatrix,
-        Pose bindPose
+        Pose bindPose,
+        const std::string& name,
+        ID_t id
     ) :
-        Asset(AssetType::ASSET_TYPE_MESH),
+        Asset(AssetType::ASSET_TYPE_MESH, name, id),
         _type(type),
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),

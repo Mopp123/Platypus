@@ -157,8 +157,8 @@ namespace platypus
             m.vertexBufferLayout = vertexBufferLayout;
             m.vertexBufferData = vertexBuffer;
             m.indexBufferData = indexBuffers;
-
             m.transformationMatrix = transformationMatrix;
+            m.name = node.name;
 
             outMeshes.push_back(m);
         }

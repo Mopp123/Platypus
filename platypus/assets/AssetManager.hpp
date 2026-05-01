@@ -107,6 +107,17 @@ namespace platypus
             const std::string& filepath,
             std::vector<KeyframeAnimationData>& outAnimations
         );
+        // Can be used to load both, static and skinned meshes
+        // TODO: instanced property should be per mesh and NOT per model!
+        //  -> Fix everywhere!
+        Model* loadModel(
+            const std::string& filepath,
+            std::vector<KeyframeAnimationData>& outAnimations,
+            bool instanced,
+            const std::string& name,
+            ID_t modelID = NULL_ID,
+            std::vector<ID_t> meshIDs = { }
+        );
         Mesh* createTerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,
