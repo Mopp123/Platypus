@@ -172,6 +172,8 @@ void WaterTestScene::init()
         false, // receive shadows,
         true, // transparent
         false, // shadeless
+        "", // name
+        NULL_ID, // id
         "water/VertexShader",
         "water/FragmentShader"
     );
