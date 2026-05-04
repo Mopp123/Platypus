@@ -387,7 +387,8 @@ namespace platypus
             pVertexBuffer,
             pIndexBuffer,
             Matrix4f(1.0f),
-            { }
+            { }, // bind pose
+            { } // animations
         );
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
@@ -458,7 +459,8 @@ namespace platypus
                 pVertexBuffer,
                 pIndexBuffer,
                 meshData.transformationMatrix,
-                { }
+                { }, // bind pose
+                { } // animations
             );
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
@@ -512,7 +514,8 @@ namespace platypus
                 pVertexBuffer,
                 pIndexBuffer,
                 meshData.transformationMatrix,
-                meshData.bindPose
+                meshData.bindPose,
+                { } // animations
             );
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
@@ -524,7 +527,6 @@ namespace platypus
 
     Model* AssetManager::loadModel(
         const std::string& filepath,
-        std::vector<KeyframeAnimationData>& outAnimations,
         bool instanced,
         const std::string& name,
         ID_t modelID,
@@ -532,7 +534,8 @@ namespace platypus
     )
     {
         std::vector<MeshData> loadedMeshes;
-        if (!load_gltf_model(filepath, loadedMeshes, outAnimations))
+        std::vector<KeyframeAnimationData> animationData;
+        if (!load_gltf_model(filepath, loadedMeshes, animationData))
         {
             Debug::log(
                 "Failed to load model using filepath: " + filepath,
@@ -543,7 +546,7 @@ namespace platypus
             return nullptr;
         }
 
-        if (!outAnimations.empty() && instanced)
+        if (!animationData.empty() && instanced)
         {
             Debug::log(
                 "Instancing not supported for skinned meshes",
@@ -579,12 +582,16 @@ namespace platypus
             MeshType meshType = MeshType::MESH_TYPE_STATIC;
             if (instanced)
                 meshType = MeshType::MESH_TYPE_STATIC_INSTANCED;
-            else if (!outAnimations.empty())
+            else if (!animationData.empty())
                 meshType = MeshType::MESH_TYPE_SKINNED;
 
             ID_t meshID = NULL_ID;
             if (i < meshIDs.size())
                 meshID = meshIDs[i];
+
+            std::vector<SkeletalAnimationData*> animationAssets(animationData.size());
+            for (size_t i = 0; i < animationData.size(); ++i)
+                animationAssets[i] = createSkeletalAnimation(animationData[i]);
 
             Mesh* pMesh = new Mesh(
                 meshType,
@@ -593,6 +600,7 @@ namespace platypus
                 pIndexBuffer,
                 meshData.transformationMatrix,
                 meshData.bindPose,
+                animationAssets,
                 meshData.name,
                 meshID
             );

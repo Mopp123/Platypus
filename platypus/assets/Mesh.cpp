@@ -25,6 +25,7 @@ namespace platypus
         Buffer* pIndexBuffer,
         const Matrix4f& transformationMatrix,
         Pose bindPose,
+        const std::vector<SkeletalAnimationData*>& animations,
         const std::string& name,
         ID_t id
     ) :
@@ -35,13 +36,25 @@ namespace platypus
         _pIndexBuffer(pIndexBuffer),
         _transformationMatrix(transformationMatrix)
     {
+        // Why are these here and not like the others?
         _bindPose = bindPose;
+        _animations = animations;
     }
 
     Mesh::~Mesh()
     {
         delete _pVertexBuffer;
         delete _pIndexBuffer;
+    }
+
+    int32_t Mesh::getAnimationIndex(const std::string& name) const
+    {
+        for (size_t i = 0; i < _animations.size(); ++i)
+        {
+            if (_animations[i]->getName() == name)
+                return i;
+        }
+        return -1;
     }
 
     Mesh* Mesh::generate_terrain(
@@ -212,7 +225,8 @@ namespace platypus
             pVertexBuffer,
             pIndexBuffer,
             Matrix4f(1.0f),
-            { }
+            { }, // bind pose
+            { } // animations
         );
         return pMesh;
     }

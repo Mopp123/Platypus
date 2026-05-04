@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Asset.hpp"
+#include "SkeletalAnimationData.hpp"
 #include "platypus/graphics/Buffers.hpp"
 #include "platypus/utils/Maths.hpp"
 #include "platypus/utils/AnimationDataUtils.hpp"
+#include <unordered_map>
 
 
 namespace platypus
@@ -31,6 +33,10 @@ namespace platypus
 
         Pose _bindPose;
 
+        // NOTE: Not sure if "assets inside assets" should rather be IDs to those instead of ptrs!
+        //  -> ptrs will become issue when serializing
+        std::vector<SkeletalAnimationData*> _animations;
+
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
@@ -40,11 +46,14 @@ namespace platypus
             Buffer* pIndexBuffer,
             const Matrix4f& transformationMatrix,
             Pose bindPose,
+            const std::vector<SkeletalAnimationData*>& animations,
             const std::string& name = "",
             ID_t id = NULL_ID
         );
-
         ~Mesh();
+
+        // returns -1 if not found
+        int32_t getAnimationIndex(const std::string& name) const;
 
         static Mesh* generate_terrain(
             float tileSize,
@@ -52,6 +61,8 @@ namespace platypus
             bool dynamic,
             bool generateTangents
         );
+
+        inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
 
         inline MeshType getType() const { return _type; }
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }

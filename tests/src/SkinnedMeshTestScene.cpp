@@ -107,14 +107,24 @@ void SkinnedMeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    std::vector<KeyframeAnimationData> animations;
-    Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
+    //std::vector<KeyframeAnimationData> animations;
+    //Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
+    //    "assets/models/MultiAnimSkeletonTest.glb",
+    //    animations
+    //);
+
+    Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/MultiAnimSkeletonTest.glb",
-        animations
+        false,
+        "AnimatedModel"
     );
+
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
-    _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
-    _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
+    //_pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
+    //_pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
+    const std::vector<SkeletalAnimationData*>& animations = pAnimatedMesh->getAnimations();
+    _pIdleAnimationAsset = animations[0];
+    _pRunAnimationAsset = animations[1];
 
     const TextureSampler* pTextureSampler = pAssetManager->getOrCreateTextureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,

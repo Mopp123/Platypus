@@ -24,13 +24,35 @@ namespace platypus
             init();
 
         ID_t id = 0;
-        while ((s_usedIDs.find(id) != s_usedIDs.end()) || id == NULL_ID)
+        while (true)
         {
             // randomize each byte individually..
             for (size_t i = 0; i < sizeof(ID_t); ++i)
             {
                 uint8_t bVal = (uint8_t)(std::rand() % 255);
                 memset(((uint8_t*)&id) + i, bVal, 1);
+            }
+            if ((s_usedIDs.find(id) != s_usedIDs.end()))
+            {
+                Debug::log(
+                    "ID: " + std::to_string(id) + " already exists! "
+                    "Attempting to generate again...",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+            }
+            else if (id == NULL_ID)
+            {
+                Debug::log(
+                    "Generated ID was NULL_ID!"
+                    "Attempting to generate again...",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+            }
+            else
+            {
+                break;
             }
         }
         s_usedIDs.insert(id);

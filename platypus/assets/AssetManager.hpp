@@ -112,7 +112,6 @@ namespace platypus
         //  -> Fix everywhere!
         Model* loadModel(
             const std::string& filepath,
-            std::vector<KeyframeAnimationData>& outAnimations,
             bool instanced,
             const std::string& name,
             ID_t modelID = NULL_ID,

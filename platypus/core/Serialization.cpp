@@ -3,6 +3,7 @@
 #include "Debug.hpp"
 #include <string>
 #include <cstring>
+#include <fstream>
 
 
 namespace platypus
@@ -14,6 +15,7 @@ namespace platypus
             std::string name(data.name);
             std::string filepath(data.filepath);
             return name + "\n"
+                "   ID = " + std::to_string(data.assetID) + "\n"
                 "   format = " + image_format_to_string(data.format) + "\n"
                 "   filepath = " + filepath + "\n"
                 "   persistent = " + std::to_string(data.persistent);
@@ -23,10 +25,11 @@ namespace platypus
         {
             std::string name(data.name);
             return name + "\n"
+                "   ID = " + std::to_string(data.assetID) + "\n"
+                "   imageID = " + std::to_string(data.imageID) + "\n"
                 "   filterMode = " + texture_sampler_filter_mode_to_string(data.filterMode) + "\n"
                 "   addressMode = " + texture_sampler_address_mode_to_string(data.addressMode) + "\n"
                 "   useMipmapping = " + std::to_string(data.useMipmapping) + "\n"
-                "   imageID = " + std::to_string(data.imageID) + "\n"
                 "   persistent = " + std::to_string(data.persistent);
         }
 
@@ -35,6 +38,7 @@ namespace platypus
             std::string name(data.name);
 
             std::string str = name + "\n"
+                "   ID = " + std::to_string(data.assetID) + "\n"
                 "   specularStrength = " + std::to_string(data.specularStrength) + "\n"
                 "   specularShininess = " + std::to_string(data.shininess) + "\n"
                 "   textureOffset = " + data.textureOffset.toString() + "\n"
@@ -68,13 +72,15 @@ namespace platypus
             std::string filepath(data.filepath);
 
             std::string str = name + "\n";
-            str += "    " + filepath + "\n";
+            str += "    ID = " + std::to_string(data.assetID) + "\n";
+            str += "    filepath = " + filepath + "\n";
             str += "    instanced = " + std::to_string(data.instanced) + "\n";
 
             str += "    meshIDs\n";
             for (size_t i = 0; i < metadata_model_max_meshes; ++i)
                 str += "        [" + std::to_string(i) + "] = " + std::to_string(data.meshIDs[i]) + "\n";
 
+            str += "    persistent = " + std::to_string(data.persistent);
             return str;
         }
 
@@ -86,6 +92,7 @@ namespace platypus
             PLATYPUS_ASSERT(filepath.size() < metadata_filepath_size);
 
             ImageMetadata data;
+            data.assetID = pImage->getID();
             data.format = pImage->getFormat();
             data.persistent = static_cast<uint8_t>(pImage->isPersistent());
             memset(data.name, 0, metadata_name_size);
@@ -99,16 +106,18 @@ namespace platypus
         {
             const std::string& assetName = pTexture->getName();
             PLATYPUS_ASSERT(assetName.size() < metadata_name_size);
+            PLATYPUS_ASSERT(pTexture->getID() != NULL_ID);
             PLATYPUS_ASSERT(pTexture->getImage());
             PLATYPUS_ASSERT(pTexture->getImage()->getID() != NULL_ID);
 
             const TextureSampler* pSampler = pTexture->getTextureSampler();
             TextureMetadata data;
+            data.assetID = pTexture->getID();
+            data.imageID = pTexture->getImage()->getID();
             data.filterMode = pSampler->getFilterMode();
             data.addressMode = pSampler->getAddressMode();
             data.useMipmapping = static_cast<uint8_t>(pSampler->isMipmapped());
             data.persistent = static_cast<uint8_t>(pTexture->isPersistent());
-            data.imageID = pTexture->getImage()->getID();
             memset(data.name, 0, metadata_name_size);
             memcpy(data.name, assetName.data(), assetName.size());
             return data;
@@ -121,6 +130,7 @@ namespace platypus
             const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
 
             MaterialMetadata data;
+            data.assetID = pMaterial->getID();
             data.specularStrength = pMaterial->getSpecularStrength();
             data.shininess = pMaterial->getShininess();
             data.textureOffset = pMaterial->getTextureOffset();
@@ -167,6 +177,7 @@ namespace platypus
             PLATYPUS_ASSERT(filepath.size() < metadata_filepath_size);
 
             ModelMetadata data;
+            data.assetID = pModel->getID();
             data.instanced = static_cast<bool>(pModel->isInstanced());
             data.persistent = static_cast<bool>(pModel->isPersistent());
 
@@ -192,10 +203,17 @@ namespace platypus
             std::vector<char> serializedData(image_metadata_serialized_size);
             memcpy(
                 serializedData.data(),
+                reinterpret_cast<void*>(&data.assetID),
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                serializedData.data() + pos,
                 reinterpret_cast<void*>(&data.format),
                 sizeof(ImageFormat)
             );
-            size_t pos = sizeof(ImageFormat);
+            pos += sizeof(ImageFormat);
 
             memcpy(
                 serializedData.data() + pos,
@@ -223,12 +241,28 @@ namespace platypus
         std::vector<char> serialize_texture_metadata(TextureMetadata data)
         {
             std::vector<char> serializedData(texture_metadata_serialized_size);
+            PLATYPUS_ASSERT(data.assetID != NULL_ID);
+
             memcpy(
                 serializedData.data(),
+                reinterpret_cast<void*>(&data.assetID),
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                serializedData.data() + pos,
+                reinterpret_cast<void*>(&data.imageID),
+                sizeof(ID_t)
+            );
+            pos += sizeof(ID_t);
+
+            memcpy(
+                serializedData.data() + pos,
                 reinterpret_cast<void*>(&data.filterMode),
                 sizeof(TextureSamplerFilterMode)
             );
-            size_t pos = sizeof(TextureSamplerFilterMode);
+            pos += sizeof(TextureSamplerFilterMode);
 
             memcpy(
                 serializedData.data() + pos,
@@ -253,16 +287,11 @@ namespace platypus
 
             memcpy(
                 serializedData.data() + pos,
-                reinterpret_cast<void*>(&data.imageID),
-                sizeof(ID_t)
-            );
-            pos += sizeof(ID_t);
-
-            memcpy(
-                serializedData.data() + pos,
                 data.name,
                 metadata_name_size
             );
+            pos += metadata_name_size;
+            PLATYPUS_ASSERT(pos == texture_metadata_serialized_size);
 
             return serializedData;
         }
@@ -274,10 +303,17 @@ namespace platypus
 
             memcpy(
                 serializedData.data(),
+                &data.assetID,
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                serializedData.data() + pos,
                 &data.specularStrength,
                 sizeof(float)
             );
-            size_t pos = sizeof(float);
+            pos += sizeof(float);
 
             memcpy(
                 serializedData.data() + pos,
@@ -379,10 +415,17 @@ namespace platypus
             std::vector<char> serializedData(model_metadata_serialized_size);
             memcpy(
                 serializedData.data(),
+                &data.assetID,
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                serializedData.data() + pos,
                 &data.instanced,
                 sizeof(uint8_t)
             );
-            size_t pos = sizeof(uint8_t);
+            pos += sizeof(uint8_t);
 
             memcpy(
                 serializedData.data() + pos,
@@ -425,11 +468,18 @@ namespace platypus
             ImageMetadata metadata;
 
             memcpy(
-                reinterpret_cast<void*>(&metadata.format),
+                reinterpret_cast<void*>(&metadata.assetID),
                 pData,
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                reinterpret_cast<void*>(&metadata.format),
+                reinterpret_cast<char*>(pData) + pos,
                 sizeof(ImageFormat)
             );
-            size_t pos = sizeof(ImageFormat);
+            pos += sizeof(ImageFormat);
 
             memcpy(
                 reinterpret_cast<void*>(&metadata.persistent),
@@ -459,11 +509,25 @@ namespace platypus
             TextureMetadata metadata;
 
             memcpy(
+                reinterpret_cast<void*>(&metadata.assetID),
+                reinterpret_cast<char*>(pData),
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                reinterpret_cast<void*>(&metadata.imageID),
+                reinterpret_cast<char*>(pData) + pos,
+                sizeof(ID_t)
+            );
+            pos += sizeof(ID_t);
+
+            memcpy(
                 reinterpret_cast<void*>(&metadata.filterMode),
-                pData,
+                reinterpret_cast<char*>(pData) + pos,
                 sizeof(TextureSamplerFilterMode)
             );
-            size_t pos = sizeof(TextureSamplerFilterMode);
+            pos += sizeof(TextureSamplerFilterMode);
 
             memcpy(
                 reinterpret_cast<void*>(&metadata.addressMode),
@@ -487,17 +551,12 @@ namespace platypus
             pos += sizeof(uint8_t);
 
             memcpy(
-                reinterpret_cast<void*>(&metadata.imageID),
-                reinterpret_cast<char*>(pData) + pos,
-                sizeof(ID_t)
-            );
-            pos += sizeof(ID_t);
-
-            memcpy(
                 metadata.name,
                 reinterpret_cast<char*>(pData) + pos,
                 metadata_name_size
             );
+            pos += metadata_name_size;
+            PLATYPUS_ASSERT(pos == texture_metadata_serialized_size);
 
             return metadata;
         }
@@ -509,11 +568,18 @@ namespace platypus
             const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
 
             memcpy(
-                &metadata.specularStrength,
+                &metadata.assetID,
                 pData,
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                &metadata.specularStrength,
+                reinterpret_cast<char*>(pData) + pos,
                 sizeof(float)
             );
-            size_t pos = sizeof(float);
+            pos += sizeof(float);
 
             memcpy(
                 &metadata.shininess,
@@ -614,11 +680,18 @@ namespace platypus
 
             ModelMetadata metadata;
             memcpy(
-                &metadata.instanced,
+                &metadata.assetID,
                 pData,
+                sizeof(ID_t)
+            );
+            size_t pos = sizeof(ID_t);
+
+            memcpy(
+                &metadata.instanced,
+                reinterpret_cast<char*>(pData) + pos,
                 sizeof(uint8_t)
             );
-            size_t pos = sizeof(uint8_t);
+            pos += sizeof(uint8_t);
 
             memcpy(
                 &metadata.persistent,
@@ -826,6 +899,102 @@ namespace platypus
                     outModels.push_back(metadata);
                     pos += model_metadata_serialized_size;
                 }
+            }
+        }
+
+        void write_asset_metadata_file(
+            const std::string& filepath,
+            const std::vector<Asset*>& assets
+        )
+        {
+            std::vector<char> fullMetadata = serialization::serialize_assets(assets);
+            try
+            {
+                std::fstream file(filepath, std::ios::out | std::ios::binary);
+                if (!file.is_open())
+                {
+                    Debug::log(
+                        "Failed to create file to: " + filepath,
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
+
+                file.write(reinterpret_cast<const char*>(fullMetadata.data()), fullMetadata.size());
+                file.close();
+                Debug::log(
+                    "File written to " + filepath + " with " + std::to_string(fullMetadata.size()) + " bytes",
+                    Debug::MessageType::PLATYPUS_MESSAGE
+                );
+            }
+            catch (const std::ifstream::failure& e)
+            {
+                Debug::log(
+                    "Failed to write file to: " + filepath + "\n    " + e.what(),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            catch (const std::exception& e)
+            {
+                const std::string exceptionStr(e.what());
+                Debug::log(
+                    "Exception: " + exceptionStr,
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+
+        void read_asset_metadata_file(
+            const std::string& filepath,
+            std::vector<serialization::ImageMetadata>& outImages,
+            std::vector<serialization::TextureMetadata>& outTextures,
+            std::vector<serialization::MaterialMetadata>& outMaterials,
+            std::vector<serialization::ModelMetadata>& outModels
+        )
+        {
+            try
+            {
+                std::ifstream file(filepath, std::ios::in | std::ios::ate | std::ios::binary);
+                if (!file.is_open())
+                {
+                    Debug::log(
+                        "Failed to open file from: " + filepath,
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return;
+                }
+
+                size_t totalSize = file.tellg();
+                file.seekg(0, std::ios::beg);
+                std::vector<char> fullData(totalSize);
+                file.read(fullData.data(), fullData.size());
+                file.close();
+
+                serialization::deserialize_assets(
+                    totalSize,
+                    fullData.data(),
+                    outImages,
+                    outTextures,
+                    outMaterials,
+                    outModels
+                );
+            }
+            catch (const std::ifstream::failure& e)
+            {
+                Debug::log(
+                    "Failed to read file from: " + filepath + "\n    " + e.what(),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
             }
         }
     }

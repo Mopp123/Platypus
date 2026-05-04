@@ -15,37 +15,46 @@ namespace platypus
         constexpr size_t metadata_filepath_size = 64;
         constexpr size_t metadata_model_max_meshes = 8;
         constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 4;
+
+        // TODO:
+        // *Add asset ID to all metadata structs!
+        // *Some way to make sure that engine's "internal asset IDs" can never conflict with
+        // user generated asset IDs!
         struct ImageMetadata
         {
+            ID_t assetID = NULL_ID;
             ImageFormat format;
             uint8_t persistent = 0;
             char name[metadata_name_size];
             char filepath[metadata_filepath_size];
         };
-        constexpr size_t image_metadata_serialized_size = sizeof(ImageFormat) +
+        constexpr size_t image_metadata_serialized_size =
+            sizeof(ID_t) +
+            sizeof(ImageFormat) +
             sizeof(uint8_t) +
             metadata_name_size +
             metadata_filepath_size;
 
         struct TextureMetadata
         {
+            ID_t assetID = NULL_ID;
+            ID_t imageID = NULL_ID;
             TextureSamplerFilterMode filterMode;
             TextureSamplerAddressMode addressMode;
             uint8_t useMipmapping = 0;
             uint8_t persistent = 0;
-            // TODO: reserve certain range or IDs for engine external asset IDs, so this is less
-            // likely get fucked!
-            ID_t imageID = NULL_ID;
             char name[metadata_name_size];
         };
-        constexpr size_t texture_metadata_serialized_size = sizeof(TextureSamplerFilterMode) +
+        constexpr size_t texture_metadata_serialized_size =
+            sizeof(ID_t) * 2 +
+            sizeof(TextureSamplerFilterMode) +
             sizeof(TextureSamplerAddressMode) +
             sizeof(uint8_t) * 2 +
-            sizeof(ID_t) +
             metadata_name_size;
 
         struct MaterialMetadata
         {
+            ID_t assetID = NULL_ID;
             float specularStrength = 0.0f;
             float shininess = 0.0f;
             Vector2f textureOffset;
@@ -62,7 +71,9 @@ namespace platypus
             char name[metadata_name_size];
         };
 
-        constexpr size_t material_metadata_serialized_size = sizeof(float) * 2 +
+        constexpr size_t material_metadata_serialized_size =
+            sizeof(ID_t) +
+            sizeof(float) * 2 +
             sizeof(Vector2f) * 2 +
             sizeof(uint8_t) * 5 +
             sizeof(ID_t) +
@@ -71,6 +82,7 @@ namespace platypus
 
         struct ModelMetadata
         {
+            ID_t assetID = NULL_ID;
             uint8_t instanced = 0;
             uint8_t persistent = 0;
             ID_t meshIDs[metadata_model_max_meshes];
@@ -78,7 +90,9 @@ namespace platypus
             char filepath[metadata_filepath_size];
         };
 
-        constexpr size_t model_metadata_serialized_size = sizeof(uint8_t) * 2 +
+        constexpr size_t model_metadata_serialized_size =
+            sizeof(ID_t) +
+            sizeof(uint8_t) * 2 +
             sizeof(ID_t) * metadata_model_max_meshes +
             metadata_name_size +
             metadata_filepath_size;
@@ -111,6 +125,19 @@ namespace platypus
             std::vector<TextureMetadata>& outTextures,
             std::vector<MaterialMetadata>& outMaterials,
             std::vector<ModelMetadata>& outModels
+        );
+
+        void write_asset_metadata_file(
+            const std::string& filepath,
+            const std::vector<Asset*>& assets
+        );
+
+        void read_asset_metadata_file(
+            const std::string& filepath,
+            std::vector<serialization::ImageMetadata>& outImages,
+            std::vector<serialization::TextureMetadata>& outTextures,
+            std::vector<serialization::MaterialMetadata>& outMaterials,
+            std::vector<serialization::ModelMetadata>& outModels
         );
     }
 }

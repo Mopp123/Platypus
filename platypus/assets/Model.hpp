@@ -11,7 +11,7 @@ namespace platypus
     private:
         std::string _filepath;
         // NOTE: Not sure if "assets inside assets" should rather be IDs to those instead of ptrs!
-        //  -> ptrs will become issue when serializing!
+        //  -> ptrs will become issue when serializing
         std::vector<Mesh*> _meshes;
 
         // NOTE:
