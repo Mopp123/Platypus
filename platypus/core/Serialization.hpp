@@ -52,6 +52,7 @@ namespace platypus
             sizeof(uint8_t) * 2 +
             metadata_name_size;
 
+        // TODO: Add custom shader filepaths to MaterialMetadata!
         struct MaterialMetadata
         {
             ID_t assetID = NULL_ID;
@@ -80,6 +81,7 @@ namespace platypus
             sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
             metadata_name_size;
 
+        // TODO: Some more coherent and centralized thing for current metadata_model_max_meshes!
         struct ModelMetadata
         {
             ID_t assetID = NULL_ID;

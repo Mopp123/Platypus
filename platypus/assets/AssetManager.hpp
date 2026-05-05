@@ -151,6 +151,8 @@ namespace platypus
         bool assetExists(ID_t assetID, AssetType type) const;
         Asset* getAsset(ID_t assetID) const;
         Asset* getAsset(ID_t assetID, AssetType type) const;
+        // NOTE: This is pretty fucking inefficient!
+        Asset* getAsset(const std::string& name) const;
         std::vector<Asset*> getAssets(AssetType type, bool excludeInternalDefaults = false) const;
 
         void makePersistent(Asset* pAsset);

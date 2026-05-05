@@ -788,6 +788,19 @@ namespace platypus
         return it->second;
     }
 
+    // NOTE: This is pretty fucking inefficient!
+    Asset* AssetManager::getAsset(const std::string& name) const
+    {
+        std::unordered_map<ID_t, Asset*>::const_iterator it;
+        for (it = _assets.begin(); it != _assets.end(); ++it)
+        {
+            Asset* pAsset = it->second;
+            if (pAsset->getName() == name)
+                return pAsset;
+        }
+        return nullptr;
+    }
+
     std::vector<Asset*> AssetManager::getAssets(AssetType type, bool excludeInternalDefaults) const
     {
         std::vector<Asset*> foundAssets;
