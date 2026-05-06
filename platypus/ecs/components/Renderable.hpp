@@ -3,6 +3,7 @@
 #include "platypus/utils/ID.hpp"
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
+#include "platypus/core/Scene.hpp"
 #include <string>
 
 
@@ -36,7 +37,8 @@ namespace platypus
     Renderable3D* create_renderable3D(
         entityID_t target,
         ID_t meshAssetID,
-        ID_t materialAssetID
+        ID_t materialAssetID,
+        Scene* pScene = nullptr
     );
 
     GUIRenderable* create_gui_renderable(
@@ -49,16 +51,19 @@ namespace platypus
         Vector2f textureOffset,
         uint32_t layer,
         bool isText,
-        std::string text
+        std::string text,
+        Scene* pScene = nullptr
     );
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        const Vector4f color
+        const Vector4f color,
+        Scene* pScene = nullptr
     );
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID
+        ID_t textureID,
+        Scene* pScene = nullptr
     );
 }

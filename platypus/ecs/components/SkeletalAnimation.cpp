@@ -2,25 +2,28 @@
 #include "platypus/assets/SkeletalAnimationData.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
-#include "platypus/core/Scene.hpp"
 
 
 namespace platypus
 {
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
-        ID_t animationAssetID
+        ID_t animationAssetID,
+        Scene* pScene
     )
     {
         Application* pApp = Application::get_instance();
-        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_skeletal_animation"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = pApp->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_skeletal_animation"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -31,7 +34,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
 
         SkeletalAnimationData* pAsset = (SkeletalAnimationData*)pApp->getAssetManager()->getAsset(
             animationAssetID,
@@ -51,18 +54,22 @@ namespace platypus
 
     SkeletonJoint* create_skeleton_joint(
         entityID_t target,
-        uint32_t jointIndex
+        uint32_t jointIndex,
+        Scene* pScene
     )
     {
         Application* pApp = Application::get_instance();
-        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_skeleton_joint"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = pApp->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_skeleton_joint"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_JOINT;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -73,7 +80,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
 
         SkeletonJoint* pJoint = (SkeletonJoint*)pComponent;
         pJoint->jointIndex = jointIndex;

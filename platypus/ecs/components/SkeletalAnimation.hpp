@@ -3,6 +3,7 @@
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/utils/Maths.hpp"
 #include "platypus/utils/ID.hpp"
+#include "platypus/core/Scene.hpp"
 
 
 namespace platypus
@@ -35,11 +36,13 @@ namespace platypus
 
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
-        ID_t animationAssetID
+        ID_t animationAssetID,
+        Scene* pScene = nullptr
     );
 
     SkeletonJoint* create_skeleton_joint(
         entityID_t target,
-        uint32_t jointIndex
+        uint32_t jointIndex,
+        Scene* pScene = nullptr
     );
 }

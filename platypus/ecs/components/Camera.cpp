@@ -1,6 +1,5 @@
 #include "Camera.hpp"
 #include "platypus/core/Application.hpp"
-#include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 
 
@@ -12,17 +11,21 @@ namespace platypus
         float fov,
         float zNear,
         float zFar,
-        const Matrix4f& orthographicProjectionMatrix // Used for 2D rendering stuff
+        const Matrix4f& orthographicProjectionMatrix, // Used for 2D rendering stuff
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_camera"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_camera"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_CAMERA;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -33,7 +36,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         Camera* pCamera = (Camera*)pComponent;
         pCamera->perspectiveProjectionMatrix = create_perspective_projection_matrix(
             aspectRatio,

@@ -3,6 +3,7 @@
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/utils/AnimationDataUtils.hpp"
+#include "platypus/core/Scene.hpp"
 #include <vector>
 
 #define PLATYPUS_MAX_CHILD_ENTITIES 10
@@ -35,14 +36,16 @@ namespace platypus
 
     Transform* create_transform(
         entityID_t target,
-        Matrix4f matrix
+        Matrix4f matrix,
+        Scene* pScene = nullptr
     );
 
     Transform* create_transform(
         entityID_t target,
         const Vector3f& position,
         const Quaternion& rotation,
-        const Vector3f& scale
+        const Vector3f& scale,
+        Scene* pScene = nullptr
     );
 
     void set_transform_position(Transform* pTransform, const Vector3f& position, bool hasParent);
@@ -61,17 +64,19 @@ namespace platypus
     // Creates Transform hierarchy for joints and returns the root joint entity
     std::vector<entityID_t> create_skeleton(
         const std::vector<Joint>& joints,
-        const std::vector<std::vector<uint32_t>>& jointChildMapping
+        const std::vector<std::vector<uint32_t>>& jointChildMapping,
+        Scene* pScene = nullptr
     );
 
     GUITransform* create_gui_transform(
         entityID_t target,
         const Vector2f position,
-        const Vector2f scale
+        const Vector2f scale,
+        Scene* pScene = nullptr
     );
 
-    void add_child(entityID_t target, entityID_t child);
-    void remove_child(entityID_t target, entityID_t child);
+    void add_child(entityID_t target, entityID_t child, Scene* pScene = nullptr);
+    void remove_child(entityID_t target, entityID_t child, Scene* pScene = nullptr);
     // Moves all children after freedPosition, so that all child IDs are contiguous.
     // Calling this assumes that there was only a single gap in contiguous IDs!
     void pack_children(Children* pChildren, size_t freedPosition);

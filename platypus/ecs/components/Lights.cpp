@@ -1,6 +1,5 @@
 #include "Lights.hpp"
 #include "platypus/core/Application.hpp"
-#include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 
 
@@ -24,17 +23,21 @@ namespace platypus
         const Matrix4f& shadowProjectionMatrix,
         const Matrix4f& shadowViewMatrix,
         bool enableShadows,
-        float maxShadowDistance
+        float maxShadowDistance,
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_directional_light"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_directional_light"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_LIGHT;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -45,7 +48,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         Light* pDirectionalLight = (Light*)pComponent;
         pDirectionalLight->shadowProjectionMatrix = shadowProjectionMatrix;
         pDirectionalLight->shadowViewMatrix = shadowViewMatrix;
@@ -60,7 +63,8 @@ namespace platypus
     Light* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
-        const Vector3f& color
+        const Vector3f& color,
+        Scene* pScene
     )
     {
         return create_directional_light(
@@ -70,7 +74,8 @@ namespace platypus
             Matrix4f(1.0f),
             Matrix4f(1.0f),
             false,
-            0.0f
+            0.0f,
+            pScene
         );
     }
 }

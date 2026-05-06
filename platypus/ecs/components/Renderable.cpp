@@ -1,6 +1,5 @@
 #include "Renderable.hpp"
 #include "platypus/core/Application.hpp"
-#include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/assets/AssetManager.hpp"
 
@@ -10,7 +9,8 @@ namespace platypus
     Renderable3D* create_renderable3D(
         entityID_t target,
         ID_t meshAssetID,
-        ID_t materialAssetID
+        ID_t materialAssetID,
+        Scene* pScene
     )
     {
         Application* pApp = Application::get_instance();
@@ -35,14 +35,17 @@ namespace platypus
             return nullptr;
         }
 
-        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_renderable3D"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = pApp->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_renderable3D"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_RENDERABLE3D;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -53,7 +56,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         Renderable3D* pRenderable = (Renderable3D*)pComponent;
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
@@ -72,17 +75,21 @@ namespace platypus
         Vector2f textureOffset,
         uint32_t layer,
         bool isText,
-        std::string text
+        std::string text,
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_gui_renderable(1)"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_gui_renderable(1)"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -93,7 +100,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         GUIRenderable* pRenderable = (GUIRenderable*)pComponent;
         pRenderable->textureID = textureID;
         pRenderable->fontID = fontID;
@@ -125,7 +132,8 @@ namespace platypus
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        const Vector4f color
+        const Vector4f color,
+        Scene* pScene
     )
     {
         return create_gui_renderable(
@@ -138,13 +146,15 @@ namespace platypus
             { 0, 0 },
             0,
             false,
-            ""
+            "",
+            pScene
         );
     }
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID
+        ID_t textureID,
+        Scene* pScene
     )
     {
         return create_gui_renderable(
@@ -157,7 +167,8 @@ namespace platypus
             { 0, 0 },
             0,
             false,
-            ""
+            "",
+            pScene
         );
     }
 }

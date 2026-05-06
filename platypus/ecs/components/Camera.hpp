@@ -2,6 +2,7 @@
 
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
+#include "platypus/core/Scene.hpp"
 
 
 namespace platypus
@@ -22,6 +23,7 @@ namespace platypus
         float fov,
         float zNear,
         float zFar,
-        const Matrix4f& orthographicProjectionMatrix // Used for 2D rendering stuff
+        const Matrix4f& orthographicProjectionMatrix, // Used for 2D rendering stuff
+        Scene* pScene = nullptr
     );
 }

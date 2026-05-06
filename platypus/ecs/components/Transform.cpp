@@ -1,7 +1,6 @@
 #include "Transform.hpp"
 #include "platypus/core/Application.hpp"
 #include "SkeletalAnimation.hpp"
-#include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 
 
@@ -9,17 +8,21 @@ namespace platypus
 {
     Transform* create_transform(
         entityID_t target,
-        Matrix4f matrix
+        Matrix4f matrix,
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_transform"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_transform"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_TRANSFORM;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -30,7 +33,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         Transform* pTransform = (Transform*)pComponent;
         pTransform->globalMatrix = matrix;
 
@@ -42,7 +45,8 @@ namespace platypus
         entityID_t target,
         const Vector3f& position,
         const Quaternion& rotation,
-        const Vector3f& scale
+        const Vector3f& scale,
+        Scene* pScene
     )
     {
         Matrix4f transformationMatrix = create_transformation_matrix(
@@ -51,7 +55,7 @@ namespace platypus
             scale
         );
 
-        return create_transform(target, transformationMatrix);
+        return create_transform(target, transformationMatrix, pScene);
     }
 
 
@@ -187,12 +191,16 @@ namespace platypus
         const std::vector<std::vector<uint32_t>>& jointChildMapping,
         const Matrix4f& parentMatrix,
         int jointIndex,
-        std::vector<entityID_t>& outEntities
+        std::vector<entityID_t>& outEntities,
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
         Matrix4f matrix = parentMatrix * joints[jointIndex].matrix;
-        entityID_t entity = pScene->createEntity();
+        entityID_t entity = pUseScene->createEntity();
         outEntities.push_back(entity);
         Transform* pTransform = create_transform(
             entity,
@@ -212,7 +220,8 @@ namespace platypus
                 jointChildMapping,
                 matrix,
                 childJointIndex,
-                outEntities
+                outEntities,
+                pUseScene
             );
             add_child(entity, childEntity);
         }
@@ -221,7 +230,8 @@ namespace platypus
 
     std::vector<entityID_t> create_skeleton(
         const std::vector<Joint>& joints,
-        const std::vector<std::vector<uint32_t>>& jointChildMapping
+        const std::vector<std::vector<uint32_t>>& jointChildMapping,
+        Scene* pScene
     )
     {
         std::vector<entityID_t> jointEntities;
@@ -230,7 +240,8 @@ namespace platypus
             jointChildMapping,
             Matrix4f(1.0f),
             0,
-            jointEntities
+            jointEntities,
+            pScene
         );
         return jointEntities;
     }
@@ -239,17 +250,21 @@ namespace platypus
     GUITransform* create_gui_transform(
         entityID_t target,
         const Vector2f position,
-        const Vector2f scale
+        const Vector2f scale,
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_gui_transform"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_gui_transform"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -260,7 +275,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         GUITransform* pTransform = (GUITransform*)pComponent;
         pTransform->position = position;
         pTransform->scale = scale;
@@ -269,17 +284,20 @@ namespace platypus
     }
 
 
-    void add_child(entityID_t target, entityID_t child)
+    void add_child(entityID_t target, entityID_t child, Scene* pScene)
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "add_child"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "add_child"))
         {
             PLATYPUS_ASSERT(false);
             return;
         }
 
         // Check if target already have Children component
-        Children* pChildren = (Children*)pScene->getComponent(
+        Children* pChildren = (Children*)pUseScene->getComponent(
             target,
             ComponentType::COMPONENT_TYPE_CHILDREN,
             false,
@@ -287,7 +305,7 @@ namespace platypus
         );
         if (!pChildren)
         {
-            void* pChildrenComponent = pScene->allocateComponent(
+            void* pChildrenComponent = pUseScene->allocateComponent(
                 target,
                 ComponentType::COMPONENT_TYPE_CHILDREN
             );
@@ -301,7 +319,7 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
                 return;
             }
-            pScene->addToComponentMask(target, ComponentType::COMPONENT_TYPE_CHILDREN);
+            pUseScene->addToComponentMask(target, ComponentType::COMPONENT_TYPE_CHILDREN);
             pChildren = (Children*)pChildrenComponent;
             pChildren->count = 0;
             memset((void*)pChildren, 0, sizeof(Children));
@@ -324,7 +342,7 @@ namespace platypus
         pChildren->entityIDs[pChildren->count] = child;
         ++pChildren->count;
 
-        void* pParentComponent = pScene->allocateComponent(
+        void* pParentComponent = pUseScene->allocateComponent(
             child,
             ComponentType::COMPONENT_TYPE_PARENT
         );
@@ -338,12 +356,12 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
-        pScene->addToComponentMask(child, ComponentType::COMPONENT_TYPE_PARENT);
+        pUseScene->addToComponentMask(child, ComponentType::COMPONENT_TYPE_PARENT);
         Parent* pParent = (Parent*)pParentComponent;
         pParent->entityID = target;
 
         // If child entity has transform, switch it's global matrix to be local
-        Transform* pChildTransform = (Transform*)pScene->getComponent(
+        Transform* pChildTransform = (Transform*)pUseScene->getComponent(
             child,
             ComponentType::COMPONENT_TYPE_TRANSFORM,
             false,
@@ -356,11 +374,14 @@ namespace platypus
         }
     }
 
-    void remove_child(entityID_t target, entityID_t child)
+    void remove_child(entityID_t target, entityID_t child, Scene* pScene)
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        pScene->destroyComponent(child, ComponentType::COMPONENT_TYPE_PARENT);
-        Children* pChildren = (Children*)pScene->getComponent(
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        pUseScene->destroyComponent(child, ComponentType::COMPONENT_TYPE_PARENT);
+        Children* pChildren = (Children*)pUseScene->getComponent(
             target,
             ComponentType::COMPONENT_TYPE_CHILDREN
         );
@@ -372,7 +393,7 @@ namespace platypus
                 pChildren->count -= 1;
                 if (pChildren->count == 0)
                 {
-                    pScene->destroyComponent(target, ComponentType::COMPONENT_TYPE_CHILDREN);
+                    pUseScene->destroyComponent(target, ComponentType::COMPONENT_TYPE_CHILDREN);
                     Debug::log(
                         "@remove_child "
                         "Last child of entity: " + std::to_string(target) + " destroyed. "

@@ -2,6 +2,7 @@
 
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
+#include "platypus/core/Scene.hpp"
 #include <string>
 
 
@@ -34,12 +35,14 @@ namespace platypus
         const Matrix4f& shadowProjectionMatrix,
         const Matrix4f& shadowViewMatrix,
         bool enableShadows,
-        float maxShadowDistance
+        float maxShadowDistance,
+        Scene* pScene = nullptr
     );
 
     Light* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
-        const Vector3f& color
+        const Vector3f& color,
+        Scene* pScene = nullptr
     );
 }
