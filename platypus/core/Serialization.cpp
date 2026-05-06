@@ -53,7 +53,7 @@ namespace platypus
             for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
                 str += "        [" + std::to_string(i) + "] = " + std::to_string(data.diffuseTextureIDs[i]) + "\n";
 
-            str += "    diffuseTextureIDs\n";
+            str += "    specularTextureIDs\n";
             for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
                 str += "        [" + std::to_string(i) + "] = " + std::to_string(data.specularTextureIDs[i]) + "\n";
 

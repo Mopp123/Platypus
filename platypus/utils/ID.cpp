@@ -13,7 +13,9 @@ namespace platypus
 
     void ID::init()
     {
-        std::srand(s_seed);
+        // Not sure should this be more deterministic or not...
+        //std::srand(s_seed);
+        std::srand(static_cast<unsigned int>(time(nullptr)));
         s_initialized = true;
     }
 

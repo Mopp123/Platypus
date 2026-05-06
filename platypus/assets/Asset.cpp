@@ -25,9 +25,14 @@ namespace platypus
         _name(name)
     {
         if (id != NULL_ID)
+        {
+            _id = id;
             ID::occupy(id);
+        }
         else
+        {
             _id = ID::generate();
+        }
     }
 
     Asset::~Asset()
