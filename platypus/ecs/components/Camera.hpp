@@ -33,4 +33,5 @@ namespace platypus
     );
 
     std::vector<char> serialize(const Camera* pCamera);
+    Camera* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData);
 }

@@ -130,6 +130,7 @@ namespace platypus
         return pRenderable;
     }
 
+
     GUIRenderable* create_gui_renderable(
         entityID_t target,
         const Vector4f color,
@@ -151,6 +152,7 @@ namespace platypus
         );
     }
 
+
     GUIRenderable* create_gui_renderable(
         entityID_t target,
         ID_t textureID,
@@ -171,6 +173,7 @@ namespace platypus
             pScene
         );
     }
+
 
     std::vector<char> serialize(const Renderable3D* pRenderable)
     {
@@ -197,5 +200,40 @@ namespace platypus
         );
 
         return serializedData;
+    }
+
+
+    Renderable3D* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData)
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(size == serialized_renderable3D_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+        size_t pos = sizeof(ComponentType);
+
+        ID_t meshID ;
+        ID_t materialID;
+
+        memcpy(
+            &meshID,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(ID_t)
+        );
+        pos += sizeof(ID_t);
+
+        memcpy(
+            &materialID,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(ID_t)
+        );
+
+        return create_renderable3D(
+            entityID,
+            meshID,
+            materialID,
+            pScene
+        );
     }
 }

@@ -79,6 +79,7 @@ namespace platypus
         );
     }
 
+
     std::vector<char> serialize(const Light* pLight)
     {
         std::vector<char> serializedData(serialized_light_size);
@@ -140,5 +141,86 @@ namespace platypus
         pos += sizeof(uint8_t);
 
         return serializedData;
+    }
+
+
+    Light* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData)
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(size == serialized_light_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_LIGHT);
+        size_t pos = sizeof(ComponentType);
+
+        Matrix4f shadowProjectionMatrix;
+        Matrix4f shadowViewMatrix;
+        Vector3f direction;
+        Vector3f color;
+        float maxShadowDistance;
+        LightType type;
+        uint8_t enableShadows;
+
+        memcpy(
+            &shadowProjectionMatrix,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            &shadowViewMatrix,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            &direction,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(Vector3f)
+        );
+        pos += sizeof(Vector3f);
+
+        memcpy(
+            &color,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(Vector3f)
+        );
+        pos += sizeof(Vector3f);
+
+        memcpy(
+            &maxShadowDistance,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            &type,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(LightType)
+        );
+        pos += sizeof(LightType);
+
+        memcpy(
+            &enableShadows,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(uint8_t)
+        );
+        pos += sizeof(uint8_t);
+
+
+        return create_directional_light(
+            entityID,
+            direction,
+            color,
+            shadowProjectionMatrix,
+            shadowViewMatrix,
+            static_cast<bool>(enableShadows),
+            maxShadowDistance,
+            pScene
+        );
     }
 }

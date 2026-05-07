@@ -1009,8 +1009,9 @@ namespace platypus
             const std::vector<entityID_t>& entities
         )
         {
-            // NOTE: How to detect where asset data ends and entity data begins?
-            std::vector<char> fullMetadata = serialize_assets(assets);
+            std::vector<char> fullData = serialize_assets(assets);
+            std::vector<char> entityData = serialize_entities(pScene, entities);
+            fullData.insert(fullData.end(), entityData.begin(), entityData.end());
             try
             {
                 std::fstream file(filepath, std::ios::out | std::ios::binary);
@@ -1025,10 +1026,10 @@ namespace platypus
                     return;
                 }
 
-                file.write(reinterpret_cast<const char*>(fullMetadata.data()), fullMetadata.size());
+                file.write(reinterpret_cast<const char*>(fullData.data()), fullData.size());
                 file.close();
                 Debug::log(
-                    "File written to " + filepath + " with " + std::to_string(fullMetadata.size()) + " bytes",
+                    "File written to " + filepath + " with " + std::to_string(fullData.size()) + " bytes",
                     Debug::MessageType::PLATYPUS_MESSAGE
                 );
             }

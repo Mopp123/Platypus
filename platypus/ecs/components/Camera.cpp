@@ -52,6 +52,7 @@ namespace platypus
         return pCamera;
     }
 
+
     std::vector<char> serialize(const Camera* pCamera)
     {
         const size_t componentTypeSize = sizeof(ComponentType);
@@ -107,5 +108,77 @@ namespace platypus
         );
 
         return serializedData;
+    }
+
+
+    Camera* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData)
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(size == serialized_camera_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_CAMERA);
+        size_t pos = sizeof(ComponentType);
+
+        Matrix4f perspectiveProjectionMatrix;;
+        Matrix4f orthographicProjectionMatrix;
+        float aspectRatio;
+        float fov;
+        float zNear;
+        float zFar;
+
+        // NOTE: perspective proj mat is constructed using aspect, fov, zNear and far so
+        // its kind of useless atm here and also in the serialized version!
+        memcpy(
+            &perspectiveProjectionMatrix,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            &orthographicProjectionMatrix,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            &aspectRatio,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            &fov,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            &zNear,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            &zFar,
+            reinterpret_cast<uint8_t*>(pData) + pos,
+            sizeof(float)
+        );
+
+        return create_camera(
+            entityID,
+            aspectRatio,
+            fov,
+            zNear,
+            zFar,
+            orthographicProjectionMatrix, // Used for 2D rendering stuff
+            pScene
+        );
     }
 }

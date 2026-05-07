@@ -62,4 +62,6 @@ namespace platypus
 
     std::vector<char> serialize(const SkeletalAnimation* pSkeletalAnimation);
     std::vector<char> serialize(const SkeletonJoint* pSkeletonJoint);
+    // NOTE: u done fucked up here, can't separate funcs by ret type alone!
+    // -> CONTINUE HERE
 }

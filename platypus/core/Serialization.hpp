@@ -145,7 +145,7 @@ namespace platypus
             std::vector<serialization::ImageMetadata>& outImages,
             std::vector<serialization::TextureMetadata>& outTextures,
             std::vector<serialization::MaterialMetadata>& outMaterials,
-            std::vector<serialization::ModelMetadata>& outModels
+            std::vector<serialization::ModelMetadata>& outModels,
         );
     }
 }

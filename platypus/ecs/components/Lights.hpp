@@ -55,4 +55,5 @@ namespace platypus
     );
 
     std::vector<char> serialize(const Light* pLight);
+    Light* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData);
 }

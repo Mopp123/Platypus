@@ -74,4 +74,5 @@ namespace platypus
     );
 
     std::vector<char> serialize(const Renderable3D* pRenderable);
+    Renderable3D* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData);
 }
