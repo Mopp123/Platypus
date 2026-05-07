@@ -9,6 +9,10 @@
 
 namespace platypus
 {
+    constexpr size_t serialized_renderable3D_size =
+        sizeof(ComponentType) +
+        sizeof(ID_t) * 2;
+
     struct Renderable3D
     {
         ID_t meshID = NULL_ID;
@@ -28,6 +32,8 @@ namespace platypus
         Vector2f textureOffset = Vector2f(0, 0);
         uint32_t layer = 0;
 
+        // TODO: When serializing, need to replace bool with uint8_t
+        // and some way to handle the text string!
         bool isText = false;
         // NOTE: Warning when initially allocating from component pool!
         // -> needs to be explicitly resized to have any space!
@@ -66,4 +72,6 @@ namespace platypus
         ID_t textureID,
         Scene* pScene = nullptr
     );
+
+    std::vector<char> serialize(const Renderable3D* pRenderable);
 }

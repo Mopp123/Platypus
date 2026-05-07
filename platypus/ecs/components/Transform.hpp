@@ -10,6 +10,23 @@
 
 namespace platypus
 {
+    constexpr size_t serialized_transform_size =
+        sizeof(ComponentType) +
+        sizeof(Matrix4f) * 2;
+
+    constexpr size_t serialized_gui_transform_size =
+        sizeof(ComponentType) +
+        sizeof(Vector2f) * 2;
+
+    constexpr size_t serialized_parent_size =
+        sizeof(ComponentType) +
+        sizeof(entityID_t);
+
+    constexpr size_t serialized_children_size =
+        sizeof(ComponentType) +
+        sizeof(size_t) +
+        sizeof(entityID_t) * PLATYPUS_MAX_CHILD_ENTITIES;
+
     struct Transform
     {
         Matrix4f localMatrix = Matrix4f(1.0f);
@@ -80,4 +97,9 @@ namespace platypus
     // Moves all children after freedPosition, so that all child IDs are contiguous.
     // Calling this assumes that there was only a single gap in contiguous IDs!
     void pack_children(Children* pChildren, size_t freedPosition);
+
+    std::vector<char> serialize(const Transform* pTransform);
+    std::vector<char> serialize(const GUITransform* pTransform);
+    std::vector<char> serialize(const Parent* pParent);
+    std::vector<char> serialize(const Children* pChildren);
 }

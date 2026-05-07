@@ -21,4 +21,5 @@ namespace platypus
     };
 
     std::string component_type_to_string(ComponentType type);
+    size_t get_component_size(ComponentType type);
 }

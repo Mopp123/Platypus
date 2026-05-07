@@ -8,7 +8,7 @@
 
 namespace platypus
 {
-    enum class LightType
+    enum class LightType : uint32_t
     {
         DIRECTIONAL_LIGHT,
         POINT_LIGHT,
@@ -16,6 +16,14 @@ namespace platypus
     };
 
     std::string light_type_to_string(LightType type);
+
+    constexpr size_t serialized_light_size =
+        sizeof(ComponentType) +
+        sizeof(Matrix4f) * 2 +
+        sizeof(Vector3f) * 2 +
+        sizeof(float) +
+        sizeof(LightType) +
+        sizeof(uint8_t);
 
     struct Light
     {
@@ -25,7 +33,7 @@ namespace platypus
         Vector3f color;
         float maxShadowDistance;
         LightType type;
-        bool enableShadows;
+        uint8_t enableShadows;
     };
 
     Light* create_directional_light(
@@ -45,4 +53,6 @@ namespace platypus
         const Vector3f& color,
         Scene* pScene = nullptr
     );
+
+    std::vector<char> serialize(const Light* pLight);
 }

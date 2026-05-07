@@ -1,6 +1,11 @@
 #include "Serialization.hpp"
 #include "Application.hpp"
 #include "Debug.hpp"
+#include "platypus/ecs/components/Camera.hpp"
+#include "platypus/ecs/components/Renderable.hpp"
+#include "platypus/ecs/components/Transform.hpp"
+#include "platypus/ecs/components/Lights.hpp"
+#include "platypus/ecs/components/SkeletalAnimation.hpp"
 #include <string>
 #include <cstring>
 #include <fstream>
@@ -816,6 +821,101 @@ namespace platypus
             return fullMetadata;
         }
 
+        std::vector<char> serialize_entities(const Scene* pScene, const std::vector<entityID_t>& entities)
+        {
+            std::vector<char> serializedData(sizeof(uint32_t));
+            const uint32_t entityCount = static_cast<const uint32_t>(entities.size());
+            memcpy(serializedData.data(), &entityCount, sizeof(uint32_t));
+            size_t pos = sizeof(uint32_t);
+
+            for (entityID_t entityID : entities)
+            {
+                const Entity& entity = pScene->getEntity(entityID);
+                std::vector<char> entityData = serialize(entity);
+                serializedData.resize(serializedData.size() + entityData.size());
+                memcpy(serializedData.data() + pos, entityData.data(), entityData.size());
+                pos += entityData.size();
+
+                const uint64_t componentMask = entity.componentMask;
+                std::unordered_map<ComponentType, const void*> components = pScene->getComponents(entityID);
+                std::unordered_map<ComponentType, const void*>::const_iterator it;
+                for (it = components.begin(); it != components.end(); ++it)
+                {
+                    std::vector<char> componentData;
+                    // TODO: UNFUCK THIS SHIT!
+                    if (componentMask & ComponentType::COMPONENT_TYPE_CAMERA)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_camera_size);
+                        componentData = serialize(reinterpret_cast<const Camera*>(it->second));
+                    }
+
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_RENDERABLE3D)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_renderable3D_size);
+                        componentData = serialize(reinterpret_cast<const Renderable3D*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
+                    {
+                        Debug::log(
+                            "GUIRenderable serialization not yet handled! "
+                            "TODO: Need to figure out some way to handle GUIRenderable's text string!",
+                            PLATYPUS_CURRENT_FUNC_NAME,
+                            Debug::MessageType::PLATYPUS_ERROR
+                        );
+                        PLATYPUS_ASSERT(false);
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_TRANSFORM)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_transform_size);
+                        componentData = serialize(reinterpret_cast<const Transform*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_GUI_TRANSFORM)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_gui_transform_size);
+                        componentData = serialize(reinterpret_cast<const GUITransform*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_PARENT)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_parent_size);
+                        componentData = serialize(reinterpret_cast<const Parent*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_CHILDREN)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_children_size);
+                        componentData = serialize(reinterpret_cast<const Children*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_LIGHT)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_light_size);
+                        componentData = serialize(reinterpret_cast<const Light*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_skeletal_animation_size);
+                        componentData = serialize(reinterpret_cast<const SkeletalAnimation*>(it->second));
+                    }
+
+                    if (componentMask & ComponentType::COMPONENT_TYPE_JOINT)
+                    {
+                        serializedData.resize(serializedData.size() + serialized_skeleton_joint_size);
+                        componentData = serialize(reinterpret_cast<const SkeletonJoint*>(it->second));
+                    }
+
+                    memcpy(serializedData.data() + pos, componentData.data(), componentData.size());
+                    pos += componentData.size();
+                }
+            }
+            return serializedData;
+        }
+
         void deserialize_assets(
             size_t dataSize,
             void* pData,
@@ -902,12 +1002,15 @@ namespace platypus
             }
         }
 
-        void write_asset_metadata_file(
+        void write(
+            const Scene* pScene,
             const std::string& filepath,
-            const std::vector<Asset*>& assets
+            const std::vector<Asset*>& assets,
+            const std::vector<entityID_t>& entities
         )
         {
-            std::vector<char> fullMetadata = serialization::serialize_assets(assets);
+            // NOTE: How to detect where asset data ends and entity data begins?
+            std::vector<char> fullMetadata = serialize_assets(assets);
             try
             {
                 std::fstream file(filepath, std::ios::out | std::ios::binary);
@@ -950,7 +1053,7 @@ namespace platypus
             }
         }
 
-        void read_asset_metadata_file(
+        void read(
             const std::string& filepath,
             std::vector<serialization::ImageMetadata>& outImages,
             std::vector<serialization::TextureMetadata>& outTextures,

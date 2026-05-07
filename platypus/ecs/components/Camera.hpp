@@ -7,6 +7,11 @@
 
 namespace platypus
 {
+    constexpr size_t serialized_camera_size =
+        sizeof(ComponentType) +
+        sizeof(Matrix4f) * 2 +
+        sizeof(float) * 4;
+
     struct Camera
     {
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
@@ -26,4 +31,6 @@ namespace platypus
         const Matrix4f& orthographicProjectionMatrix, // Used for 2D rendering stuff
         Scene* pScene = nullptr
     );
+
+    std::vector<char> serialize(const Camera* pCamera);
 }

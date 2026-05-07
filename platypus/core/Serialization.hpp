@@ -2,8 +2,11 @@
 
 #include "platypus/assets/Image.hpp"
 #include "platypus/assets/Texture.hpp"
-#include "platypus/assets/AssetManager.hpp"
+#include "platypus/assets/Material.hpp"
+#include "platypus/assets/Model.hpp"
 #include "platypus/utils/Maths.hpp"
+#include "platypus/ecs/Entity.hpp"
+#include "platypus/core/Scene.hpp"
 #include <vector>
 
 
@@ -120,6 +123,7 @@ namespace platypus
         ModelMetadata deserialize_model_metadata(size_t dataSize, void* pData);
 
         std::vector<char> serialize_assets(const std::vector<Asset*>& assets);
+        std::vector<char> serialize_entities(const Scene* pScene, const std::vector<entityID_t>& entities);
         void deserialize_assets(
             size_t dataSize,
             void* pData,
@@ -129,12 +133,14 @@ namespace platypus
             std::vector<ModelMetadata>& outModels
         );
 
-        void write_asset_metadata_file(
+        void write(
+            const Scene* pScene,
             const std::string& filepath,
-            const std::vector<Asset*>& assets
+            const std::vector<Asset*>& assets,
+            const std::vector<entityID_t>& entities
         );
 
-        void read_asset_metadata_file(
+        void read(
             const std::string& filepath,
             std::vector<serialization::ImageMetadata>& outImages,
             std::vector<serialization::TextureMetadata>& outTextures,

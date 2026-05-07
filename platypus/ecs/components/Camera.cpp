@@ -51,4 +51,61 @@ namespace platypus
         pCamera->zFar = zFar;
         return pCamera;
     }
+
+    std::vector<char> serialize(const Camera* pCamera)
+    {
+        const size_t componentTypeSize = sizeof(ComponentType);
+
+        std::vector<char> serializedData(serialized_camera_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_CAMERA;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            componentTypeSize
+        );
+        size_t pos = componentTypeSize;
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pCamera->perspectiveProjectionMatrix),
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pCamera->orthographicProjectionMatrix),
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pCamera->aspectRatio),
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pCamera->fov),
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pCamera->zNear),
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pCamera->zFar),
+            sizeof(float)
+        );
+
+        return serializedData;
+    }
 }

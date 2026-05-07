@@ -8,11 +8,25 @@
 
 namespace platypus
 {
-    enum class AnimationMode
+    enum class AnimationMode : uint32_t
     {
         ANIMATION_MODE_LOOP,
         ANIMATION_MODE_PLAY_ONCE
     };
+
+    constexpr size_t skeletal_animation_max_joints = 50;
+
+    constexpr size_t serialized_skeletal_animation_size =
+        sizeof(ComponentType) +
+        sizeof(AnimationMode) +
+        sizeof(ID_t) +
+        sizeof(float) * 2 +
+        sizeof(uint8_t) +
+        sizeof(Matrix4f) * skeletal_animation_max_joints;
+
+    constexpr size_t serialized_skeleton_joint_size =
+        sizeof(ComponentType) +
+        sizeof(uint32_t);
 
     struct SkeletalAnimation
     {
@@ -20,11 +34,11 @@ namespace platypus
         ID_t animationID = 0;
         float time = 0.0f;
         float length = 0.0f; // Total length of the anim in seconds
-        bool stopped = false;
+        uint8_t stopped = 0;
 
         // Atm the matrices to throw to the shader
         // NOTE: Currently the joint count used, should be fetched from the Mesh asset!
-        Matrix4f jointMatrices[50];
+        Matrix4f jointMatrices[skeletal_animation_max_joints];
     };
 
     // NOTE: ATM JUST TESTING WITH THIS
@@ -45,4 +59,7 @@ namespace platypus
         uint32_t jointIndex,
         Scene* pScene = nullptr
     );
+
+    std::vector<char> serialize(const SkeletalAnimation* pSkeletalAnimation);
+    std::vector<char> serialize(const SkeletonJoint* pSkeletonJoint);
 }

@@ -171,4 +171,31 @@ namespace platypus
             pScene
         );
     }
+
+    std::vector<char> serialize(const Renderable3D* pRenderable)
+    {
+        std::vector<char> serializedData(serialized_renderable3D_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_RENDERABLE3D;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pRenderable->meshID),
+            sizeof(ID_t)
+        );
+        pos += sizeof(ID_t);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pRenderable->materialID),
+            sizeof(ID_t)
+        );
+
+        return serializedData;
+    }
 }

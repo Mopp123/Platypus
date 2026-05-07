@@ -440,4 +440,105 @@ namespace platypus
         // Make last pos NULL_ENTITY since otherwise the last id gets duplicated
         pChildren->entityIDs[pChildren->count] = NULL_ENTITY_ID;
     }
+
+    std::vector<char> serialize(const Transform* pTransform)
+    {
+        std::vector<char> serializedData(serialized_transform_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_TRANSFORM;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pTransform->localMatrix),
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pTransform->globalMatrix),
+            sizeof(Matrix4f)
+        );
+
+        return serializedData;
+    }
+
+    std::vector<char> serialize(const GUITransform* pTransform)
+    {
+        std::vector<char> serializedData(serialized_gui_transform_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pTransform->position),
+            sizeof(Vector2f)
+        );
+        pos += sizeof(Vector2f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pTransform->scale),
+            sizeof(Vector2f)
+        );
+
+        return serializedData;
+    }
+
+    std::vector<char> serialize(const Parent* pParent)
+    {
+        std::vector<char> serializedData(serialized_parent_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_PARENT;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pParent->entityID),
+            sizeof(entityID_t)
+        );
+
+        return serializedData;
+    }
+
+    std::vector<char> serialize(const Children* pChildren)
+    {
+        std::vector<char> serializedData(serialized_children_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_CHILDREN;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pChildren->count),
+            sizeof(size_t)
+        );
+        pos += sizeof(size_t);
+
+        memcpy(
+            serializedData.data() + pos,
+            pChildren->entityIDs,
+            sizeof(entityID_t) * PLATYPUS_MAX_CHILD_ENTITIES
+        );
+
+        return serializedData;
+    }
 }

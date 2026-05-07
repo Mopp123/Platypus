@@ -68,6 +68,8 @@ namespace platypus
             bool enableWarning = true
         ) const;
 
+        std::unordered_map<ComponentType, const void*> getComponents(entityID_t entityID) const;
+
         virtual void init() = 0;
         virtual void update() = 0;
 

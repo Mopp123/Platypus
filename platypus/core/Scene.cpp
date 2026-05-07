@@ -405,6 +405,44 @@ namespace platypus
         return nullptr;
     }
 
+    std::unordered_map<ComponentType, const void*> Scene::getComponents(entityID_t entityID) const
+    {
+        const Entity entity = getEntity(entityID);
+        const uint64_t componentMask = entity.componentMask;
+        std::unordered_map<ComponentType, const void*> components;
+        if (componentMask & ComponentType::COMPONENT_TYPE_CAMERA)
+            components[ComponentType::COMPONENT_TYPE_CAMERA] = getComponent(entityID, ComponentType::COMPONENT_TYPE_CAMERA);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_RENDERABLE3D)
+            components[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = getComponent(entityID, ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
+            components[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = getComponent(entityID, ComponentType::COMPONENT_TYPE_GUI_RENDERABLE);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_TRANSFORM)
+            components[ComponentType::COMPONENT_TYPE_TRANSFORM] = getComponent(entityID, ComponentType::COMPONENT_TYPE_TRANSFORM);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_GUI_TRANSFORM)
+            components[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = getComponent(entityID, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_PARENT)
+            components[ComponentType::COMPONENT_TYPE_PARENT] = getComponent(entityID, ComponentType::COMPONENT_TYPE_PARENT);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_CHILDREN)
+            components[ComponentType::COMPONENT_TYPE_CHILDREN] = getComponent(entityID, ComponentType::COMPONENT_TYPE_CHILDREN);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_LIGHT)
+            components[ComponentType::COMPONENT_TYPE_LIGHT] = getComponent(entityID, ComponentType::COMPONENT_TYPE_LIGHT);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION)
+            components[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = getComponent(entityID, ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION);
+
+        if (componentMask & ComponentType::COMPONENT_TYPE_JOINT)
+            components[ComponentType::COMPONENT_TYPE_JOINT] = getComponent(entityID, ComponentType::COMPONENT_TYPE_JOINT);
+
+        return components;
+    }
+
     void Scene::addToComponentMask(entityID_t entityID, ComponentType componentType)
     {
         if (!isValidEntity(entityID, "addToComponentMask"))

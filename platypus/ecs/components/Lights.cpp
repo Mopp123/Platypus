@@ -56,7 +56,7 @@ namespace platypus
         pDirectionalLight->color = color;
         pDirectionalLight->maxShadowDistance = maxShadowDistance;
         pDirectionalLight->type = LightType::DIRECTIONAL_LIGHT;
-        pDirectionalLight->enableShadows = enableShadows;
+        pDirectionalLight->enableShadows = static_cast<uint8_t>(enableShadows);
         return pDirectionalLight;
     }
 
@@ -77,5 +77,68 @@ namespace platypus
             0.0f,
             pScene
         );
+    }
+
+    std::vector<char> serialize(const Light* pLight)
+    {
+        std::vector<char> serializedData(serialized_light_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_LIGHT;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->shadowProjectionMatrix),
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->shadowViewMatrix),
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->direction),
+            sizeof(Vector3f)
+        );
+        pos += sizeof(Vector3f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->color),
+            sizeof(Vector3f)
+        );
+        pos += sizeof(Vector3f);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->maxShadowDistance),
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->type),
+            sizeof(LightType)
+        );
+        pos += sizeof(LightType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pLight->enableShadows),
+            sizeof(uint8_t)
+        );
+        pos += sizeof(uint8_t);
+
+        return serializedData;
     }
 }

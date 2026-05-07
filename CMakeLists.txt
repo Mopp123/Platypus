@@ -34,27 +34,28 @@ include_directories(
     "dependencies/utfcpp"
 )
 
-file(GLOB SRC_FILES
-    platypus/core/*.cpp
-    platypus/core/platform/${BUILD_TARGET}/*.cpp
-
-    platypus/ecs/components/*.cpp
-    platypus/ecs/systems/*.cpp
-    platypus/utils/*.cpp
-    platypus/utils/modelLoading/*.cpp
-    platypus/utils/controllers/*.cpp
-
-    platypus/assets/*.cpp
-    platypus/assets/platform/${BUILD_TARGET}/*.cpp
-
-    platypus/graphics/*.cpp
-    platypus/graphics/platform/${BUILD_TARGET}/*.cpp
-    platypus/graphics/renderers/*.cpp
-
-    platypus/ui/*.cpp
-)
+#file(GLOB SRC_FILES
+#    platypus/core/*.cpp
+#    platypus/core/platform/${BUILD_TARGET}/*.cpp
+#
+#    platypus/ecs/components/*.cpp
+#    platypus/ecs/systems/*.cpp
+#    platypus/utils/*.cpp
+#    platypus/utils/modelLoading/*.cpp
+#    platypus/utils/controllers/*.cpp
+#
+#    platypus/assets/*.cpp
+#    platypus/assets/platform/${BUILD_TARGET}/*.cpp
+#
+#    platypus/graphics/*.cpp
+#    platypus/graphics/platform/${BUILD_TARGET}/*.cpp
+#    platypus/graphics/renderers/*.cpp
+#
+#    platypus/ui/*.cpp
+#)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
+add_subdirectory(platypus)
 
 # TODO: Some flag to build looking all libs from current dir for "shipping"?
 add_library(glfw SHARED IMPORTED)

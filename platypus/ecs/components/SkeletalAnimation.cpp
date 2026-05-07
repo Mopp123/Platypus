@@ -87,4 +87,79 @@ namespace platypus
 
         return pJoint;
     }
+
+    std::vector<char> serialize(const SkeletalAnimation* pSkeletalAnimation)
+    {
+        std::vector<char> serializedData(serialized_skeletal_animation_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pSkeletalAnimation->mode),
+            sizeof(AnimationMode)
+        );
+        pos += sizeof(AnimationMode);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pSkeletalAnimation->animationID),
+            sizeof(ID_t)
+        );
+        pos += sizeof(ID_t);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pSkeletalAnimation->time),
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pSkeletalAnimation->length),
+            sizeof(float)
+        );
+        pos += sizeof(float);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pSkeletalAnimation->stopped),
+            sizeof(uint8_t)
+        );
+        pos += sizeof(uint8_t);
+
+        memcpy(
+            serializedData.data() + pos,
+            pSkeletalAnimation->jointMatrices,
+            sizeof(Matrix4f) * skeletal_animation_max_joints
+        );
+        pos += sizeof(Matrix4f) * skeletal_animation_max_joints;
+
+        return serializedData;
+    }
+
+    std::vector<char> serialize(const SkeletonJoint* pSkeletonJoint)
+    {
+        std::vector<char> serializedData(serialized_skeleton_joint_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_JOINT;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pSkeletonJoint->jointIndex),
+            sizeof(uint32_t)
+        );
+        return serializedData;
+    }
 }
