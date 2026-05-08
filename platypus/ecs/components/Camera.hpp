@@ -29,9 +29,16 @@ namespace platypus
         float zNear,
         float zFar,
         const Matrix4f& orthographicProjectionMatrix, // Used for 2D rendering stuff
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     std::vector<char> serialize(const Camera* pCamera);
-    Camera* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData);
+    void deserialize(
+        Scene* pScene,
+        Camera** ppCamera,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
 }

@@ -44,16 +44,24 @@ namespace platypus
         const Matrix4f& shadowViewMatrix,
         bool enableShadows,
         float maxShadowDistance,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     Light* create_directional_light(
         entityID_t target,
         const Vector3f& direction,
         const Vector3f& color,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     std::vector<char> serialize(const Light* pLight);
-    Light* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData);
+    void deserialize(
+        Scene* pScene,
+        Light** ppLight,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
 }

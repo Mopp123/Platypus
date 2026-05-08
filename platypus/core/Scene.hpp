@@ -74,6 +74,7 @@ namespace platypus
         virtual void update() = 0;
 
         void addToComponentMask(entityID_t entityID, ComponentType componentType);
+        void setComponentMask(entityID_t entityID, uint64_t mask);
         // @param errLocation This can be used to tell what func caused this to error
         bool isValidEntity(entityID_t entityID, const std::string& errLocation) const;
         bool isValidComponent(ComponentType, const std::string& errLocation) const;

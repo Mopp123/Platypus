@@ -12,7 +12,8 @@ namespace platypus
         float zNear,
         float zFar,
         const Matrix4f& orthographicProjectionMatrix, // Used for 2D rendering stuff
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         Scene* pUseScene = pScene;
@@ -36,7 +37,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pUseScene->addToComponentMask(target, componentType);
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
         Camera* pCamera = (Camera*)pComponent;
         pCamera->perspectiveProjectionMatrix = create_perspective_projection_matrix(
             aspectRatio,
@@ -111,10 +114,16 @@ namespace platypus
     }
 
 
-    Camera* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData)
+    void deserialize(
+        Scene* pScene,
+        Camera** ppCamera,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
-        PLATYPUS_ASSERT(size == serialized_camera_size);
+        PLATYPUS_ASSERT(dataSize == serialized_camera_size);
 
         ComponentType componentType;
         memcpy(&componentType, pData, sizeof(ComponentType));
@@ -171,14 +180,15 @@ namespace platypus
             sizeof(float)
         );
 
-        return create_camera(
+        *ppCamera = create_camera(
             entityID,
             aspectRatio,
             fov,
             zNear,
             zFar,
             orthographicProjectionMatrix, // Used for 2D rendering stuff
-            pScene
+            pScene,
+            true
         );
     }
 }

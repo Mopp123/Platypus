@@ -9,7 +9,8 @@ namespace platypus
     Transform* create_transform(
         entityID_t target,
         Matrix4f matrix,
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         Scene* pUseScene = pScene;
@@ -33,7 +34,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pUseScene->addToComponentMask(target, componentType);
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
         Transform* pTransform = (Transform*)pComponent;
         pTransform->globalMatrix = matrix;
 
@@ -46,7 +49,8 @@ namespace platypus
         const Vector3f& position,
         const Quaternion& rotation,
         const Vector3f& scale,
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         Matrix4f transformationMatrix = create_transformation_matrix(
@@ -55,7 +59,7 @@ namespace platypus
             scale
         );
 
-        return create_transform(target, transformationMatrix, pScene);
+        return create_transform(target, transformationMatrix, pScene, useExplicitComponentMask);
     }
 
 
@@ -251,7 +255,8 @@ namespace platypus
         entityID_t target,
         const Vector2f position,
         const Vector2f scale,
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         Scene* pUseScene = pScene;
@@ -275,12 +280,92 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pUseScene->addToComponentMask(target, componentType);
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
         GUITransform* pTransform = (GUITransform*)pComponent;
         pTransform->position = position;
         pTransform->scale = scale;
 
         return pTransform;
+    }
+
+
+    Parent* create_parent(
+        entityID_t target,
+        entityID_t parentID,
+        Scene* pScene,
+        bool useExplicitComponentMask
+    )
+    {
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_parent"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_PARENT;
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
+        if (!pComponent)
+        {
+            Debug::log(
+                "Failed to allocate Parent component for entity: " + std::to_string(target),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
+        Parent* pParent = reinterpret_cast<Parent*>(pComponent);
+        pParent->entityID = parentID;
+        return pParent;
+    }
+
+
+    Children* create_children(
+        entityID_t target,
+        std::vector<entityID_t> childIDs,
+        Scene* pScene,
+        bool useExplicitComponentMask
+    )
+    {
+        PLATYPUS_ASSERT(childIDs.size() <= PLATYPUS_MAX_CHILD_ENTITIES);
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_children"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_CHILDREN;
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
+        if (!pComponent)
+        {
+            Debug::log(
+                "Failed to allocate Children component for entity: " + std::to_string(target),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
+        Children* pChildren = reinterpret_cast<Children*>(pComponent);
+        pChildren->count = childIDs.size();
+        for (size_t i = 0; i < childIDs.size(); ++i)
+            pChildren->entityIDs[i] = childIDs[i];
+
+        return pChildren;
     }
 
 
@@ -374,6 +459,7 @@ namespace platypus
         }
     }
 
+
     void remove_child(entityID_t target, entityID_t child, Scene* pScene)
     {
         Scene* pUseScene = pScene;
@@ -413,6 +499,7 @@ namespace platypus
         PLATYPUS_ASSERT(false);
     }
 
+
     void pack_children(Children* pChildren, size_t freedPosition)
     {
         // This should never happen since this gets called ONLY when children are removed
@@ -441,6 +528,7 @@ namespace platypus
         pChildren->entityIDs[pChildren->count] = NULL_ENTITY_ID;
     }
 
+
     std::vector<char> serialize(const Transform* pTransform)
     {
         std::vector<char> serializedData(serialized_transform_size);
@@ -467,6 +555,7 @@ namespace platypus
 
         return serializedData;
     }
+
 
     std::vector<char> serialize(const GUITransform* pTransform)
     {
@@ -495,6 +584,7 @@ namespace platypus
         return serializedData;
     }
 
+
     std::vector<char> serialize(const Parent* pParent)
     {
         std::vector<char> serializedData(serialized_parent_size);
@@ -514,6 +604,7 @@ namespace platypus
 
         return serializedData;
     }
+
 
     std::vector<char> serialize(const Children* pChildren)
     {
@@ -540,5 +631,161 @@ namespace platypus
         );
 
         return serializedData;
+    }
+
+
+    void deserialize(
+        Scene* pScene,
+        Transform** ppTransform,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(dataSize == serialized_transform_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_TRANSFORM);
+        size_t pos = sizeof(ComponentType);
+
+        Matrix4f localMatrix;
+        Matrix4f globalMatrix;
+
+        memcpy(
+            &localMatrix,
+            reinterpret_cast<char*>(pData) + pos,
+            sizeof(Matrix4f)
+        );
+        pos += sizeof(Matrix4f);
+
+        memcpy(
+            &globalMatrix,
+            reinterpret_cast<char*>(pData) + pos,
+            sizeof(Matrix4f)
+        );
+
+        *ppTransform = create_transform(
+            entityID,
+            Matrix4f(1.0f),
+            pScene,
+            true
+        );
+
+        (*ppTransform)->localMatrix = localMatrix;
+        (*ppTransform)->globalMatrix = globalMatrix;
+    }
+
+
+    void deserialize(
+        Scene* pScene,
+        GUITransform** ppTransform,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(dataSize == serialized_gui_transform_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_GUI_TRANSFORM);
+        size_t pos = sizeof(ComponentType);
+
+        Vector2f position;
+        Vector2f scale;
+
+        memcpy(
+            &position,
+            reinterpret_cast<char*>(pData) + pos,
+            sizeof(Vector2f)
+        );
+        pos += sizeof(Vector2f);
+
+        memcpy(
+            &scale,
+            reinterpret_cast<char*>(pData) + pos,
+            sizeof(Vector2f)
+        );
+
+        *ppTransform = create_gui_transform(
+            entityID,
+            position,
+            scale,
+            pScene,
+            true
+        );
+    }
+
+
+    void deserialize(
+        Scene* pScene,
+        Parent** ppParent,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(dataSize == serialized_parent_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_PARENT);
+        size_t pos = sizeof(ComponentType);
+
+        entityID_t parentEntityID;
+
+        memcpy(
+            &parentEntityID,
+            reinterpret_cast<char*>(pData) + pos,
+            sizeof(entityID_t)
+        );
+
+        *ppParent = create_parent(entityID, parentEntityID, pScene, true);
+    }
+
+
+    void deserialize(
+        Scene* pScene,
+        Children** ppChildren,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(dataSize == serialized_children_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_CHILDREN);
+        size_t pos = sizeof(ComponentType);
+
+        size_t childCount;
+        memcpy(
+            &childCount,
+            reinterpret_cast<char*>(pData) + pos,
+            sizeof(size_t)
+        );
+        pos += sizeof(size_t);
+
+        std::vector<entityID_t> childEntityIDs(childCount);
+
+        for (size_t i = 0; i < childCount; ++i)
+        {
+            entityID_t childID;
+            memcpy(
+                &childID,
+                reinterpret_cast<char*>(pData) + pos,
+                sizeof(entityID_t)
+            );
+            childEntityIDs[i] = childID;
+            pos += sizeof(entityID_t);
+        }
+
+        *ppChildren = create_children(entityID, childEntityIDs, pScene, true);
     }
 }

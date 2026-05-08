@@ -51,17 +51,31 @@ namespace platypus
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
         ID_t animationAssetID,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     SkeletonJoint* create_skeleton_joint(
         entityID_t target,
         uint32_t jointIndex,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     std::vector<char> serialize(const SkeletalAnimation* pSkeletalAnimation);
     std::vector<char> serialize(const SkeletonJoint* pSkeletonJoint);
-    // NOTE: u done fucked up here, can't separate funcs by ret type alone!
-    // -> CONTINUE HERE
+    void deserialize(
+        Scene* pScene,
+        SkeletalAnimation** ppSkeletalAnimation,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
+    void deserialize(
+        Scene* pScene,
+        SkeletonJoint** ppSkeletonJoint,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
 }

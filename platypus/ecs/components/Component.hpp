@@ -1,10 +1,14 @@
 #pragma once
 
+#include "platypus/ecs/Entity.hpp"
 #include <string>
+#include <vector>
 
 
 namespace platypus
 {
+    class Scene;
+
     enum ComponentType
     {
         COMPONENT_TYPE_EMPTY            = 0x0,
@@ -22,4 +26,20 @@ namespace platypus
 
     std::string component_type_to_string(ComponentType type);
     size_t get_component_size(ComponentType type);
+    size_t get_component_serialized_size(ComponentType type);
+
+    std::vector<char> serialize_component(
+        ComponentType componentType,
+        size_t dataSize,
+        const void* pData
+    );
+
+    void deserialize_component(
+        Scene* pScene,
+        ComponentType componentType,
+        void** ppComponent,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
 }

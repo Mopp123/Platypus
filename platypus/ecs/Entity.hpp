@@ -9,6 +9,8 @@ typedef int64_t entityID_t;
 
 namespace platypus
 {
+    class Scene;
+
     constexpr size_t serialized_entity_size =
         sizeof(entityID_t) +
         sizeof(uint64_t) +
@@ -17,7 +19,6 @@ namespace platypus
     struct Entity
     {
         entityID_t id = NULL_ENTITY_ID;
-        // TODO: remove parent from here -> that kind of stuff handled using Parent and Children components!
         uint64_t componentMask = 0;
         uint8_t active = 1;
 
@@ -26,5 +27,13 @@ namespace platypus
         void clear();
     };
 
-    std::vector<char> serialize(const Entity& entity);
+    size_t get_component_count(uint64_t componentMask);
+
+    std::vector<char> serialize_entity(const Entity& entity);
+    void deserialize_entity(
+        Scene* pScene,
+        entityID_t& outEntity,
+        size_t dataSize,
+        void* pData
+    );
 }

@@ -1,6 +1,7 @@
 #include "Serialization.hpp"
 #include "Application.hpp"
 #include "Debug.hpp"
+#include "platypus/ecs/components/Component.hpp"
 #include "platypus/ecs/components/Camera.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/ecs/components/Transform.hpp"
@@ -831,92 +832,61 @@ namespace platypus
             for (entityID_t entityID : entities)
             {
                 const Entity& entity = pScene->getEntity(entityID);
-                std::vector<char> entityData = serialize(entity);
+                std::vector<char> entityData = serialize_entity(entity);
                 serializedData.resize(serializedData.size() + entityData.size());
                 memcpy(serializedData.data() + pos, entityData.data(), entityData.size());
                 pos += entityData.size();
 
-                const uint64_t componentMask = entity.componentMask;
                 std::unordered_map<ComponentType, const void*> components = pScene->getComponents(entityID);
+                Debug::log(
+                    "___TEST___serializing " + std::to_string(components.size()) + " components "
+                    "for entity " + std::to_string(entityID)
+                );
                 std::unordered_map<ComponentType, const void*>::const_iterator it;
                 for (it = components.begin(); it != components.end(); ++it)
                 {
-                    std::vector<char> componentData;
+                    Debug::log(
+                        "___TEST___serializing component: " + component_type_to_string(it->first)
+                    );
+                    const size_t serializedComponentSize = get_component_serialized_size(it->first);
+                    serializedData.resize(serializedData.size() + serializedComponentSize);
                     // TODO: UNFUCK THIS SHIT!
-                    if (componentMask & ComponentType::COMPONENT_TYPE_CAMERA)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_camera_size);
-                        componentData = serialize(reinterpret_cast<const Camera*>(it->second));
-                    }
-
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_RENDERABLE3D)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_renderable3D_size);
-                        componentData = serialize(reinterpret_cast<const Renderable3D*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
-                    {
-                        Debug::log(
-                            "GUIRenderable serialization not yet handled! "
-                            "TODO: Need to figure out some way to handle GUIRenderable's text string!",
-                            PLATYPUS_CURRENT_FUNC_NAME,
-                            Debug::MessageType::PLATYPUS_ERROR
-                        );
-                        PLATYPUS_ASSERT(false);
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_TRANSFORM)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_transform_size);
-                        componentData = serialize(reinterpret_cast<const Transform*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_GUI_TRANSFORM)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_gui_transform_size);
-                        componentData = serialize(reinterpret_cast<const GUITransform*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_PARENT)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_parent_size);
-                        componentData = serialize(reinterpret_cast<const Parent*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_CHILDREN)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_children_size);
-                        componentData = serialize(reinterpret_cast<const Children*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_LIGHT)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_light_size);
-                        componentData = serialize(reinterpret_cast<const Light*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_skeletal_animation_size);
-                        componentData = serialize(reinterpret_cast<const SkeletalAnimation*>(it->second));
-                    }
-
-                    if (componentMask & ComponentType::COMPONENT_TYPE_JOINT)
-                    {
-                        serializedData.resize(serializedData.size() + serialized_skeleton_joint_size);
-                        componentData = serialize(reinterpret_cast<const SkeletonJoint*>(it->second));
-                    }
-
+                    std::vector<char> componentData = serialize_component(
+                        it->first,
+                        get_component_size(it->first),
+                        it->second
+                    );
+                    PLATYPUS_ASSERT(componentData.size() == serializedComponentSize);
                     memcpy(serializedData.data() + pos, componentData.data(), componentData.size());
+
                     pos += componentData.size();
                 }
             }
+
+            // CURRENT ISSUE: components don't get put into the buffer correctly, see below!
+            // CONTINUE HERE
+            PLATYPUS_ASSERT(false);
+            ComponentType typeTest;
+            memcpy(
+                &typeTest,
+                serializedData.data() + sizeof(uint32_t),
+                sizeof(ComponentType)
+            );
+            Debug::log("___TEST___wrote " + component_type_to_string(typeTest));
+
+            ComponentType typeTest2;
+            memcpy(
+                &typeTest2,
+                serializedData.data() + sizeof(uint32_t) + serialized_transform_size,
+                sizeof(ComponentType)
+            );
+            Debug::log("___TEST___wrote " + component_type_to_string(typeTest2));
+
+
             return serializedData;
         }
 
-        void deserialize_assets(
+        size_t deserialize_assets(
             size_t dataSize,
             void* pData,
             std::vector<ImageMetadata>& outImages,
@@ -946,6 +916,7 @@ namespace platypus
                 reinterpret_cast<char*>(pData) + sizeof(uint32_t) * 3,
                 sizeof(uint32_t)
             );
+            const uint32_t totalCount = imageCount + textureCount + materialCount + modelCount;
 
             uint32_t textureSectionBegin = serialized_assets_header_size + imageCount * image_metadata_serialized_size;
             uint32_t textureSectionEnd = textureSectionBegin + textureCount * texture_metadata_serialized_size;
@@ -957,7 +928,8 @@ namespace platypus
             uint32_t modelSectionEnd = modelSectionBegin + modelCount * model_metadata_serialized_size;
 
             size_t pos = serialized_assets_header_size;
-            while (pos < dataSize)
+            uint32_t loadedCount = 0;
+            while (loadedCount < totalCount)
             {
                 if (pos < textureSectionBegin)
                 {
@@ -999,6 +971,75 @@ namespace platypus
                     outModels.push_back(metadata);
                     pos += model_metadata_serialized_size;
                 }
+                ++loadedCount;
+            }
+            return pos;
+        }
+
+        void deserialize_entities(
+            Scene* pScene,
+            void* pData,
+            std::vector<entityID_t>& outEntities
+        )
+        {
+            uint32_t entityCount;
+            memcpy(
+                &entityCount,
+                pData,
+                sizeof(uint32_t)
+            );
+            size_t pos = sizeof(uint32_t);
+            outEntities.resize(entityCount);
+
+            Debug::log("___TEST___attempting to load " + std::to_string(entityCount) + " entities...");
+
+            for (size_t i = 0; i < entityCount; ++i)
+            {
+                entityID_t entityID;
+                deserialize_entity(
+                    pScene,
+                    entityID,
+                    serialized_entity_size,
+                    reinterpret_cast<char*>(pData) + pos
+                );
+
+                Entity entity = pScene->getEntity(entityID);
+                size_t componentCount = get_component_count(entity.componentMask);
+                Debug::log(
+                    "___TEST___attempting to load " + std::to_string(componentCount) + " components "
+                    "for entity " + std::to_string(entityID)
+                );
+                for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
+                {
+                    ComponentType componentType;
+                    memcpy(
+                        &componentType,
+                        reinterpret_cast<char*>(pData) + pos,
+                        sizeof(ComponentType)
+                    );
+                    size_t serializedComponentSize = get_component_serialized_size(componentType);
+
+                    Debug::log(
+                        "___TEST___attempting to deserialize component: " + component_type_to_string(componentType) + " "
+                        "serialized size should be: " + std::to_string(serializedComponentSize)
+                    );
+
+                    void* pComponent = nullptr;
+                    deserialize_component(
+                        pScene,
+                        componentType,
+                        &pComponent,
+                        entityID,
+                        serializedComponentSize,
+                        reinterpret_cast<char*>(pData) + pos
+                    );
+                    pos += serializedComponentSize;
+                }
+                outEntities[i] = entityID;
+                Debug::log(
+                    "___TEST___loaded entity: " + std::to_string(entityID) + " "
+                    "with " + std::to_string(componentCount) + " components"
+                );
             }
         }
 
@@ -1055,11 +1096,13 @@ namespace platypus
         }
 
         void read(
+            Scene* pScene,
             const std::string& filepath,
             std::vector<serialization::ImageMetadata>& outImages,
             std::vector<serialization::TextureMetadata>& outTextures,
             std::vector<serialization::MaterialMetadata>& outMaterials,
-            std::vector<serialization::ModelMetadata>& outModels
+            std::vector<serialization::ModelMetadata>& outModels,
+            std::vector<entityID_t>& outEntities
         )
         {
             try
@@ -1082,13 +1125,26 @@ namespace platypus
                 file.read(fullData.data(), fullData.size());
                 file.close();
 
-                serialization::deserialize_assets(
+                Debug::log(
+                    "___TEST___reading assets..."
+                );
+                size_t assetDataEndPos = deserialize_assets(
                     totalSize,
                     fullData.data(),
                     outImages,
                     outTextures,
                     outMaterials,
                     outModels
+                );
+                Debug::log(
+                    "___TEST___assets read from file. "
+                    "Loading entities, starting from position: " + std::to_string(assetDataEndPos)
+                );
+
+                deserialize_entities(
+                    pScene,
+                    fullData.data() + assetDataEndPos,
+                    outEntities
                 );
             }
             catch (const std::ifstream::failure& e)

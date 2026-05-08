@@ -44,7 +44,8 @@ namespace platypus
         entityID_t target,
         ID_t meshAssetID,
         ID_t materialAssetID,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     GUIRenderable* create_gui_renderable(
@@ -74,5 +75,11 @@ namespace platypus
     );
 
     std::vector<char> serialize(const Renderable3D* pRenderable);
-    Renderable3D* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData);
+    void deserialize(
+        Scene* pScene,
+        Renderable3D** ppRenderable,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
 }

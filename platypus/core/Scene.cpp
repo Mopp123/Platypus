@@ -467,6 +467,27 @@ namespace platypus
         entity.componentMask |= componentTypeID;
     }
 
+    void Scene::setComponentMask(entityID_t entityID, uint64_t mask)
+    {
+        if (!isValidEntity(entityID, "setComponentMask"))
+        {
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        // Not sure how this could happen, but just in case...
+        if (_entities[entityID].id != entityID)
+        {
+            Debug::log(
+                "Now u done fucked up xDdd",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        _entities[entityID].componentMask = mask;
+    }
+
     bool Scene::isValidEntity(entityID_t entityID, const std::string& errLocation) const
     {
         bool success = true;

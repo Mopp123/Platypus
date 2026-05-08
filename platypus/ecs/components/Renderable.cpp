@@ -10,7 +10,8 @@ namespace platypus
         entityID_t target,
         ID_t meshAssetID,
         ID_t materialAssetID,
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         Application* pApp = Application::get_instance();
@@ -56,7 +57,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pUseScene->addToComponentMask(target, componentType);
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
         Renderable3D* pRenderable = (Renderable3D*)pComponent;
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
@@ -203,10 +206,16 @@ namespace platypus
     }
 
 
-    Renderable3D* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData)
+    void deserialize(
+        Scene* pScene,
+        Renderable3D** ppRenderable,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
-        PLATYPUS_ASSERT(size == serialized_renderable3D_size);
+        PLATYPUS_ASSERT(dataSize == serialized_renderable3D_size);
 
         ComponentType componentType;
         memcpy(&componentType, pData, sizeof(ComponentType));
@@ -229,11 +238,12 @@ namespace platypus
             sizeof(ID_t)
         );
 
-        return create_renderable3D(
+        *ppRenderable = create_renderable3D(
             entityID,
             meshID,
             materialID,
-            pScene
+            pScene,
+            true
         );
     }
 }

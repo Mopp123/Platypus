@@ -24,7 +24,8 @@ namespace platypus
         const Matrix4f& shadowViewMatrix,
         bool enableShadows,
         float maxShadowDistance,
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         Scene* pUseScene = pScene;
@@ -48,7 +49,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pUseScene->addToComponentMask(target, componentType);
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
         Light* pDirectionalLight = (Light*)pComponent;
         pDirectionalLight->shadowProjectionMatrix = shadowProjectionMatrix;
         pDirectionalLight->shadowViewMatrix = shadowViewMatrix;
@@ -64,7 +67,8 @@ namespace platypus
         entityID_t target,
         const Vector3f& direction,
         const Vector3f& color,
-        Scene* pScene
+        Scene* pScene,
+        bool useExplicitComponentMask
     )
     {
         return create_directional_light(
@@ -75,7 +79,8 @@ namespace platypus
             Matrix4f(1.0f),
             false,
             0.0f,
-            pScene
+            pScene,
+            useExplicitComponentMask
         );
     }
 
@@ -144,10 +149,16 @@ namespace platypus
     }
 
 
-    Light* deserialize(Scene* pScene, entityID_t entityID, size_t size, void* pData)
+    void deserialize(
+        Scene* pScene,
+        Light** ppLight,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
-        PLATYPUS_ASSERT(size == serialized_light_size);
+        PLATYPUS_ASSERT(dataSize == serialized_light_size);
 
         ComponentType componentType;
         memcpy(&componentType, pData, sizeof(ComponentType));
@@ -212,7 +223,7 @@ namespace platypus
         pos += sizeof(uint8_t);
 
 
-        return create_directional_light(
+        *ppLight = create_directional_light(
             entityID,
             direction,
             color,
@@ -220,7 +231,8 @@ namespace platypus
             shadowViewMatrix,
             static_cast<bool>(enableShadows),
             maxShadowDistance,
-            pScene
+            pScene,
+            true
         );
     }
 }

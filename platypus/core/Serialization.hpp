@@ -124,13 +124,18 @@ namespace platypus
 
         std::vector<char> serialize_assets(const std::vector<Asset*>& assets);
         std::vector<char> serialize_entities(const Scene* pScene, const std::vector<entityID_t>& entities);
-        void deserialize_assets(
+        size_t deserialize_assets(
             size_t dataSize,
             void* pData,
             std::vector<ImageMetadata>& outImages,
             std::vector<TextureMetadata>& outTextures,
             std::vector<MaterialMetadata>& outMaterials,
             std::vector<ModelMetadata>& outModels
+        );
+        void deserialize_entities(
+            Scene* pScene,
+            void* pData,
+            std::vector<entityID_t>& outEntities
         );
 
         void write(
@@ -141,11 +146,13 @@ namespace platypus
         );
 
         void read(
+            Scene* pScene,
             const std::string& filepath,
             std::vector<serialization::ImageMetadata>& outImages,
             std::vector<serialization::TextureMetadata>& outTextures,
             std::vector<serialization::MaterialMetadata>& outMaterials,
             std::vector<serialization::ModelMetadata>& outModels,
+            std::vector<entityID_t>& outEntities
         );
     }
 }

@@ -54,7 +54,8 @@ namespace platypus
     Transform* create_transform(
         entityID_t target,
         Matrix4f matrix,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     Transform* create_transform(
@@ -62,7 +63,8 @@ namespace platypus
         const Vector3f& position,
         const Quaternion& rotation,
         const Vector3f& scale,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     void set_transform_position(Transform* pTransform, const Vector3f& position, bool hasParent);
@@ -89,7 +91,21 @@ namespace platypus
         entityID_t target,
         const Vector2f position,
         const Vector2f scale,
-        Scene* pScene = nullptr
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
+    );
+
+    Parent* create_parent(
+        entityID_t target,
+        entityID_t parentID,
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
+    );
+    Children* create_children(
+        entityID_t target,
+        std::vector<entityID_t> childIDs,
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
     );
 
     void add_child(entityID_t target, entityID_t child, Scene* pScene = nullptr);
@@ -102,4 +118,36 @@ namespace platypus
     std::vector<char> serialize(const GUITransform* pTransform);
     std::vector<char> serialize(const Parent* pParent);
     std::vector<char> serialize(const Children* pChildren);
+
+    void deserialize(
+        Scene* pScene,
+        Transform** ppTransform,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
+
+    void deserialize(
+        Scene* pScene,
+        GUITransform** ppTransform,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
+
+    void deserialize(
+        Scene* pScene,
+        Parent** ppParent,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
+
+    void deserialize(
+        Scene* pScene,
+        Children** ppChildren,
+        entityID_t entityID,
+        size_t dataSize,
+        void* pData
+    );
 }

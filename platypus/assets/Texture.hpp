@@ -4,7 +4,7 @@
 #include "Image.hpp"
 #include "platypus/graphics/CommandBuffer.hpp"
 #include "platypus/graphics/Pipeline.hpp"
-#include <memory>
+#include <string>
 
 
 namespace platypus
