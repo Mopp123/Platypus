@@ -865,22 +865,22 @@ namespace platypus
 
             // CURRENT ISSUE: components don't get put into the buffer correctly, see below!
             // CONTINUE HERE
-            PLATYPUS_ASSERT(false);
-            ComponentType typeTest;
-            memcpy(
-                &typeTest,
-                serializedData.data() + sizeof(uint32_t),
-                sizeof(ComponentType)
-            );
-            Debug::log("___TEST___wrote " + component_type_to_string(typeTest));
+            //ComponentType typeTest;
+            //memcpy(
+            //    &typeTest,
+            //    serializedData.data() + sizeof(uint32_t) + serialized_entity_size,
+            //    sizeof(ComponentType)
+            //);
+            //Debug::log("___TEST___wrote " + component_type_to_string(typeTest));
 
-            ComponentType typeTest2;
-            memcpy(
-                &typeTest2,
-                serializedData.data() + sizeof(uint32_t) + serialized_transform_size,
-                sizeof(ComponentType)
-            );
-            Debug::log("___TEST___wrote " + component_type_to_string(typeTest2));
+            //ComponentType typeTest2;
+            //memcpy(
+            //    &typeTest2,
+            //    serializedData.data() + sizeof(uint32_t) + serialized_entity_size + serialized_transform_size,
+            //    sizeof(ComponentType)
+            //);
+            //Debug::log("___TEST___wrote " + component_type_to_string(typeTest2));
+            //PLATYPUS_ASSERT(false);
 
 
             return serializedData;
@@ -1002,6 +1002,7 @@ namespace platypus
                     serialized_entity_size,
                     reinterpret_cast<char*>(pData) + pos
                 );
+                pos += serialized_entity_size;
 
                 Entity entity = pScene->getEntity(entityID);
                 size_t componentCount = get_component_count(entity.componentMask);

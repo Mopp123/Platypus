@@ -20,6 +20,8 @@ namespace platypus
             meshAssetID,
             AssetType::ASSET_TYPE_MESH
         );
+        PLATYPUS_ASSERT(pMesh);
+
         const Material* pMaterial = (const Material*)pAssetManager->getAsset(
             materialAssetID,
             AssetType::ASSET_TYPE_MATERIAL
