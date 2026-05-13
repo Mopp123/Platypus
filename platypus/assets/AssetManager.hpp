@@ -161,6 +161,15 @@ namespace platypus
 
         bool isPersistent(ID_t assetID) const;
 
+        std::vector<char> createMetadataBuffer(
+            const std::vector<Asset*>& assets
+        );
+
+        std::unordered_map<std::string, Asset*> createFromMetadataBuffer(
+            const std::vector<char>& buffer,
+            size_t& lastReadPos
+        );
+
         inline size_t getAssetTotalCount() const { return _assets.size(); }
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }

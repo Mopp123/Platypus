@@ -836,6 +836,177 @@ namespace platypus
         return _persistentAssets.find(assetID) != _persistentAssets.end();
     }
 
+    std::vector<char> AssetManager::createMetadataBuffer(
+        const std::vector<Asset*>& assets
+    )
+    {
+        std::vector<char> buffer(serialized_assets_header_size);
+
+        // NOTE: Assets are currently ALWAYS written in this order!
+        std::vector<const Image*> imageAssets;
+        std::vector<const Texture*> textureAssets;
+        std::vector<const Material*> materialAssets;
+        std::vector<const Model*> modelAssets;
+
+        for (const Asset* pAsset : assets)
+        {
+            if (pAsset->getType() == AssetType::ASSET_TYPE_IMAGE)
+                imageAssets.push_back(reinterpret_cast<const Image*>(pAsset));
+            else if (pAsset->getType() == AssetType::ASSET_TYPE_TEXTURE)
+                textureAssets.push_back(reinterpret_cast<const Texture*>(pAsset));
+            else if (pAsset->getType() == AssetType::ASSET_TYPE_MATERIAL)
+                materialAssets.push_back(reinterpret_cast<const Material*>(pAsset));
+            else if (pAsset->getType() == AssetType::ASSET_TYPE_MODEL)
+                modelAssets.push_back(reinterpret_cast<const Model*>(pAsset));
+        }
+        const size_t imageAssetCount = imageAssets.size();
+        const size_t textureAssetCount = textureAssets.size();
+        const size_t materialAssetCount = materialAssets.size();
+        const size_t modelAssetCount = modelAssets.size();
+
+        const uint32_t imageAssetCountU32 = static_cast<uint32_t>(imageAssetCount);
+        const uint32_t textureAssetCountU32 = static_cast<uint32_t>(textureAssetCount);
+        const uint32_t materialAssetCountU32 = static_cast<uint32_t>(materialAssetCount);
+        const uint32_t modelAssetCountU32 = static_cast<uint32_t>(modelAssetCount);
+
+        // Write header containing counts for each asset type
+        memcpy(
+            buffer.data(),
+            &imageAssetCountU32,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            buffer.data() + sizeof(uint32_t),
+            &textureAssetCountU32,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            buffer.data() + sizeof(uint32_t) * 2,
+            &materialAssetCountU32,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            buffer.data() + sizeof(uint32_t) * 3,
+            &modelAssetCountU32,
+            sizeof(uint32_t)
+        );
+
+        for (const Image* pImage : imageAssets)
+            pImage->writeToMetadataBuffer(buffer);
+        for (const Texture* pTexture : textureAssets)
+            pTexture->writeToMetadataBuffer(buffer);
+        for (const Material* pMaterial : materialAssets)
+            pMaterial->writeToMetadataBuffer(buffer);
+        for (const Model* pModel : modelAssets)
+            pModel->writeToMetadataBuffer(buffer);
+
+        return buffer;
+    }
+
+    std::unordered_map<std::string, Asset*> AssetManager::createFromMetadataBuffer(
+        const std::vector<char>& buffer,
+        size_t& lastReadPos
+    )
+    {
+        std::unordered_map<std::string, Asset*> outAssets;
+
+        const size_t bufferSize = buffer.size();
+        PLATYPUS_ASSERT(bufferSize >= serialized_assets_header_size);
+        uint32_t imageCount = 0;
+        uint32_t textureCount = 0;
+        uint32_t materialCount = 0;
+        uint32_t modelCount = 0;
+        const char* pData = buffer.data();
+        memcpy(
+            &imageCount,
+            pData,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            &textureCount,
+            pData + sizeof(uint32_t),
+            sizeof(uint32_t)
+        );
+        memcpy(
+            &materialCount,
+            pData + sizeof(uint32_t) * 2,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            &modelCount,
+            pData + sizeof(uint32_t) * 3,
+            sizeof(uint32_t)
+        );
+        const uint32_t totalCount = imageCount + textureCount + materialCount + modelCount;
+        Debug::log("___TEST___Attempting to load " + std::to_string(totalCount) + " assets");
+
+        const uint32_t serializedImageSize = static_cast<uint32_t>(Image::get_serialized_metadata_size());
+        const uint32_t serializedTextureSize = static_cast<uint32_t>(Texture::get_serialized_metadata_size());
+        const uint32_t serializedMaterialSize = static_cast<uint32_t>(Material::get_serialized_metadata_size());
+        const uint32_t serializedModelSize = static_cast<uint32_t>(Model::get_serialized_metadata_size());
+
+        // WARNING! After updated this thing here, the sections might not be correct!
+        uint32_t textureSectionBegin = serialized_assets_header_size + imageCount * serializedImageSize;
+        uint32_t textureSectionEnd = textureSectionBegin + textureCount * serializedTextureSize;
+
+        uint32_t materialSectionBegin = textureSectionEnd;
+        uint32_t materialSectionEnd = materialSectionBegin + materialCount * serializedMaterialSize;
+
+        uint32_t modelSectionBegin = materialSectionEnd;
+        uint32_t modelSectionEnd = modelSectionBegin + modelCount * serializedModelSize;
+
+        lastReadPos = serialized_assets_header_size;
+        uint32_t loadedCount = 0;
+        while (loadedCount < totalCount)
+        {
+            if (lastReadPos < textureSectionBegin)
+            {
+                PLATYPUS_ASSERT(lastReadPos + serializedImageSize <= bufferSize);
+                Image* pImage = Image::create_from_metadata_buffer(
+                    this,
+                    buffer,
+                    lastReadPos
+                );
+                outAssets[pImage->getName()] = pImage;
+                lastReadPos += serializedImageSize;
+            }
+            else if (lastReadPos >= textureSectionBegin && lastReadPos < textureSectionEnd)
+            {
+                PLATYPUS_ASSERT(lastReadPos + serializedTextureSize <= bufferSize);
+                Texture* pTexture = Texture::create_from_metadata_buffer(
+                    this,
+                    buffer,
+                    lastReadPos
+                );
+                outAssets[pTexture->getName()] = pTexture;
+                lastReadPos += serializedTextureSize;
+            }
+            else if (lastReadPos >= materialSectionBegin && lastReadPos < materialSectionEnd)
+            {
+                PLATYPUS_ASSERT(lastReadPos + serializedMaterialSize <= bufferSize);
+                Material* pMaterial = Material::create_from_metadata_buffer(
+                    this,
+                    buffer,
+                    lastReadPos
+                );
+                outAssets[pMaterial->getName()] = pMaterial;
+                lastReadPos += serializedMaterialSize;
+            }
+            else if (lastReadPos >= modelSectionBegin && lastReadPos < modelSectionEnd)
+            {
+                PLATYPUS_ASSERT(lastReadPos + serializedModelSize <= bufferSize);
+                Model* pModel = Model::create_from_metadata_buffer(
+                    this,
+                    buffer,
+                    lastReadPos
+                );
+                outAssets[pModel->getName()] = pModel;
+                lastReadPos += serializedModelSize;
+            }
+            ++loadedCount;
+        }
+    }
+
     bool AssetManager::validateAsset(
         const char* callLocation,
         ID_t assetID,

@@ -2,6 +2,7 @@
 
 #include "platypus/utils/ID.hpp"
 #include <string>
+#include <vector>
 
 
 namespace platypus
@@ -36,9 +37,16 @@ namespace platypus
     };
 
 
+    constexpr size_t asset_metadata_name_size = 32;
+    constexpr size_t asset_metadata_filepath_size = 64;
+    constexpr size_t asset_metadata_model_max_meshes = 8;
+    constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 4;
+
+
+    class AssetManager;
     class Asset
     {
-    private:
+    protected:
         ID_t _id = NULL_ID;
         AssetType _type = AssetType::ASSET_TYPE_NONE;
         std::string _name;
@@ -48,6 +56,10 @@ namespace platypus
         Asset(const Asset&) = delete;
         Asset(AssetType type, const std::string& name = "", ID_t id = NULL_ID);
         virtual ~Asset();
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const { }
 
         // TODO: Maybe this should be member var of Asset..?
         bool isPersistent() const;

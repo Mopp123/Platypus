@@ -6,6 +6,17 @@
 
 namespace platypus
 {
+    struct ModelMetadata
+    {
+        ID_t assetID = NULL_ID;
+        uint8_t instanced = 0;
+        uint8_t persistent = 0;
+        ID_t meshIDs[asset_metadata_model_max_meshes];
+        char name[asset_metadata_name_size];
+        char filepath[asset_metadata_filepath_size];
+    };
+
+
     class Model : public Asset
     {
     private:
@@ -30,6 +41,18 @@ namespace platypus
             ID_t id = NULL_ID
         );
         ~Model();
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        static Model* create_from_metadata_buffer(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+
+        static size_t get_serialized_metadata_size();
 
         inline const std::string& getFilepath() const { return _filepath; }
         inline bool isInstanced() const { return _instanced; }

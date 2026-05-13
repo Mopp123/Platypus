@@ -1,4 +1,5 @@
 #include "Image.hpp"
+#include "AssetManager.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
 
@@ -213,32 +214,6 @@ namespace platypus
             delete[] _pData;
     }
 
-    Image* Image::load_image(
-        const std::string& filepath,
-        ImageFormat format,
-        const std::string& name,
-        ID_t id
-    )
-    {
-        int width = 0;
-        int height = 0;
-        int channels = 0;
-        // TODO: On OpenGL side we need to flip?
-        bool flipVertically = false;
-        stbi_set_flip_vertically_on_load(flipVertically);
-        unsigned char* pStbImageData = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
-
-        if (!pStbImageData)
-        {
-            stbi_image_free(pStbImageData);
-            return nullptr;
-        }
-        Image* pImage = new Image(pStbImageData, width, height, channels, format, name, id);
-        pImage->_filepath = filepath;
-        stbi_image_free(pStbImageData);
-        return pImage;
-    }
-
     int Image::getColorChannelValue(
         uint32_t x,
         uint32_t y,
@@ -279,5 +254,126 @@ namespace platypus
             return 0;
         }
         return _pData[(x + y * _width) * _channels + channelIndex];
+    }
+
+    Image* Image::load_image(
+        const std::string& filepath,
+        ImageFormat format,
+        const std::string& name,
+        ID_t id
+    )
+    {
+        int width = 0;
+        int height = 0;
+        int channels = 0;
+        // TODO: On OpenGL side we need to flip?
+        bool flipVertically = false;
+        stbi_set_flip_vertically_on_load(flipVertically);
+        unsigned char* pStbImageData = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
+
+        if (!pStbImageData)
+        {
+            stbi_image_free(pStbImageData);
+            return nullptr;
+        }
+        Image* pImage = new Image(pStbImageData, width, height, channels, format, name, id);
+        pImage->_filepath = filepath;
+        stbi_image_free(pStbImageData);
+        return pImage;
+    }
+
+    /*
+        Serialized format (in order):
+            ID_t assetID = NULL_ID;
+            ImageFormat format;
+            uint8_t persistent = 0;
+            char name[asset_metadata_name_size];
+            char filepath[asset_metadata_filepath_size];
+    */
+    void Image::writeToMetadataBuffer(
+        std::vector<char>& targetBuffer
+    ) const
+    {
+        PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
+        PLATYPUS_ASSERT(_filepath.size() <= asset_metadata_filepath_size);
+        const size_t prevSize = targetBuffer.size();
+        targetBuffer.resize(prevSize + get_serialized_metadata_size());
+        char* pBuf = targetBuffer.data() + prevSize;
+
+        memcpy(pBuf, &_id, sizeof(ID_t));
+        size_t pos = sizeof(ID_t);
+
+        memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
+        pos += sizeof(ImageFormat);
+
+        // TODO: Figure how to deal with this?
+        uint8_t persistent = 0;
+        memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        // Clear the buf for the longest possible name
+        memset(pBuf + pos, 0, asset_metadata_name_size);
+        // Write the name
+        memcpy(pBuf + pos, _name.data(), _name.size());
+        pos += asset_metadata_name_size;
+
+        // Same as above for the filepath
+        memset(pBuf + pos, 0, asset_metadata_filepath_size);
+        memcpy(pBuf + pos, _filepath.data(), _filepath.size());
+
+        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+    }
+
+    Image* Image::create_from_metadata_buffer(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    )
+    {
+        PLATYPUS_ASSERT((targetBuffer.size() + bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
+        ID_t id = NULL_ID;
+        ImageFormat format;
+        uint8_t persistent;
+        char name[asset_metadata_name_size];
+        char filepath[asset_metadata_filepath_size];
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+
+        memcpy(&id, pBuf, sizeof(ID_t));
+        size_t pos = sizeof(ID_t);
+
+        memcpy(&format, pBuf + pos, sizeof(ImageFormat));
+        pos += sizeof(ImageFormat);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+
+        memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
+        pos += asset_metadata_filepath_size;
+
+        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+
+        Image* pImage = pAssetManager->loadImage(
+            std::string(filepath),
+            format,
+            std::string(name),
+            id
+        );
+        if (persistent)
+            pAssetManager->makePersistent(pImage);
+
+        return pImage;
+    }
+
+    size_t Image::get_serialized_metadata_size()
+    {
+        return sizeof(ID_t) +
+            sizeof(ImageFormat) +
+            sizeof(uint8_t) +
+            asset_metadata_name_size +
+            asset_metadata_filepath_size;
     }
 }

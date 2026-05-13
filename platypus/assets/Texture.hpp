@@ -62,6 +62,18 @@ namespace platypus
     };
 
 
+    struct TextureMetadata
+    {
+        ID_t assetID = NULL_ID;
+        ID_t imageID = NULL_ID;
+        TextureSamplerFilterMode filterMode;
+        TextureSamplerAddressMode addressMode;
+        uint8_t useMipmapping = 0;
+        uint8_t persistent = 0;
+        char name[asset_metadata_name_size];
+    };
+
+
     struct TextureImpl;
     class Texture : public Asset
     {
@@ -93,6 +105,18 @@ namespace platypus
         );
         Texture(const Texture&) = delete;
         ~Texture();
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        static Texture* create_from_metadata_buffer(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+
+        static size_t get_serialized_metadata_size();
 
         inline const TextureImpl* getImpl() const { return _pImpl; }
         inline TextureImpl* getImpl() { return _pImpl; }

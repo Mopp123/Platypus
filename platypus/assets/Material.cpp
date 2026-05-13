@@ -623,6 +623,214 @@ namespace platypus
         return nullptr;
     }
 
+    /*
+        Serialized format (in order):
+            ID_t assetID = NULL_ID;
+            float specularStrength = 0.0f;
+            float shininess = 0.0f;
+            Vector2f textureOffset;
+            Vector2f textureScale;
+            uint8_t castShadows = 1;
+            uint8_t receiveShadows = 1;
+            uint8_t transparent = 0;
+            uint8_t shadeless = 0;
+            uint8_t persistent = 0;
+            ID_t blendmapTextureID = NULL_ID;
+            ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+            ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+            ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+            char name[metadata_name_size];
+    */
+    void Material::writeToMetadataBuffer(
+        std::vector<char>& targetBuffer
+    ) const
+    {
+        PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
+
+        const size_t prevSize = targetBuffer.size();
+        targetBuffer.resize(prevSize + get_serialized_metadata_size());
+        char* pBuf = targetBuffer.data() + prevSize;
+
+        memcpy(pBuf, &_id, sizeof(ID_t));
+        size_t pos = sizeof(ID_t);
+
+        const float specularStrength = getSpecularStrength();
+        memcpy(pBuf + pos, &specularStrength, sizeof(float));
+        pos += sizeof(float);
+
+        const float specularShininess = getShininess();
+        memcpy(pBuf + pos, &specularShininess, sizeof(float));
+        pos += sizeof(float);
+
+        const Vector2f textureOffset = getTextureOffset();
+        memcpy(pBuf + pos, &textureOffset, sizeof(Vector2f));
+        pos += sizeof(Vector2f);
+
+        const Vector2f textureScale = getTextureScale();
+        memcpy(pBuf + pos, &textureScale, sizeof(Vector2f));
+        pos += sizeof(Vector2f);
+
+        const uint8_t castShadows = static_cast<uint8_t>(_castShadows);
+        memcpy(pBuf + pos, &castShadows, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        const uint8_t receiveShadows = static_cast<uint8_t>(_receiveShadows);
+        memcpy(pBuf + pos, &receiveShadows, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        const uint8_t transparent = static_cast<uint8_t>(_transparent);
+        memcpy(pBuf + pos, &transparent, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        const uint8_t shadeless = static_cast<uint8_t>(_shadeless);
+        memcpy(pBuf + pos, &shadeless, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        // TODO: Figure how to deal with this?
+        const uint8_t persistent = 0;
+        memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(pBuf + pos, &_blendmapTextureID, sizeof(ID_t));
+        pos += sizeof(ID_t);
+
+        const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
+        const size_t textureChannelSize = sizeof(ID_t) * texturesPerChannel;
+        memcpy(pBuf + pos, &_diffuseTextureIDs, textureChannelSize);
+        pos += textureChannelSize;
+        memcpy(pBuf + pos, &_specularTextureIDs, textureChannelSize);
+        pos += textureChannelSize;
+        memcpy(pBuf + pos, &_normalTextureIDs, textureChannelSize);
+        pos += textureChannelSize;
+
+        memset(pBuf + pos, 0, asset_metadata_name_size);
+        memcpy(pBuf + pos, _name.data(), _name.size());
+        pos += asset_metadata_name_size;
+
+        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+    }
+
+    Material* Material::create_from_metadata_buffer(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    )
+    {
+        PLATYPUS_ASSERT((targetBuffer.size() + bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
+
+        ID_t id;
+        float specularStrength;
+        float shininess;
+        Vector2f textureOffset;
+        Vector2f textureScale;
+        uint8_t castShadows;
+        uint8_t receiveShadows;
+        uint8_t transparent;
+        uint8_t shadeless;
+        uint8_t persistent;
+        ID_t blendmapTextureID;
+        ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        char name[asset_metadata_name_size];
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+
+        memcpy(&id, pBuf, sizeof(ID_t));
+        size_t pos = sizeof(ID_t);
+
+        memcpy(&specularStrength, pBuf + pos, sizeof(float));
+        pos += sizeof(float);
+
+        memcpy(&shininess, pBuf + pos, sizeof(float));
+        pos += sizeof(float);
+
+        memcpy(&textureOffset, pBuf + pos, sizeof(Vector2f));
+        pos += sizeof(Vector2f);
+
+        memcpy(&textureScale, pBuf + pos, sizeof(Vector2f));
+        pos += sizeof(Vector2f);
+
+        memcpy(&castShadows, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&receiveShadows, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&transparent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&shadeless, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&blendmapTextureID, pBuf + pos, sizeof(ID_t));
+        pos += sizeof(ID_t);
+
+        const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
+        const size_t textureChannelSize = sizeof(ID_t) * texturesPerChannel;
+        memcpy(&diffuseTextureIDs, pBuf + pos, textureChannelSize);
+        pos += textureChannelSize;
+        memcpy(&specularTextureIDs, pBuf + pos, textureChannelSize);
+        pos += textureChannelSize;
+        memcpy(&normalTextureIDs, pBuf + pos, textureChannelSize);
+        pos += textureChannelSize;
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+
+        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+
+        std::vector<ID_t> diffuseTextures;
+        std::vector<ID_t> specularTextures;
+        std::vector<ID_t> normalTextures;
+        for (size_t i = 0; i < texturesPerChannel; ++i)
+        {
+            if (diffuseTextureIDs[i] != NULL_ID)
+                diffuseTextures.push_back(diffuseTextureIDs[i]);
+            if (specularTextureIDs[i] != NULL_ID)
+                specularTextures.push_back(specularTextureIDs[i]);
+            if (normalTextureIDs[i] != NULL_ID)
+                normalTextures.push_back(normalTextureIDs[i]);
+        }
+
+        // TODO: Allow specifying custom shader files
+        Material* pMaterial = pAssetManager->createMaterial(
+            blendmapTextureID,
+            diffuseTextures,
+            specularTextures,
+            normalTextures,
+            specularStrength,
+            shininess,
+            textureOffset,
+            textureScale,
+            static_cast<bool>(castShadows),
+            static_cast<bool>(receiveShadows),
+            static_cast<bool>(transparent),
+            static_cast<bool>(shadeless),
+            std::string(name),
+            id
+        );
+
+        if (persistent)
+            pAssetManager->makePersistent(pMaterial);
+
+        return pMaterial;
+    }
+
+    size_t Material::get_serialized_metadata_size()
+    {
+        return sizeof(ID_t) +
+            sizeof(float) * 2 +
+            sizeof(Vector2f) * 2 +
+            sizeof(uint8_t) * 5 +
+            sizeof(ID_t) +
+            sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
+            asset_metadata_name_size;
+    }
+
     void Material::warnUnassigned(const std::string& beginStr)
     {
         Debug::log(

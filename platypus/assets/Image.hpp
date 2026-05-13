@@ -2,6 +2,7 @@
 
 #include "platypus/Common.h"
 #include "Asset.hpp"
+#include <vector>
 
 #define PE_IMAGE_MAX_CHANNELS 4
 
@@ -62,6 +63,17 @@ namespace platypus
     bool is_color_format(ImageFormat format);
     ImageFormat srgb_format_to_unorm(ImageFormat srgb);
 
+
+    struct ImageMetadata
+    {
+        ID_t assetID = NULL_ID;
+        ImageFormat format;
+        uint8_t persistent = 0;
+        char name[asset_metadata_name_size];
+        char filepath[asset_metadata_filepath_size];
+    };
+
+
     struct ImageImpl;
     class Image : public Asset
     {
@@ -87,17 +99,30 @@ namespace platypus
         );
         ~Image();
 
+        int getColorChannelValue(
+            uint32_t x,
+            uint32_t y,
+            uint32_t channelIndex
+        ) const;
+
         static Image* load_image(
             const std::string& filepath,
             ImageFormat format,
             const std::string& name = "",
             ID_t id = NULL_ID
         );
-        int getColorChannelValue(
-            uint32_t x,
-            uint32_t y,
-            uint32_t channelIndex
-        ) const;
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        static Image* create_from_metadata_buffer(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+
+        static size_t get_serialized_metadata_size();
 
         inline const std::string& getFilepath() const { return _filepath; }
 
@@ -109,5 +134,4 @@ namespace platypus
         inline size_t getSize() const { return _width * _height * _channels; }
         inline ImageFormat getFormat() const { return _format; }
     };
-
 }

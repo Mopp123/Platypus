@@ -5,6 +5,7 @@
 #include "Mesh.hpp"
 #include "platypus/graphics/Descriptors.hpp"
 #include "platypus/graphics/Pipeline.hpp"
+#include <vector>
 #include <unordered_map>
 
 
@@ -15,6 +16,26 @@
 
 namespace platypus
 {
+
+    struct MaterialMetadata
+    {
+        ID_t assetID = NULL_ID;
+        float specularStrength = 0.0f;
+        float shininess = 0.0f;
+        Vector2f textureOffset;
+        Vector2f textureScale;
+        uint8_t castShadows = 1;
+        uint8_t receiveShadows = 1;
+        uint8_t transparent = 0;
+        uint8_t shadeless = 0;
+        uint8_t persistent = 0;
+        ID_t blendmapTextureID = NULL_ID;
+        ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        char name[asset_metadata_name_size];
+    };
+
     struct MaterialPipelineData
     {
         Shader* pVertexShader;
@@ -127,6 +148,18 @@ namespace platypus
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
 
         Pipeline* getPipeline(MeshType meshType);
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        static Material* create_from_metadata_buffer(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+
+        static size_t get_serialized_metadata_size();
 
         inline ID_t getBlendmapTextureID() const { return _blendmapTextureID; }
         inline const ID_t* getDiffuseTextureIDs() const { return _diffuseTextureIDs; }
