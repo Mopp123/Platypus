@@ -153,6 +153,7 @@ namespace platypus
         Asset* getAsset(ID_t assetID, AssetType type) const;
         // NOTE: This is pretty fucking inefficient!
         Asset* getAsset(const std::string& name) const;
+        std::vector<Asset*> getAssets(bool excludeInternalDefaults = false) const;
         std::vector<Asset*> getAssets(AssetType type, bool excludeInternalDefaults = false) const;
 
         void makePersistent(Asset* pAsset);
@@ -163,6 +164,30 @@ namespace platypus
 
         std::vector<char> createMetadataBuffer(
             const std::vector<Asset*>& assets
+        );
+
+        // Returns the position after the header in buffer (ie where the actual data begins)
+        size_t readMetadataHeader(
+            const std::vector<char>& buffer,
+            size_t* pImageCount,
+            size_t* pTextureCount,
+            size_t* pMaterialCount,
+            size_t* pModelCount
+        );
+
+        // This is to be able to load one asset per fram (in order to get some kind of loading
+        // screen working since don't know what to do with web parallelization yet...)
+        //
+        // *The last read pos is stored in the bufferReadEndPos to be able to start reading the
+        // next asset in the buffer
+        Asset* createFromMetadataBuffer(
+            size_t imageCount,
+            size_t textureCount,
+            size_t materialCount,
+            size_t modelCount,
+            const std::vector<char>& buffer,
+            size_t bufferReadPos,
+            size_t& bufferReadEndPos
         );
 
         std::unordered_map<std::string, Asset*> createFromMetadataBuffer(

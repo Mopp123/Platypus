@@ -782,6 +782,22 @@ namespace platypus
         return nullptr;
     }
 
+    std::vector<Asset*> AssetManager::getAssets(bool excludeInternalDefaults) const
+    {
+        std::vector<Asset*> assets;
+        for (const auto& asset : _assets)
+        {
+            Asset* pAsset = asset.second;
+            if (excludeInternalDefaults)
+            {
+                if (_defaultAssets.find(pAsset->getID()) != _defaultAssets.end())
+                    continue;
+            }
+            assets.push_back(asset.second);
+        }
+        return assets;
+    }
+
     std::vector<Asset*> AssetManager::getAssets(AssetType type, bool excludeInternalDefaults) const
     {
         std::vector<Asset*> foundAssets;
@@ -805,6 +821,16 @@ namespace platypus
     {
         pAsset->setPersistent(true);
         _persistentAssets[pAsset->getID()] = pAsset;
+
+        // WARNING!
+        // TODO: Consider having some "sub asset container" for the base asset
+        // instead of having ptrs to assets inside the assets themselves!!!
+        if (pAsset->getType() == AssetType::ASSET_TYPE_MODEL)
+        {
+            Model* pModel = reinterpret_cast<Model*>(pAsset);
+            for (Mesh* pMesh : pModel->getMeshes())
+                makePersistent(pMesh);
+        }
     }
 
     void AssetManager::addExternalPersistentAsset(Asset* pAsset)
@@ -896,6 +922,120 @@ namespace platypus
         }
 
         return buffer;
+    }
+
+
+    size_t AssetManager::readMetadataHeader(
+        const std::vector<char>& buffer,
+        size_t* pImageCount,
+        size_t* pTextureCount,
+        size_t* pMaterialCount,
+        size_t* pModelCount
+    )
+    {
+        PLATYPUS_ASSERT(buffer.size() >= serialized_assets_header_size);
+        uint32_t imageCount = 0;
+        uint32_t textureCount = 0;
+        uint32_t materialCount = 0;
+        uint32_t modelCount = 0;
+        const char* pData = buffer.data();
+        memcpy(
+            &imageCount,
+            pData,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            &textureCount,
+            pData + sizeof(uint32_t),
+            sizeof(uint32_t)
+        );
+        memcpy(
+            &materialCount,
+            pData + sizeof(uint32_t) * 2,
+            sizeof(uint32_t)
+        );
+        memcpy(
+            &modelCount,
+            pData + sizeof(uint32_t) * 3,
+            sizeof(uint32_t)
+        );
+        if (pImageCount) *pImageCount = imageCount;
+        if (pTextureCount) *pTextureCount = textureCount;
+        if (pMaterialCount) *pMaterialCount = materialCount;
+        if (pModelCount) *pModelCount = modelCount;
+        return sizeof(uint32_t) * 4;
+    }
+
+    Asset* AssetManager::createFromMetadataBuffer(
+        size_t imageCount,
+        size_t textureCount,
+        size_t materialCount,
+        size_t modelCount,
+        const std::vector<char>& buffer,
+        size_t bufferReadPos,
+        size_t& bufferReadEndPos
+    )
+    {
+        PLATYPUS_ASSERT(bufferReadPos >= serialized_assets_header_size);
+        const size_t bufferSize = buffer.size();
+        PLATYPUS_ASSERT(bufferReadPos <= bufferSize);
+
+        const uint32_t totalCount = imageCount + textureCount + materialCount + modelCount;
+
+        const uint32_t serializedImageSize = static_cast<uint32_t>(Image::get_serialized_metadata_size());
+        const uint32_t serializedTextureSize = static_cast<uint32_t>(Texture::get_serialized_metadata_size());
+        const uint32_t serializedMaterialSize = static_cast<uint32_t>(Material::get_serialized_metadata_size());
+        const uint32_t serializedModelSize = static_cast<uint32_t>(Model::get_serialized_metadata_size());
+
+        uint32_t textureSectionBegin = serialized_assets_header_size + imageCount * serializedImageSize;
+        uint32_t textureSectionEnd = textureSectionBegin + textureCount * serializedTextureSize;
+
+        uint32_t materialSectionBegin = textureSectionEnd;
+        uint32_t materialSectionEnd = materialSectionBegin + materialCount * serializedMaterialSize;
+
+        uint32_t modelSectionBegin = materialSectionEnd;
+        uint32_t modelSectionEnd = modelSectionBegin + modelCount * serializedModelSize;
+
+        Asset* pAsset = nullptr;
+        size_t serializedAssetSize = 0;
+        if (bufferReadPos < textureSectionBegin)
+        {
+            serializedAssetSize = serializedImageSize;
+            pAsset = Image::create_from_metadata_buffer(
+                this,
+                buffer,
+                bufferReadPos
+            );
+        }
+        else if (bufferReadPos >= textureSectionBegin && bufferReadPos < textureSectionEnd)
+        {
+            serializedAssetSize = serializedTextureSize;
+            pAsset = Texture::create_from_metadata_buffer(
+                this,
+                buffer,
+                bufferReadPos
+            );
+        }
+        else if (bufferReadPos >= materialSectionBegin && bufferReadEndPos < materialSectionEnd)
+        {
+            serializedAssetSize = serializedMaterialSize;
+            pAsset = Material::create_from_metadata_buffer(
+                this,
+                buffer,
+                bufferReadPos
+            );
+        }
+        else if (bufferReadPos >= modelSectionBegin && bufferReadPos < modelSectionEnd)
+        {
+            serializedAssetSize = serializedModelSize;
+            pAsset = Model::create_from_metadata_buffer(
+                this,
+                buffer,
+                bufferReadPos
+            );
+        }
+        bufferReadEndPos = bufferReadPos + serializedAssetSize;
+        return pAsset;
     }
 
     std::unordered_map<std::string, Asset*> AssetManager::createFromMetadataBuffer(
