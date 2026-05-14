@@ -10,7 +10,7 @@
 
 namespace platypus
 {
-    std::vector<char> load_file(const std::string& filepath)
+    std::vector<char> read_file(const std::string& filepath)
     {
         std::vector<char> buffer;
         try
@@ -55,6 +55,44 @@ namespace platypus
         }
 
         return buffer;
+    }
+
+    void write_file(const std::string& filepath, const std::vector<char>& data)
+    {
+        try
+        {
+            std::ofstream file(filepath, std::ios::binary);
+            if (!file.is_open())
+            {
+                Debug::log(
+                    "Failed to open file: " + filepath + " for writing",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return;
+            }
+
+            file.write(data.data(), data.size());
+            file.close();
+        }
+        catch (const std::ifstream::failure& e)
+        {
+            Debug::log(
+                "Failed write file: " + filepath + " "
+                "(std::ifstream::failure) " + std::string(e.what()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
+        catch (const std::exception& e)
+        {
+            Debug::log(
+                "Failed write file: " + filepath + " "
+                "(std::exception) " + std::string(e.what()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+        }
     }
 
 

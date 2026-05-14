@@ -111,26 +111,6 @@ namespace platypus
             _persistentAssets.erase(assetID);
     }
 
-    // TODO: delete below?
-    /*
-    void AssetManager::destroyPersistentAsset(ID_t assetID)
-    {
-        if (_persistentAssets.find(assetID) == _persistentAssets.end())
-        {
-            Debug::log(
-                "Asset with id: " + std::to_string(assetID) + " wasn't marked as persistent",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        delete _assets[assetID];
-        _assets.erase(assetID);
-        _persistentAssets.erase(assetID);
-    }
-    */
-
     Image* AssetManager::createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format)
     {
         bool failure = false;
@@ -322,6 +302,7 @@ namespace platypus
             shadeless,
             name,
             id,
+            false, // is persistent?
             customVertexShaderFilename,
             customFragmentShaderFilename
         );
@@ -822,6 +803,7 @@ namespace platypus
 
     void AssetManager::makePersistent(Asset* pAsset)
     {
+        pAsset->setPersistent(true);
         _persistentAssets[pAsset->getID()] = pAsset;
     }
 

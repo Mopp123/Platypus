@@ -115,6 +115,7 @@ namespace platypus
             bool shadeless = false,
             const std::string& name = "",
             ID_t id = NULL_ID,
+            bool persistent = false,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );

@@ -192,9 +192,10 @@ namespace platypus
         int channels,
         ImageFormat format,
         const std::string& name,
-        ID_t id
+        ID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_IMAGE, name, id),
+        Asset(AssetType::ASSET_TYPE_IMAGE, name, id, persistent),
         _width(width),
         _height(height),
         _channels(channels),
@@ -306,8 +307,7 @@ namespace platypus
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
 
-        // TODO: Figure how to deal with this?
-        uint8_t persistent = 0;
+        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 

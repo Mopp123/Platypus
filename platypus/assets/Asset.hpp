@@ -50,11 +50,17 @@ namespace platypus
         ID_t _id = NULL_ID;
         AssetType _type = AssetType::ASSET_TYPE_NONE;
         std::string _name;
+        bool _persistent = false;
 
     public:
         Asset() = delete;
         Asset(const Asset&) = delete;
-        Asset(AssetType type, const std::string& name = "", ID_t id = NULL_ID);
+        Asset(
+            AssetType type,
+            const std::string& name = "",
+            ID_t id = NULL_ID,
+            bool persistent = false
+        );
         virtual ~Asset();
 
         virtual void writeToMetadataBuffer(
@@ -62,7 +68,8 @@ namespace platypus
         ) const { }
 
         // TODO: Maybe this should be member var of Asset..?
-        bool isPersistent() const;
+        inline bool isPersistent() const { return _persistent; }
+        inline void setPersistent(bool arg) { _persistent = arg; }
 
         inline ID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }

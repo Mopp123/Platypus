@@ -29,10 +29,11 @@ namespace platypus
         bool shadeless,
         const std::string& name,
         ID_t id,
+        bool persistent,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     ) :
-        Asset(AssetType::ASSET_TYPE_MATERIAL, name, id),
+        Asset(AssetType::ASSET_TYPE_MATERIAL, name, id, persistent),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),
@@ -686,8 +687,7 @@ namespace platypus
         memcpy(pBuf + pos, &shadeless, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        // TODO: Figure how to deal with this?
-        const uint8_t persistent = 0;
+        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 

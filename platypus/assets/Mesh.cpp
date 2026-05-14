@@ -27,9 +27,10 @@ namespace platypus
         Pose bindPose,
         const std::vector<SkeletalAnimationData*>& animations,
         const std::string& name,
-        ID_t id
+        ID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_MESH, name, id),
+        Asset(AssetType::ASSET_TYPE_MESH, name, id, persistent),
         _type(type),
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),

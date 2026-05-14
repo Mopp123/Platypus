@@ -95,7 +95,8 @@ namespace platypus
             int channels,
             ImageFormat format,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            ID_t id = NULL_ID,
+            bool persistent = false
         );
         ~Image();
 

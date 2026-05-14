@@ -38,7 +38,8 @@ namespace platypus
             bool instanced,
             const std::vector<Mesh*>& meshes,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            ID_t id = NULL_ID,
+            bool persistent = false
         );
         ~Model();
 

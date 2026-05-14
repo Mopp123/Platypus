@@ -20,9 +20,15 @@ namespace platypus
         }
     }
 
-    Asset::Asset(AssetType type, const std::string& name, ID_t id) :
+    Asset::Asset(
+        AssetType type,
+        const std::string& name,
+        ID_t id,
+        bool persistent
+    ) :
         _type(type),
-        _name(name)
+        _name(name),
+        _persistent(persistent)
     {
         if (id != NULL_ID)
         {
@@ -38,11 +44,5 @@ namespace platypus
     Asset::~Asset()
     {
         ID::erase(_id);
-    }
-
-    bool Asset::isPersistent() const
-    {
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        return pAssetManager->isPersistent(_id);
     }
 }

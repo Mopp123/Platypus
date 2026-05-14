@@ -11,9 +11,10 @@ namespace platypus
         bool instanced,
         const std::vector<Mesh*>& meshes,
         const std::string& name,
-        ID_t id
+        ID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_MODEL, name, id),
+        Asset(AssetType::ASSET_TYPE_MODEL, name, id, persistent),
         _filepath(filepath),
         _meshes(meshes),
         _instanced(instanced)
@@ -51,8 +52,7 @@ namespace platypus
         memcpy(pBuf + pos, &instanced, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        // TODO: Figure how to deal with this?
-        uint8_t persistent = 0;
+        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
@@ -128,7 +128,13 @@ namespace platypus
         );
 
         if (persistent)
+        {
+            const std::vector<Mesh*>& meshes = pModel->getMeshes();
+            for (Mesh* pMesh : meshes)
+                pAssetManager->makePersistent(pMesh);
+
             pAssetManager->makePersistent(pModel);
+        }
 
         return pModel;
     }

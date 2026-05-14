@@ -64,8 +64,7 @@ namespace platypus
         memcpy(pBuf + pos, &useMipmapping, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        // TODO: Figure how to deal with this?
-        uint8_t persistent = 0;
+        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 

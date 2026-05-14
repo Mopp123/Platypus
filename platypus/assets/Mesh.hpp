@@ -48,7 +48,8 @@ namespace platypus
             Pose bindPose,
             const std::vector<SkeletalAnimationData*>& animations,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            ID_t id = NULL_ID,
+            bool persistent = false
         );
         ~Mesh();
 

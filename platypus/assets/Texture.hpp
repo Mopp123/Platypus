@@ -101,7 +101,8 @@ namespace platypus
             const Image* pImage,
             const TextureSampler* pSampler,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            ID_t id = NULL_ID,
+            bool persistent = false
         );
         Texture(const Texture&) = delete;
         ~Texture();

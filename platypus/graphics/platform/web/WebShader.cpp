@@ -58,7 +58,7 @@ namespace platypus
         _filename(filename)
     {
         const std::string fullPath = "assets/shaders/web/" + filename + ".glsl";
-        std::string source = load_text_file(fullPath);
+        std::string source = read_text_file(fullPath);
 
         GLenum stageType = to_gl_shader(stage);
         uint32_t id = glCreateShader(stageType);
