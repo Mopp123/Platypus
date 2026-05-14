@@ -69,13 +69,13 @@ namespace platypus
         SkeletalAnimation** ppSkeletalAnimation,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
     void deserialize(
         Scene* pScene,
         SkeletonJoint** ppSkeletonJoint,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 }

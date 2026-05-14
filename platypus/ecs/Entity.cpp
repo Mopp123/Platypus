@@ -63,7 +63,7 @@ namespace platypus
         Scene* pScene,
         entityID_t& outEntity,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(dataSize == serialized_entity_size);
@@ -81,14 +81,14 @@ namespace platypus
 
         memcpy(
             &componentMask,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(uint64_t)
         );
         pos += sizeof(uint64_t);
 
         memcpy(
             &active,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(uint8_t)
         );
         // NOTE: atm assuming that all written entities are in correct order

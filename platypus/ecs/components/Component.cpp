@@ -131,7 +131,7 @@ namespace platypus
         void** ppComponent,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         Debug::log(

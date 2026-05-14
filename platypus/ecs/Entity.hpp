@@ -34,6 +34,6 @@ namespace platypus
         Scene* pScene,
         entityID_t& outEntity,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 }

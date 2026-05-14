@@ -13,23 +13,46 @@ namespace platypus
     std::vector<char> load_file(const std::string& filepath)
     {
         std::vector<char> buffer;
-        std::ifstream file(filepath, std::ios::ate | std::ios::binary);
-        if (!file.is_open())
+        try
+        {
+            std::ifstream file(filepath, std::ios::ate | std::ios::binary);
+            if (!file.is_open())
+            {
+                Debug::log(
+                    "Failed to open file: " + filepath,
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return buffer;
+            }
+
+            size_t fileSize = static_cast<size_t>(file.tellg());
+            buffer.resize(fileSize);
+
+            file.seekg(0, std::ios::beg);
+            file.read(buffer.data(), fileSize);
+            file.close();
+        }
+        catch (const std::ifstream::failure& e)
         {
             Debug::log(
-                "@load_file "
-                "Failed to open file from: " + filepath,
+                "Failed read file: " + filepath + " "
+                "(std::ifstream::failure) " + std::string(e.what()),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             return buffer;
         }
-
-        size_t fileSize = (size_t)file.tellg();
-        buffer.resize(fileSize);
-
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-        file.close();
+        catch (const std::exception& e)
+        {
+            Debug::log(
+                "Failed read file: " + filepath + " "
+                "(std::exception) " + std::string(e.what()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return buffer;
+        }
 
         return buffer;
     }

@@ -891,14 +891,27 @@ namespace platypus
             sizeof(uint32_t)
         );
 
+        size_t pos = sizeof(uint32_t) * 4;
         for (const Image* pImage : imageAssets)
+        {
             pImage->writeToMetadataBuffer(buffer);
+            pos += Image::get_serialized_metadata_size();
+        }
         for (const Texture* pTexture : textureAssets)
+        {
             pTexture->writeToMetadataBuffer(buffer);
+            pos += Texture::get_serialized_metadata_size();
+        }
         for (const Material* pMaterial : materialAssets)
+        {
             pMaterial->writeToMetadataBuffer(buffer);
+            pos += Material::get_serialized_metadata_size();
+        }
         for (const Model* pModel : modelAssets)
+        {
             pModel->writeToMetadataBuffer(buffer);
+            pos += Model::get_serialized_metadata_size();
+        }
 
         return buffer;
     }
@@ -1005,6 +1018,7 @@ namespace platypus
             }
             ++loadedCount;
         }
+        return outAssets;
     }
 
     bool AssetManager::validateAsset(

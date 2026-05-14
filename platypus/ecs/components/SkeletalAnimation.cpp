@@ -172,7 +172,7 @@ namespace platypus
         SkeletalAnimation** ppSkeletalAnimation,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -197,42 +197,42 @@ namespace platypus
 
         memcpy(
             &mode,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(AnimationMode)
         );
         pos += sizeof(AnimationMode);
 
         memcpy(
             &animationID,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(ID_t)
         );
         pos += sizeof(ID_t);
 
         memcpy(
             &time,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(float)
         );
         pos += sizeof(float);
 
         memcpy(
             &length,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(float)
         );
         pos += sizeof(float);
 
         memcpy(
             &stopped,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(uint8_t)
         );
         pos += sizeof(uint8_t);
 
         memcpy(
             jointMatrices,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(Matrix4f) * skeletal_animation_max_joints
         );
 
@@ -249,7 +249,7 @@ namespace platypus
         SkeletonJoint** ppSkeletonJoint,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -263,7 +263,7 @@ namespace platypus
         uint32_t jointIndex;
         memcpy(
             &jointIndex,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(uint32_t)
         );
 

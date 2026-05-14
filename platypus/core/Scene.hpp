@@ -70,9 +70,6 @@ namespace platypus
 
         std::unordered_map<ComponentType, const void*> getComponents(entityID_t entityID) const;
 
-        virtual void init() = 0;
-        virtual void update() = 0;
-
         void addToComponentMask(entityID_t entityID, ComponentType componentType);
         void setComponentMask(entityID_t entityID, uint64_t mask);
         // @param errLocation This can be used to tell what func caused this to error
@@ -80,6 +77,24 @@ namespace platypus
         bool isValidComponent(ComponentType, const std::string& errLocation) const;
 
         void setActiveCameraEntity(entityID_t entityID);
+
+        // Puts all entities and their components into buffer that can be saved on disk
+        std::vector<char> createSerializedBuffer(
+            const std::vector<entityID_t>& toSerialize
+        );
+
+        // Creates scene according to inputted serialized buffer.
+        // NOTE: The input buffer here is currently intended to contain all assets as well
+        // TODO: Why the fuck does the above need to be so? -> rather take just the portion containing
+        // the entity and component stuff?
+        std::vector<entityID_t> createFromSerializedBuffer(
+            const std::vector<char>& buffer,
+            size_t bufferPos
+        );
+
+        virtual void init() = 0;
+        virtual void update() = 0;
+
         inline entityID_t getActiveCameraEntity() const { return _activeCameraEntity; }
     };
 }

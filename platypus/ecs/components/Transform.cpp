@@ -639,7 +639,7 @@ namespace platypus
         Transform** ppTransform,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -655,14 +655,14 @@ namespace platypus
 
         memcpy(
             &localMatrix,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(Matrix4f)
         );
         pos += sizeof(Matrix4f);
 
         memcpy(
             &globalMatrix,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(Matrix4f)
         );
 
@@ -683,7 +683,7 @@ namespace platypus
         GUITransform** ppTransform,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -699,14 +699,14 @@ namespace platypus
 
         memcpy(
             &position,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(Vector2f)
         );
         pos += sizeof(Vector2f);
 
         memcpy(
             &scale,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(Vector2f)
         );
 
@@ -725,7 +725,7 @@ namespace platypus
         Parent** ppParent,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -740,7 +740,7 @@ namespace platypus
 
         memcpy(
             &parentEntityID,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(entityID_t)
         );
 
@@ -753,7 +753,7 @@ namespace platypus
         Children** ppChildren,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -767,7 +767,7 @@ namespace platypus
         size_t childCount;
         memcpy(
             &childCount,
-            reinterpret_cast<char*>(pData) + pos,
+            reinterpret_cast<const char*>(pData) + pos,
             sizeof(size_t)
         );
         pos += sizeof(size_t);
@@ -779,7 +779,7 @@ namespace platypus
             entityID_t childID;
             memcpy(
                 &childID,
-                reinterpret_cast<char*>(pData) + pos,
+                reinterpret_cast<const char*>(pData) + pos,
                 sizeof(entityID_t)
             );
             childEntityIDs[i] = childID;

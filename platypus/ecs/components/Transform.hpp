@@ -124,7 +124,7 @@ namespace platypus
         Transform** ppTransform,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 
     void deserialize(
@@ -132,7 +132,7 @@ namespace platypus
         GUITransform** ppTransform,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 
     void deserialize(
@@ -140,7 +140,7 @@ namespace platypus
         Parent** ppParent,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 
     void deserialize(
@@ -148,6 +148,6 @@ namespace platypus
         Children** ppChildren,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 }

@@ -321,6 +321,7 @@ namespace platypus
         memset(pBuf + pos, 0, asset_metadata_filepath_size);
         memcpy(pBuf + pos, _filepath.data(), _filepath.size());
 
+        pos += asset_metadata_filepath_size;
         PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
     }
 
@@ -330,7 +331,7 @@ namespace platypus
         size_t bufferPos
     )
     {
-        PLATYPUS_ASSERT((targetBuffer.size() + bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
+        PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
         ID_t id = NULL_ID;
         ImageFormat format;
         uint8_t persistent;

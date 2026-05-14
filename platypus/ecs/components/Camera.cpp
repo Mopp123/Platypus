@@ -119,7 +119,7 @@ namespace platypus
         Camera** ppCamera,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -141,42 +141,42 @@ namespace platypus
         // its kind of useless atm here and also in the serialized version!
         memcpy(
             &perspectiveProjectionMatrix,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(Matrix4f)
         );
         pos += sizeof(Matrix4f);
 
         memcpy(
             &orthographicProjectionMatrix,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(Matrix4f)
         );
         pos += sizeof(Matrix4f);
 
         memcpy(
             &aspectRatio,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(float)
         );
         pos += sizeof(float);
 
         memcpy(
             &fov,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(float)
         );
         pos += sizeof(float);
 
         memcpy(
             &zNear,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(float)
         );
         pos += sizeof(float);
 
         memcpy(
             &zFar,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(float)
         );
 

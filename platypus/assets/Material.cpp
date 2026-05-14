@@ -716,7 +716,7 @@ namespace platypus
         size_t bufferPos
     )
     {
-        PLATYPUS_ASSERT((targetBuffer.size() + bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
+        PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
         ID_t id;
         float specularStrength;

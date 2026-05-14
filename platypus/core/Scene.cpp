@@ -537,4 +537,119 @@ namespace platypus
         }
         _activeCameraEntity = entityID;
     }
+
+    std::vector<char> Scene::createSerializedBuffer(
+        const std::vector<entityID_t>& toSerialize
+    )
+    {
+        std::vector<char> serializedData(sizeof(uint32_t));
+        const uint32_t entityCount = static_cast<const uint32_t>(toSerialize.size());
+        memcpy(serializedData.data(), &entityCount, sizeof(uint32_t));
+        size_t pos = sizeof(uint32_t);
+
+        for (entityID_t entityID : toSerialize)
+        {
+            const Entity& entity = getEntity(entityID);
+            std::vector<char> entityData = serialize_entity(entity);
+            serializedData.resize(serializedData.size() + entityData.size());
+            memcpy(serializedData.data() + pos, entityData.data(), entityData.size());
+            pos += entityData.size();
+
+            std::unordered_map<ComponentType, const void*> components = getComponents(entityID);
+            Debug::log(
+                "___TEST___serializing " + std::to_string(components.size()) + " components "
+                "for entity " + std::to_string(entityID)
+            );
+            std::unordered_map<ComponentType, const void*>::const_iterator it;
+            for (it = components.begin(); it != components.end(); ++it)
+            {
+                Debug::log(
+                    "___TEST___serializing component: " + component_type_to_string(it->first)
+                );
+                const size_t serializedComponentSize = get_component_serialized_size(it->first);
+                serializedData.resize(serializedData.size() + serializedComponentSize);
+                // TODO: UNFUCK THIS SHIT!
+                std::vector<char> componentData = serialize_component(
+                    it->first,
+                    get_component_size(it->first),
+                    it->second
+                );
+                PLATYPUS_ASSERT(componentData.size() == serializedComponentSize);
+                memcpy(serializedData.data() + pos, componentData.data(), componentData.size());
+
+                pos += componentData.size();
+            }
+        }
+        return serializedData;
+    }
+
+    std::vector<entityID_t> Scene::createFromSerializedBuffer(
+        const std::vector<char>& buffer,
+        size_t bufferPos
+    )
+    {
+        PLATYPUS_ASSERT((bufferPos + sizeof(uint32_t)) <= buffer.size());
+        const char* pData = buffer.data() + bufferPos;
+        uint32_t entityCount = 0;
+        memcpy(
+            &entityCount,
+            pData,
+            sizeof(uint32_t)
+        );
+        size_t pos = sizeof(uint32_t);
+        std::vector<entityID_t> entities(entityCount);
+
+        Debug::log("___TEST___attempting to load " + std::to_string(entityCount) + " entities...");
+
+        for (size_t i = 0; i < entityCount; ++i)
+        {
+            entityID_t entityID;
+            deserialize_entity(
+                this,
+                entityID,
+                serialized_entity_size,
+                reinterpret_cast<const char*>(pData) + pos
+            );
+            pos += serialized_entity_size;
+
+            Entity entity = getEntity(entityID);
+            size_t componentCount = get_component_count(entity.componentMask);
+            Debug::log(
+                "___TEST___attempting to load " + std::to_string(componentCount) + " components "
+                "for entity " + std::to_string(entityID)
+            );
+            for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
+            {
+                ComponentType componentType;
+                memcpy(
+                    &componentType,
+                    reinterpret_cast<const char*>(pData) + pos,
+                    sizeof(ComponentType)
+                );
+                size_t serializedComponentSize = get_component_serialized_size(componentType);
+
+                Debug::log(
+                    "___TEST___attempting to deserialize component: " + component_type_to_string(componentType) + " "
+                    "serialized size should be: " + std::to_string(serializedComponentSize)
+                );
+
+                void* pComponent = nullptr;
+                deserialize_component(
+                    this,
+                    componentType,
+                    &pComponent,
+                    entityID,
+                    serializedComponentSize,
+                    reinterpret_cast<const char*>(pData) + pos
+                );
+                pos += serializedComponentSize;
+            }
+            entities[i] = entityID;
+            Debug::log(
+                "___TEST___loaded entity: " + std::to_string(entityID) + " "
+                "with " + std::to_string(componentCount) + " components"
+            );
+        }
+        return entities;
+    }
 }

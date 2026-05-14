@@ -80,6 +80,6 @@ namespace platypus
         Renderable3D** ppRenderable,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     );
 }

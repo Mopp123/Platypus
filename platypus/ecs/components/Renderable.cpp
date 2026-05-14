@@ -213,7 +213,7 @@ namespace platypus
         Renderable3D** ppRenderable,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -229,14 +229,14 @@ namespace platypus
 
         memcpy(
             &meshID,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(ID_t)
         );
         pos += sizeof(ID_t);
 
         memcpy(
             &materialID,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(ID_t)
         );
 

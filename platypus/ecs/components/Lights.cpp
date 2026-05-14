@@ -154,7 +154,7 @@ namespace platypus
         Light** ppLight,
         entityID_t entityID,
         size_t dataSize,
-        void* pData
+        const void* pData
     )
     {
         PLATYPUS_ASSERT(pScene->entityExists(entityID));
@@ -175,49 +175,49 @@ namespace platypus
 
         memcpy(
             &shadowProjectionMatrix,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(Matrix4f)
         );
         pos += sizeof(Matrix4f);
 
         memcpy(
             &shadowViewMatrix,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(Matrix4f)
         );
         pos += sizeof(Matrix4f);
 
         memcpy(
             &direction,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(Vector3f)
         );
         pos += sizeof(Vector3f);
 
         memcpy(
             &color,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(Vector3f)
         );
         pos += sizeof(Vector3f);
 
         memcpy(
             &maxShadowDistance,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(float)
         );
         pos += sizeof(float);
 
         memcpy(
             &type,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(LightType)
         );
         pos += sizeof(LightType);
 
         memcpy(
             &enableShadows,
-            reinterpret_cast<uint8_t*>(pData) + pos,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
             sizeof(uint8_t)
         );
         pos += sizeof(uint8_t);
