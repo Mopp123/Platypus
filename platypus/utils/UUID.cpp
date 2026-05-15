@@ -1,68 +1,47 @@
 #include "UUID.hpp"
 #include <time.h>
-#include <cstdlib>
-#include <cstring>
 #include "platypus/core/Debug.hpp"
 
 
 namespace platypus
 {
-    unsigned int UUID::s_seed = 4276;
-    std::set<UUID_t> UUID::s_usedIDs;
+    std::mt19937_64 UUID::s_randomEngine;
+    std::unordered_map<uint32_t, std::set<UUID_t>> UUID::s_IDPools;
     bool UUID::s_initialized = false;
 
     void UUID::init()
     {
-        // Not sure should this be more deterministic or not...
-        //std::srand(s_seed);
-        std::srand(static_cast<unsigned int>(time(nullptr)));
+        s_randomEngine.seed(time(nullptr));
         s_initialized = true;
     }
 
     // NOTE: Could be done better...
-    UUID_t UUID::generate()
+    UUID_t UUID::generate(uint32_t poolID)
     {
         if (!s_initialized)
             init();
 
-        UUID_t id = 0;
-        while (true)
+        if (s_IDPools.find(poolID) == s_IDPools.end())
+            s_IDPools[poolID] = { };
+
+        std::set<UUID_t>& IDPool = s_IDPools[poolID];
+        UUID_t id = s_randomEngine();
+        if (IDPool.find(id) != IDPool.end())
         {
-            // randomize each byte individually..
-            for (size_t i = 0; i < sizeof(UUID_t); ++i)
-            {
-                uint8_t bVal = (uint8_t)(std::rand() % 255);
-                memset(((uint8_t*)&id) + i, bVal, 1);
-            }
-            if ((s_usedIDs.find(id) != s_usedIDs.end()))
-            {
-                Debug::log(
-                    "ID: " + std::to_string(id) + " already exists! "
-                    "Attempting to generate again...",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_WARNING
-                );
-            }
-            else if (id == NULL_UUID)
-            {
-                Debug::log(
-                    "Generated ID was NULL_UUID!"
-                    "Attempting to generate again...",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_WARNING
-                );
-            }
-            else
-            {
-                break;
-            }
+            Debug::log(
+                "UUID: " + std::to_string(id) + " already exists in pool: " + std::to_string(poolID) + "! "
+                "With current system this should never happen!?!?",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
         }
-        s_usedIDs.insert(id);
+        IDPool.insert(id);
 
         return id;
     }
 
-    bool UUID::occupy(UUID_t id)
+    bool UUID::occupy(UUID_t id, uint32_t poolID)
     {
         if (id == NULL_UUID)
         {
@@ -78,10 +57,10 @@ namespace platypus
         if (!s_initialized)
             init();
 
-        if (s_usedIDs.find(id) != s_usedIDs.end())
+        if (s_IDPools.find(poolID) == s_IDPools.end())
         {
             Debug::log(
-                "ID: " + std::to_string(id) + " was already in use!",
+                "IDPool: " + std::to_string(poolID) + " not found!",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -89,24 +68,49 @@ namespace platypus
             return false;
         }
 
-        s_usedIDs.insert(id);
+        std::set<UUID_t>& IDPool = s_IDPools[poolID];
+        if (IDPool.find(id) != IDPool.end())
+        {
+            Debug::log(
+                "UUID: " + std::to_string(id) + " was already in use in pool: " + std::to_string(poolID),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return false;
+        }
+
+        IDPool.insert(id);
         return true;
     }
 
-    void UUID::erase(UUID_t idToErase)
+    void UUID::erase(UUID_t idToErase, uint32_t poolID)
     {
-        std::set<UUID_t>::iterator it = s_usedIDs.find(idToErase);
-        if (it == s_usedIDs.end())
+        if (s_IDPools.find(poolID) == s_IDPools.end())
         {
             Debug::log(
-                "@ID::erase ID: " + std::to_string(idToErase) + " wasn't found from used IDs",
+                "IDPool: " + std::to_string(poolID) + " not found!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        std::set<UUID_t>& IDPool = s_IDPools[poolID];
+        std::set<UUID_t>::iterator it = IDPool.find(idToErase);
+        if (it == IDPool.end())
+        {
+            Debug::log(
+                "UUID: " + std::to_string(idToErase) + " not found from pool: " + std::to_string(poolID),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
         else
         {
-            s_usedIDs.erase(it);
+            IDPool.erase(it);
         }
     }
 
@@ -115,20 +119,11 @@ namespace platypus
     // https://stackoverflow.com/questions/919612/mapping-two-integers-to-one-in-a-unique-and-deterministic-way
     UUID_t UUID::hash(UUID_t a, UUID_t b)
     {
+        // TODO: Make sure this id doesn't exist already in any pool?
         uint32_t A = (uint32_t)(a >= 0 ? 2 * (int32_t)a : -2 * (int32_t)a - 1);
         uint32_t B = (uint32_t)(b >= 0 ? 2 * (int32_t)b : -2 * (int32_t)b - 1);
         uint32_t C = (int32_t)((A >= B ? A * A + A + B : A + B * B) / 2);
         UUID_t id = (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
-        if (s_usedIDs.find(id) != s_usedIDs.end())
-        {
-            Debug::log(
-                "@ID::hash "
-                "UUID: " + std::to_string(id) + " already exists!",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return NULL_UUID;
-        }
         return id;
     }
 }

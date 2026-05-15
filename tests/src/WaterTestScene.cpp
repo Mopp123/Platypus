@@ -83,19 +83,19 @@ void WaterTestScene::init()
         ""
     };
 
-    std::vector<ID_t> diffuseTextures = loadTextures(
+    std::vector<UUID_t> diffuseTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         pTextureSampler,
         diffuseTexturePaths
     );
-    std::vector<ID_t> specularTextures = loadTextures(
+    std::vector<UUID_t> specularTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         pTextureSampler,
         specularTexturePaths
     );
-    std::vector<ID_t> normalTextures = loadTextures(
+    std::vector<UUID_t> normalTextures = loadTextures(
         pAssetManager,
         ImageFormat::R8G8B8A8_UNORM,
         pTextureSampler,
@@ -160,7 +160,7 @@ void WaterTestScene::init()
     );
 
     Material* pWaterMaterial = pAssetManager->createMaterial(
-        NULL_ID,
+        NULL_UUID,
         { pWaterTexture->getID() },
         { pWaterDistortionTexture->getID() },
         { },
@@ -173,7 +173,7 @@ void WaterTestScene::init()
         true, // transparent
         false, // shadeless
         "", // name
-        NULL_ID, // id
+        NULL_UUID, // id
         "water/VertexShader",
         "water/FragmentShader"
     );

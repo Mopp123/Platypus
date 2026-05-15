@@ -144,7 +144,7 @@ void SkinnedMeshTestScene::init()
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        NULL_ID,
+        NULL_UUID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
         { },
@@ -152,7 +152,7 @@ void SkinnedMeshTestScene::init()
         16.0f
     );
     Material* pBoxMaterial = pAssetManager->createMaterial(
-        NULL_ID,
+        NULL_UUID,
         { pBoxDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
         { },

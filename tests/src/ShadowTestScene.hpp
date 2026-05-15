@@ -15,7 +15,7 @@ private:
     entityID_t _framebufferDebugEntity = NULL_ENTITY_ID;
     platypus::Texture* _pTestTexture1 = nullptr;
     platypus::Texture* _pTestTexture2 = nullptr;
-    platypus::Texture* _pFramebufferDebugTexture = NULL_ID;
+    platypus::Texture* _pFramebufferDebugTexture = NULL_UUID;
 
 public:
     ShadowTestScene();

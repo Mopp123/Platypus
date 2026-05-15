@@ -3,14 +3,14 @@
 
 using namespace platypus;
 
-static std::vector<ID_t> load_textures(
+static std::vector<UUID_t> load_textures(
     AssetManager* pAssetManager,
     ImageFormat imageFormat,
     const TextureSampler* pSampler,
     std::vector<std::string> filepaths
 )
 {
-    std::vector<ID_t> textures;
+    std::vector<UUID_t> textures;
     for (const std::string& path : filepaths)
     {
         textures.push_back(
@@ -113,19 +113,19 @@ void TerrainTestScene::init()
         "assets/textures/terrain/jungle_mntn2_n.png"
     };
 
-    std::vector<ID_t> diffuseTextures = load_textures(
+    std::vector<UUID_t> diffuseTextures = load_textures(
         pAssetManager,
         texImageFormat,
         pTextureSampler,
         diffuseTexturePaths
     );
-    std::vector<ID_t> specularTextures = load_textures(
+    std::vector<UUID_t> specularTextures = load_textures(
         pAssetManager,
         texImageFormat,
         pTextureSampler,
         specularTexturePaths
     );
-    std::vector<ID_t> normalTextures = load_textures(
+    std::vector<UUID_t> normalTextures = load_textures(
         pAssetManager,
         ImageFormat::R8G8B8A8_UNORM,
         pTextureSampler,

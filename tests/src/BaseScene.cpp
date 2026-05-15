@@ -113,17 +113,17 @@ void BaseScene::initBase()
 void BaseScene::updateBase()
 {}
 
-std::vector<ID_t> BaseScene::loadTextures(
+std::vector<UUID_t> BaseScene::loadTextures(
     AssetManager* pAssetManager,
     ImageFormat imageFormat,
     const TextureSampler* pSampler,
     std::vector<std::string> filepaths
 )
 {
-    std::vector<ID_t> textures;
+    std::vector<UUID_t> textures;
     for (const std::string& path : filepaths)
     {
-        ID_t textureID = pAssetManager->getZeroTexture()->getID();
+        UUID_t textureID = pAssetManager->getZeroTexture()->getID();
         if (!path.empty())
         {
             textureID = pAssetManager->loadTexture(
@@ -162,7 +162,7 @@ Material* BaseScene::createMeshMaterial(
         pSampler
     );
     Material* pMaterial = pAssetManager->createMaterial(
-        NULL_ID,
+        NULL_UUID,
         { pTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
         { },
@@ -182,8 +182,8 @@ entityID_t BaseScene::createStaticMeshEntity(
     const Vector3f& position,
     const Quaternion& rotation,
     const Vector3f& scale,
-    ID_t meshAssetID,
-    ID_t materialAssetID
+    UUID_t meshAssetID,
+    UUID_t materialAssetID
 )
 {
     entityID_t entity = createEntity();
@@ -208,7 +208,7 @@ entityID_t BaseScene::createSkinnedMeshEntity(
     const platypus::Vector3f& scale,
     platypus::Mesh* pMesh,
     platypus::SkeletalAnimationData* pAnimationAsset,
-    ID_t materialAssetID,
+    UUID_t materialAssetID,
     std::vector<entityID_t>& outJointEntities
 )
 {

@@ -96,19 +96,19 @@ void ShadowTestScene::init()
         "assets/textures/terrain/jungle_mntn2_n.png"
     };
 
-    std::vector<ID_t> diffuseTextures = loadTextures(
+    std::vector<UUID_t> diffuseTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         pTextureSampler,
         diffuseTexturePaths
     );
-    std::vector<ID_t> specularTextures = loadTextures(
+    std::vector<UUID_t> specularTextures = loadTextures(
         pAssetManager,
         texImageFormat,
         pTextureSampler,
         specularTexturePaths
     );
-    std::vector<ID_t> normalTextures = loadTextures(
+    std::vector<UUID_t> normalTextures = loadTextures(
         pAssetManager,
         ImageFormat::R8G8B8A8_UNORM,
         pTextureSampler,
