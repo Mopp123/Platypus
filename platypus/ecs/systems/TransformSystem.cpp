@@ -59,7 +59,7 @@ namespace platypus
         );
         if (pEntityAnimation && (pEntityAnimation != pUseAnimation))
         {
-            ID_t prevAnimAssetID = NULL_ID;
+            UUID_t prevAnimAssetID = NULL_UUID;
             if (pUseAnimation)
                 prevAnimAssetID = pUseAnimation->animationID;
             pUseAnimation = pEntityAnimation;

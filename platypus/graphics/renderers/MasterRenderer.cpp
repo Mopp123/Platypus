@@ -198,13 +198,14 @@ namespace platypus
         if (pRenderable3D)
         {
             AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-            const ID_t meshID = pRenderable3D->meshID;
+            const UUID_t meshID = pRenderable3D->meshID;
             Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
             const MeshType meshType = pMesh->getType();
-            const ID_t materialID = pRenderable3D->materialID;
+            const UUID_t materialID = pRenderable3D->materialID;
             const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
 
-            ID_t batchID = ID::hash(meshID, materialID);
+            // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs!
+            UUID_t batchID = UUID::hash(meshID, materialID);
 
             if (pMaterial->isTransparent())
             {

@@ -5,7 +5,6 @@
 #include "platypus/graphics/Buffers.hpp"
 #include "platypus/utils/Maths.hpp"
 #include "platypus/utils/AnimationDataUtils.hpp"
-#include <unordered_map>
 
 
 namespace platypus
@@ -48,7 +47,7 @@ namespace platypus
             Pose bindPose,
             const std::vector<SkeletalAnimationData*>& animations,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             bool persistent = false
         );
         ~Mesh();

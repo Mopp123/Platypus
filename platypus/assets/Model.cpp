@@ -11,7 +11,7 @@ namespace platypus
         bool instanced,
         const std::vector<Mesh*>& meshes,
         const std::string& name,
-        ID_t id,
+        UUID_t id,
         bool persistent
     ) :
         Asset(AssetType::ASSET_TYPE_MODEL, name, id, persistent),
@@ -45,8 +45,8 @@ namespace platypus
         targetBuffer.resize(prevSize + get_serialized_metadata_size());
         char* pBuf = targetBuffer.data() + prevSize;
 
-        memcpy(pBuf, &_id, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(pBuf, &_id, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
         const uint8_t instanced = static_cast<uint8_t>(_instanced);
         memcpy(pBuf + pos, &instanced, sizeof(uint8_t));
@@ -56,9 +56,9 @@ namespace platypus
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        ID_t meshIDs[asset_metadata_model_max_meshes];
-        const size_t meshesSize = sizeof(ID_t) * asset_metadata_model_max_meshes;
-        memset(meshIDs, NULL_ID, meshesSize);
+        UUID_t meshIDs[asset_metadata_model_max_meshes];
+        const size_t meshesSize = sizeof(UUID_t) * asset_metadata_model_max_meshes;
+        memset(meshIDs, NULL_UUID, meshesSize);
         for (size_t i = 0; i < _meshes.size(); ++i)
             meshIDs[i] = _meshes[i]->getID();
 
@@ -82,17 +82,17 @@ namespace platypus
     {
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
-        ID_t id;
+        UUID_t id;
         uint8_t instanced;
         uint8_t persistent;
-        ID_t meshIDs[asset_metadata_model_max_meshes];
+        UUID_t meshIDs[asset_metadata_model_max_meshes];
         char name[asset_metadata_name_size];
         char filepath[asset_metadata_filepath_size];
 
         const char* pBuf = targetBuffer.data() + bufferPos;
 
-        memcpy(&id, pBuf, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(&id, pBuf, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
         memcpy(&instanced, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
@@ -100,7 +100,7 @@ namespace platypus
         memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        const size_t meshesSize = sizeof(ID_t) * asset_metadata_model_max_meshes;
+        const size_t meshesSize = sizeof(UUID_t) * asset_metadata_model_max_meshes;
         memcpy(&meshIDs, pBuf + pos, meshesSize);
         pos += meshesSize;
 
@@ -112,10 +112,10 @@ namespace platypus
 
         PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
 
-        std::vector<ID_t> useMeshIDs;
+        std::vector<UUID_t> useMeshIDs;
         for (size_t i = 0; i < asset_metadata_model_max_meshes; ++i)
         {
-            if (meshIDs[i] != NULL_ID)
+            if (meshIDs[i] != NULL_UUID)
                 useMeshIDs.push_back(meshIDs[i]);
         }
 
@@ -141,9 +141,9 @@ namespace platypus
 
     size_t Model::get_serialized_metadata_size()
     {
-        return sizeof(ID_t) +
+        return sizeof(UUID_t) +
             sizeof(uint8_t) * 2 +
-            sizeof(ID_t) * asset_metadata_model_max_meshes +
+            sizeof(UUID_t) * asset_metadata_model_max_meshes +
             asset_metadata_name_size +
             asset_metadata_filepath_size;
     }

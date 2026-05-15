@@ -538,7 +538,7 @@ namespace platypus
         _activeCameraEntity = entityID;
     }
 
-    std::vector<char> Scene::createSerializedBuffer(
+    std::vector<char> Scene::serialize(
         const std::vector<entityID_t>& toSerialize
     )
     {
@@ -583,13 +583,84 @@ namespace platypus
         return serializedData;
     }
 
-    std::vector<entityID_t> Scene::createFromSerializedBuffer(
-        const std::vector<char>& buffer,
-        size_t bufferPos
+    size_t Scene::deserializeHeader(
+        const std::vector<char>& serializedData,
+        size_t serializedDataPos,
+        size_t* pEntityCount
+    ) const
+    {
+        PLATYPUS_ASSERT((serializedDataPos + serialized_entities_header_size) <= serializedData.size());
+        const char* pData = serializedData.data() + serializedDataPos;
+        uint32_t entityCount = 0;
+        memcpy(&entityCount, pData, serialized_entities_header_size);
+        if (pEntityCount) *pEntityCount = static_cast<size_t>(entityCount);
+        return serializedDataPos + serialized_entities_header_size;
+    }
+
+    entityID_t Scene::deserialize(
+        const std::vector<char>& serializedData,
+        size_t bufferReadPos,
+        size_t& bufferReadEndPos
     )
     {
-        PLATYPUS_ASSERT((bufferPos + sizeof(uint32_t)) <= buffer.size());
-        const char* pData = buffer.data() + bufferPos;
+        PLATYPUS_ASSERT((bufferReadPos + serialized_entity_size) <= serializedData.size());
+        const char* pData = serializedData.data() + bufferReadPos;
+        entityID_t entityID;
+        deserialize_entity(
+            this,
+            entityID,
+            serialized_entity_size,
+            pData
+        );
+        bufferReadPos += serialized_entity_size;
+
+        Entity entity = getEntity(entityID);
+        size_t componentCount = get_component_count(entity.componentMask);
+        Debug::log(
+            "___TEST___attempting to load " + std::to_string(componentCount) + " components "
+            "for entity " + std::to_string(entityID)
+        );
+        for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
+        {
+            ComponentType componentType;
+            memcpy(
+                &componentType,
+                pData + bufferReadPos,
+                sizeof(ComponentType)
+            );
+            size_t serializedComponentSize = get_component_serialized_size(componentType);
+
+            Debug::log(
+                "___TEST___attempting to deserialize component: " + component_type_to_string(componentType) + " "
+                "serialized size should be: " + std::to_string(serializedComponentSize)
+            );
+
+            void* pComponent = nullptr;
+            deserialize_component(
+                this,
+                componentType,
+                &pComponent,
+                entityID,
+                serializedComponentSize,
+                pData + bufferReadPos
+            );
+            bufferReadPos += serializedComponentSize;
+        }
+        Debug::log(
+            "___TEST___loaded entity: " + std::to_string(entityID) + " "
+            "with " + std::to_string(componentCount) + " components"
+        );
+        bufferReadEndPos = bufferReadPos;
+        return entityID;
+    }
+
+    std::vector<entityID_t> Scene::deserialize(
+        const std::vector<char>& serializedData,
+        size_t serializedDataPos
+    )
+    {
+        PLATYPUS_ASSERT((serializedDataPos + sizeof(uint32_t)) <= serializedData.size());
+        const char* pData = serializedData.data() + serializedDataPos;
         uint32_t entityCount = 0;
         memcpy(
             &entityCount,

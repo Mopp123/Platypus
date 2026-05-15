@@ -212,7 +212,7 @@ namespace platypus
         {
             batch.type = BatchType::NONE;
             freeTextureDescriptorSets(batch.textureID);
-            batch.textureID = NULL_ID;
+            batch.textureID = NULL_UUID;
             batch.count = 0;
         }
         _toRender.clear();
@@ -220,7 +220,7 @@ namespace platypus
 
     void GUIRenderer::freeDescriptorSets()
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it;
+        std::unordered_map<UUID_t, std::vector<DescriptorSet>>::iterator it;
         for (it = _textureDescriptorSets.begin(); it != _textureDescriptorSets.end(); ++it)
         {
             _descriptorPoolRef.freeDescriptorSets(it->second);
@@ -250,8 +250,8 @@ namespace platypus
         );
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        ID_t textureID = pRenderable->textureID;
-        if (textureID == NULL_ID)
+        UUID_t textureID = pRenderable->textureID;
+        if (textureID == NULL_UUID)
         {
             textureID = pAssetManager->getWhiteTexture()->getID();
         }
@@ -276,7 +276,7 @@ namespace platypus
                 return;
             }
             if (!occupyBatch(
-                    pRenderable->fontID != NULL_ID ? BatchType::TEXT : BatchType::IMAGE,
+                    pRenderable->fontID != NULL_UUID ? BatchType::TEXT : BatchType::IMAGE,
                     batchIndex,
                     pRenderable->layer, textureID
                 ))
@@ -293,7 +293,7 @@ namespace platypus
         if (!hasDescriptorSets(textureID))
             createTextureDescriptorSets(textureID);
 
-        if (pRenderable->fontID != NULL_ID)
+        if (pRenderable->fontID != NULL_UUID)
         {
             addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
         }
@@ -329,7 +329,7 @@ namespace platypus
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(&renderPass);
 
-        std::vector<std::pair<uint32_t, ID_t>> unusedBatches;
+        std::vector<std::pair<uint32_t, UUID_t>> unusedBatches;
         std::map<uint32_t, std::set<size_t>>::iterator layerIt;
         for (layerIt = _toRender.begin(); layerIt != _toRender.end(); ++layerIt)
         {
@@ -372,7 +372,7 @@ namespace platypus
                 }
 
                 // This should never actually happen?
-                if (batchData.textureID == NULL_ID)
+                if (batchData.textureID == NULL_UUID)
                     continue;
 
                 batchData.pInstancedBuffer->updateDevice(
@@ -432,7 +432,7 @@ namespace platypus
         }
 
         // Erase unused batches
-        for (std::pair<uint32_t, ID_t>& toErase : unusedBatches)
+        for (std::pair<uint32_t, UUID_t>& toErase : unusedBatches)
             freeBatch(toErase.first, toErase.second);
 
         currentCommandBuffer.end();
@@ -445,7 +445,7 @@ namespace platypus
 
     int GUIRenderer::findExistingBatchIndex(
         uint32_t layer,
-        ID_t textureID,
+        UUID_t textureID,
         size_t requiredBatchDataElements
     ) const
     {
@@ -471,7 +471,7 @@ namespace platypus
         {
             const BatchData& batchData = _batches[i];
             // TODO: Varying size batches?
-            if (batchData.textureID == NULL_ID && requiredBatchDataElements <= s_maxBatchLength)
+            if (batchData.textureID == NULL_UUID && requiredBatchDataElements <= s_maxBatchLength)
                 return i;
         }
         return -1;
@@ -602,7 +602,7 @@ namespace platypus
         BatchType batchType,
         size_t batchIndex,
         uint32_t layer,
-        ID_t textureID
+        UUID_t textureID
     )
     {
         Application* pApp = Application::get_instance();
@@ -634,7 +634,7 @@ namespace platypus
 
     bool GUIRenderer::freeBatch(
         uint32_t layer,
-        ID_t textureID
+        UUID_t textureID
     )
     {
         int batchIndex = findExistingBatchIndex(layer, textureID, 0);
@@ -664,7 +664,7 @@ namespace platypus
 
         BatchData& batchData = _batches[batchIndex];
         batchData.type = BatchType::NONE;
-        batchData.textureID = NULL_ID;
+        batchData.textureID = NULL_UUID;
         batchData.textureAtlasRows = 0;
         batchData.count = 0;
 
@@ -688,12 +688,12 @@ namespace platypus
         return true;
     }
 
-    bool GUIRenderer::hasDescriptorSets(ID_t batchIdentifier) const
+    bool GUIRenderer::hasDescriptorSets(UUID_t batchIdentifier) const
     {
         return _textureDescriptorSets.find(batchIdentifier) != _textureDescriptorSets.end();
     }
 
-    void GUIRenderer::createTextureDescriptorSets(ID_t textureID)
+    void GUIRenderer::createTextureDescriptorSets(UUID_t textureID)
     {
         Application* pApp = Application::get_instance();
         AssetManager* pAssetManager = pApp->getAssetManager();
@@ -726,9 +726,9 @@ namespace platypus
         Debug::log("@GUIRenderer::createDescriptorSets New texture descriptor sets created for batch with textureID: " + std::to_string(textureID));
     }
 
-    void GUIRenderer::freeTextureDescriptorSets(ID_t textureID)
+    void GUIRenderer::freeTextureDescriptorSets(UUID_t textureID)
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it = _textureDescriptorSets.find(textureID);
+        std::unordered_map<UUID_t, std::vector<DescriptorSet>>::iterator it = _textureDescriptorSets.find(textureID);
         if (it != _textureDescriptorSets.end())
         {
             _descriptorPoolRef.freeDescriptorSets(it->second);

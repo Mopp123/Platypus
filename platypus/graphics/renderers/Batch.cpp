@@ -3,6 +3,10 @@
 #include "platypus/core/Debug.hpp"
 
 
+// NOTE: IMPORTANT!
+//  STOP USING UUID for batch ids?
+//      -> figure out something else!
+
 namespace platypus
 {
     RenderPassType Batcher::s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES] = {
@@ -277,7 +281,7 @@ namespace platypus
     }
 
     void Batcher::createSharedBatchInstancedBuffers(
-        ID_t identifier,
+        UUID_t identifier,
         size_t bufferElementSize,
         size_t maxBatchLength,
         size_t framesInFlight,
@@ -301,7 +305,7 @@ namespace platypus
 
     void Batcher::createBatchShaderResources(
         size_t framesInFlight,
-        ID_t batchID,
+        UUID_t batchID,
         size_t maxBatchLength,
         const std::vector<ShaderResourceLayout>& resourceLayouts,
         std::vector<BatchShaderResource>& outResources
@@ -392,16 +396,16 @@ namespace platypus
         return combinedDescriptorSets;
     }
 
-    Batch* Batcher::getBatch(RenderPassType renderPassType, ID_t identifier)
+    Batch* Batcher::getBatch(RenderPassType renderPassType, UUID_t identifier)
     {
         if (_batches.find(renderPassType) == _batches.end())
             return nullptr;
 
-        std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>>::iterator passBatchIndexIt = _identifierBatchMapping.find(renderPassType);
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, size_t>>::iterator passBatchIndexIt = _identifierBatchMapping.find(renderPassType);
         if (passBatchIndexIt != _identifierBatchMapping.end())
         {
-            std::unordered_map<ID_t, size_t>& passBatchIndices = passBatchIndexIt->second;
-            std::unordered_map<ID_t, size_t>::iterator passBatchIt = passBatchIndices.find(identifier);
+            std::unordered_map<UUID_t, size_t>& passBatchIndices = passBatchIndexIt->second;
+            std::unordered_map<UUID_t, size_t>::iterator passBatchIt = passBatchIndices.find(identifier);
             if (passBatchIt != passBatchIndices.end())
             {
                 size_t batchIndex = passBatchIt->second;
@@ -422,7 +426,7 @@ namespace platypus
 
     // TODO: Optimize!
     // Returns batches sharing the same ID for all render passes
-    std::vector<Batch*> Batcher::getBatches(ID_t identifier)
+    std::vector<Batch*> Batcher::getBatches(UUID_t identifier)
     {
         std::vector<Batch*> batches;
         for (size_t i = 0; i < PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES; ++i)
@@ -434,9 +438,9 @@ namespace platypus
         return batches;
     }
 
-    BatchShaderResource* Batcher::getSharedBatchResource(ID_t batchID, size_t resourceIndex)
+    BatchShaderResource* Batcher::getSharedBatchResource(UUID_t batchID, size_t resourceIndex)
     {
-        std::unordered_map<ID_t, size_t>::const_iterator it = _batchShaderResourceMapping.find(batchID);
+        std::unordered_map<UUID_t, size_t>::const_iterator it = _batchShaderResourceMapping.find(batchID);
         if (it != _batchShaderResourceMapping.end())
         {
             // TODO: Make safer!!!!
@@ -447,9 +451,9 @@ namespace platypus
         return nullptr;
     }
 
-    bool Batcher::batchResourcesExist(ID_t batchID) const
+    bool Batcher::batchResourcesExist(UUID_t batchID) const
     {
-        std::unordered_map<ID_t, size_t>::const_iterator indexIt = _batchShaderResourceMapping.find(batchID);
+        std::unordered_map<UUID_t, size_t>::const_iterator indexIt = _batchShaderResourceMapping.find(batchID);
         if (indexIt == _batchShaderResourceMapping.end())
         {
             Debug::log(
@@ -473,14 +477,14 @@ namespace platypus
     }
 
     // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
-    std::vector<BatchShaderResource>& Batcher::accessSharedBatchResources(ID_t batchID)
+    std::vector<BatchShaderResource>& Batcher::accessSharedBatchResources(UUID_t batchID)
     {
         return _allocatedShaderResources[_batchShaderResourceMapping[batchID]];
     }
 
     // NOTE: Not used anymore? TODO: Delete?
     void Batcher::updateHostSideSharedResource(
-        ID_t batchID,
+        UUID_t batchID,
         size_t resourceIndex,
         void* pData,
         size_t dataSize,
@@ -488,7 +492,7 @@ namespace platypus
         size_t currentFrame
     )
     {
-        std::unordered_map<ID_t, size_t>::iterator it = _batchShaderResourceMapping.find(batchID);
+        std::unordered_map<UUID_t, size_t>::iterator it = _batchShaderResourceMapping.find(batchID);
         if (it == _batchShaderResourceMapping.end())
         {
             Debug::log(
@@ -537,15 +541,15 @@ namespace platypus
     bool Batcher::validateBatchDoesntExist(
         const char* callLocation,
         RenderPassType renderPassType,
-        ID_t batchID
+        UUID_t batchID
     ) const
     {
         const std::string locationStr(callLocation);
-        std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>>::const_iterator passIt = _identifierBatchMapping.find(renderPassType);
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, size_t>>::const_iterator passIt = _identifierBatchMapping.find(renderPassType);
         if (passIt != _identifierBatchMapping.end())
         {
-            const std::unordered_map<ID_t, size_t>& passBatches = passIt->second;
-            std::unordered_map<ID_t, size_t>::const_iterator passBatchIt = passBatches.find(batchID);
+            const std::unordered_map<UUID_t, size_t>& passBatches = passIt->second;
+            std::unordered_map<UUID_t, size_t>::const_iterator passBatchIt = passBatches.find(batchID);
             if (passBatchIt != passBatches.end())
             {
                 Debug::log(
@@ -579,8 +583,8 @@ namespace platypus
     }
 
     void Batcher::createBatch(
-        ID_t meshID,
-        ID_t materialID,
+        UUID_t meshID,
+        UUID_t materialID,
         size_t maxBatchLength,
         uint32_t maxRepeatCount,
         uint32_t repeatAdvance,
@@ -592,7 +596,7 @@ namespace platypus
         const RenderPass* pRenderPass
     )
     {
-        ID_t batchID = ID::hash(meshID, materialID);
+        UUID_t batchID = UUID::hash(meshID, materialID);
         RenderPassType renderPassType = pRenderPass->getType();
         if (!validateBatchDoesntExist("Batcher::createBatch", renderPassType, batchID))
             return;
@@ -619,7 +623,7 @@ namespace platypus
 
         // Currently batching requires valid material in order to figure out some unique batch ID.
         // TODO: Allow creating batches without materials?
-        if (materialID == NULL_ID)
+        if (materialID == NULL_UUID)
         {
             Debug::log(
                 "@Batcher::createBatch "
@@ -739,7 +743,7 @@ namespace platypus
         }
 
         // Need to add the Material descriptor sets last if using those..
-        if (materialID != NULL_ID && !shadowPass)
+        if (materialID != NULL_UUID && !shadowPass)
             usedDescriptorSets.push_back(pMaterial->getDescriptorSets());
 
         std::vector<std::vector<DescriptorSet>> combinedDescriptorSets = combineUsedDescriptorSets(
@@ -808,8 +812,8 @@ namespace platypus
     }
 
     void Batcher::createBatch(
-        ID_t meshID,
-        ID_t materialID,
+        UUID_t meshID,
+        UUID_t materialID,
         const Light * const pDirectionalLight,
         const RenderPass* pRenderPass
     )
@@ -855,7 +859,7 @@ namespace platypus
     }
 
     void Batcher::addToBatch(
-        ID_t batchID,
+        UUID_t batchID,
         void* pData,
         size_t dataSize,
         const std::vector<size_t>& dataElementSizes,
@@ -985,7 +989,7 @@ namespace platypus
     }
 
     void Batcher::addToAllocatedShaderResources(
-        ID_t batchID,
+        UUID_t batchID,
         std::vector<BatchShaderResource>& shaderResources
     )
     {
@@ -1003,7 +1007,7 @@ namespace platypus
 
     // TODO: delete below after fixing static and skinned batches
     void Batcher::addToAllocatedShaderResources(
-        ID_t batchID,
+        UUID_t batchID,
         const std::vector<Buffer*>& buffers,
         const std::vector<DescriptorSet> descriptorSets
     )
@@ -1020,7 +1024,7 @@ namespace platypus
     }
 
     std::vector<Buffer*> Batcher::getOrCreateSharedInstancedBuffer(
-        ID_t batchID,
+        UUID_t batchID,
         size_t elementSize,
         size_t maxBatchLength,
         size_t framesInFlight
@@ -1054,7 +1058,7 @@ namespace platypus
     }
 
     std::vector<BatchShaderResource>& Batcher::getOrCreateSharedShaderResources(
-        ID_t batchID,
+        UUID_t batchID,
         size_t maxBatchLength,
         const std::vector<ShaderResourceLayout>& resourceLayouts,
         size_t framesInFlight

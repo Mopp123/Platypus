@@ -1,4 +1,4 @@
-#include "ID.hpp"
+#include "UUID.hpp"
 #include <time.h>
 #include <cstdlib>
 #include <cstring>
@@ -7,11 +7,11 @@
 
 namespace platypus
 {
-    unsigned int ID::s_seed = 4276;
-    std::set<ID_t> ID::s_usedIDs;
-    bool ID::s_initialized = false;
+    unsigned int UUID::s_seed = 4276;
+    std::set<UUID_t> UUID::s_usedIDs;
+    bool UUID::s_initialized = false;
 
-    void ID::init()
+    void UUID::init()
     {
         // Not sure should this be more deterministic or not...
         //std::srand(s_seed);
@@ -20,16 +20,16 @@ namespace platypus
     }
 
     // NOTE: Could be done better...
-    ID_t ID::generate()
+    UUID_t UUID::generate()
     {
         if (!s_initialized)
             init();
 
-        ID_t id = 0;
+        UUID_t id = 0;
         while (true)
         {
             // randomize each byte individually..
-            for (size_t i = 0; i < sizeof(ID_t); ++i)
+            for (size_t i = 0; i < sizeof(UUID_t); ++i)
             {
                 uint8_t bVal = (uint8_t)(std::rand() % 255);
                 memset(((uint8_t*)&id) + i, bVal, 1);
@@ -43,10 +43,10 @@ namespace platypus
                     Debug::MessageType::PLATYPUS_WARNING
                 );
             }
-            else if (id == NULL_ID)
+            else if (id == NULL_UUID)
             {
                 Debug::log(
-                    "Generated ID was NULL_ID!"
+                    "Generated ID was NULL_UUID!"
                     "Attempting to generate again...",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_WARNING
@@ -62,12 +62,12 @@ namespace platypus
         return id;
     }
 
-    bool ID::occupy(ID_t id)
+    bool UUID::occupy(UUID_t id)
     {
-        if (id == NULL_ID)
+        if (id == NULL_UUID)
         {
             Debug::log(
-                "Can't occupy NULL_ID explicitly!",
+                "Can't occupy NULL_UUID explicitly!",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -93,9 +93,9 @@ namespace platypus
         return true;
     }
 
-    void ID::erase(ID_t idToErase)
+    void UUID::erase(UUID_t idToErase)
     {
-        std::set<ID_t>::iterator it = s_usedIDs.find(idToErase);
+        std::set<UUID_t>::iterator it = s_usedIDs.find(idToErase);
         if (it == s_usedIDs.end())
         {
             Debug::log(
@@ -110,23 +110,24 @@ namespace platypus
         }
     }
 
+    // NOTE: After upgrading to using uint64_t instead of uint32_t, this might be fucked?
     // Not sure if this might fail in some cases... use at your own risk...
     // https://stackoverflow.com/questions/919612/mapping-two-integers-to-one-in-a-unique-and-deterministic-way
-    ID_t ID::hash(ID_t a, ID_t b)
+    UUID_t UUID::hash(UUID_t a, UUID_t b)
     {
         uint32_t A = (uint32_t)(a >= 0 ? 2 * (int32_t)a : -2 * (int32_t)a - 1);
         uint32_t B = (uint32_t)(b >= 0 ? 2 * (int32_t)b : -2 * (int32_t)b - 1);
         uint32_t C = (int32_t)((A >= B ? A * A + A + B : A + B * B) / 2);
-        ID_t id = (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
+        UUID_t id = (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
         if (s_usedIDs.find(id) != s_usedIDs.end())
         {
             Debug::log(
                 "@ID::hash "
-                "ID: " + std::to_string(id) + " already exists!",
+                "UUID: " + std::to_string(id) + " already exists!",
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
-            return NULL_ID;
+            return NULL_UUID;
         }
         return id;
     }

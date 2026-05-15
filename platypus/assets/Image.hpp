@@ -66,7 +66,7 @@ namespace platypus
 
     struct ImageMetadata
     {
-        ID_t assetID = NULL_ID;
+        UUID_t assetID = NULL_UUID;
         ImageFormat format;
         uint8_t persistent = 0;
         char name[asset_metadata_name_size];
@@ -95,7 +95,7 @@ namespace platypus
             int channels,
             ImageFormat format,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             bool persistent = false
         );
         ~Image();
@@ -110,7 +110,7 @@ namespace platypus
             const std::string& filepath,
             ImageFormat format,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            UUID_t id = NULL_UUID
         );
 
         virtual void writeToMetadataBuffer(

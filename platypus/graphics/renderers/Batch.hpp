@@ -120,7 +120,7 @@ namespace platypus
         std::unordered_map<MeshType, BatchTemplate> _batchTemplates;
 
         std::unordered_map<RenderPassType, std::vector<Batch*>> _batches;
-        std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierBatchMapping;
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, size_t>> _identifierBatchMapping;
 
         // Additional batch pipelines that aren't managed elsewhere
         // (for example shadow pass pipelines are managed here)
@@ -140,7 +140,7 @@ namespace platypus
 
         // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
         std::vector<std::vector<BatchShaderResource>> _allocatedShaderResources;
-        std::unordered_map<ID_t, size_t> _batchShaderResourceMapping;
+        std::unordered_map<UUID_t, size_t> _batchShaderResourceMapping;
 
     public:
         Batcher(
@@ -172,24 +172,24 @@ namespace platypus
 
         void freeBatches();
 
-        Batch* getBatch(RenderPassType renderPassType, ID_t identifier);
+        Batch* getBatch(RenderPassType renderPassType, UUID_t identifier);
         // Returns all batches for a render pass
         const std::vector<Batch*>& getBatches(RenderPassType renderPassType);
         // Returns batches sharing the same ID for all render passes
-        std::vector<Batch*> getBatches(ID_t identifier);
+        std::vector<Batch*> getBatches(UUID_t identifier);
 
         static const DescriptorSetLayout& get_static_descriptor_set_layout();
         static const DescriptorSetLayout& get_joint_descriptor_set_layout();
 
-        BatchShaderResource* getSharedBatchResource(ID_t batchID, size_t resourceIndex);
+        BatchShaderResource* getSharedBatchResource(UUID_t batchID, size_t resourceIndex);
 
-        bool batchResourcesExist(ID_t batchID) const;
+        bool batchResourcesExist(UUID_t batchID) const;
         // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
-        std::vector<BatchShaderResource>& accessSharedBatchResources(ID_t batchID);
+        std::vector<BatchShaderResource>& accessSharedBatchResources(UUID_t batchID);
 
         // NOTE: Not used anymore? TODO: Delete?
         void updateHostSideSharedResource(
-            ID_t batchID,
+            UUID_t batchID,
             size_t resourceIndex,
             void* pData,
             size_t dataSize,
@@ -198,7 +198,7 @@ namespace platypus
         );
 
         void createSharedBatchInstancedBuffers(
-            ID_t identifier,
+            UUID_t identifier,
             size_t bufferElementSize,
             size_t maxBatchLength,
             size_t framesInFlight,
@@ -224,7 +224,7 @@ namespace platypus
         // Creates dynamic uniform buffers and descriptor sets for the whole batch
         void createBatchShaderResources(
             size_t framesInFlight,
-            ID_t batchID,
+            UUID_t batchID,
             size_t maxBatchLength,
             const std::vector<ShaderResourceLayout>& resourceLayouts,
             std::vector<BatchShaderResource>& outResources
@@ -234,15 +234,15 @@ namespace platypus
         bool validateBatchDoesntExist(
             const char* callLocation,
             RenderPassType renderPassType,
-            ID_t batchID
+            UUID_t batchID
         ) const;
 
         void destroyManagedPipelines();
         void recreateManagedPipelines();
 
         void createBatch(
-            ID_t meshID,
-            ID_t materialID,
+            UUID_t meshID,
+            UUID_t materialID,
             size_t maxBatchLength,
             uint32_t maxRepeatCount,
             uint32_t repeatAdvance,
@@ -255,15 +255,15 @@ namespace platypus
         );
 
         void createBatch(
-            ID_t meshID,
-            ID_t materialID,
+            UUID_t meshID,
+            UUID_t materialID,
             const Light * const pDirectionalLight,
             const RenderPass* pRenderPass
         );
 
         // totalDataSize has to be the size of provided pData and sum of values in pData
         void addToBatch(
-            ID_t batchID,
+            UUID_t batchID,
             void* pData,
             size_t dataSize,
             const std::vector<size_t>& dataElementSizes,
@@ -277,25 +277,25 @@ namespace platypus
 
     private:
         void addToAllocatedShaderResources(
-            ID_t batchID,
+            UUID_t batchID,
             std::vector<BatchShaderResource>& shaderResources
         );
         // TODO: delete below after fixing static and skinned batches
         void addToAllocatedShaderResources(
-            ID_t batchID,
+            UUID_t batchID,
             const std::vector<Buffer*>& buffers,
             const std::vector<DescriptorSet> descriptorSets
         );
 
         std::vector<Buffer*> getOrCreateSharedInstancedBuffer(
-            ID_t batchID,
+            UUID_t batchID,
             size_t elementSize,
             size_t maxBatchLength,
             size_t framesInFlight
         );
 
         std::vector<BatchShaderResource>& getOrCreateSharedShaderResources(
-            ID_t batchID,
+            UUID_t batchID,
             size_t maxBatchLength,
             const std::vector<ShaderResourceLayout>& resourceLayouts,
             size_t framesInFlight

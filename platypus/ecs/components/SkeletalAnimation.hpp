@@ -2,7 +2,7 @@
 
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/utils/Maths.hpp"
-#include "platypus/utils/ID.hpp"
+#include "platypus/utils/UUID.hpp"
 #include "platypus/core/Scene.hpp"
 
 
@@ -19,7 +19,7 @@ namespace platypus
     constexpr size_t serialized_skeletal_animation_size =
         sizeof(ComponentType) +
         sizeof(AnimationMode) +
-        sizeof(ID_t) +
+        sizeof(UUID_t) +
         sizeof(float) * 2 +
         sizeof(uint8_t) +
         sizeof(Matrix4f) * skeletal_animation_max_joints;
@@ -31,7 +31,7 @@ namespace platypus
     struct SkeletalAnimation
     {
         AnimationMode mode = AnimationMode::ANIMATION_MODE_LOOP;
-        ID_t animationID = 0;
+        UUID_t animationID = 0;
         float time = 0.0f;
         float length = 0.0f; // Total length of the anim in seconds
         uint8_t stopped = 0;
@@ -50,7 +50,7 @@ namespace platypus
 
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
-        ID_t animationAssetID,
+        UUID_t animationAssetID,
         Scene* pScene = nullptr,
         bool useExplicitComponentMask = false
     );

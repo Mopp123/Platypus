@@ -12,10 +12,10 @@ namespace platypus
 {
     // NOTE: All transparent materials use opaque pass's depth buffer as texture!
     Material::Material(
-        ID_t blendmapTextureID,
-        ID_t* pDiffuseTextureIDs,
-        ID_t* pSpecularTextureIDs,
-        ID_t* pNormalTextureIDs,
+        UUID_t blendmapTextureID,
+        UUID_t* pDiffuseTextureIDs,
+        UUID_t* pSpecularTextureIDs,
+        UUID_t* pNormalTextureIDs,
         size_t diffuseTextureCount,
         size_t specularTextureCount,
         size_t normalTextureCount,
@@ -28,7 +28,7 @@ namespace platypus
         bool transparent,
         bool shadeless,
         const std::string& name,
-        ID_t id,
+        UUID_t id,
         bool persistent,
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
@@ -48,13 +48,13 @@ namespace platypus
     {
         validateTextureCounts();
 
-        memset(_diffuseTextureIDs, NULL_ID, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
-        memset(_specularTextureIDs, NULL_ID, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
-        memset(_normalTextureIDs, NULL_ID, sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_diffuseTextureIDs, NULL_UUID, sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_specularTextureIDs, NULL_UUID, sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_normalTextureIDs, NULL_UUID, sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
 
-        memcpy(_diffuseTextureIDs, pDiffuseTextureIDs, sizeof(ID_t) * _diffuseTextureCount);
-        memcpy(_specularTextureIDs, pSpecularTextureIDs, sizeof(ID_t) * _specularTextureCount);
-        memcpy(_normalTextureIDs, pNormalTextureIDs, sizeof(ID_t) * _normalTextureCount);
+        memcpy(_diffuseTextureIDs, pDiffuseTextureIDs, sizeof(UUID_t) * _diffuseTextureCount);
+        memcpy(_specularTextureIDs, pSpecularTextureIDs, sizeof(UUID_t) * _specularTextureCount);
+        memcpy(_normalTextureIDs, pNormalTextureIDs, sizeof(UUID_t) * _normalTextureCount);
 
         _uniformBufferData.lightingProperties.x = specularStrength;
         _uniformBufferData.lightingProperties.y = shininess;
@@ -428,7 +428,7 @@ namespace platypus
 
     Texture* Material::getBlendmapTexture() const
     {
-        if (_blendmapTextureID == NULL_ID)
+        if (_blendmapTextureID == NULL_UUID)
         {
             Debug::log(
                 "@Material::getBlendmapTexture "
@@ -508,7 +508,7 @@ namespace platypus
     std::vector<Texture*> Material::getTextures() const
     {
         std::vector<Texture*> textures;
-        if (_blendmapTextureID != NULL_ID)
+        if (_blendmapTextureID != NULL_UUID)
             textures.push_back(getBlendmapTexture());
 
         for (size_t i = 0; i < _diffuseTextureCount; ++i)
@@ -547,7 +547,7 @@ namespace platypus
         return textures;
     }
 
-    ID_t Material::getDiffuseTextureID(size_t channel) const
+    UUID_t Material::getDiffuseTextureID(size_t channel) const
     {
         if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
         {
@@ -562,7 +562,7 @@ namespace platypus
         return _diffuseTextureIDs[channel];
     }
 
-    ID_t Material::getSpecularTextureID(size_t channel) const
+    UUID_t Material::getSpecularTextureID(size_t channel) const
     {
         if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
         {
@@ -577,7 +577,7 @@ namespace platypus
         return _specularTextureIDs[channel];
     }
 
-    ID_t Material::getNormalTextureID(size_t channel) const
+    UUID_t Material::getNormalTextureID(size_t channel) const
     {
         if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
         {
@@ -652,8 +652,8 @@ namespace platypus
         targetBuffer.resize(prevSize + get_serialized_metadata_size());
         char* pBuf = targetBuffer.data() + prevSize;
 
-        memcpy(pBuf, &_id, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(pBuf, &_id, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
         const float specularStrength = getSpecularStrength();
         memcpy(pBuf + pos, &specularStrength, sizeof(float));
@@ -691,11 +691,11 @@ namespace platypus
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        memcpy(pBuf + pos, &_blendmapTextureID, sizeof(ID_t));
-        pos += sizeof(ID_t);
+        memcpy(pBuf + pos, &_blendmapTextureID, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
 
         const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
-        const size_t textureChannelSize = sizeof(ID_t) * texturesPerChannel;
+        const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
         memcpy(pBuf + pos, &_diffuseTextureIDs, textureChannelSize);
         pos += textureChannelSize;
         memcpy(pBuf + pos, &_specularTextureIDs, textureChannelSize);
@@ -718,7 +718,7 @@ namespace platypus
     {
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
-        ID_t id;
+        UUID_t id;
         float specularStrength;
         float shininess;
         Vector2f textureOffset;
@@ -728,16 +728,16 @@ namespace platypus
         uint8_t transparent;
         uint8_t shadeless;
         uint8_t persistent;
-        ID_t blendmapTextureID;
-        ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t blendmapTextureID;
+        UUID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
         char name[asset_metadata_name_size];
 
         const char* pBuf = targetBuffer.data() + bufferPos;
 
-        memcpy(&id, pBuf, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(&id, pBuf, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
         memcpy(&specularStrength, pBuf + pos, sizeof(float));
         pos += sizeof(float);
@@ -766,11 +766,11 @@ namespace platypus
         memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        memcpy(&blendmapTextureID, pBuf + pos, sizeof(ID_t));
-        pos += sizeof(ID_t);
+        memcpy(&blendmapTextureID, pBuf + pos, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
 
         const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
-        const size_t textureChannelSize = sizeof(ID_t) * texturesPerChannel;
+        const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
         memcpy(&diffuseTextureIDs, pBuf + pos, textureChannelSize);
         pos += textureChannelSize;
         memcpy(&specularTextureIDs, pBuf + pos, textureChannelSize);
@@ -783,16 +783,16 @@ namespace platypus
 
         PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
 
-        std::vector<ID_t> diffuseTextures;
-        std::vector<ID_t> specularTextures;
-        std::vector<ID_t> normalTextures;
+        std::vector<UUID_t> diffuseTextures;
+        std::vector<UUID_t> specularTextures;
+        std::vector<UUID_t> normalTextures;
         for (size_t i = 0; i < texturesPerChannel; ++i)
         {
-            if (diffuseTextureIDs[i] != NULL_ID)
+            if (diffuseTextureIDs[i] != NULL_UUID)
                 diffuseTextures.push_back(diffuseTextureIDs[i]);
-            if (specularTextureIDs[i] != NULL_ID)
+            if (specularTextureIDs[i] != NULL_UUID)
                 specularTextures.push_back(specularTextureIDs[i]);
-            if (normalTextureIDs[i] != NULL_ID)
+            if (normalTextureIDs[i] != NULL_UUID)
                 normalTextures.push_back(normalTextureIDs[i]);
         }
 
@@ -822,12 +822,12 @@ namespace platypus
 
     size_t Material::get_serialized_metadata_size()
     {
-        return sizeof(ID_t) +
+        return sizeof(UUID_t) +
             sizeof(float) * 2 +
             sizeof(Vector2f) * 2 +
             sizeof(uint8_t) * 5 +
-            sizeof(ID_t) +
-            sizeof(ID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
+            sizeof(UUID_t) +
+            sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
             asset_metadata_name_size;
     }
 
@@ -1019,7 +1019,7 @@ namespace platypus
             else
                 shaderName += "_";
 
-            if (_blendmapTextureID != NULL_ID)
+            if (_blendmapTextureID != NULL_UUID)
                 shaderName += "b";
             if (_diffuseTextureCount > 0)
                 shaderName += "d";

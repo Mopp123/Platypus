@@ -24,7 +24,7 @@ namespace platypus
                 pParent,
                 pLayout, // Need to create for inherited UIElement -> will be modified here immediately tho!
                 false,
-                NULL_ID,
+                NULL_UUID,
                 pFont,
                 nullptr,
                 true // NOTE: All mouse input is ignored for Text atm!! TODO: ALLOW MORE CONTROL OVER THIS!

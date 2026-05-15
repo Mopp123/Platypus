@@ -91,7 +91,7 @@ namespace platypus
                 UIElement* pParent,
                 const Layout* pLayout,
                 bool createRenderable,
-                ID_t textureID = NULL_ID,
+                UUID_t textureID = NULL_UUID,
                 UIElement::OnClickEvent* pOnClickEvent = nullptr
             );
 

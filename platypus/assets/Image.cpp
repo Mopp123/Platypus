@@ -192,7 +192,7 @@ namespace platypus
         int channels,
         ImageFormat format,
         const std::string& name,
-        ID_t id,
+        UUID_t id,
         bool persistent
     ) :
         Asset(AssetType::ASSET_TYPE_IMAGE, name, id, persistent),
@@ -261,7 +261,7 @@ namespace platypus
         const std::string& filepath,
         ImageFormat format,
         const std::string& name,
-        ID_t id
+        UUID_t id
     )
     {
         int width = 0;
@@ -301,8 +301,8 @@ namespace platypus
         targetBuffer.resize(prevSize + get_serialized_metadata_size());
         char* pBuf = targetBuffer.data() + prevSize;
 
-        memcpy(pBuf, &_id, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(pBuf, &_id, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
@@ -332,7 +332,7 @@ namespace platypus
     )
     {
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
-        ID_t id = NULL_ID;
+        UUID_t id = NULL_UUID;
         ImageFormat format;
         uint8_t persistent;
         char name[asset_metadata_name_size];
@@ -340,8 +340,8 @@ namespace platypus
 
         const char* pBuf = targetBuffer.data() + bufferPos;
 
-        memcpy(&id, pBuf, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(&id, pBuf, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
         memcpy(&format, pBuf + pos, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
@@ -371,7 +371,7 @@ namespace platypus
 
     size_t Image::get_serialized_metadata_size()
     {
-        return sizeof(ID_t) +
+        return sizeof(UUID_t) +
             sizeof(ImageFormat) +
             sizeof(uint8_t) +
             asset_metadata_name_size +

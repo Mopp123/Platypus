@@ -63,7 +63,7 @@ namespace platypus
         struct BatchData
         {
             BatchType type = BatchType::NONE;
-            ID_t textureID = NULL_ID;
+            UUID_t textureID = NULL_UUID;
             Buffer* pInstancedBuffer = nullptr;
             float textureAtlasRows = 1.0f;
             size_t count = 0;
@@ -78,7 +78,7 @@ namespace platypus
         //
         // BUT! If want to have batch specific descriptor sets, needs some combined identifier
         // for each batch that contains its' type and textureID
-        std::unordered_map<ID_t, std::vector<DescriptorSet>> _textureDescriptorSets;
+        std::unordered_map<UUID_t, std::vector<DescriptorSet>> _textureDescriptorSets;
 
 
         Pipeline _imgPipeline;
@@ -131,7 +131,7 @@ namespace platypus
         // without intention of adding to it!
         int findExistingBatchIndex(
             uint32_t layer,
-            ID_t textureID,
+            UUID_t textureID,
             size_t requiredBatchDataElements
         ) const;
         int findFreeBatchIndex(size_t requiredBatchDataElements) const;
@@ -152,15 +152,15 @@ namespace platypus
             BatchType batchType,
             size_t batchIndex,
             uint32_t layer,
-            ID_t textureID
+            UUID_t textureID
         );
         bool freeBatch(
             uint32_t layer,
-            ID_t textureID
+            UUID_t textureID
         );
 
-        bool hasDescriptorSets(ID_t textureID) const;
-        void createTextureDescriptorSets(ID_t textureID);
-        void freeTextureDescriptorSets(ID_t textureID);
+        bool hasDescriptorSets(UUID_t textureID) const;
+        void createTextureDescriptorSets(UUID_t textureID);
+        void freeTextureDescriptorSets(UUID_t textureID);
     };
 }

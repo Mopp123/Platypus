@@ -79,17 +79,33 @@ namespace platypus
         void setActiveCameraEntity(entityID_t entityID);
 
         // Puts all entities and their components into buffer that can be saved on disk
-        std::vector<char> createSerializedBuffer(
+        std::vector<char> serialize(
             const std::vector<entityID_t>& toSerialize
         );
+
+        // Returns the position after the header in serializedData
+        // (the "actual position", including the entered serializedDataPos)
+        size_t deserializeHeader(
+            const std::vector<char>& serializedData,
+            size_t serializedDataPos,
+            size_t* pEntityCount
+        ) const;
+
 
         // Creates scene according to inputted serialized buffer.
         // NOTE: The input buffer here is currently intended to contain all assets as well
         // TODO: Why the fuck does the above need to be so? -> rather take just the portion containing
         // the entity and component stuff?
-        std::vector<entityID_t> createFromSerializedBuffer(
-            const std::vector<char>& buffer,
-            size_t bufferPos
+
+        entityID_t deserialize(
+            const std::vector<char>& serializedData,
+            size_t bufferReadPos,
+            size_t& bufferReadEndPos
+        );
+
+        std::vector<entityID_t> deserialize(
+            const std::vector<char>& serializedData,
+            size_t serializedDataPos
         );
 
         virtual void init() = 0;

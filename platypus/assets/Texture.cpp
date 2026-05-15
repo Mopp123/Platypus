@@ -39,18 +39,18 @@ namespace platypus
     {
         PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
         PLATYPUS_ASSERT(_pImage);
-        PLATYPUS_ASSERT(_pImage->getID() != NULL_ID);
+        PLATYPUS_ASSERT(_pImage->getID() != NULL_UUID);
 
         const size_t prevSize = targetBuffer.size();
         targetBuffer.resize(prevSize + get_serialized_metadata_size());
         char* pBuf = targetBuffer.data() + prevSize;
 
-        memcpy(pBuf, &_id, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(pBuf, &_id, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
-        const ID_t imageID = _pImage->getID();
-        memcpy(pBuf + pos, &imageID, sizeof(ID_t));
-        pos += sizeof(ID_t);
+        const UUID_t imageID = _pImage->getID();
+        memcpy(pBuf + pos, &imageID, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
 
         const TextureSamplerFilterMode samplerFilterMode = _pSampler->getFilterMode();
         memcpy(pBuf + pos, &samplerFilterMode, sizeof(TextureSamplerFilterMode));
@@ -85,8 +85,8 @@ namespace platypus
     {
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
-        ID_t id;
-        ID_t imageID;
+        UUID_t id;
+        UUID_t imageID;
         TextureSamplerFilterMode samplerFilterMode;
         TextureSamplerAddressMode samplerAddressMode;
         uint8_t useMipmapping;
@@ -95,11 +95,11 @@ namespace platypus
 
         const char* pBuf = targetBuffer.data() + bufferPos;
 
-        memcpy(&id, pBuf, sizeof(ID_t));
-        size_t pos = sizeof(ID_t);
+        memcpy(&id, pBuf, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
 
-        memcpy(&imageID, pBuf + pos, sizeof(ID_t));
-        pos += sizeof(ID_t);
+        memcpy(&imageID, pBuf + pos, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
 
         memcpy(&samplerFilterMode, pBuf + pos, sizeof(TextureSamplerFilterMode));
         pos += sizeof(TextureSamplerFilterMode);
@@ -135,7 +135,7 @@ namespace platypus
 
     size_t Texture::get_serialized_metadata_size()
     {
-        return sizeof(ID_t) * 2 +
+        return sizeof(UUID_t) * 2 +
             sizeof(TextureSamplerFilterMode) +
             sizeof(TextureSamplerAddressMode) +
             sizeof(uint8_t) * 2 +

@@ -19,7 +19,7 @@ namespace platypus
 
     struct MaterialMetadata
     {
-        ID_t assetID = NULL_ID;
+        UUID_t assetID = NULL_UUID;
         float specularStrength = 0.0f;
         float shininess = 0.0f;
         Vector2f textureOffset;
@@ -29,10 +29,10 @@ namespace platypus
         uint8_t transparent = 0;
         uint8_t shadeless = 0;
         uint8_t persistent = 0;
-        ID_t blendmapTextureID = NULL_ID;
-        ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t blendmapTextureID = NULL_UUID;
+        UUID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
         char name[asset_metadata_name_size];
     };
 
@@ -67,10 +67,10 @@ namespace platypus
     {
     private:
         // NOTE: Do these really need to be like this?
-        ID_t _blendmapTextureID = NULL_ID;
-        ID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        ID_t _specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        ID_t _normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t _blendmapTextureID = NULL_UUID;
+        UUID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t _specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t _normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
         size_t _diffuseTextureCount = 0;
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
@@ -98,10 +98,10 @@ namespace platypus
     public:
         // NOTE: All transparent materials use opaque pass's depth buffer as texture!
         Material(
-            ID_t blendmapTextureID,
-            ID_t* pDiffuseTextureIDs,
-            ID_t* pSpecularTextureIDs,
-            ID_t* pNormalTextureIDs,
+            UUID_t blendmapTextureID,
+            UUID_t* pDiffuseTextureIDs,
+            UUID_t* pSpecularTextureIDs,
+            UUID_t* pNormalTextureIDs,
             size_t diffuseTextureCount,
             size_t specularTextureCount,
             size_t normalTextureCount,
@@ -114,7 +114,7 @@ namespace platypus
             bool transparent = false,
             bool shadeless = false,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             bool persistent = false,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
@@ -141,9 +141,9 @@ namespace platypus
         Texture* getNormalTexture(size_t channel) const;
         std::vector<Texture*> getTextures() const;
 
-        ID_t getDiffuseTextureID(size_t channel) const;
-        ID_t getSpecularTextureID(size_t channel) const;
-        ID_t getNormalTextureID(size_t channel) const;
+        UUID_t getDiffuseTextureID(size_t channel) const;
+        UUID_t getSpecularTextureID(size_t channel) const;
+        UUID_t getNormalTextureID(size_t channel) const;
 
         void setLightingProperties(float specularStrength, float shininess, bool shadeless);
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
@@ -162,20 +162,20 @@ namespace platypus
 
         static size_t get_serialized_metadata_size();
 
-        inline ID_t getBlendmapTextureID() const { return _blendmapTextureID; }
-        inline const ID_t* getDiffuseTextureIDs() const { return _diffuseTextureIDs; }
-        inline const ID_t* getSpecularTextureIDs() const { return _specularTextureIDs; }
-        inline const ID_t* getNormalTextureIDs() const { return _normalTextureIDs; }
+        inline UUID_t getBlendmapTextureID() const { return _blendmapTextureID; }
+        inline const UUID_t* getDiffuseTextureIDs() const { return _diffuseTextureIDs; }
+        inline const UUID_t* getSpecularTextureIDs() const { return _specularTextureIDs; }
+        inline const UUID_t* getNormalTextureIDs() const { return _normalTextureIDs; }
 
-        inline bool hasBlendmap() const { return _blendmapTextureID != NULL_ID; }
-        inline bool hasNormalMap() const { return _normalTextureIDs[0] != NULL_ID; }
+        inline bool hasBlendmap() const { return _blendmapTextureID != NULL_UUID; }
+        inline bool hasNormalMap() const { return _normalTextureIDs[0] != NULL_UUID; }
 
         inline size_t getTotalTextureCount() const
         {
             return _diffuseTextureCount +
                 _specularTextureCount +
                 _normalTextureCount +
-                (_blendmapTextureID != NULL_ID ? 1 : 0) +
+                (_blendmapTextureID != NULL_UUID ? 1 : 0) +
                 (_receiveShadows ? 1 : 0) +
                 (_transparent ? 1 : 0);
         }

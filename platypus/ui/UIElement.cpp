@@ -114,7 +114,7 @@ namespace platypus
             UIElement* pParent,
             const Layout* pLayout,
             bool createRenderable,
-            ID_t textureID,
+            UUID_t textureID,
             const Font* pFont,
             OnClickEvent* pOnClickEvent,
             bool ignoreInput
@@ -855,85 +855,5 @@ namespace platypus
                 }
             }
         }
-
-
-        // TODO: remove below
-        /*
-        UIElement* add_container(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const Layout* pLayout,
-            bool createRenderable,
-            ID_t textureID,
-            const Font* pFont,
-            UIElement::OnClickEvent* pOnClickEvent
-        )
-        {
-            if (pLayout->id == -1)
-            {
-                Debug::log(
-                    "Layout's id was invalid(-1). "
-                    "Make sure you have added the layout to the LayoutUI container before using it.",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-
-            if (pLayout->wordWrap == WordWrap::NORMAL && pLayout->scale.x == 0.0f)
-            {
-                Debug::log(
-                    "Layout was using word wrapping but its' scale was 0. "
-                    "Can't wrap against width of 0...",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-
-            Vector2f position;
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            entityID_t entity = pScene->createEntity();
-            GUITransform* pTransform = create_gui_transform(
-                entity,
-                position,
-                pLayout->scale
-            );
-            if (createRenderable)
-            {
-                GUIRenderable* pRenderable = create_gui_renderable(
-                    entity,
-                    pLayout->color
-                );
-                pRenderable->textureID = textureID;
-                pRenderable->borderColor = pLayout->borderColor;
-                pRenderable->borderThickness = static_cast<float>(pLayout->borderThickness);
-                pRenderable->layer = pLayout->layer;
-            }
-
-            UIElement* pElement = new UIElement(
-                ui,
-                entity,
-                pLayout->id,
-                pFont,
-                pOnClickEvent
-            );
-
-            // *Need to update the "tree" even if contains only single element
-            // so that scale and pos is immediately correct..
-            if (pParent)
-            {
-                pParent->addChild(pElement);
-            }
-            else
-            {
-                pElement->updateTree();
-                if (!pParent)
-                    ui.addRootElement(pElement);
-            }
-
-            return pElement;
-        }
-        */
     }
 }

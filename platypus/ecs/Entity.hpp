@@ -16,6 +16,8 @@ namespace platypus
         sizeof(uint64_t) +
         sizeof(uint8_t);
 
+    constexpr size_t serialized_entities_header_size = sizeof(uint32_t);
+
     struct Entity
     {
         entityID_t id = NULL_ENTITY_ID;

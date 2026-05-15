@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/utils/ID.hpp"
+#include "platypus/utils/UUID.hpp"
 #include <string>
 #include <vector>
 
@@ -47,7 +47,7 @@ namespace platypus
     class Asset
     {
     protected:
-        ID_t _id = NULL_ID;
+        UUID_t _id = NULL_UUID;
         AssetType _type = AssetType::ASSET_TYPE_NONE;
         std::string _name;
         bool _persistent = false;
@@ -58,7 +58,7 @@ namespace platypus
         Asset(
             AssetType type,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             bool persistent = false
         );
         virtual ~Asset();
@@ -71,7 +71,7 @@ namespace platypus
         inline bool isPersistent() const { return _persistent; }
         inline void setPersistent(bool arg) { _persistent = arg; }
 
-        inline ID_t getID() const { return _id; }
+        inline UUID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }
         inline const std::string& getName() const { return _name; }
     };

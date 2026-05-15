@@ -68,7 +68,7 @@ namespace platypus
                 pParent,
                 pLayout,
                 true,
-                NULL_ID,
+                NULL_UUID,
                 nullptr,
                 pOnClick
             )

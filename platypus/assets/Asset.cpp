@@ -23,26 +23,26 @@ namespace platypus
     Asset::Asset(
         AssetType type,
         const std::string& name,
-        ID_t id,
+        UUID_t id,
         bool persistent
     ) :
         _type(type),
         _name(name),
         _persistent(persistent)
     {
-        if (id != NULL_ID)
+        if (id != NULL_UUID)
         {
             _id = id;
-            ID::occupy(id);
+            UUID::occupy(id);
         }
         else
         {
-            _id = ID::generate();
+            _id = UUID::generate();
         }
     }
 
     Asset::~Asset()
     {
-        ID::erase(_id);
+        UUID::erase(_id);
     }
 }

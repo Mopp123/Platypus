@@ -542,7 +542,7 @@ namespace platypus
         const Image* pImage,
         const TextureSampler* pSampler,
         const std::string& name,
-        ID_t id,
+        UUID_t id,
         bool persistent
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),

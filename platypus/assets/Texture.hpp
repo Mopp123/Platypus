@@ -64,8 +64,8 @@ namespace platypus
 
     struct TextureMetadata
     {
-        ID_t assetID = NULL_ID;
-        ID_t imageID = NULL_ID;
+        UUID_t assetID = NULL_UUID;
+        UUID_t imageID = NULL_UUID;
         TextureSamplerFilterMode filterMode;
         TextureSamplerAddressMode addressMode;
         uint8_t useMipmapping = 0;
@@ -101,7 +101,7 @@ namespace platypus
             const Image* pImage,
             const TextureSampler* pSampler,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             bool persistent = false
         );
         Texture(const Texture&) = delete;

@@ -17,8 +17,8 @@ namespace platypus
     class AssetManager
     {
     private:
-        std::unordered_map<ID_t, Asset*> _assets;
-        std::unordered_map<ID_t, Asset*> _persistentAssets;
+        std::unordered_map<UUID_t, Asset*> _assets;
+        std::unordered_map<UUID_t, Asset*> _persistentAssets;
         // NOTE: Currently these exist throughout the lifetime of the program
         //  -> there's only a couple of sampler property combinations so.. why the fuck not...
         std::vector<TextureSampler*> _textureSamplers;
@@ -31,14 +31,14 @@ namespace platypus
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
         Texture* _pZeroTexture = nullptr;
-        std::set<ID_t> _defaultAssets;
+        std::set<UUID_t> _defaultAssets;
 
     public:
         AssetManager();
         ~AssetManager();
         void destroyAssets();
         // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
-        void destroyAsset(ID_t assetID);
+        void destroyAsset(UUID_t assetID);
         //void destroyPersistentAsset(ID_t assetID);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
@@ -46,34 +46,34 @@ namespace platypus
             const std::string& filepath,
             ImageFormat format,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            UUID_t id = NULL_UUID
         );
         Texture* createTexture(
-            ID_t imageID,
+            UUID_t imageID,
             const TextureSampler* pSampler,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            UUID_t id = NULL_UUID
         );
         Texture* createTexture(
-            ID_t imageID,
+            UUID_t imageID,
             TextureSamplerFilterMode filterMode,
             TextureSamplerAddressMode addressMode,
             bool useMipmapping,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            UUID_t id = NULL_UUID
         );
         Texture* loadTexture(
             const std::string& filepath,
             ImageFormat format,
             const TextureSampler* pSampler,
             const std::string& name = "",
-            ID_t id = NULL_ID
+            UUID_t id = NULL_UUID
         );
         Material* createMaterial(
-            ID_t blendmapTextureID,
-            std::vector<ID_t> diffuseTextureIDs,
-            std::vector<ID_t> specularTextureIDs,
-            std::vector<ID_t> normalTextureIDs,
+            UUID_t blendmapTextureID,
+            std::vector<UUID_t> diffuseTextureIDs,
+            std::vector<UUID_t> specularTextureIDs,
+            std::vector<UUID_t> normalTextureIDs,
             float specularStrength,
             float shininess,
             const Vector2f& textureOffset,
@@ -83,15 +83,15 @@ namespace platypus
             bool transparent,
             bool shadeless,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );
         Material* createMaterial(
-            ID_t blendmapTextureID,
-            std::vector<ID_t> diffuseTextureIDs,
-            std::vector<ID_t> specularTextureIDs,
-            std::vector<ID_t> normalTextureIDs,
+            UUID_t blendmapTextureID,
+            std::vector<UUID_t> diffuseTextureIDs,
+            std::vector<UUID_t> specularTextureIDs,
+            std::vector<UUID_t> normalTextureIDs,
             float specularStrength = 0.625f,
             float shininess = 16.0f
         );
@@ -114,8 +114,8 @@ namespace platypus
             const std::string& filepath,
             bool instanced,
             const std::string& name,
-            ID_t modelID = NULL_ID,
-            std::vector<ID_t> meshIDs = { }
+            UUID_t modelID = NULL_UUID,
+            std::vector<UUID_t> meshIDs = { }
         );
         Mesh* createTerrainMesh(
             float tileSize,
@@ -147,10 +147,10 @@ namespace platypus
             bool useMipmapping
         );
 
-        bool assetExists(ID_t assetID) const;
-        bool assetExists(ID_t assetID, AssetType type) const;
-        Asset* getAsset(ID_t assetID) const;
-        Asset* getAsset(ID_t assetID, AssetType type) const;
+        bool assetExists(UUID_t assetID) const;
+        bool assetExists(UUID_t assetID, AssetType type) const;
+        Asset* getAsset(UUID_t assetID) const;
+        Asset* getAsset(UUID_t assetID, AssetType type) const;
         // NOTE: This is pretty fucking inefficient!
         Asset* getAsset(const std::string& name) const;
         std::vector<Asset*> getAssets(bool excludeInternalDefaults = false) const;
@@ -160,38 +160,38 @@ namespace platypus
         // For adding asset that wasn't created using the AssetManager
         void addExternalPersistentAsset(Asset* pAsset);
 
-        bool isPersistent(ID_t assetID) const;
+        bool isPersistent(UUID_t assetID) const;
 
-        std::vector<char> createMetadataBuffer(
+        std::vector<char> serialize(
             const std::vector<Asset*>& assets
         );
 
-        // Returns the position after the header in buffer (ie where the actual data begins)
-        size_t readMetadataHeader(
-            const std::vector<char>& buffer,
+        // Returns the position after the header in serializedData (ie where the actual data begins)
+        size_t deserializeHeader(
+            const std::vector<char>& serializedData,
             size_t* pImageCount,
             size_t* pTextureCount,
             size_t* pMaterialCount,
             size_t* pModelCount
-        );
+        ) const;
 
         // This is to be able to load one asset per fram (in order to get some kind of loading
         // screen working since don't know what to do with web parallelization yet...)
         //
         // *The last read pos is stored in the bufferReadEndPos to be able to start reading the
-        // next asset in the buffer
-        Asset* createFromMetadataBuffer(
+        // next asset in the serializedData
+        Asset* deserialize(
             size_t imageCount,
             size_t textureCount,
             size_t materialCount,
             size_t modelCount,
-            const std::vector<char>& buffer,
+            const std::vector<char>& serializedData,
             size_t bufferReadPos,
             size_t& bufferReadEndPos
         );
 
-        std::unordered_map<std::string, Asset*> createFromMetadataBuffer(
-            const std::vector<char>& buffer,
+        std::unordered_map<std::string, Asset*> deserialize(
+            const std::vector<char>& serializedData,
             size_t& lastReadPos
         );
 
@@ -203,7 +203,7 @@ namespace platypus
     private:
         bool validateAsset(
             const char* callLocation,
-            ID_t assetID,
+            UUID_t assetID,
             AssetType requiredType
         );
 

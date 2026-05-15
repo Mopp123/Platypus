@@ -8,7 +8,7 @@ namespace platypus
 {
     SkeletalAnimation* create_skeletal_animation(
         entityID_t target,
-        ID_t animationAssetID,
+        UUID_t animationAssetID,
         Scene* pScene,
         bool useExplicitComponentMask
     )
@@ -113,9 +113,9 @@ namespace platypus
         memcpy(
             serializedData.data() + pos,
             &(pSkeletalAnimation->animationID),
-            sizeof(ID_t)
+            sizeof(UUID_t)
         );
-        pos += sizeof(ID_t);
+        pos += sizeof(UUID_t);
 
         memcpy(
             serializedData.data() + pos,
@@ -184,7 +184,7 @@ namespace platypus
         size_t pos = sizeof(ComponentType);
 
         AnimationMode mode;
-        ID_t animationID;
+        UUID_t animationID;
         float time;
         float length;
         uint8_t stopped;
@@ -205,9 +205,9 @@ namespace platypus
         memcpy(
             &animationID,
             reinterpret_cast<const char*>(pData) + pos,
-            sizeof(ID_t)
+            sizeof(UUID_t)
         );
-        pos += sizeof(ID_t);
+        pos += sizeof(UUID_t);
 
         memcpy(
             &time,

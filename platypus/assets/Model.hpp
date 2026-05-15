@@ -8,10 +8,10 @@ namespace platypus
 {
     struct ModelMetadata
     {
-        ID_t assetID = NULL_ID;
+        UUID_t assetID = NULL_UUID;
         uint8_t instanced = 0;
         uint8_t persistent = 0;
-        ID_t meshIDs[asset_metadata_model_max_meshes];
+        UUID_t meshIDs[asset_metadata_model_max_meshes];
         char name[asset_metadata_name_size];
         char filepath[asset_metadata_filepath_size];
     };
@@ -38,7 +38,7 @@ namespace platypus
             bool instanced,
             const std::vector<Mesh*>& meshes,
             const std::string& name = "",
-            ID_t id = NULL_ID,
+            UUID_t id = NULL_UUID,
             bool persistent = false
         );
         ~Model();

@@ -8,8 +8,8 @@ namespace platypus
 {
     Renderable3D* create_renderable3D(
         entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID,
+        UUID_t meshAssetID,
+        UUID_t materialAssetID,
         Scene* pScene,
         bool useExplicitComponentMask
     )
@@ -72,8 +72,8 @@ namespace platypus
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID,
-        ID_t fontID,
+        UUID_t textureID,
+        UUID_t fontID,
         Vector4f color,
         Vector4f borderColor,
         float borderThickness,
@@ -144,8 +144,8 @@ namespace platypus
     {
         return create_gui_renderable(
             target,
-            NULL_ID,
-            NULL_ID,
+            NULL_UUID,
+            NULL_UUID,
             color,
             { 0, 0, 0, 0 }, // border color
             0.0f, // border thickness
@@ -160,14 +160,14 @@ namespace platypus
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID,
+        UUID_t textureID,
         Scene* pScene
     )
     {
         return create_gui_renderable(
             target,
             textureID,
-            NULL_ID,
+            NULL_UUID,
             { 1, 1, 1, 1 }, // color
             { 0, 0, 0, 0 }, // border color
             0.0f, // border thickness
@@ -194,14 +194,14 @@ namespace platypus
         memcpy(
             serializedData.data() + pos,
             &(pRenderable->meshID),
-            sizeof(ID_t)
+            sizeof(UUID_t)
         );
-        pos += sizeof(ID_t);
+        pos += sizeof(UUID_t);
 
         memcpy(
             serializedData.data() + pos,
             &(pRenderable->materialID),
-            sizeof(ID_t)
+            sizeof(UUID_t)
         );
 
         return serializedData;
@@ -224,20 +224,20 @@ namespace platypus
         PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_RENDERABLE3D);
         size_t pos = sizeof(ComponentType);
 
-        ID_t meshID ;
-        ID_t materialID;
+        UUID_t meshID ;
+        UUID_t materialID;
 
         memcpy(
             &meshID,
             reinterpret_cast<const uint8_t*>(pData) + pos,
-            sizeof(ID_t)
+            sizeof(UUID_t)
         );
-        pos += sizeof(ID_t);
+        pos += sizeof(UUID_t);
 
         memcpy(
             &materialID,
             reinterpret_cast<const uint8_t*>(pData) + pos,
-            sizeof(ID_t)
+            sizeof(UUID_t)
         );
 
         *ppRenderable = create_renderable3D(

@@ -139,9 +139,9 @@ namespace platypus
             glType = GL_FLOAT;
         }
 
-        uint32_t id = 0;
-        GL_FUNC(glGenTextures(1, &id));
-        GL_FUNC(glBindTexture(GL_TEXTURE_2D, id));
+        uint32_t glTextureID = 0;
+        GL_FUNC(glGenTextures(1, &glTextureID));
+        GL_FUNC(glBindTexture(GL_TEXTURE_2D, glTextureID));
         GL_FUNC(glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -218,14 +218,14 @@ namespace platypus
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
 
         _pImpl = new TextureImpl;
-        _pImpl->id = id;
+        _pImpl->id = glTextureID;
     }
 
     Texture::Texture(
         const Image* pImage,
         const TextureSampler* pSampler,
         const std::string& name,
-        ID_t id,
+        UUID_t id,
         bool persistent
     ) :
         Asset(AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
@@ -274,9 +274,9 @@ namespace platypus
         const int width = pImage->getWidth();
         const int height = pImage->getHeight();
 
-        uint32_t id = 0;
-        GL_FUNC(glGenTextures(1, &id));
-        GL_FUNC(glBindTexture(GL_TEXTURE_2D, id));
+        uint32_t glTextureID = 0;
+        GL_FUNC(glGenTextures(1, &glTextureID));
+        GL_FUNC(glBindTexture(GL_TEXTURE_2D, glTextureID));
         GL_FUNC(glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -352,7 +352,7 @@ namespace platypus
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
 
         _pImpl = new TextureImpl;
-        _pImpl->id = id;
+        _pImpl->id = glTextureID;
     }
 
     Texture::~Texture()

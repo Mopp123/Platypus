@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platypus/utils/ID.hpp"
+#include "platypus/utils/UUID.hpp"
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/core/Scene.hpp"
@@ -11,12 +11,12 @@ namespace platypus
 {
     constexpr size_t serialized_renderable3D_size =
         sizeof(ComponentType) +
-        sizeof(ID_t) * 2;
+        sizeof(UUID_t) * 2;
 
     struct Renderable3D
     {
-        ID_t meshID = NULL_ID;
-        ID_t materialID = NULL_ID;
+        UUID_t meshID = NULL_UUID;
+        UUID_t materialID = NULL_UUID;
     };
 
     // NOTE: When adding strings, make sure to take into accout
@@ -24,8 +24,8 @@ namespace platypus
     // -> if using std::string it's underlying mem is nullptr initially!
     struct GUIRenderable
     {
-        ID_t textureID = NULL_ID;
-        ID_t fontID = NULL_ID;
+        UUID_t textureID = NULL_UUID;
+        UUID_t fontID = NULL_UUID;
         Vector4f color = Vector4f(1, 1, 1, 1);
         Vector4f borderColor = Vector4f(1, 1, 1, 1);
         float borderThickness = 0.0f;
@@ -42,16 +42,16 @@ namespace platypus
 
     Renderable3D* create_renderable3D(
         entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID,
+        UUID_t meshAssetID,
+        UUID_t materialAssetID,
         Scene* pScene = nullptr,
         bool useExplicitComponentMask = false
     );
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID,
-        ID_t fontID,
+        UUID_t textureID,
+        UUID_t fontID,
         Vector4f color,
         Vector4f borderColor,
         float borderThickness,
@@ -70,7 +70,7 @@ namespace platypus
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID,
+        UUID_t textureID,
         Scene* pScene = nullptr
     );
 
