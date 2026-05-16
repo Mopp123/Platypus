@@ -31,10 +31,10 @@ namespace platypus
         {
             Layout* pBoxLayout = uiManager.createLayout();
             pBoxLayout->colors = {
-                { 0.2f, 0.2f, 0.2f, 1.0f },
+                { 0.175f, 0.125f, 0.125f, 1.0f },
                 { 0.3f, 0.3f, 0.3f, 1.0f },
-                { 0.1f, 0.1f, 0.1f, 1.0f },
-                { 0.125f, 0.125f, 0.125f, 1.0f }
+                { 0.05f, 0.05f, 0.05f, 1.0f },
+                { 0.2f, 0.2f, 0.2f, 1.0f }
             };
             pBoxLayout->padding = { 2, 2 };
             pBoxLayout->borderThickness = 1.0f;
@@ -103,10 +103,10 @@ namespace platypus
             // *Should scale be overridden in order to use same layout for differently scaled
             // InputFields?
             pFieldLayout->scale = { 300, charHeight };
-            pFieldLayout->colors.base = { 0.2f, 0.2f, 0.2f, 1.0f };
+            pFieldLayout->colors.base = { 0.1f, 0.1f, 0.1f, 1.0f };
             pFieldLayout->colors.hover = { 0.3f, 0.3f, 0.3f, 1.0f };
-            pFieldLayout->colors.selected = { 0.1f, 0.1f, 0.1f, 1.0f };
-            pFieldLayout->colors.border = { 0.7f, 0.7f, 0.7f, 1.0f };
+            pFieldLayout->colors.selected = { 0.125f, 0.125f, 0.125f, 1.0f };
+            pFieldLayout->colors.border = { 0.5f, 0.5f, 0.5f, 1.0f };
             pFieldLayout->borderThickness = 1.0f;
             pFieldLayout->textOverflow = TextOverflow::ELLIPSIS_LEFT;
 
