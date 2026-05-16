@@ -20,6 +20,8 @@ namespace platypus
 
         std::set<UUID_t>& IDPool = s_IDPools[poolID];
         UUID_t id = s_randomEngine();
+        PLATYPUS_ASSERT(id != NULL_UUID);
+
         if (IDPool.find(id) != IDPool.end())
         {
             Debug::log(

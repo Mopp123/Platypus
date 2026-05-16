@@ -95,9 +95,6 @@ namespace platypus
 
         // Creates scene according to inputted serialized buffer.
         // NOTE: The input buffer here is currently intended to contain all assets as well
-        // TODO: Why the fuck does the above need to be so? -> rather take just the portion containing
-        // the entity and component stuff?
-
         entityID_t deserialize(
             const std::vector<char>& serializedData,
             size_t bufferReadPos,
