@@ -24,8 +24,8 @@ namespace platypus
         static UUID_t generate(uint32_t poolID = 0);
         static bool occupy(UUID_t id, uint32_t poolID = 0);
         static void erase(UUID_t idToErase, uint32_t poolID = 0);
-
         static UUID_t hash(UUID_t a, UUID_t b);
+        static bool exists(UUID_t uuid, uint32_t poolID = 0);
 
     private:
         static void init();

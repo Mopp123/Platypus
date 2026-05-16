@@ -98,7 +98,7 @@ namespace platypus
         return _componentPools[componentType]->occupy(&target);
     }
 
-    entityID_t Scene::createEntity()
+    entityID_t Scene::createEntity(UUID_t explicitUUID)
     {
         Entity entity;
         if (!_freeEntityIDs.empty())
@@ -112,6 +112,24 @@ namespace platypus
         else
         {
             entity.id = _entities.size();
+            if (explicitUUID == NULL_UUID)
+            {
+                entity.uuid = UUID::generate(entity_uuid_pool_id);
+            }
+            else
+            {
+                if (UUID::exists(explicitUUID, entity_uuid_pool_id))
+                {
+                    Debug::log(
+                        "Entity UUID " + std::to_string(explicitUUID) + " already exists!",
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+                entity.uuid = explicitUUID;
+            }
+
             _entities.push_back(entity);
         }
         return entity.id;
@@ -126,6 +144,16 @@ namespace platypus
         {
             if (_entities[entity].id != NULL_ENTITY_ID)
                 return _entities[entity];
+        }
+        return { };
+    }
+
+    Entity Scene::getEntity(UUID_t entityUUID) const
+    {
+        for (const Entity& entity : _entities)
+        {
+            if (entity.uuid == entityUUID)
+                return entity;
         }
         return { };
     }
@@ -604,24 +632,25 @@ namespace platypus
     )
     {
         PLATYPUS_ASSERT((bufferReadPos + serialized_entity_size) <= serializedData.size());
-        const char* pData = serializedData.data() + bufferReadPos;
-        entityID_t entityID;
+        const char* pData = serializedData.data();
+        Debug::log("___TEST___reading entity from pos: " + std::to_string(bufferReadPos));
+        Entity entity;
         deserialize_entity(
             this,
-            entityID,
+            entity,
             serialized_entity_size,
-            pData
+            pData + bufferReadPos
         );
         bufferReadPos += serialized_entity_size;
 
-        Entity entity = getEntity(entityID);
         size_t componentCount = get_component_count(entity.componentMask);
         Debug::log(
             "___TEST___attempting to load " + std::to_string(componentCount) + " components "
-            "for entity " + std::to_string(entityID)
+            "for entity " + std::to_string(entity.id)
         );
         for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
         {
+            PLATYPUS_ASSERT(bufferReadPos < serializedData.size());
             ComponentType componentType;
             memcpy(
                 &componentType,
@@ -630,28 +659,23 @@ namespace platypus
             );
             size_t serializedComponentSize = get_component_serialized_size(componentType);
 
-            Debug::log(
-                "___TEST___attempting to deserialize component: " + component_type_to_string(componentType) + " "
-                "serialized size should be: " + std::to_string(serializedComponentSize)
-            );
-
             void* pComponent = nullptr;
             deserialize_component(
                 this,
                 componentType,
                 &pComponent,
-                entityID,
+                entity.id,
                 serializedComponentSize,
                 pData + bufferReadPos
             );
             bufferReadPos += serializedComponentSize;
         }
         Debug::log(
-            "___TEST___loaded entity: " + std::to_string(entityID) + " "
+            "___TEST___loaded entity: " + std::to_string(entity.id) + " "
             "with " + std::to_string(componentCount) + " components"
         );
         bufferReadEndPos = bufferReadPos;
-        return entityID;
+        return entity.id;
     }
 
     std::vector<entityID_t> Scene::deserialize(
@@ -674,23 +698,25 @@ namespace platypus
 
         for (size_t i = 0; i < entityCount; ++i)
         {
-            entityID_t entityID;
+
+            Debug::log("___TEST___reading entity from pos: " + std::to_string(pos));
+            Entity entity;
             deserialize_entity(
                 this,
-                entityID,
+                entity,
                 serialized_entity_size,
                 reinterpret_cast<const char*>(pData) + pos
             );
             pos += serialized_entity_size;
 
-            Entity entity = getEntity(entityID);
             size_t componentCount = get_component_count(entity.componentMask);
             Debug::log(
                 "___TEST___attempting to load " + std::to_string(componentCount) + " components "
-                "for entity " + std::to_string(entityID)
+                "for entity " + std::to_string(entity.id)
             );
             for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
             {
+                Debug::log("___TEST___reading component from pos: " + std::to_string(pos));
                 ComponentType componentType;
                 memcpy(
                     &componentType,
@@ -709,15 +735,15 @@ namespace platypus
                     this,
                     componentType,
                     &pComponent,
-                    entityID,
+                    entity.id,
                     serializedComponentSize,
                     reinterpret_cast<const char*>(pData) + pos
                 );
                 pos += serializedComponentSize;
             }
-            entities[i] = entityID;
+            entities[i] = entity.id;
             Debug::log(
-                "___TEST___loaded entity: " + std::to_string(entityID) + " "
+                "___TEST___loaded entity: " + std::to_string(entity.id) + " "
                 "with " + std::to_string(componentCount) + " components"
             );
         }

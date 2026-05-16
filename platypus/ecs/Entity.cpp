@@ -23,6 +23,7 @@ namespace platypus
 
     Entity::Entity(const Entity& other) :
         id(other.id),
+        uuid(other.uuid),
         componentMask(other.componentMask),
         active(other.active)
     {}
@@ -30,6 +31,7 @@ namespace platypus
     void Entity::clear()
     {
         id = NULL_ENTITY_ID;
+        UUID::erase(uuid, entity_uuid_pool_id);
         componentMask = 0;
     }
 
@@ -38,10 +40,10 @@ namespace platypus
         std::vector<char> serializedData(serialized_entity_size);
         memcpy(
             serializedData.data(),
-            &entity.id,
-            sizeof(entityID_t)
+            &entity.uuid,
+            sizeof(UUID_t)
         );
-        size_t pos = sizeof(entityID_t);
+        size_t pos = sizeof(UUID_t);
 
         memcpy(
             serializedData.data() + pos,
@@ -61,23 +63,23 @@ namespace platypus
 
     void deserialize_entity(
         Scene* pScene,
-        entityID_t& outEntity,
+        Entity& outEntity,
         size_t dataSize,
         const void* pData
     )
     {
         PLATYPUS_ASSERT(dataSize == serialized_entity_size);
 
-        entityID_t id;
+        UUID_t uuid;
         uint64_t componentMask;
         uint8_t active;
 
         memcpy(
-            &id,
+            &uuid,
             pData,
-            sizeof(entityID_t)
+            sizeof(UUID_t)
         );
-        size_t pos = sizeof(entityID_t);
+        size_t pos = sizeof(UUID_t);
 
         memcpy(
             &componentMask,
@@ -93,9 +95,9 @@ namespace platypus
         );
         // NOTE: atm assuming that all written entities are in correct order
         //  -> scene assigns the id
-        entityID_t entityID = pScene->createEntity();
+        entityID_t entityID = pScene->createEntity(uuid);
         pScene->setComponentMask(entityID, componentMask);
         pScene->setEntityActive(entityID, static_cast<bool>(active));
-        outEntity = entityID;
+        outEntity = pScene->getEntity(uuid);
     }
 }

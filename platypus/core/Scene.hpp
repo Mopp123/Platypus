@@ -43,8 +43,9 @@ namespace platypus
 
         void* allocateComponent(entityID_t target, ComponentType componentType);
 
-        entityID_t createEntity();
+        entityID_t createEntity(UUID_t explicitUUID = NULL_UUID);
         Entity getEntity(entityID_t entity) const;
+        Entity getEntity(UUID_t entityUUID) const;
         void setEntityActive(entityID_t entity, bool arg);
         bool isEntityActive(entityID_t entity) const;
         bool entityExists(entityID_t entity) const;

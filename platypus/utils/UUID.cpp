@@ -9,12 +9,6 @@ namespace platypus
     std::unordered_map<uint32_t, std::set<UUID_t>> UUID::s_IDPools;
     bool UUID::s_initialized = false;
 
-    void UUID::init()
-    {
-        s_randomEngine.seed(time(nullptr));
-        s_initialized = true;
-    }
-
     // NOTE: Could be done better...
     UUID_t UUID::generate(uint32_t poolID)
     {
@@ -125,5 +119,20 @@ namespace platypus
         uint32_t C = (int32_t)((A >= B ? A * A + A + B : A + B * B) / 2);
         UUID_t id = (a < 0 && b < 0) || (a >= 0 && b >= 0) ? C : -C - 1;
         return id;
+    }
+
+    bool UUID::exists(UUID_t uuid, uint32_t poolID)
+    {
+        if (s_IDPools.find(poolID) == s_IDPools.end())
+            return false;
+
+        const std::set<UUID_t>& poolIDs = s_IDPools[poolID];
+        return poolIDs.find(uuid) != poolIDs.end();
+    }
+
+    void UUID::init()
+    {
+        s_randomEngine.seed(time(nullptr));
+        s_initialized = true;
     }
 }
