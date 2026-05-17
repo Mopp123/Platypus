@@ -207,6 +207,8 @@ namespace platypus
             uint32_t getRelativeLayer() const;
             uint32_t getAbsoluteLayer() const;
 
+            // NOTE: Not sure if this works properly!?
+            void setLayout(Layout* pLayout);
             Layout* getLayout() const;
 
             static uint32_t get_cursor_over_layer();

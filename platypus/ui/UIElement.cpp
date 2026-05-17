@@ -802,6 +802,12 @@ namespace platypus
             return _absoluteLayer;
         }
 
+        // NOTE: Not sure if this works properly!?
+        void UIElement::setLayout(Layout* pLayout)
+        {
+            _layoutID = pLayout->id;
+        }
+
         Layout* UIElement::getLayout() const
         {
             return _managerRef.getLayout(_layoutID);

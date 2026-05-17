@@ -15,9 +15,9 @@ namespace platypus
             Layout* pLayout = uiManager.createLayout();
             pLayout->effectOnParentFlags = effectOnParentFlags;
             pLayout->colors = {
-                { 1.0f, 1.0f, 1.0f, 1.0f },
-                { 1.0f, 1.0f, 1.0f, 1.0f },
-                { 1.0f, 1.0f, 1.0f, 1.0f }
+                { 0.7f, 0.7f, 0.7f, 1.0f },
+                { 0.7f, 0.7f, 0.7f, 1.0f },
+                { 0.7f, 0.7f, 0.7f, 1.0f }
             };
             *ppLayout = pLayout;
         }
@@ -43,9 +43,9 @@ namespace platypus
 
             Layout* pTextLayout = uiManager.createLayout();
             pTextLayout->colors = {
-                { 1.0f, 1.0f, 1.0f, 1.0f },
-                { 1.0f, 1.0f, 1.0f, 1.0f },
-                { 1.0f, 1.0f, 1.0f, 1.0f }
+                { 0.7f, 0.7f, 0.7f, 1.0f },
+                { 0.7f, 0.7f, 0.7f, 1.0f },
+                { 0.7f, 0.7f, 0.7f, 1.0f }
             };
 
             *ppBoxLayout = pBoxLayout;
@@ -106,7 +106,7 @@ namespace platypus
             pFieldLayout->colors.base = { 0.1f, 0.1f, 0.1f, 1.0f };
             pFieldLayout->colors.hover = { 0.3f, 0.3f, 0.3f, 1.0f };
             pFieldLayout->colors.selected = { 0.125f, 0.125f, 0.125f, 1.0f };
-            pFieldLayout->colors.border = { 0.5f, 0.5f, 0.5f, 1.0f };
+            pFieldLayout->colors.border = { 0.5f, 0.4f, 0.4f, 1.0f };
             pFieldLayout->borderThickness = 1.0f;
             pFieldLayout->textOverflow = TextOverflow::ELLIPSIS_LEFT;
 
