@@ -13,4 +13,6 @@ namespace platypus
     std::string read_text_file(const std::string& filepath);
 
     bool validate_file(const std::string& filepath, std::string& error);
+
+    std::string get_relative_path(const std::string& absolutePath);
 }

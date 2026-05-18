@@ -136,14 +136,14 @@ namespace platypus
         void updateSceneDepthDescriptorSet(Texture* pSceneDepthTexture);
 
         Texture* getBlendmapTexture() const;
-        Texture* getDiffuseTexture(size_t channel) const;
-        Texture* getSpecularTexture(size_t channel) const;
-        Texture* getNormalTexture(size_t channel) const;
+        Texture* getDiffuseTexture(size_t slot) const;
+        Texture* getSpecularTexture(size_t slot) const;
+        Texture* getNormalTexture(size_t slot) const;
         std::vector<Texture*> getTextures() const;
 
-        UUID_t getDiffuseTextureID(size_t channel) const;
-        UUID_t getSpecularTextureID(size_t channel) const;
-        UUID_t getNormalTextureID(size_t channel) const;
+        UUID_t getDiffuseTextureID(size_t slot) const;
+        UUID_t getSpecularTextureID(size_t slot) const;
+        UUID_t getNormalTextureID(size_t slot) const;
 
         void setLightingProperties(float specularStrength, float shininess, bool shadeless);
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);

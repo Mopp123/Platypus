@@ -596,18 +596,22 @@ namespace platypus
             };
         }
 
-        void UIElement::updateInheritedScale(Vector2f parentScale)
+        void UIElement::updateInheritedScale(
+            Vector2f parentScale,
+            Vector2f parentPadding,
+            float parentBorderThickness
+        )
         {
             Layout* pLayout = getLayout();
 
             GUITransform* pTransform = getTransform();
             if (pLayout->inheritParentFlags & InheritParentFlagBits::WIDTH)
-                pTransform->scale.x = parentScale.x;
+                pTransform->scale.x = parentScale.x - parentPadding.x * 2 - parentBorderThickness * 2;
             if (pLayout->inheritParentFlags & InheritParentFlagBits::HEIGHT)
-                pTransform->scale.y = parentScale.y;
+                pTransform->scale.y = parentScale.y - parentPadding.y * 2 - parentBorderThickness * 2;
 
             for (UIElement* pChild : _children)
-                pChild->updateInheritedScale(pTransform->scale);
+                pChild->updateInheritedScale(pTransform->scale, pLayout->padding, pLayout->borderThickness);
         }
 
         // NOTE: Newly incorporated borderThickness might not work properly
@@ -728,7 +732,8 @@ namespace platypus
         void UIElement::updateTree()
         {
             updateScale();
-            updateInheritedScale(getTransform()->scale);
+            const Layout* pLayout = getLayout();
+            updateInheritedScale(getTransform()->scale, pLayout->padding, pLayout->borderThickness);
             Vector2f cumulatedScale;
             updatePosition(cumulatedScale);
         }

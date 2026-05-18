@@ -435,7 +435,6 @@ namespace platypus
                 "blendmap texture asset ID was NULL_ID.",
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
             return nullptr;
         }
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -445,62 +444,59 @@ namespace platypus
         );
     }
 
-    Texture* Material::getDiffuseTexture(size_t channel) const
+    Texture* Material::getDiffuseTexture(size_t slot) const
     {
-        if (channel >= _diffuseTextureCount)
+        if (slot >= _diffuseTextureCount)
         {
             Debug::log(
                 "@Material::getDiffuseTexture "
-                "channel(" + std::to_string(channel) + ") out of bounds. "
+                "slot(" + std::to_string(slot) + ") out of bounds. "
                 "Material has " + std::to_string(_diffuseTextureCount) + " diffuse textures.",
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
             return nullptr;
         }
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         return (Texture*)pAssetManager->getAsset(
-            _diffuseTextureIDs[channel],
+            _diffuseTextureIDs[slot],
             AssetType::ASSET_TYPE_TEXTURE
         );
     }
 
-    Texture* Material::getSpecularTexture(size_t channel) const
+    Texture* Material::getSpecularTexture(size_t slot) const
     {
-        if (channel >= _specularTextureCount)
+        if (slot >= _specularTextureCount)
         {
             Debug::log(
                 "@Material::getSpecularTexture "
-                "channel(" + std::to_string(channel) + ") out of bounds. "
+                "slot(" + std::to_string(slot) + ") out of bounds. "
                 "Material has " + std::to_string(_specularTextureCount) + " specular textures.",
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
             return nullptr;
         }
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         return (Texture*)pAssetManager->getAsset(
-            _specularTextureIDs[channel],
+            _specularTextureIDs[slot],
             AssetType::ASSET_TYPE_TEXTURE
         );
     }
 
-    Texture* Material::getNormalTexture(size_t channel) const
+    Texture* Material::getNormalTexture(size_t slot) const
     {
-        if (channel >= _normalTextureCount)
+        if (slot >= _normalTextureCount)
         {
             Debug::log(
                 "@Material::getNormalTexture "
-                "channel(" + std::to_string(channel) + ") out of bounds. "
+                "slot(" + std::to_string(slot) + ") out of bounds. "
                 "Material has " + std::to_string(_normalTextureCount) + " normal textures.",
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
             return nullptr;
         }
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         return (Texture*)pAssetManager->getAsset(
-            _normalTextureIDs[channel],
+            _normalTextureIDs[slot],
             AssetType::ASSET_TYPE_TEXTURE
         );
     }
@@ -547,49 +543,49 @@ namespace platypus
         return textures;
     }
 
-    UUID_t Material::getDiffuseTextureID(size_t channel) const
+    UUID_t Material::getDiffuseTextureID(size_t slot) const
     {
-        if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
+        if (slot >= PE_MAX_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
-                "Texture channel(" + std::to_string(channel) + ") out of bounds! "
-                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per channel.",
+                "Texture slot(" + std::to_string(slot) + ") out of bounds! "
+                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per slot.",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
-        return _diffuseTextureIDs[channel];
+        return _diffuseTextureIDs[slot];
     }
 
-    UUID_t Material::getSpecularTextureID(size_t channel) const
+    UUID_t Material::getSpecularTextureID(size_t slot) const
     {
-        if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
+        if (slot >= PE_MAX_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
-                "Texture channel(" + std::to_string(channel) + ") out of bounds! "
-                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per channel.",
+                "Texture slot(" + std::to_string(slot) + ") out of bounds! "
+                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per slot.",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
-        return _specularTextureIDs[channel];
+        return _specularTextureIDs[slot];
     }
 
-    UUID_t Material::getNormalTextureID(size_t channel) const
+    UUID_t Material::getNormalTextureID(size_t slot) const
     {
-        if (channel >= PE_MAX_MATERIAL_TEX_CHANNELS)
+        if (slot >= PE_MAX_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
-                "Texture channel(" + std::to_string(channel) + ") out of bounds! "
-                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per channel.",
+                "Texture slot(" + std::to_string(slot) + ") out of bounds! "
+                "Material can have up to " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " textures per slot.",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
-        return _normalTextureIDs[channel];
+        return _normalTextureIDs[slot];
     }
 
     void Material::setLightingProperties(float specularStrength, float shininess, bool shadeless)

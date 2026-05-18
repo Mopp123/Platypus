@@ -166,4 +166,37 @@ namespace platypus
         }
         return true;
     }
+
+
+    std::string get_relative_path(const std::string& absolutePath)
+    {
+        const std::string currentPath = std::filesystem::current_path().string();
+        size_t p = absolutePath.find(currentPath);
+        if (absolutePath.size() < currentPath.size())
+        {
+            Debug::log(
+                "Absolute path: " + absolutePath + " length(" + std::to_string(absolutePath.size()) + ") "
+                "was shorter than current path: " + currentPath + " length(" + std::to_string(currentPath.size()) + ") "
+                "This func requires absolute path be inside the current path!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return "";
+        }
+
+        if (p == std::string::npos)
+        {
+            Debug::log(
+                "Current path: " + currentPath + " not found from absolute path: " + absolutePath + ". "
+                "Make sure you entered the absolute path correctly!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return "";
+        }
+
+        std::string result = absolutePath;
+        // erase currentPath + 1 since need to get rid of the first '/'
+        return result.erase(p, currentPath.size() + 1);
+    }
 }

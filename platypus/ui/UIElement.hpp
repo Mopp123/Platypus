@@ -185,7 +185,11 @@ namespace platypus
             void updateScale();
             // Updates width and/or height according to parent if layout demands it
             // NOTE: This was a quick fix for one issue, this could be fucked...
-            void updateInheritedScale(Vector2f parentScale);
+            void updateInheritedScale(
+                Vector2f parentScale,
+                Vector2f parentPadding,
+                float parentBorderThickness
+            );
 
             // Updates global positions for the whole element tree recursively
             // NOTE: Has to be called AFTER updating all element tree scales using above!
