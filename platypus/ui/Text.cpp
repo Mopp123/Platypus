@@ -28,7 +28,8 @@ namespace platypus
                 pFont,
                 nullptr,
                 true // NOTE: All mouse input is ignored for Text atm!! TODO: ALLOW MORE CONTROL OVER THIS!
-            )
+            ),
+            _fullStr(txt)
         {
             WordWrap useWordWrap = WordWrap::NONE;
             TextOverflow useTextOverflow = TextOverflow::NONE;
@@ -102,6 +103,7 @@ namespace platypus
         )
         {
             PLATYPUS_ASSERT(pParentElement);
+            _fullStr = text;
 
             // TODO: Make App, SceneManager and Scene accessing safer here!
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -154,6 +156,7 @@ namespace platypus
         void Text::set(const std::string& text)
         {
             PLATYPUS_ASSERT(_pParent);
+            _fullStr = text;
 
             // TODO: Make App, SceneManager and Scene accessing safer here!
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
@@ -201,6 +204,13 @@ namespace platypus
 
             overrideScale({ maxLineWidth, charHeight * lineCount });
             triggerFullTreeUpdate();
+        }
+
+        std::string Text::getVisualStr() const
+        {
+            const GUIRenderable* pRenderable = getRenderable();
+            PLATYPUS_ASSERT(pRenderable);
+            return pRenderable->text;
         }
 
 

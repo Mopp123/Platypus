@@ -15,6 +15,9 @@ namespace platypus
         {
         protected:
             friend class UIManager;
+
+            std::string _fullStr;
+
             // Protected since some other UIElement may extend this
             // TODO: Don't create new layout for each Text
             //  -> rather specify same layout for multiple Texts and have some "individual scale"
@@ -36,6 +39,8 @@ namespace platypus
             // TODO: replace above with below!
             void set(const std::string& text);
 
+            std::string getVisualStr() const;
+            inline std::string getFullStr() const { return _fullStr; }
             inline const Font* getFont() const { return _pFont; }
         };
 

@@ -71,7 +71,7 @@ namespace platypus
             if (_inputFieldRef.isSelected())
             {
                 Text* pText = _inputFieldRef._pButton->getText();
-                std::string& str = pText->getRenderable()->text;
+                std::string str = pText->getFullStr();
                 if (key == KeyName::KEY_BACKSPACE && action != InputAction::RELEASE)
                 {
                     util::str::pop_back_utf8(str);
@@ -100,7 +100,7 @@ namespace platypus
             if (_inputFieldRef.isSelected())
             {
                 Text* pText = _inputFieldRef._pButton->getText();
-                std::string& str = pText->getRenderable()->text;
+                std::string str = pText->getFullStr();
                 util::str::append_utf8(codepoint, str);
                 pText->set(
                     _inputFieldRef._pButton,
@@ -230,7 +230,8 @@ namespace platypus
 
         std::string InputField::getContent() const
         {
-            return _pButton->getText()->getRenderable()->text;
+            //return _pButton->getText()->getRenderable()->text;
+            return _pButton->getText()->getFullStr();
         }
 
         bool InputField::getContentFloat(float& outValue) const

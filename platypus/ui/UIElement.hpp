@@ -177,6 +177,7 @@ namespace platypus
             Vector2f getGlobalPosition() const;
             const GUITransform* getTransform() const;
             GUIRenderable* getRenderable();
+            const GUIRenderable* getRenderable() const;
             inline UIElement* getParent() const { return _pParent; }
             UIElement* getRootParent();
             virtual void setActive(bool arg);

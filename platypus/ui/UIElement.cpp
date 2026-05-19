@@ -464,6 +464,23 @@ namespace platypus
             return nullptr;
         }
 
+        const GUIRenderable* UIElement::getRenderable() const
+        {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            const Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const GUIRenderable* pRenderable = reinterpret_cast<const GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                )
+            );
+            if (pRenderable)
+                return pRenderable;
+
+            return nullptr;
+        }
+
         UIElement* UIElement::getRootParent()
         {
             if (!_pParent)
