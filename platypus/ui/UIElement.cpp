@@ -100,7 +100,7 @@ namespace platypus
                     }
                 }
 
-                // TESTING
+                // If drag event -> get where the dragging begins..
                 if (_pElement->_pDragEvent && !_pElement->_dragged)
                 {
                     InputManager& inputManager = Application::get_instance()->getInputManager();

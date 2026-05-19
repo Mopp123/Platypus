@@ -62,6 +62,7 @@ namespace platypus
         {
             Layout* pLayout = uiManager.createLayout();
             pLayout->expandElements = ExpandElements::RIGHT;
+            pLayout->elementGap = 2.0f;
 
             Layout* pBoxLayout = uiManager.createLayout();
             pBoxLayout->colors = {

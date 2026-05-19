@@ -49,6 +49,7 @@ namespace platypus
             class DragEvent
             {
             protected:
+                // *Where the dragging begins..
                 int _beginX = 0;
                 int _beginY = 0;
 
