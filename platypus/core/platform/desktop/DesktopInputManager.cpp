@@ -148,7 +148,6 @@ namespace platypus
 
         float mdx = static_cast<float>(x) - static_cast<float>(pInputManager->getMouseX());
         float mdy = static_cast<float>(y) - static_cast<float>(pInputManager->getMouseY());
-
         int mx = (int)x;
         int my = (int)y;
         pInputManager->setMousePos(mx, my);

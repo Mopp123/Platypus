@@ -263,13 +263,14 @@ namespace platypus
         // In web gl our coords are flipped -> need to flip mouseY
         // NOTE: ATM DISABLED ONLY FOR TESTING
         //const int windowHeight = Application::get_instance()->getWindow().getHeight();
-
+        float mdx = static_cast<float>(x) - static_cast<float>(pInputManager->getMouseX());
+        float mdy = static_cast<float>(y) - static_cast<float>(pInputManager->getMouseY());
         int mx = mouseEvent->targetX;
         int my = mouseEvent->targetY;
         //int my = windowHeight - mouseEvent->targetY;
         pInputManager->setMousePos(mx, my);
+        pInputManager->setMouseMove(mdx, mdy);
         pInputManager->processCursorPosEvents(mx, my);
-
         return 0;
     }
 
