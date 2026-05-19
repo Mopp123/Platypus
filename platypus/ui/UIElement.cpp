@@ -100,6 +100,15 @@ namespace platypus
                     }
                 }
 
+                // TESTING
+                if (_pElement->_pDragEvent && !_pElement->_dragged)
+                {
+                    InputManager& inputManager = Application::get_instance()->getInputManager();
+                    _pElement->_pDragEvent->setBeginPos(
+                        inputManager.getMouseX(),
+                        inputManager.getMouseY()
+                    );
+                }
                 _pElement->_dragged = true;
             }
 

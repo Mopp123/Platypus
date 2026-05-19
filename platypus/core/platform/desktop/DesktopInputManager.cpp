@@ -146,9 +146,13 @@ namespace platypus
         //const int windowHeight = Application::get_instance()->getWindow().getHeight();
         //int my = windowHeight - (int)y;
 
+        float mdx = static_cast<float>(x) - static_cast<float>(pInputManager->getMouseX());
+        float mdy = static_cast<float>(y) - static_cast<float>(pInputManager->getMouseY());
+
         int mx = (int)x;
         int my = (int)y;
         pInputManager->setMousePos(mx, my);
+        pInputManager->setMouseMove(mdx, mdy);
         pInputManager->processCursorPosEvents(mx, my);
     }
 

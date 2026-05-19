@@ -48,8 +48,13 @@ namespace platypus
 
             class DragEvent
             {
+            protected:
+                int _beginX = 0;
+                int _beginY = 0;
+
             public:
                 virtual ~DragEvent() {}
+                inline void setBeginPos(int x, int y) { _beginX = x, _beginY = y; }
                 virtual void func(int mx, int my) = 0;
             };
 
