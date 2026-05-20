@@ -79,6 +79,10 @@ namespace platypus
             delete _pImpl;
     }
 
+    void Window::requestClosing()
+    {
+    }
+
     bool Window::isCloseRequested()
     {
         return false;

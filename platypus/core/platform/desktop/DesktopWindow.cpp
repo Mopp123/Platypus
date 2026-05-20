@@ -95,6 +95,11 @@ namespace platypus
         delete _pImpl;
     }
 
+    void Window::requestClosing()
+    {
+        glfwSetWindowShouldClose(_pImpl->pGLFWwindow, 1);
+    }
+
     bool Window::isCloseRequested()
     {
         return (bool)glfwWindowShouldClose(_pImpl->pGLFWwindow);

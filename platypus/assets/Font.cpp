@@ -209,6 +209,7 @@ namespace platypus
             1,
             ImageFormat::R8_UNORM
         );
+        pFontImgData->setSerializable(false);
         _imageID = pFontImgData->getID();
 
         Texture* pTexture = pAssetManager->createTexture(
@@ -218,6 +219,7 @@ namespace platypus
             true // use mipmapping? -> NOTE: Why are we mipmapping this?
         );
         pTexture->setAtlasRowCount(textureAtlasRowCount);
+        pTexture->setSerializable(false);
         _textureID = pTexture->getID();
 
         _textureAtlasRowCount = textureAtlasRowCount;

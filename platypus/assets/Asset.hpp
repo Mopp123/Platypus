@@ -51,6 +51,7 @@ namespace platypus
         AssetType _type = AssetType::ASSET_TYPE_NONE;
         std::string _name;
         bool _persistent = false;
+        bool _serializable = true;
 
     public:
         Asset() = delete;
@@ -74,5 +75,7 @@ namespace platypus
         inline UUID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }
         inline const std::string& getName() const { return _name; }
+        inline void setSerializable(bool arg) { _serializable = arg; }
+        inline bool isSerializable() const { return _serializable; }
     };
 }

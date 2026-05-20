@@ -33,12 +33,15 @@ namespace platypus
         Texture* _pZeroTexture = nullptr;
         std::set<UUID_t> _defaultAssets;
 
+        std::vector<std::string> _errors;
+
     public:
         AssetManager();
         ~AssetManager();
         void destroyAssets();
         // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
         void destroyAsset(UUID_t assetID);
+        void destroyAsset(const std::string& assetName);
         //void destroyPersistentAsset(ID_t assetID);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
@@ -149,12 +152,20 @@ namespace platypus
 
         bool assetExists(UUID_t assetID) const;
         bool assetExists(UUID_t assetID, AssetType type) const;
+        bool assetExists(const std::string& assetName) const;
         Asset* getAsset(UUID_t assetID) const;
         Asset* getAsset(UUID_t assetID, AssetType type) const;
         // NOTE: This is pretty fucking inefficient!
-        Asset* getAsset(const std::string& name) const;
-        std::vector<Asset*> getAssets(bool excludeInternalDefaults = false) const;
-        std::vector<Asset*> getAssets(AssetType type, bool excludeInternalDefaults = false) const;
+        Asset* getAsset(const std::string& assetName) const;
+        std::vector<Asset*> getAssets(
+            bool excludeInternalDefaults = false,
+            bool excludeNonSerializable = true
+        ) const;
+        std::vector<Asset*> getAssets(
+            AssetType type,
+            bool excludeInternalDefaults = false,
+            bool excludeNonSerializable = true
+        ) const;
 
         void makePersistent(Asset* pAsset);
         // For adding asset that wasn't created using the AssetManager
@@ -194,6 +205,8 @@ namespace platypus
             const std::vector<char>& serializedData,
             size_t& lastReadPos
         );
+
+        std::vector<std::string> popErrors();
 
         inline size_t getAssetTotalCount() const { return _assets.size(); }
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }

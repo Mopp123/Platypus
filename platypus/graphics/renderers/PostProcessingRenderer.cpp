@@ -277,6 +277,7 @@ namespace platypus
             swapchainExtent.width,
             swapchainExtent.height
         );
+        pColorStageAttachment->setSerializable(false);
 
         Framebuffer* pColorStageFramebuffer = new Framebuffer(
             _intermediatePass,

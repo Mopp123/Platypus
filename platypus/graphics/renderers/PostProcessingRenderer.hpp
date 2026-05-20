@@ -113,7 +113,6 @@ namespace platypus
             const char* callLocation
         ) const;
 
-
         bool validateStageDataComplete(
             PostProcessingStage stage,
             std::string& outErrors

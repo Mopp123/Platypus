@@ -553,9 +553,9 @@ namespace platypus
         if (!is_image_format_valid(imageFormat, pImage->getChannels()))
         {
             Debug::log(
-                "@Texture::Texture "
                 "Invalid target format: " + image_format_to_string(imageFormat) + " "
                 "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
         }

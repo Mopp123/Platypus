@@ -12,12 +12,15 @@ namespace platypus
         // Create black and white default textures
         PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
         _pWhiteImage = createImage(whitePixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
+        _pWhiteImage->setSerializable(false);
 
         PE_ubyte blackPixels[4] = { 0, 0, 0, 255 };
         _pBlackImage = createImage(blackPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
+        _pBlackImage->setSerializable(false);
 
         PE_ubyte zeroPixels[4] = { 0, 0, 0, 0 };
         _pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
+        _pZeroImage->setSerializable(false);
 
         _persistentAssets[_pWhiteImage->getID()] = _pWhiteImage;
         _persistentAssets[_pBlackImage->getID()] = _pBlackImage;
@@ -37,14 +40,20 @@ namespace platypus
             _pWhiteImage->getID(),
             pDefaultTextureSampler
         );
+        _pWhiteTexture->setSerializable(false);
+
         _pBlackTexture = createTexture(
             _pBlackImage->getID(),
             pDefaultTextureSampler
         );
+        _pBlackTexture->setSerializable(false);
+
         _pZeroTexture = createTexture(
             _pZeroImage->getID(),
             pDefaultTextureSampler
         );
+        _pZeroTexture->setSerializable(false);
+
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
         _persistentAssets[_pZeroTexture->getID()] = _pZeroTexture;
@@ -109,6 +118,24 @@ namespace platypus
 
         if (_persistentAssets.find(assetID) != _persistentAssets.end())
             _persistentAssets.erase(assetID);
+    }
+
+    void AssetManager::destroyAsset(const std::string& assetName)
+    {
+        if (assetName.empty())
+            return;
+
+        UUID_t assetID = NULL_UUID;
+        std::unordered_map<UUID_t, Asset*>::const_iterator it;
+        for (it = _assets.begin(); it != _assets.end(); ++it)
+        {
+            if (it->second->getName() == assetName)
+            {
+                assetID = it->first;
+                break;
+            }
+        }
+        destroyAsset(assetID);
     }
 
     Image* AssetManager::createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format)
@@ -182,12 +209,29 @@ namespace platypus
         Image* pImage = (Image*)getAsset(imageID, AssetType::ASSET_TYPE_IMAGE);
         if (!pImage)
         {
+            const std::string error = "Failed to find image with ID: " + std::to_string(imageID);
             Debug::log(
-                "AssetManager::createTexture "
-                "Failed to find image with ID: " + std::to_string(imageID),
+                error,
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
+            _errors.push_back(error);
+            return nullptr;
+        }
+
+        const ImageFormat imageFormat = pImage->getFormat();
+        const int imageColorChannels = pImage->getChannels();
+        if (!is_image_format_valid(imageFormat, imageColorChannels))
+        {
+            const std::string error = "Invalid target format: " + image_format_to_string(imageFormat) + " "
+                "for image with " + std::to_string(imageColorChannels) + " channels";
+
+            Debug::log(
+                error,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            _errors.push_back(error);
             return nullptr;
         }
 
@@ -727,6 +771,20 @@ namespace platypus
         return false;
     }
 
+    bool AssetManager::assetExists(const std::string& assetName) const
+    {
+        if (assetName.empty())
+            return false;
+
+        std::unordered_map<UUID_t, Asset*>::const_iterator it;
+        for (it = _assets.begin(); it != _assets.end(); ++it)
+        {
+            if (it->second->getName() == assetName)
+                return true;
+        }
+        return false;
+    }
+
     Asset* AssetManager::getAsset(UUID_t assetID) const
     {
         std::unordered_map<UUID_t, Asset*>::const_iterator it = _assets.find(assetID);
@@ -770,19 +828,25 @@ namespace platypus
     }
 
     // NOTE: This is pretty fucking inefficient!
-    Asset* AssetManager::getAsset(const std::string& name) const
+    Asset* AssetManager::getAsset(const std::string& assetName) const
     {
+        if (assetName.empty())
+            return nullptr;
+
         std::unordered_map<UUID_t, Asset*>::const_iterator it;
         for (it = _assets.begin(); it != _assets.end(); ++it)
         {
             Asset* pAsset = it->second;
-            if (pAsset->getName() == name)
+            if (pAsset->getName() == assetName)
                 return pAsset;
         }
         return nullptr;
     }
 
-    std::vector<Asset*> AssetManager::getAssets(bool excludeInternalDefaults) const
+    std::vector<Asset*> AssetManager::getAssets(
+        bool excludeInternalDefaults,
+        bool excludeNonSerializable
+    ) const
     {
         std::vector<Asset*> assets;
         for (const auto& asset : _assets)
@@ -793,22 +857,36 @@ namespace platypus
                 if (_defaultAssets.find(pAsset->getID()) != _defaultAssets.end())
                     continue;
             }
+            if (excludeNonSerializable)
+            {
+                if (!pAsset->isSerializable())
+                    continue;
+            }
             assets.push_back(asset.second);
         }
         return assets;
     }
 
-    std::vector<Asset*> AssetManager::getAssets(AssetType type, bool excludeInternalDefaults) const
+    std::vector<Asset*> AssetManager::getAssets(
+        AssetType type,
+        bool excludeInternalDefaults,
+        bool excludeNonSerializable
+    ) const
     {
         std::vector<Asset*> foundAssets;
         for (const auto& asset : _assets)
         {
-            if (asset.second->getType() == type)
+            Asset* pAsset = asset.second;
+            if (pAsset->getType() == type)
             {
-                Asset* pAsset = asset.second;
                 if (excludeInternalDefaults)
                 {
                     if (_defaultAssets.find(pAsset->getID()) != _defaultAssets.end())
+                        continue;
+                }
+                if (excludeNonSerializable)
+                {
+                    if (!pAsset->isSerializable())
                         continue;
                 }
                 foundAssets.push_back(asset.second);
@@ -1128,6 +1206,13 @@ namespace platypus
             ++loadedCount;
         }
         return outAssets;
+    }
+
+    std::vector<std::string> AssetManager::popErrors()
+    {
+        std::vector<std::string> errors = _errors;
+        _errors.clear();
+        return errors;
     }
 
     bool AssetManager::validateAsset(
