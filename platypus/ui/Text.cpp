@@ -395,7 +395,7 @@ namespace platypus
 
             const Layout* pParentLayout = pParentElement->getLayout();
             const float parentWidth = pParentElement->getGlobalScale().x;
-            const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2 - pParentLayout->borderThickness * 2.0f;
+            const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2.0f - pParentLayout->borderThickness * 2.0f;
             if (fullVisualWidth <= parentContentWidth)
             {
                 if (pOutWidth)
