@@ -98,7 +98,7 @@ namespace platypus
         return _componentPools[componentType]->occupy(&target);
     }
 
-    entityID_t Scene::createEntity(UUID_t explicitUUID)
+    entityID_t Scene::createEntity(const std::string& name, UUID_t explicitUUID)
     {
         Entity entity;
         UUID_t uuid = explicitUUID;
@@ -113,6 +113,19 @@ namespace platypus
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
+        }
+
+        if (!name.empty())
+        {
+            if (_nameEntityMapping.find(name) != _nameEntityMapping.end())
+            {
+                Debug::log(
+                    "Entity name: " + name + " already exists!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
         }
 
         if (!_freeEntityIDs.empty())
@@ -130,6 +143,9 @@ namespace platypus
         }
 
         entity.uuid = uuid;
+        if (!name.empty())
+            _nameEntityMapping[name] = entity.id;
+
         return entity.id;
     }
 
@@ -275,6 +291,21 @@ namespace platypus
         // Destroy/free entity itself
         _freeEntityIDs.push(entityID);
         _entities[entityID].clear();
+
+        // Free entity name
+        // TODO: Optimize!
+        std::unordered_map<std::string, size_t>::const_iterator nameIt;
+        std::string foundName;
+        for (nameIt = _nameEntityMapping.begin(); nameIt != _nameEntityMapping.end(); ++nameIt)
+        {
+            if (nameIt->second == entityID)
+            {
+                foundName = nameIt->first;
+                break;
+            }
+        }
+        if (!foundName.empty())
+            _nameEntityMapping.erase(foundName);
     }
 
     void Scene::destroyComponent(entityID_t entityID, ComponentType componentType)

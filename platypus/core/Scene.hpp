@@ -28,6 +28,7 @@ namespace platypus
 
         std::vector<System*> _systems;
         std::vector<Entity> _entities;
+        std::unordered_map<std::string, size_t> _nameEntityMapping;
 
         std::queue<entityID_t> _freeEntityIDs;
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
@@ -43,7 +44,7 @@ namespace platypus
 
         void* allocateComponent(entityID_t target, ComponentType componentType);
 
-        entityID_t createEntity(UUID_t explicitUUID = NULL_UUID);
+        entityID_t createEntity(const std::string& name = "", UUID_t explicitUUID = NULL_UUID);
         Entity getEntity(entityID_t entity) const;
         Entity getEntity(UUID_t entityUUID) const;
         void setEntityActive(entityID_t entity, bool arg);
