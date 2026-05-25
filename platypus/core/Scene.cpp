@@ -101,22 +101,28 @@ namespace platypus
     entityID_t Scene::createEntity(const std::string& name, UUID_t explicitUUID)
     {
         Entity entity;
-        UUID_t uuid = explicitUUID;
-        if (uuid == NULL_UUID)
+        UUID_t uuid = NULL_UUID;
+        if (explicitUUID != NULL_UUID)
+        {
+            if (UUID::exists(explicitUUID, entity_uuid_pool_id))
+            {
+                Debug::log(
+                    "Entity UUID " + std::to_string(explicitUUID) + " already exists!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            uuid = explicitUUID;
+            UUID::occupy(uuid, entity_uuid_pool_id);
+        }
+        else
+        {
             uuid = UUID::generate(entity_uuid_pool_id);
+        }
 
         PLATYPUS_ASSERT(uuid != NULL_UUID);
         entity.uuid = uuid;
-
-        if (UUID::exists(explicitUUID, entity_uuid_pool_id))
-        {
-            Debug::log(
-                "Entity UUID " + std::to_string(explicitUUID) + " already exists!",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
 
         if (!name.empty())
         {
@@ -618,7 +624,7 @@ namespace platypus
     {
         bool success = true;
         if (entityID < 0 || entityID >= _entities.size())
-            success = false;
+            return false;
         success = _entities[entityID].id != NULL_ENTITY_ID;
         if (!success)
         {

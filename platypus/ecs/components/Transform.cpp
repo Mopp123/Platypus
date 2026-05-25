@@ -136,6 +136,26 @@ namespace platypus
         m[2 + 2 * 4] = m[2 + 2 * 4] / currentSZ * scale.z;
     }
 
+    Vector3f get_transform_position(const Transform* pTransform, bool hasParent)
+    {
+        const Matrix4f m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        return {
+            m[0 + 3 * 4],
+            m[1 + 3 * 4],
+            m[2 + 3 * 4]
+        };
+    }
+
+    // *Got this from: https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
+    Vector3f get_transform_scale(const Transform* pTransform, bool hasParent)
+    {
+        const Matrix4f m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        float sx = Vector3f(m[0 + 0 * 4], m[1 + 0 * 4], m[2 + 0 * 4]).length();
+        float sy = Vector3f(m[0 + 1 * 4], m[1 + 1 * 4], m[2 + 1 * 4]).length();
+        float sz = Vector3f(m[0 + 2 * 4], m[1 + 2 * 4], m[2 + 2 * 4]).length();
+        return { sx, sy, sz };
+    }
+
     Vector3f get_transform_forward(Transform* pTransform)
     {
         Matrix4f& m = pTransform->globalMatrix;

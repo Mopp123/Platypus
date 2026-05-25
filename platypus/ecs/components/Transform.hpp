@@ -73,6 +73,10 @@ namespace platypus
     void rotate_transform(Transform* pTransform, float pAmount, float yAmount, float rAmount, bool hasParent);
     void set_transform_scale(Transform* pTransform, const Vector3f& scale, bool hasParent);
 
+    Vector3f get_transform_position(const Transform* pTransform, bool hasParent);
+    // NOTE: NOT TESTED -> might be fucked!
+    Vector3f get_transform_scale(const Transform* pTransform, bool hasParent);
+
     // NOTE: None of these are tested, might point to wrong directions!
     Vector3f get_transform_forward(Transform* pTransform);
     Vector3f get_transform_up(Transform* pTransform);
