@@ -153,6 +153,8 @@ namespace platypus
                 const Layout* pCursorIndicatorLayout,
                 const std::string& infoText,
                 const Font* pFont,
+                void(*pOnFinishInput)(const std::string&, void*) = nullptr,
+                void* pOnFinishInputUserData = nullptr,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );
@@ -162,6 +164,8 @@ namespace platypus
                 const std::string& infoText,
                 const Font* pFont,
                 ExpandElements fieldDirection, // is the field to the left or below the info txt
+                void(*pOnFinishInput)(const std::string&, void*) = nullptr,
+                void* pOnFinishInputUserData = nullptr,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );

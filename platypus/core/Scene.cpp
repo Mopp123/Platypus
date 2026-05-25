@@ -103,7 +103,10 @@ namespace platypus
         Entity entity;
         UUID_t uuid = explicitUUID;
         if (uuid == NULL_UUID)
-            entity.uuid = UUID::generate(entity_uuid_pool_id);
+            uuid = UUID::generate(entity_uuid_pool_id);
+
+        PLATYPUS_ASSERT(uuid != NULL_UUID);
+        entity.uuid = uuid;
 
         if (UUID::exists(explicitUUID, entity_uuid_pool_id))
         {
@@ -142,7 +145,6 @@ namespace platypus
             _entities.push_back(entity);
         }
 
-        entity.uuid = uuid;
         if (!name.empty())
             _nameEntityMapping[name] = entity.id;
 
@@ -170,6 +172,58 @@ namespace platypus
                 return entity;
         }
         return { };
+    }
+
+    Entity Scene::getEntity(const std::string& name) const
+    {
+        std::unordered_map<std::string, size_t>::const_iterator it = _nameEntityMapping.find(name);
+        if (it != _nameEntityMapping.end())
+            return getEntity(static_cast<entityID_t>(it->second));
+
+        return { };
+    }
+
+    std::string Scene::getEntityName(entityID_t entity)
+    {
+        if (entity == NULL_ENTITY_ID)
+            return "";
+
+        std::unordered_map<std::string, size_t>::const_iterator it;
+        for (it = _nameEntityMapping.begin(); it != _nameEntityMapping.end(); ++it)
+        {
+            if (it->second == static_cast<size_t>(entity))
+                return it->first;
+        }
+        return "";
+    }
+
+    void Scene::setEntityName(const std::string& currentName, const std::string& newName)
+    {
+        #ifdef PLATYPUS_DEBUG
+        if (_nameEntityMapping.find(newName) != _nameEntityMapping.end())
+        {
+            Debug::log(
+                "Entity name " + newName + " already exists!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        if (_nameEntityMapping.find(currentName) == _nameEntityMapping.end())
+        {
+            Debug::log(
+                "No entity name " + currentName + " found!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        #endif
+        size_t entityIndex = _nameEntityMapping[currentName];
+        _nameEntityMapping[newName] = entityIndex;
+        _nameEntityMapping.erase(currentName);
     }
 
     void Scene::setEntityActive(entityID_t entity, bool arg)
@@ -246,6 +300,21 @@ namespace platypus
         if (entity < 0 || entity >= _entities.size())
             return false;
         return _entities[entity].id != NULL_ENTITY_ID;
+    }
+
+    bool Scene::entityExists(const std::string& name) const
+    {
+        return _nameEntityMapping.find(name) != _nameEntityMapping.end();
+    }
+
+    std::vector<std::string> Scene::getEntityNames() const
+    {
+        std::vector<std::string> names;
+        std::unordered_map<std::string, size_t>::const_iterator it;
+        for (it = _nameEntityMapping.begin(); it != _nameEntityMapping.end(); ++it)
+            names.push_back(it->first);
+
+        return names;
     }
 
     void Scene::destroyEntity(entityID_t entityID)
@@ -607,7 +676,7 @@ namespace platypus
         for (entityID_t entityID : toSerialize)
         {
             const Entity& entity = getEntity(entityID);
-            std::vector<char> entityData = serialize_entity(entity);
+            std::vector<char> entityData = serialize_entity(entity, getEntityName(entityID));
             serializedData.resize(serializedData.size() + entityData.size());
             memcpy(serializedData.data() + pos, entityData.data(), entityData.size());
             pos += entityData.size();

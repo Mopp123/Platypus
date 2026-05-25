@@ -85,8 +85,13 @@ namespace platypus
             Text* _pInfoText = nullptr;
             UIElement* _pCursorIndicator = nullptr;
 
+            void(*_pOnFinishInput)(const std::string&, void*);
+            void* _pOnFinishInputUserData = nullptr;
+
             void(*_pOnInputCharFunc)(const std::string&, void*);
             void* _pOnInputCharUserData = nullptr;
+
+            static size_t s_activeInputModes;
 
         protected:
             friend class UIManager;
@@ -101,6 +106,8 @@ namespace platypus
                 const Layout* pCursorIndicatorLayout,
                 const std::string& infoText,
                 const Font* pFont,
+                void(*pOnFinishInput)(const std::string&, void*) = nullptr,
+                void* pOnFinishInputUserData = nullptr,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );
@@ -117,6 +124,8 @@ namespace platypus
             bool getContentFloat(float& outValue) const;
             bool getContentVector2f(Vector2f& outValue) const;
             void setContent(const std::string& text);
+
+            static bool in_input_mode();
 
             inline Button* getButton() { return _pButton; }
             inline Text* getInfoText() { return _pInfoText; }

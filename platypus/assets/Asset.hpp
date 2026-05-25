@@ -37,7 +37,7 @@ namespace platypus
     };
 
 
-    constexpr size_t asset_metadata_name_size = 32;
+    constexpr size_t asset_metadata_name_size = 32; // NOTE: This is probably too short!
     constexpr size_t asset_metadata_filepath_size = 64;
     constexpr size_t asset_metadata_model_max_meshes = 8;
     constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 4;

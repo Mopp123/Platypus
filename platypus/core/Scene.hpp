@@ -47,10 +47,20 @@ namespace platypus
         entityID_t createEntity(const std::string& name = "", UUID_t explicitUUID = NULL_UUID);
         Entity getEntity(entityID_t entity) const;
         Entity getEntity(UUID_t entityUUID) const;
+        Entity getEntity(const std::string& name) const;
+        std::string getEntityName(entityID_t entity);
+        void setEntityName(const std::string& currentName, const std::string& newName);
         void setEntityActive(entityID_t entity, bool arg);
         bool isEntityActive(entityID_t entity) const;
         bool entityExists(entityID_t entity) const;
+        bool entityExists(const std::string& name) const;
         inline const std::vector<Entity>& getEntities() const { return _entities; }
+        // TODO:
+        // *Make getEntityNames() safer!
+        // *Get rid of getEntityNames() when figuring out some more coherent system with
+        // entity names!
+        // NOTE: getEntityNames() is slow as fuck! DO NOT RELY ON THIS AT "SCENE RUNTIME"
+        std::vector<std::string> getEntityNames() const;
         void destroyEntity(entityID_t entityID);
         void destroyComponent(entityID_t entityID, ComponentType componentType);
 

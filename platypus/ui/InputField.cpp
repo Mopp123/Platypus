@@ -116,6 +116,7 @@ namespace platypus
         }
 
 
+        size_t InputField::s_activeInputModes = 0;
         InputField::InputField(
             UIManager& uiManager,
             UIElement* pParent,
@@ -126,6 +127,8 @@ namespace platypus
             const Layout* pCursorIndicatorLayout,
             const std::string& infoText,
             const Font* pFont,
+            void(*pOnFinishInput)(const std::string&, void*),
+            void* pOnFinishInputUserData,
             void(*pOnInputCharFunc)(const std::string&, void*),
             void* pOnInputCharUserData
         ) :
@@ -139,6 +142,8 @@ namespace platypus
                nullptr,
                false
             ),
+            _pOnFinishInput(pOnFinishInput),
+            _pOnFinishInputUserData(pOnFinishInputUserData),
             _pOnInputCharFunc(pOnInputCharFunc),
             _pOnInputCharUserData(pOnInputCharUserData)
         {
@@ -284,6 +289,11 @@ namespace platypus
             _pButton->getText()->set(text);
         }
 
+        bool InputField::in_input_mode()
+        {
+            return s_activeInputModes > 0;
+        }
+
         void InputField::setInputMode(bool active)
         {
             // NOTE: ISSUE! WTF!?!?!?!
@@ -305,10 +315,17 @@ namespace platypus
                 //  -> make the cursor be the scale of the selected char!
                 _pCursorIndicator->setLayoutScale({ _cursorWidth, cursorScale.y });
                 pButtonBoxRenderable->color = pBoxLayout->colors.selected;
+                ++s_activeInputModes;
             }
             else
             {
                 pButtonBoxRenderable->color = pBoxLayout->colors.base;
+
+                if (_pOnFinishInput)
+                    (*_pOnFinishInput)(getContent(), _pOnFinishInputUserData);
+
+                if (s_activeInputModes >= 1)
+                    --s_activeInputModes;
             }
         }
     }
