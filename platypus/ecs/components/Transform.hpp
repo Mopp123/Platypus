@@ -74,6 +74,7 @@ namespace platypus
     void set_transform_scale(Transform* pTransform, const Vector3f& scale, bool hasParent);
 
     Vector3f get_transform_position(const Transform* pTransform, bool hasParent);
+    Vector3f get_transform_euler_rotation(const Transform* pTransform, bool hasParent);
     // NOTE: NOT TESTED -> might be fucked!
     Vector3f get_transform_scale(const Transform* pTransform, bool hasParent);
 

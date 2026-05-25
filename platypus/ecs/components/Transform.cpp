@@ -146,7 +146,52 @@ namespace platypus
         };
     }
 
-    // *Got this from: https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
+    // *Got this and get_transform_scale(...) from: https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
+    // NOTE: This uses ZYX order! NOT TESTED, IS PROBABLY FUCKED!
+    Vector3f get_transform_euler_rotation(const Transform* pTransform, bool hasParent)
+    {
+        const Matrix4f m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        float sx = Vector3f(m[0 + 0 * 4], m[1 + 0 * 4], m[2 + 0 * 4]).length();
+        float sy = Vector3f(m[0 + 1 * 4], m[1 + 1 * 4], m[2 + 1 * 4]).length();
+        float sz = Vector3f(m[0 + 2 * 4], m[1 + 2 * 4], m[2 + 2 * 4]).length();
+
+        Matrix4f rotationMatrix(1.0f);
+        rotationMatrix[0 + 0 * 4] = m[0 + 0 * 4] / sx;
+        rotationMatrix[1 + 0 * 4] = m[1 + 0 * 4] / sx;
+        rotationMatrix[2 + 0 * 4] = m[2 + 0 * 4] / sx;
+
+        rotationMatrix[0 + 1 * 4] = m[0 + 1 * 4] / sy;
+        rotationMatrix[1 + 1 * 4] = m[1 + 1 * 4] / sy;
+        rotationMatrix[2 + 1 * 4] = m[2 + 1 * 4] / sy;
+
+        rotationMatrix[0 + 2 * 4] = m[0 + 2 * 4] / sz;
+        rotationMatrix[1 + 2 * 4] = m[1 + 2 * 4] / sz;
+        rotationMatrix[2 + 2 * 4] = m[2 + 2 * 4] / sz;
+
+        float r00 = rotationMatrix[0];
+        float r10 = rotationMatrix[1 + 0 * 4];
+        float pitch = std::atan2(
+            -rotationMatrix[2 + 0 * 4],
+            std::sqrt(r00 * r00 + r10 * r10)
+        );
+
+        float yaw = 0.0f;
+        float roll = 0.0f;
+
+        // Solve Gimbal Lock
+        if (std::cos(pitch) == 0.0f)
+        {
+            roll = 0.0f;
+            yaw = std::atan2(rotationMatrix[0 + 1 * 4], rotationMatrix[1 + 1 * 4]);
+        }
+        else
+        {
+            yaw = std::atan2(r10, r00);
+            roll = std::atan2(rotationMatrix[2 + 1 * 4], rotationMatrix[2 + 2 * 4]);
+        }
+        return { pitch, yaw, roll };
+    }
+
     Vector3f get_transform_scale(const Transform* pTransform, bool hasParent)
     {
         const Matrix4f m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
