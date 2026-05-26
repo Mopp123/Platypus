@@ -132,6 +132,40 @@ namespace platypus
         return poolIDs.find(uuid) != poolIDs.end();
     }
 
+    uint32_t UUID::get_free_pool_ID()
+    {
+        uint32_t poolID = s_IDPools.size();
+        if (poolID == 0)
+            poolID = 1;
+
+        if (s_IDPools.find(poolID) != s_IDPools.end())
+        {
+            Debug::log(
+                "Pool ID: " + std::to_string(poolID) + " was already taken! "
+                "This might have happened because you used non default(0) pool ID "
+                "without getting it from this function! Convoluted and awful system, I know:D",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        return poolID;
+    }
+
+    void UUID::erase_pool_ID(uint32_t poolID)
+    {
+        if (s_IDPools.find(poolID) == s_IDPools.end())
+        {
+            Debug::log(
+                "No pool ID: " + std::to_string(poolID) + " found!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        s_IDPools.erase(poolID);
+    }
+
     void UUID::init()
     {
         s_randomEngine.seed(time(nullptr));

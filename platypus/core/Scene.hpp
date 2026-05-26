@@ -26,6 +26,8 @@ namespace platypus
     private:
         friend class SceneManager;
 
+        uint32_t _entityUUIDPool = 0;
+
         std::vector<System*> _systems;
         std::vector<Entity> _entities;
         std::unordered_map<std::string, size_t> _nameEntityMapping;

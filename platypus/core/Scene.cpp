@@ -16,8 +16,8 @@ namespace platypus
 {
     Scene::Scene()
     {
+        _entityUUIDPool = UUID::get_free_pool_ID();
         size_t maxPoolLength = 10000;
-
         _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = new ComponentPool<Transform>(
             sizeof(Transform),
             maxPoolLength,
@@ -86,6 +86,8 @@ namespace platypus
             delete system;
 
         _systems.clear();
+
+        UUID::erase_pool_ID(_entityUUIDPool);
     }
 
     void* Scene::allocateComponent(entityID_t target, ComponentType componentType)

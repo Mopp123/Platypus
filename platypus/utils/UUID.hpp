@@ -26,6 +26,8 @@ namespace platypus
         static void erase(UUID_t idToErase, uint32_t poolID = 0);
         static UUID_t hash(UUID_t a, UUID_t b);
         static bool exists(UUID_t uuid, uint32_t poolID = 0);
+        static uint32_t get_free_pool_ID();
+        static void erase_pool_ID(uint32_t poolID);
 
     private:
         static void init();

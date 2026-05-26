@@ -20,7 +20,9 @@ namespace platypus
         serialized_entity_name_size;
 
     constexpr size_t serialized_entities_header_size = sizeof(uint32_t);
-    constexpr uint32_t entity_uuid_pool_id = 1;
+
+    // TODO: Remove below and use the Scene's entity UUID pool ID!
+    //constexpr uint32_t entity_uuid_pool_id = 1;
 
     struct Entity
     {
