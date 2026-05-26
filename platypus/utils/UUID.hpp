@@ -17,19 +17,21 @@ namespace platypus
     {
     private:
         static std::mt19937_64 s_randomEngine;
-        static std::unordered_map<uint32_t, std::set<UUID_t>> s_IDPools;
+        static std::vector<std::set<UUID_t>> s_IDPools;
+        static std::vector<size_t> s_freePoolIndices;
         static bool s_initialized;
 
     public:
-        static UUID_t generate(uint32_t poolID = 0);
-        static bool occupy(UUID_t id, uint32_t poolID = 0);
-        static void erase(UUID_t idToErase, uint32_t poolID = 0);
+        static UUID_t generate(size_t poolIndex);
+        static bool occupy(UUID_t id, size_t poolIndex);
+        static void erase(UUID_t idToErase, size_t poolIndex);
         static UUID_t hash(UUID_t a, UUID_t b);
-        static bool exists(UUID_t uuid, uint32_t poolID = 0);
-        static uint32_t get_free_pool_ID();
-        static void erase_pool_ID(uint32_t poolID);
+        static bool exists(UUID_t uuid, size_t poolIndex);
+        static size_t occupy_pool();
+        static void erase_pool(size_t poolIndex);
 
     private:
         static void init();
+        static bool pool_exists(size_t poolIndex);
     };
 }

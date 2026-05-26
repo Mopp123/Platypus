@@ -39,6 +39,7 @@ namespace platypus
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
+            size_t uuidPool,
             MeshType type,
             VertexBufferLayout vertexBufferLayout,
             Buffer* pVertexBuffer,
@@ -56,6 +57,7 @@ namespace platypus
         int32_t getAnimationIndex(const std::string& name) const;
 
         static Mesh* generate_terrain(
+            size_t uuidPool,
             float tileSize,
             const std::vector<float>& heightmapData,
             bool dynamic,

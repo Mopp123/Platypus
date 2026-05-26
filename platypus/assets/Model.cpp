@@ -7,6 +7,7 @@ namespace platypus
 {
     // NOTE: Meshes ownership doesn't transfer here!
     Model::Model(
+        size_t uuidPool,
         const std::string& filepath,
         bool instanced,
         const std::vector<Mesh*>& meshes,
@@ -14,7 +15,7 @@ namespace platypus
         UUID_t id,
         bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_MODEL, name, id, persistent),
+        Asset(uuidPool, AssetType::ASSET_TYPE_MODEL, name, id, persistent),
         _filepath(filepath),
         _meshes(meshes),
         _instanced(instanced)

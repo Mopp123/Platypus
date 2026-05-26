@@ -9,6 +9,7 @@ namespace platypus
 {
     AssetManager::AssetManager()
     {
+        _uuidPool = UUID::occupy_pool();
         // Create black and white default textures
         PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
         _pWhiteImage = createImage(whitePixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
@@ -173,7 +174,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        Image* pImage = new Image(pData, width, height, channels, format);
+        Image* pImage = new Image(_uuidPool, pData, width, height, channels, format);
         _assets[pImage->getID()] = pImage;
         return pImage;
     }
@@ -185,7 +186,7 @@ namespace platypus
         UUID_t id
     )
     {
-        Image* pImage = Image::load_image(filepath, format, name, id);
+        Image* pImage = Image::load_image(_uuidPool, filepath, format, name, id);
         if (!pImage)
         {
             Debug::log(
@@ -236,6 +237,7 @@ namespace platypus
         }
 
         Texture* pTexture = new Texture(
+            _uuidPool,
             pImage,
             pSampler,
             name,
@@ -329,6 +331,7 @@ namespace platypus
         }
 
         Material* pMaterial = new Material(
+            _uuidPool,
             blendmapTextureID,
             diffuseTextureIDs.data(),
             specularTextureIDs.data(),
@@ -407,6 +410,7 @@ namespace platypus
             false
         );
         Mesh* pMesh = new Mesh(
+            _uuidPool,
             meshType,
             vertexBufferLayout,
             pVertexBuffer,
@@ -479,6 +483,7 @@ namespace platypus
             }
 
             Mesh* pMesh = new Mesh(
+                _uuidPool,
                 instanced ? MeshType::MESH_TYPE_STATIC_INSTANCED : MeshType::MESH_TYPE_STATIC,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
@@ -490,7 +495,7 @@ namespace platypus
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
         }
-        Model* pModel = new Model(filepath, instanced, createdMeshes);
+        Model* pModel = new Model(_uuidPool, filepath, instanced, createdMeshes);
         _assets[pModel->getID()] = pModel;
         return pModel;
     }
@@ -534,6 +539,7 @@ namespace platypus
             );
 
             Mesh* pMesh = new Mesh(
+                _uuidPool,
                 MeshType::MESH_TYPE_SKINNED,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
@@ -545,7 +551,7 @@ namespace platypus
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
         }
-        Model* pModel = new Model(filepath, false, createdMeshes);
+        Model* pModel = new Model(_uuidPool, filepath, false, createdMeshes);
         _assets[pModel->getID()] = pModel;
         return pModel;
     }
@@ -619,6 +625,7 @@ namespace platypus
                 animationAssets[i] = createSkeletalAnimation(animationData[i]);
 
             Mesh* pMesh = new Mesh(
+                _uuidPool,
                 meshType,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
@@ -632,7 +639,7 @@ namespace platypus
             _assets[pMesh->getID()] = pMesh;
             createdMeshes.push_back(pMesh);
         }
-        Model* pModel = new Model(filepath, instanced, createdMeshes, name, modelID);
+        Model* pModel = new Model(_uuidPool, filepath, instanced, createdMeshes, name, modelID);
         _assets[pModel->getID()] = pModel;
         return pModel;
     }
@@ -644,7 +651,13 @@ namespace platypus
         bool generateTangents
     )
     {
-        Mesh* pTerrainMesh = Mesh::generate_terrain(tileSize, heightmapData, dynamic, generateTangents);
+        Mesh* pTerrainMesh = Mesh::generate_terrain(
+            _uuidPool,
+            tileSize,
+            heightmapData,
+            dynamic,
+            generateTangents
+        );
         _assets[pTerrainMesh->getID()] = pTerrainMesh;
         return pTerrainMesh;
     }
@@ -654,6 +667,7 @@ namespace platypus
     )
     {
         SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(
+            _uuidPool,
             keyframes
         );
         _assets[pAnimationData->getID()] = pAnimationData;
@@ -662,7 +676,7 @@ namespace platypus
 
     Font* AssetManager::loadFont(const std::string& filepath, unsigned int pixelSize)
     {
-        Font* pFont = new Font;
+        Font* pFont = new Font(_uuidPool);
         if (!pFont->load(filepath, pixelSize))
         {
             Debug::log(

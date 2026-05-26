@@ -34,7 +34,7 @@ namespace platypus
 
         Entity();
         Entity(const Entity& other);
-        void clear();
+        void clear(uint32_t UUIDPoolID);
     };
 
     size_t get_component_count(uint64_t componentMask);

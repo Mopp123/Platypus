@@ -16,7 +16,7 @@ namespace platypus
 {
     Scene::Scene()
     {
-        _entityUUIDPool = UUID::get_free_pool_ID();
+        _entityUUIDPool = UUID::occupy_pool();
         size_t maxPoolLength = 10000;
         _componentPools[ComponentType::COMPONENT_TYPE_TRANSFORM] = new ComponentPool<Transform>(
             sizeof(Transform),
@@ -87,7 +87,7 @@ namespace platypus
 
         _systems.clear();
 
-        UUID::erase_pool_ID(_entityUUIDPool);
+        UUID::erase_pool(_entityUUIDPool);
     }
 
     void* Scene::allocateComponent(entityID_t target, ComponentType componentType)
@@ -106,21 +106,22 @@ namespace platypus
         UUID_t uuid = NULL_UUID;
         if (explicitUUID != NULL_UUID)
         {
-            if (UUID::exists(explicitUUID, entity_uuid_pool_id))
+            if (UUID::exists(explicitUUID, _entityUUIDPool))
             {
                 Debug::log(
-                    "Entity UUID " + std::to_string(explicitUUID) + " already exists!",
+                    "Entity UUID " + std::to_string(explicitUUID) + " already exists "
+                    "in UUID pool " + std::to_string(_entityUUIDPool),
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
             }
             uuid = explicitUUID;
-            UUID::occupy(uuid, entity_uuid_pool_id);
+            UUID::occupy(uuid, _entityUUIDPool);
         }
         else
         {
-            uuid = UUID::generate(entity_uuid_pool_id);
+            uuid = UUID::generate(_entityUUIDPool);
         }
 
         PLATYPUS_ASSERT(uuid != NULL_UUID);
@@ -367,7 +368,7 @@ namespace platypus
         }
         // Destroy/free entity itself
         _freeEntityIDs.push(entityID);
-        _entities[entityID].clear();
+        _entities[entityID].clear(_entityUUIDPool);
 
         // Free entity name
         // TODO: Optimize!

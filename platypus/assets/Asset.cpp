@@ -21,11 +21,13 @@ namespace platypus
     }
 
     Asset::Asset(
+        size_t uuidPool,
         AssetType type,
         const std::string& name,
         UUID_t id,
         bool persistent
     ) :
+        _uuidPool(uuidPool),
         _type(type),
         _name(name),
         _persistent(persistent)
@@ -33,16 +35,16 @@ namespace platypus
         if (id != NULL_UUID)
         {
             _id = id;
-            UUID::occupy(id);
+            UUID::occupy(id, _uuidPool);
         }
         else
         {
-            _id = UUID::generate();
+            _id = UUID::generate(_uuidPool);
         }
     }
 
     Asset::~Asset()
     {
-        UUID::erase(_id);
+        UUID::erase(_id, _uuidPool);
     }
 }

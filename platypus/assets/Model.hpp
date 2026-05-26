@@ -34,6 +34,7 @@ namespace platypus
     public:
         // NOTE: Meshes ownership doesn't transfer here!
         Model(
+            size_t uuidPool,
             const std::string& filepath,
             bool instanced,
             const std::vector<Mesh*>& meshes,

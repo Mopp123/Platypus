@@ -12,6 +12,7 @@ namespace platypus
 {
     // NOTE: All transparent materials use opaque pass's depth buffer as texture!
     Material::Material(
+        size_t uuidPool,
         UUID_t blendmapTextureID,
         UUID_t* pDiffuseTextureIDs,
         UUID_t* pSpecularTextureIDs,
@@ -33,7 +34,7 @@ namespace platypus
         const std::string& customVertexShaderFilename,
         const std::string& customFragmentShaderFilename
     ) :
-        Asset(AssetType::ASSET_TYPE_MATERIAL, name, id, persistent),
+        Asset(uuidPool, AssetType::ASSET_TYPE_MATERIAL, name, id, persistent),
         _blendmapTextureID(blendmapTextureID),
         _diffuseTextureCount(diffuseTextureCount),
         _specularTextureCount(specularTextureCount),

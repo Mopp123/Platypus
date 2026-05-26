@@ -19,6 +19,7 @@ namespace platypus
 
 
     Mesh::Mesh(
+        size_t uuidPool,
         MeshType type,
         VertexBufferLayout vertexBufferLayout,
         Buffer* pVertexBuffer,
@@ -30,7 +31,7 @@ namespace platypus
         UUID_t id,
         bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_MESH, name, id, persistent),
+        Asset(uuidPool,AssetType::ASSET_TYPE_MESH, name, id, persistent),
         _type(type),
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),
@@ -59,6 +60,7 @@ namespace platypus
     }
 
     Mesh* Mesh::generate_terrain(
+        size_t uuidPool,
         float tileSize,
         const std::vector<float>& heightmapData,
         bool dynamic,
@@ -221,6 +223,7 @@ namespace platypus
         );
 
         Mesh* pMesh = new Mesh(
+            uuidPool,
             MeshType::MESH_TYPE_STATIC,
             generateTangents ? VertexBufferLayout::get_common_static_tangent_layout() : VertexBufferLayout::get_common_static_layout(),
             pVertexBuffer,

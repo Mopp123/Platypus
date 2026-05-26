@@ -7,6 +7,8 @@
 #include "platypus/core/Debug.hpp"
 #include "platypus/assets/Texture.hpp"
 #include "platypus/assets/platform/desktop/DesktopTexture.hpp"
+#include "platypus/core/Application.hpp"
+
 #include <algorithm>
 #include <string>
 #include <vulkan/vk_enum_string_helper.h>
@@ -110,6 +112,7 @@ namespace platypus
             return;
         }
 
+        size_t assetUUIDPool = Application::get_instance()->getAssetManager()->getUUIDPool();
         for (size_t i = 0; i < swapchainImages.size(); ++i)
         {
             VkImageView imageView = create_image_views(
@@ -119,7 +122,7 @@ namespace platypus
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 1
             )[0];
-            Texture* pTexture = new Texture(format);
+            Texture* pTexture = new Texture(assetUUIDPool, format);
             pTexture->getImpl()->image = swapchainImages[i];
             pTexture->getImpl()->imageView = imageView;
             outTextures[i] = pTexture;
@@ -178,7 +181,8 @@ namespace platypus
             return;
         }
 
-        *pOutAttachment = new Texture(to_engine_format(format));
+        size_t assetUUIDPool = Application::get_instance()->getAssetManager()->getUUIDPool();
+        *pOutAttachment = new Texture(assetUUIDPool, to_engine_format(format));
         (*pOutAttachment)->getImpl()->image = vkImage;
         (*pOutAttachment)->getImpl()->vmaAllocation = imageAllocation;
         (*pOutAttachment)->getImpl()->imageView = create_image_views(

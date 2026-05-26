@@ -89,6 +89,7 @@ namespace platypus
     public:
         // NOTE: pData gets copied here, ownership doesn't transfer!
         Image(
+            size_t uuidPool,
             PE_ubyte* pData,
             int width,
             int height,
@@ -107,6 +108,7 @@ namespace platypus
         ) const;
 
         static Image* load_image(
+            size_t uuidPool,
             const std::string& filepath,
             ImageFormat format,
             const std::string& name = "",

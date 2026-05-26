@@ -13,8 +13,8 @@
 
 namespace platypus
 {
-    Font::Font() :
-        Asset(AssetType::ASSET_TYPE_FONT)
+    Font::Font(size_t uuidPool) :
+        Asset(uuidPool, AssetType::ASSET_TYPE_FONT)
     {
     }
 

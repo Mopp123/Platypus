@@ -6,26 +6,34 @@
 namespace platypus
 {
     std::mt19937_64 UUID::s_randomEngine;
-    std::unordered_map<uint32_t, std::set<UUID_t>> UUID::s_IDPools;
+    std::vector<std::set<UUID_t>> UUID::s_IDPools;
+    std::vector<size_t> UUID::s_freePoolIndices;
     bool UUID::s_initialized = false;
 
     // NOTE: Could be done better...
-    UUID_t UUID::generate(uint32_t poolID)
+    UUID_t UUID::generate(size_t poolIndex)
     {
         if (!s_initialized)
             init();
 
-        if (s_IDPools.find(poolID) == s_IDPools.end())
-            s_IDPools[poolID] = { };
+        if (!pool_exists(poolIndex))
+        {
+            Debug::log(
+                "No pool index " + std::to_string(poolIndex) + " exists!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return NULL_UUID;
+        }
 
-        std::set<UUID_t>& IDPool = s_IDPools[poolID];
+        std::set<UUID_t>& IDPool = s_IDPools[poolIndex];
         UUID_t id = s_randomEngine();
         PLATYPUS_ASSERT(id != NULL_UUID);
-
         if (IDPool.find(id) != IDPool.end())
         {
             Debug::log(
-                "UUID: " + std::to_string(id) + " already exists in pool: " + std::to_string(poolID) + "! "
+                "UUID: " + std::to_string(id) + " already exists in pool: " + std::to_string(poolIndex) + "! "
                 "With current system this should never happen!?!?",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
@@ -33,11 +41,10 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         IDPool.insert(id);
-
         return id;
     }
 
-    bool UUID::occupy(UUID_t id, uint32_t poolID)
+    bool UUID::occupy(UUID_t id, size_t poolIndex)
     {
         if (id == NULL_UUID)
         {
@@ -53,10 +60,10 @@ namespace platypus
         if (!s_initialized)
             init();
 
-        if (s_IDPools.find(poolID) == s_IDPools.end())
+        if (!pool_exists(poolIndex))
         {
             Debug::log(
-                "IDPool: " + std::to_string(poolID) + " not found!",
+                "No pool index " + std::to_string(poolIndex) + " exists!",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -64,11 +71,11 @@ namespace platypus
             return false;
         }
 
-        std::set<UUID_t>& IDPool = s_IDPools[poolID];
+        std::set<UUID_t>& IDPool = s_IDPools[poolIndex];
         if (IDPool.find(id) != IDPool.end())
         {
             Debug::log(
-                "UUID: " + std::to_string(id) + " was already in use in pool: " + std::to_string(poolID),
+                "UUID: " + std::to_string(id) + " was already in use in pool: " + std::to_string(poolIndex),
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -80,12 +87,12 @@ namespace platypus
         return true;
     }
 
-    void UUID::erase(UUID_t idToErase, uint32_t poolID)
+    void UUID::erase(UUID_t idToErase, size_t poolIndex)
     {
-        if (s_IDPools.find(poolID) == s_IDPools.end())
+        if (!pool_exists(poolIndex))
         {
             Debug::log(
-                "IDPool: " + std::to_string(poolID) + " not found!",
+                "No pool index " + std::to_string(poolIndex) + " exists!",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -93,12 +100,12 @@ namespace platypus
             return;
         }
 
-        std::set<UUID_t>& IDPool = s_IDPools[poolID];
+        std::set<UUID_t>& IDPool = s_IDPools[poolIndex];
         std::set<UUID_t>::iterator it = IDPool.find(idToErase);
         if (it == IDPool.end())
         {
             Debug::log(
-                "UUID: " + std::to_string(idToErase) + " not found from pool: " + std::to_string(poolID),
+                "UUID: " + std::to_string(idToErase) + " not found from pool: " + std::to_string(poolIndex),
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -123,52 +130,69 @@ namespace platypus
         return id;
     }
 
-    bool UUID::exists(UUID_t uuid, uint32_t poolID)
+    bool UUID::exists(UUID_t uuid, size_t poolIndex)
     {
-        if (s_IDPools.find(poolID) == s_IDPools.end())
+        if (!pool_exists(poolIndex))
             return false;
 
-        const std::set<UUID_t>& poolIDs = s_IDPools[poolID];
+        const std::set<UUID_t>& poolIDs = s_IDPools[poolIndex];
         return poolIDs.find(uuid) != poolIDs.end();
     }
 
-    uint32_t UUID::get_free_pool_ID()
+    size_t UUID::occupy_pool()
     {
-        uint32_t poolID = s_IDPools.size();
-        if (poolID == 0)
-            poolID = 1;
-
-        if (s_IDPools.find(poolID) != s_IDPools.end())
+        size_t poolIndex = 0;
+        if (!s_freePoolIndices.empty())
         {
-            Debug::log(
-                "Pool ID: " + std::to_string(poolID) + " was already taken! "
-                "This might have happened because you used non default(0) pool ID "
-                "without getting it from this function! Convoluted and awful system, I know:D",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
+            poolIndex = s_freePoolIndices.back();
+            s_freePoolIndices.pop_back();
+            // This should be unnecessary since freed pool should be already empty...
+            s_IDPools[poolIndex] = { };
         }
-        return poolID;
+        else
+        {
+            poolIndex = s_IDPools.size();
+            s_IDPools.push_back({});
+        }
+        return poolIndex;
     }
 
-    void UUID::erase_pool_ID(uint32_t poolID)
+    void UUID::erase_pool(size_t poolIndex)
     {
-        if (s_IDPools.find(poolID) == s_IDPools.end())
+        if (!pool_exists(poolIndex))
         {
             Debug::log(
-                "No pool ID: " + std::to_string(poolID) + " found!",
+                "No pool index " + std::to_string(poolIndex) + " exists!",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
+            return;
         }
-        s_IDPools.erase(poolID);
+        if (poolIndex == s_IDPools.size() - 1)
+        {
+            s_IDPools.pop_back();
+        }
+        else
+        {
+            s_IDPools[poolIndex].clear();
+            s_freePoolIndices.push_back(poolIndex);
+        }
     }
 
     void UUID::init()
     {
         s_randomEngine.seed(time(nullptr));
         s_initialized = true;
+    }
+
+    bool UUID::pool_exists(size_t poolIndex)
+    {
+        for (size_t freePoolIndex : s_freePoolIndices)
+        {
+            if (poolIndex == freePoolIndex)
+                return false;
+        }
+        return poolIndex < s_IDPools.size();
     }
 }

@@ -98,6 +98,7 @@ namespace platypus
     public:
         // NOTE: All transparent materials use opaque pass's depth buffer as texture!
         Material(
+            size_t uuidPool,
             UUID_t blendmapTextureID,
             UUID_t* pDiffuseTextureIDs,
             UUID_t* pSpecularTextureIDs,

@@ -48,7 +48,7 @@ namespace platypus
         std::unordered_map<uint32_t, FontGlyphData> _glyphMapping;
 
     public:
-        Font();
+        Font(size_t uuidPool);
         ~Font();
 
         // NOTE: Some "pixelSize" values doesn't work on some fonts!

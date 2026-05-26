@@ -266,11 +266,14 @@ namespace platypus
 
     void PostProcessingRenderer::createFramebuffers()
     {
-        const Extent2D swapchainExtent = Application::get_instance()->getSwapchain()->getExtent();
+        Application* pApp = Application::get_instance();
+        const Extent2D swapchainExtent = pApp->getSwapchain()->getExtent();
         if (!validateStagesExist("PostProcessingRenderer::createFramebuffers"))
             return;
 
+        size_t assetUUIDPool = pApp->getAssetManager()->getUUIDPool();
         Texture* pColorStageAttachment = new Texture(
+            assetUUIDPool,
             TextureType::COLOR_TEXTURE,
             &_textureSampler,
             _colorImageFormat,
@@ -294,6 +297,7 @@ namespace platypus
         uint32_t blurFramebufferHeight = swapchainExtent.height / 2;
 
         Texture* pHorizontalBlurStageAttachment = new Texture(
+            assetUUIDPool,
             TextureType::COLOR_TEXTURE,
             &_textureSampler,
             _colorImageFormat,
@@ -313,6 +317,7 @@ namespace platypus
 
 
         Texture* pVerticalBlurStageAttachment = new Texture(
+            assetUUIDPool,
             TextureType::COLOR_TEXTURE,
             &_textureSampler,
             _colorImageFormat,

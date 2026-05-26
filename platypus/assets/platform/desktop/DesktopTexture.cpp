@@ -454,21 +454,22 @@ namespace platypus
     }
 
 
-    Texture::Texture(ImageFormat format) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
+    Texture::Texture(size_t uuidPool, ImageFormat format) :
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
         _imageFormat(format)
     {
         _pImpl = new TextureImpl;
     }
 
     Texture::Texture(
+        size_t uuidPool,
         TextureType type,
         const TextureSampler* pSampler,
         ImageFormat format,
         uint32_t width,
         uint32_t height
     ):
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
         _pSampler(pSampler),
         _imageFormat(format)
     {
@@ -539,13 +540,14 @@ namespace platypus
     }
 
     Texture::Texture(
+        size_t uuidPool,
         const Image* pImage,
         const TextureSampler* pSampler,
         const std::string& name,
         UUID_t id,
         bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
         _pImage(pImage),
         _pSampler(pSampler)
     {

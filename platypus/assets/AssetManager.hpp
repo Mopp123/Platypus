@@ -17,6 +17,7 @@ namespace platypus
     class AssetManager
     {
     private:
+        size_t _uuidPool = 0;
         std::unordered_map<UUID_t, Asset*> _assets;
         std::unordered_map<UUID_t, Asset*> _persistentAssets;
         // NOTE: Currently these exist throughout the lifetime of the program
@@ -212,6 +213,8 @@ namespace platypus
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
         inline Texture* getZeroTexture() const { return _pZeroTexture; }
+
+        inline size_t getUUIDPool() const { return _uuidPool; }
 
     private:
         bool validateAsset(

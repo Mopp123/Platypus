@@ -89,8 +89,9 @@ namespace platypus
         // Needed for Vulkan swapchain's color and depth textures. ...fucking dumb
         // This should ONLY create the _pImpl and set _imageFormat!
         // *This kind of Texture can't be sampled in shader!
-        Texture(ImageFormat format);
+        Texture(size_t uuidPool, ImageFormat format);
         Texture(
+            size_t uuidPool,
             TextureType type,
             const TextureSampler* pSampler,
             ImageFormat format,
@@ -98,6 +99,7 @@ namespace platypus
             uint32_t height
         );
         Texture(
+            size_t uuidPool,
             const Image* pImage,
             const TextureSampler* pSampler,
             const std::string& name = "",

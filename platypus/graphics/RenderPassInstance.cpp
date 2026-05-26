@@ -30,12 +30,14 @@ namespace platypus
         if (_useWindowDimensions)
             matchWindowDimensions();
 
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         // TODO: Allow having different dimensions for the framebuffer and attachment
         // (Atm attachment has same dimensions as the framebuffer)
         std::vector<Texture*> colorAttachments;
         if (_renderPassRef.getColorFormat() != ImageFormat::NONE)
         {
             _pColorAttachment = new Texture(
+                pAssetManager->getUUIDPool(),
                 TextureType::COLOR_TEXTURE,
                 _pTextureSampler,
                 _renderPassRef.getColorFormat(),
@@ -44,11 +46,12 @@ namespace platypus
             );
             _pColorAttachment->setSerializable(false);
             colorAttachments.push_back(_pColorAttachment);
-            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
+            pAssetManager->addExternalPersistentAsset(_pColorAttachment);
         }
         if (_renderPassRef.getDepthFormat() != ImageFormat::NONE)
         {
             _pDepthAttachment = new Texture(
+                pAssetManager->getUUIDPool(),
                 TextureType::DEPTH_TEXTURE,
                 _pTextureSampler,
                 _renderPassRef.getDepthFormat(),
@@ -56,7 +59,7 @@ namespace platypus
                 _framebufferHeight
             );
             _pDepthAttachment->setSerializable(false);
-            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+            pAssetManager->addExternalPersistentAsset(_pDepthAttachment);
         }
         // TODO: Allow creating multiple framebuffers for each frame in flight?
         _framebuffers.push_back(

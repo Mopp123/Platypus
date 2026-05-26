@@ -11,9 +11,10 @@ namespace platypus
     }
 
     SkeletalAnimationData::SkeletalAnimationData(
+        size_t uuidPool,
         const KeyframeAnimationData& animationData
     ) :
-        Asset(AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA),
+        Asset(uuidPool, AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA),
         _animationData(animationData)
     {}
 

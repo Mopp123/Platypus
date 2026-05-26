@@ -403,8 +403,12 @@ namespace platypus
 
     void MasterRenderer::createOffscreenPassResources()
     {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        size_t assetUUIDPool = pAssetManager->getUUIDPool();
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
+
         _pColorAttachment = new Texture(
+            assetUUIDPool,
             TextureType::COLOR_TEXTURE,
             &_offscreenTextureSampler,
             _offscreenColorFormat,
@@ -412,9 +416,10 @@ namespace platypus
             swapchainExtent.height
         );
         _pColorAttachment->setSerializable(false);
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
+        pAssetManager->addExternalPersistentAsset(_pColorAttachment);
 
         _pDepthAttachment = new Texture(
+            assetUUIDPool,
             TextureType::DEPTH_TEXTURE,
             &_offscreenTextureSampler,
             _offscreenDepthFormat,
@@ -448,7 +453,6 @@ namespace platypus
         // Update new "scene depth texture" for materials that are transparent
         // TODO: Some way to know if Material uses framebuffer attachment as texture?
         Texture* pDepthAttachment = _shadowPassInstance.getFramebuffer(0)->getDepthAttachment();
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
         {
             Material* pMaterial = (Material*)pAsset;

@@ -186,6 +186,7 @@ namespace platypus
 
 
     Image::Image(
+        size_t uuidPool,
         PE_ubyte* pData,
         int width,
         int height,
@@ -195,7 +196,7 @@ namespace platypus
         UUID_t id,
         bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_IMAGE, name, id, persistent),
+        Asset(uuidPool, AssetType::ASSET_TYPE_IMAGE, name, id, persistent),
         _width(width),
         _height(height),
         _channels(channels),
@@ -258,6 +259,7 @@ namespace platypus
     }
 
     Image* Image::load_image(
+        size_t uuidPool,
         const std::string& filepath,
         ImageFormat format,
         const std::string& name,
@@ -277,7 +279,7 @@ namespace platypus
             stbi_image_free(pStbImageData);
             return nullptr;
         }
-        Image* pImage = new Image(pStbImageData, width, height, channels, format, name, id);
+        Image* pImage = new Image(uuidPool, pStbImageData, width, height, channels, format, name, id);
         pImage->_filepath = filepath;
         stbi_image_free(pStbImageData);
         return pImage;

@@ -28,10 +28,10 @@ namespace platypus
         active(other.active)
     {}
 
-    void Entity::clear()
+    void Entity::clear(uint32_t UUIDPoolID)
     {
         id = NULL_ENTITY_ID;
-        UUID::erase(uuid, entity_uuid_pool_id);
+        UUID::erase(uuid, UUIDPoolID);
         componentMask = 0;
     }
 

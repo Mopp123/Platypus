@@ -47,6 +47,7 @@ namespace platypus
     class Asset
     {
     protected:
+        size_t _uuidPool = 0;
         UUID_t _id = NULL_UUID;
         AssetType _type = AssetType::ASSET_TYPE_NONE;
         std::string _name;
@@ -57,6 +58,7 @@ namespace platypus
         Asset() = delete;
         Asset(const Asset&) = delete;
         Asset(
+            size_t uuidPool,
             AssetType type,
             const std::string& name = "",
             UUID_t id = NULL_UUID,
