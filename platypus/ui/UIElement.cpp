@@ -212,6 +212,8 @@ namespace platypus
 
         UIElement::~UIElement()
         {
+            remove_from_cursor_over_layers(_absoluteLayer, _entityID);
+
             if (_pMouseEnterEvent)
                 delete _pMouseEnterEvent;
             if (_pMouseOverEvent)

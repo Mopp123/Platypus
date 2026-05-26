@@ -66,6 +66,7 @@ namespace platypus
 
             Layout* _pDefaultInputFieldCursorLayout = nullptr;
 
+            // NOTE: Why the aren't all of these sets?
             std::vector<Layout*> _layouts;
             std::vector<UIElement*> _rootElements;
             std::set<UIElement*> _updatedRootElements;
