@@ -102,7 +102,6 @@ namespace platypus
         Debug::log("Assets destroyed");
     }
 
-    // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
     void AssetManager::destroyAsset(UUID_t assetID)
     {
         if (_assets.find(assetID) == _assets.end())
@@ -119,6 +118,9 @@ namespace platypus
 
         if (_persistentAssets.find(assetID) != _persistentAssets.end())
             _persistentAssets.erase(assetID);
+
+        if (_defaultAssets.find(assetID) != _defaultAssets.end())
+            _defaultAssets.erase(assetID);
     }
 
     void AssetManager::destroyAsset(const std::string& assetName)
@@ -925,10 +927,23 @@ namespace platypus
         }
     }
 
-    void AssetManager::addExternalPersistentAsset(Asset* pAsset)
+    void AssetManager::addExternalDefaultAsset(Asset* pAsset)
     {
-        _assets[pAsset->getID()] = pAsset;
+        UUID_t assetID = pAsset->getID();
+        if (_defaultAssets.find(assetID) != _defaultAssets.end())
+        {
+            Debug::log(
+                "Asset UUID: " + std::to_string(assetID) + " "
+                "was already added as external default!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        _assets[assetID] = pAsset;
         makePersistent(pAsset);
+        _defaultAssets.insert(assetID);
     }
 
     bool AssetManager::isPersistent(UUID_t assetID) const

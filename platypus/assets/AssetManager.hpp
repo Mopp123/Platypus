@@ -19,7 +19,10 @@ namespace platypus
     private:
         size_t _uuidPool = 0;
         std::unordered_map<UUID_t, Asset*> _assets;
+        // NOTE: Why the fuck isn't _persistentAssets a set, like _defaultAssets or something?
         std::unordered_map<UUID_t, Asset*> _persistentAssets;
+        std::set<UUID_t> _defaultAssets;
+
         // NOTE: Currently these exist throughout the lifetime of the program
         //  -> there's only a couple of sampler property combinations so.. why the fuck not...
         std::vector<TextureSampler*> _textureSamplers;
@@ -32,7 +35,6 @@ namespace platypus
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
         Texture* _pZeroTexture = nullptr;
-        std::set<UUID_t> _defaultAssets;
 
         std::vector<std::string> _errors;
 
@@ -40,10 +42,8 @@ namespace platypus
         AssetManager();
         ~AssetManager();
         void destroyAssets();
-        // TODO: Maybe replace destroyPersistentAsset(ID_t) with the above destroyAsset?
         void destroyAsset(UUID_t assetID);
         void destroyAsset(const std::string& assetName);
-        //void destroyPersistentAsset(ID_t assetID);
 
         Image* createImage(PE_ubyte* pData, int width, int height, int channels, ImageFormat format);
         Image* loadImage(
@@ -169,8 +169,12 @@ namespace platypus
         ) const;
 
         void makePersistent(Asset* pAsset);
-        // For adding asset that wasn't created using the AssetManager
-        void addExternalPersistentAsset(Asset* pAsset);
+        // For adding asset that wasn't created using the AssetManager.
+        // This piece of shit requires all textures, including framebuffer attachments,
+        // used for all render passes to be "reqistered assets" atm so need to have some
+        // way of differentiating user created assets and "engine's defaults".
+        // NOTE: All external defaults are also persistent!
+        void addExternalDefaultAsset(Asset* pAsset);
 
         bool isPersistent(UUID_t assetID) const;
 

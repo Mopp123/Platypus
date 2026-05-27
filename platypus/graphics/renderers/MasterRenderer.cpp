@@ -416,7 +416,7 @@ namespace platypus
             swapchainExtent.height
         );
         _pColorAttachment->setSerializable(false);
-        pAssetManager->addExternalPersistentAsset(_pColorAttachment);
+        pAssetManager->addExternalDefaultAsset(_pColorAttachment);
 
         _pDepthAttachment = new Texture(
             assetUUIDPool,
@@ -427,7 +427,7 @@ namespace platypus
             swapchainExtent.height
         );
         _pDepthAttachment->setSerializable(false);
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+        Application::get_instance()->getAssetManager()->addExternalDefaultAsset(_pDepthAttachment);
 
         _pOpaqueFramebuffer = new Framebuffer(
             _opaquePass,

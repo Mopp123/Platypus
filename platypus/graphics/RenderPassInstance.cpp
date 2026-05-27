@@ -46,7 +46,7 @@ namespace platypus
             );
             _pColorAttachment->setSerializable(false);
             colorAttachments.push_back(_pColorAttachment);
-            pAssetManager->addExternalPersistentAsset(_pColorAttachment);
+            pAssetManager->addExternalDefaultAsset(_pColorAttachment);
         }
         if (_renderPassRef.getDepthFormat() != ImageFormat::NONE)
         {
@@ -59,7 +59,7 @@ namespace platypus
                 _framebufferHeight
             );
             _pDepthAttachment->setSerializable(false);
-            pAssetManager->addExternalPersistentAsset(_pDepthAttachment);
+            pAssetManager->addExternalDefaultAsset(_pDepthAttachment);
         }
         // TODO: Allow creating multiple framebuffers for each frame in flight?
         _framebuffers.push_back(
