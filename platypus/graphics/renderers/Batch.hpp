@@ -124,7 +124,8 @@ namespace platypus
 
         // Additional batch pipelines that aren't managed elsewhere
         // (for example shadow pass pipelines are managed here)
-        std::vector<BatchPipelineData*> _managedPipelineData;
+        // key = batchID
+        std::unordered_map<UUID_t, BatchPipelineData*> _managedPipelineData;
         // NOTE: The ID here can be anything, not just hash(meshID, materialID)
         //  -> when accessing these pipelines you need to know how the ID was originally created!
         //std::unordered_map<RenderPassType, std::unordered_map<ID_t, size_t>> _identifierPipelineDataMapping;
@@ -171,6 +172,7 @@ namespace platypus
         void resetForNextFrame();
 
         void freeBatches();
+        void freeBatch(UUID_t batchID);
 
         Batch* getBatch(RenderPassType renderPassType, UUID_t identifier);
         // Returns all batches for a render pass

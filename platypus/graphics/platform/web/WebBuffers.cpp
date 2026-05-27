@@ -250,4 +250,35 @@ namespace platypus
         }
         GL_FUNC(glBindBuffer(glBufferType, 0));
     }
+
+    // NOTE: THIS IS NEW, NOT TESTED YET!
+    void Buffer::updateDevice()
+    {
+        if (!_hostSideUpdated && _pData)
+        {
+            Debug::log(
+                "Host side buffer exists but wasn't updated!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
+        const size_t dataSize = getTotalSize();
+        const size_t offset = 0;
+        if (!validateUpdate(_pData, dataSize, offset))
+        {
+            Debug::log(
+                "@Buffer::updateDevice "
+                "Failed to update buffer!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        GLenum glBufferType = to_opengl_buffer_type(_bufferUsageFlags);
+        GL_FUNC(glBindBuffer(glBufferType, _pImpl->id));
+        GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
+        GL_FUNC(glBufferData(glBufferType, dataSize, _pData, glBufferUpdateFrequency));
+        GL_FUNC(glBindBuffer(glBufferType, 0));
+    }
 }

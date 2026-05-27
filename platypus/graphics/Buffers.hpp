@@ -189,6 +189,7 @@ namespace platypus
         void updateDeviceAndHost(void* pData, size_t dataSize, size_t offset);
         // Function updateDevice requires platform impl!
         void updateDevice(void* pData, size_t dataSize, size_t offset);
+        void updateDevice();
 
         inline const void* getData() const { return _pData; }
         inline void* accessData() { return _pData; }

@@ -430,14 +430,16 @@ namespace platypus
 
     void Buffer::updateDevice(void* pData, size_t dataSize, size_t offset)
     {
-        if (!_hostSideUpdated && _pData)
-        {
-            Debug::log(
-                "@Buffer::updateDevice "
-                "Host side buffer exists but wasn't updated!",
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-        }
+        // NOTE: WTF is the point of of below check if we provide the pData for this func and the
+        // _pData member isn't even used? Is this some old shit that u forgot to update??
+        //if (!_hostSideUpdated && _pData)
+        //{
+        //    Debug::log(
+        //        "@Buffer::updateDevice "
+        //        "Host side buffer exists but wasn't updated!",
+        //        Debug::MessageType::PLATYPUS_WARNING
+        //    );
+        //}
 
         if (!validateUpdate(pData, dataSize, offset))
         {
@@ -452,6 +454,38 @@ namespace platypus
         vmaCopyMemoryToAllocation(
             Device::get_impl()->vmaAllocator,
             pData,
+            _pImpl->vmaAllocation,
+            offset,
+            dataSize
+        );
+        _hostSideUpdated = false;
+    }
+
+    void Buffer::updateDevice()
+    {
+        if (!_hostSideUpdated && _pData)
+        {
+            Debug::log(
+                "Host side buffer exists but wasn't updated!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
+        const size_t dataSize = getTotalSize();
+        const size_t offset = 0;
+        if (!validateUpdate(_pData, dataSize, offset))
+        {
+            Debug::log(
+                "Failed to update buffer!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        vmaCopyMemoryToAllocation(
+            Device::get_impl()->vmaAllocator,
+            _pData,
             _pImpl->vmaAllocation,
             offset,
             dataSize

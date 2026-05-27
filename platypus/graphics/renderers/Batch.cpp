@@ -207,7 +207,6 @@ namespace platypus
             pushConstantsShaderStage // Push constants' stage flags
         );
         pPipelineData->pPipeline->create();
-        _managedPipelineData.push_back(pPipelineData);
         return pPipelineData;
     }
 
@@ -219,11 +218,13 @@ namespace platypus
             {
                 // NOTE: Do we need to really update the whole buffer if it's not used entirely?
                 Buffer* pBuffer = resource.buffer[currentFrame];
-                pBuffer->updateDevice(
-                    pBuffer->accessData(),
-                    pBuffer->getTotalSize(),
-                    0
-                );
+                pBuffer->updateDevice();
+                // NOTE: Why the fuck was below done earlier?
+                //pBuffer->updateDevice(
+                //    pBuffer->accessData(),
+                //    pBuffer->getTotalSize(),
+                //    0
+                //);
             }
         }
     }
@@ -268,6 +269,21 @@ namespace platypus
         }
         _allocatedShaderResources.clear();
         _batchShaderResourceMapping.clear();
+    }
+
+    void Batcher::freeBatch(UUID_t batchID)
+    {
+        // CONTINUE HERE!
+        if (_managedPipelineData.find(batchID) != _managedPipelineData.end())
+            _managedPipelineData.erase(batchID);
+
+        // TODO:
+        // *Find batch's _allocatedShaderResources
+        // *delete possible _allocatedShaderResources's buffers
+        // *free _allocatedShaderResources's descriptor sets
+        //
+        // *remove batchID from _allocatedShaderResources
+        // *remove batchID from _batchShaderResourceMapping
     }
 
     const DescriptorSetLayout& Batcher::get_static_descriptor_set_layout()
@@ -567,18 +583,21 @@ namespace platypus
 
     void Batcher::destroyManagedPipelines()
     {
-        for (BatchPipelineData* pPipelineData : _managedPipelineData)
-            delete pPipelineData;
+        std::unordered_map<UUID_t, BatchPipelineData*>::iterator it;
+        for (it = _managedPipelineData.begin(); it != _managedPipelineData.end(); ++it)
+            delete it->second;
 
         _managedPipelineData.clear();
     }
 
     void Batcher::recreateManagedPipelines()
     {
-        for (BatchPipelineData* pPipelineData : _managedPipelineData)
+        std::unordered_map<UUID_t, BatchPipelineData*>::iterator it;
+        for (it = _managedPipelineData.begin(); it != _managedPipelineData.end(); ++it)
         {
-            pPipelineData->pPipeline->destroy();
-            pPipelineData->pPipeline->create();
+            Pipeline* pPipeline = it->second->pPipeline;
+            pPipeline->destroy();
+            pPipeline->create();
         }
     }
 
@@ -764,13 +783,12 @@ namespace platypus
                 shadowPass, // shadow pipeline?
                 usedVertexBufferLayouts
             );
-            // NOTE: WARNING! There's an issue if the pipeline requires more descriptor set layouts than
-            // provided with the inputted uniformResourceLayouts!
+            // NOTE: WARNING! There's an issue if the pipeline requires more descriptor set layouts
+            // than provided with the inputted uniformResourceLayouts!
             std::vector<DescriptorSetLayout> usedDescriptorSetLayouts;
             for (const ShaderResourceLayout& resourceLayout : uniformResourceLayouts)
                 usedDescriptorSetLayouts.push_back(resourceLayout.descriptorSetLayout);
 
-            // NOTE: Don't know if working, not tested!
             std::string vertexShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, meshType);
             std::string fragmentShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, meshType);
             BatchPipelineData* pPipelineData = createBatchPipelineData(
@@ -783,6 +801,8 @@ namespace platypus
                 pushConstantsSize,
                 pushConstantsShaderStage
             );
+            PLATYPUS_ASSERT(_managedPipelineData.find(batchID) == _managedPipelineData.end());
+            _managedPipelineData[batchID] = pPipelineData;
             pPipeline = pPipelineData->pPipeline;
         }
 

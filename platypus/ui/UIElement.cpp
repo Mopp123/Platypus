@@ -854,6 +854,11 @@ namespace platypus
             return s_cursorOverLayers.rbegin()->first;
         }
 
+        size_t UIElement::get_cursor_over_layer_count()
+        {
+            return s_cursorOverLayers.size();
+        }
+
 
         void UIElement::setRenderLayer(uint32_t renderLayer)
         {

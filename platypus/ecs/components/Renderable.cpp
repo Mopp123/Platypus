@@ -250,6 +250,7 @@ namespace platypus
             meshID,
             materialID,
             pScene,
+            true,
             true
         );
     }

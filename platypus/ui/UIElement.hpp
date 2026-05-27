@@ -223,6 +223,7 @@ namespace platypus
             Layout* getLayout() const;
 
             static uint32_t get_cursor_over_layer();
+            static size_t get_cursor_over_layer_count();
 
             inline const entityID_t getEntityID() const { return _entityID; }
             inline void overrideScale(const Vector2f& scale) { _overrideScale = true; _overrideScaleValue = scale; }
