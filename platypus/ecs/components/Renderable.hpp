@@ -45,7 +45,8 @@ namespace platypus
         UUID_t meshAssetID,
         UUID_t materialAssetID,
         Scene* pScene = nullptr,
-        bool useExplicitComponentMask = false
+        bool useExplicitComponentMask = false,
+        bool allowNullAssets = false // ATM JUST FOR TESTING Renderable3D creation in Editor
     );
 
     GUIRenderable* create_gui_renderable(

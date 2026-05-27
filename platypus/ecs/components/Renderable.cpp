@@ -11,31 +11,36 @@ namespace platypus
         UUID_t meshAssetID,
         UUID_t materialAssetID,
         Scene* pScene,
-        bool useExplicitComponentMask
+        bool useExplicitComponentMask,
+        bool allowNullAssets // ATM JUST FOR TESTING Renderable3D creation in Editor
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager* pAssetManager = pApp->getAssetManager();
-        const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
-            meshAssetID,
-            AssetType::ASSET_TYPE_MESH
-        );
-        PLATYPUS_ASSERT(pMesh);
 
-        const Material* pMaterial = (const Material*)pAssetManager->getAsset(
-            materialAssetID,
-            AssetType::ASSET_TYPE_MATERIAL
-        );
-        if (pMesh->getType() == MeshType::MESH_TYPE_STATIC_INSTANCED && pMaterial->isTransparent())
+        if (!allowNullAssets)
         {
-            Debug::log(
-                "@create_renderable3D "
-                "Mesh type was MESH_TYPE_STATIC_INSTANCED and Material was transparent. "
-                "Instanced transparent renderables aren't currently supported!",
-                Debug::MessageType::PLATYPUS_ERROR
+            AssetManager* pAssetManager = pApp->getAssetManager();
+            const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
+                meshAssetID,
+                AssetType::ASSET_TYPE_MESH
             );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
+            PLATYPUS_ASSERT(pMesh);
+
+            const Material* pMaterial = (const Material*)pAssetManager->getAsset(
+                materialAssetID,
+                AssetType::ASSET_TYPE_MATERIAL
+            );
+            if (pMesh->getType() == MeshType::MESH_TYPE_STATIC_INSTANCED && pMaterial->isTransparent())
+            {
+                Debug::log(
+                    "@create_renderable3D "
+                    "Mesh type was MESH_TYPE_STATIC_INSTANCED and Material was transparent. "
+                    "Instanced transparent renderables aren't currently supported!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return nullptr;
+            }
         }
 
         Scene* pUseScene = pScene;

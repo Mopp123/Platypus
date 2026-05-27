@@ -199,54 +199,59 @@ namespace platypus
         {
             AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
             const UUID_t meshID = pRenderable3D->meshID;
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-            const MeshType meshType = pMesh->getType();
             const UUID_t materialID = pRenderable3D->materialID;
-            const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-
-            // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs!
-            UUID_t batchID = UUID::hash(meshID, materialID);
-
-            if (pMaterial->isTransparent())
+            // NOTE: Atm allowing renderables to have meshes and materials as NULL_UUIDs!
+            // TODO: Make this nicer!
+            if (meshID != NULL_UUID && materialID != NULL_UUID)
             {
-                // Create transparent batch (if required)
-                if (!_batcher.getBatch(RenderPassType::TRANSPARENT_PASS, batchID))
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_transparentPass);
-            }
-            else
-            {
-                // Create opaque batch (if required)
-                if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_opaquePass);
-            }
+                Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+                const MeshType meshType = pMesh->getType();
+                const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
 
-            // Create shadow batch (if required)
-            if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
-                _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
+                // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs!
+                UUID_t batchID = UUID::hash(meshID, materialID);
 
-            if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
-            {
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)&(pTransform->globalMatrix),
-                    sizeof(Matrix4f),
-                    { sizeof(Matrix4f) },
-                    _currentFrame
-                );
-            }
-            else if (meshType == MeshType::MESH_TYPE_SKINNED)
-            {
-                const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
-                    entity.id,
-                    ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
-                );
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)pAnimation->jointMatrices,
-                    sizeof(Matrix4f) * pMesh->getJointCount(),
-                    { sizeof(Matrix4f) * pMesh->getJointCount() },
-                    _currentFrame
-                );
+                if (pMaterial->isTransparent())
+                {
+                    // Create transparent batch (if required)
+                    if (!_batcher.getBatch(RenderPassType::TRANSPARENT_PASS, batchID))
+                        _batcher.createBatch(meshID, materialID, pDirectionalLight, &_transparentPass);
+                }
+                else
+                {
+                    // Create opaque batch (if required)
+                    if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
+                        _batcher.createBatch(meshID, materialID, pDirectionalLight, &_opaquePass);
+                }
+
+                // Create shadow batch (if required)
+                if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
+
+                if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                {
+                    _batcher.addToBatch(
+                        batchID,
+                        (void*)&(pTransform->globalMatrix),
+                        sizeof(Matrix4f),
+                        { sizeof(Matrix4f) },
+                        _currentFrame
+                    );
+                }
+                else if (meshType == MeshType::MESH_TYPE_SKINNED)
+                {
+                    const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
+                        entity.id,
+                        ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+                    );
+                    _batcher.addToBatch(
+                        batchID,
+                        (void*)pAnimation->jointMatrices,
+                        sizeof(Matrix4f) * pMesh->getJointCount(),
+                        { sizeof(Matrix4f) * pMesh->getJointCount() },
+                        _currentFrame
+                    );
+                }
             }
         }
 
