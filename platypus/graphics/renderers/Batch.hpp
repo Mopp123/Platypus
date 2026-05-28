@@ -119,8 +119,7 @@ namespace platypus
 
         std::unordered_map<MeshType, BatchTemplate> _batchTemplates;
 
-        std::unordered_map<RenderPassType, std::vector<Batch*>> _batches;
-        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, size_t>> _identifierBatchMapping;
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>> _batches;
 
         // Additional batch pipelines that aren't managed elsewhere
         // (for example shadow pass pipelines are managed here)
@@ -139,9 +138,16 @@ namespace platypus
         static DescriptorSetLayout s_staticDescriptorSetLayout; // single transformation mat as dynamic ubo for all batch members
         static DescriptorSetLayout s_jointDescriptorSetLayout;
 
-        // NOTE: Currently assuming these are modified frequently -> need one for each frame in flight!
-        std::vector<std::vector<BatchShaderResource>> _allocatedShaderResources;
-        std::unordered_map<UUID_t, size_t> _batchShaderResourceMapping;
+        // NOTE: Currently assuming these are modified frequently
+        //  -> need one for each frame in flight(BatchShaderResource has them for each frame in flight)!
+        // key = batchID
+        std::unordered_map<UUID_t, std::vector<BatchShaderResource>> _allocatedShaderResources;
+        // NOTE: IMPORTANT!
+        // *_allocatedShaderResources might be shared between same batchID in separate render passes!
+        //  -> these resources can be destroyed only when the last existing batch using these gets
+        //  freed/destroyed. ..ref count kind of thing...
+        //  TODO: Maybe make this shit a bit less convoluted?
+        std::unordered_map<UUID_t, size_t> _allocatedShaderResourceUseCount;
 
     public:
         Batcher(
@@ -176,7 +182,9 @@ namespace platypus
 
         Batch* getBatch(RenderPassType renderPassType, UUID_t identifier);
         // Returns all batches for a render pass
-        const std::vector<Batch*>& getBatches(RenderPassType renderPassType);
+        // NOTE: Became a little slower after updated all shit here to be unordered_map of batch IDs..
+        // TODO: Optimize?
+        const std::vector<Batch*> getBatches(RenderPassType renderPassType) const;
         // Returns batches sharing the same ID for all render passes
         std::vector<Batch*> getBatches(UUID_t identifier);
 
@@ -188,16 +196,6 @@ namespace platypus
         bool batchResourcesExist(UUID_t batchID) const;
         // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
         std::vector<BatchShaderResource>& accessSharedBatchResources(UUID_t batchID);
-
-        // NOTE: Not used anymore? TODO: Delete?
-        void updateHostSideSharedResource(
-            UUID_t batchID,
-            size_t resourceIndex,
-            void* pData,
-            size_t dataSize,
-            size_t offset,
-            size_t currentFrame
-        );
 
         void createSharedBatchInstancedBuffers(
             UUID_t identifier,

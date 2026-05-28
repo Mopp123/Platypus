@@ -212,9 +212,10 @@ namespace platypus
 
     void Batcher::updateDeviceSideBuffers(size_t currentFrame)
     {
-        for (std::vector<BatchShaderResource>& batchResources : _allocatedShaderResources)
+        std::unordered_map<UUID_t, std::vector<BatchShaderResource>>::iterator it;
+        for (it = _allocatedShaderResources.begin(); it != _allocatedShaderResources.end(); ++it)
         {
-            for (BatchShaderResource& resource : batchResources)
+            for (BatchShaderResource& resource : it->second)
             {
                 // NOTE: Do we need to really update the whole buffer if it's not used entirely?
                 Buffer* pBuffer = resource.buffer[currentFrame];
@@ -231,11 +232,14 @@ namespace platypus
 
     void Batcher::resetForNextFrame()
     {
-        std::unordered_map<RenderPassType, std::vector<Batch*>>::iterator batchIt;
-        for (batchIt = _batches.begin(); batchIt != _batches.end(); ++batchIt)
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::iterator passBatchIt;
+        for (passBatchIt = _batches.begin(); passBatchIt != _batches.end(); ++passBatchIt)
         {
-            for (Batch* pBatch : batchIt->second)
+            std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+            std::unordered_map<UUID_t, Batch*>::iterator batchIt;
+            for (batchIt = passBatches.begin(); batchIt != passBatches.end(); ++batchIt)
             {
+                Batch* pBatch = batchIt->second;
                 pBatch->instanceCount = 0;
                 pBatch->repeatCount = 0;
             }
@@ -244,46 +248,78 @@ namespace platypus
 
     void Batcher::freeBatches()
     {
-        destroyManagedPipelines();
-
-        std::unordered_map<RenderPassType, std::vector<Batch*>>::iterator batchIt;
-        for (batchIt = _batches.begin(); batchIt != _batches.end(); ++batchIt)
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::iterator passBatchIt;
+        std::unordered_map<RenderPassType, std::set<UUID_t>> toFree;
+        for (passBatchIt = _batches.begin(); passBatchIt != _batches.end(); ++passBatchIt)
         {
-            for (Batch* pBatch : batchIt->second)
-                delete pBatch;
+            std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+            std::unordered_map<UUID_t, Batch*>::iterator batchIt;
+            for (batchIt = passBatches.begin(); batchIt != passBatches.end(); ++batchIt)
+                toFree[passBatchIt->first].insert(batchIt->first);
         }
-        _batches.clear();
-        _identifierBatchMapping.clear();
 
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-        for (std::vector<BatchShaderResource>& batchResources : _allocatedShaderResources)
+        std::unordered_map<RenderPassType, std::set<UUID_t>>::iterator freePassIt;
+        for (freePassIt = toFree.begin(); freePassIt != toFree.end(); ++freePassIt)
         {
-            for (BatchShaderResource& resource : batchResources)
-            {
-                for (Buffer* pBuffer : resource.buffer)
-                    delete pBuffer;
-
-                descriptorPool.freeDescriptorSets(resource.descriptorSet);
-            }
+            for (UUID_t idToFree : freePassIt->second)
+                freeBatch(idToFree);
         }
-        _allocatedShaderResources.clear();
-        _batchShaderResourceMapping.clear();
     }
 
     void Batcher::freeBatch(UUID_t batchID)
     {
-        // CONTINUE HERE!
-        if (_managedPipelineData.find(batchID) != _managedPipelineData.end())
+        // NOTE: Don't remember are manager pipelines shared?
+        std::unordered_map<UUID_t, BatchPipelineData*>::iterator managedPipelineIt = _managedPipelineData.find(batchID);
+        if (managedPipelineIt != _managedPipelineData.end())
+        {
+            delete managedPipelineIt->second;
             _managedPipelineData.erase(batchID);
+        }
 
-        // TODO:
-        // *Find batch's _allocatedShaderResources
-        // *delete possible _allocatedShaderResources's buffers
-        // *free _allocatedShaderResources's descriptor sets
-        //
-        // *remove batchID from _allocatedShaderResources
-        // *remove batchID from _batchShaderResourceMapping
+        bool destroyResources = false;
+        if (_allocatedShaderResourceUseCount.find(batchID) != _allocatedShaderResourceUseCount.end())
+        {
+            size_t& countRef = _allocatedShaderResourceUseCount[batchID];
+            if (countRef == 0)
+            {
+                Debug::log("WTF U DONE!?!?!?", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
+                PLATYPUS_ASSERT(false);
+            }
+            countRef -= 1;
+            if (countRef == 0)
+                destroyResources = true;
+        }
+
+        if (destroyResources)
+        {
+            MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+            DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
+            std::unordered_map<UUID_t, std::vector<BatchShaderResource>>::iterator shaderResourceIt = _allocatedShaderResources.find(batchID);
+            if (shaderResourceIt != _allocatedShaderResources.end())
+            {
+                std::vector<BatchShaderResource>& batchResources = shaderResourceIt->second;
+                for (BatchShaderResource& resource : batchResources)
+                {
+                    for (Buffer* pBuffer : resource.buffer)
+                        delete pBuffer;
+
+                    descriptorPool.freeDescriptorSets(resource.descriptorSet);
+                }
+            }
+            _allocatedShaderResources.erase(batchID);
+            _allocatedShaderResourceUseCount.erase(batchID);
+        }
+
+        for (RenderPassType renderPassType : s_availableRenderPasses)
+        {
+            std::unordered_map<UUID_t, Batch*>& passBatches = _batches[renderPassType];
+            std::unordered_map<UUID_t, Batch*>::iterator passBatchIt = passBatches.find(batchID);
+            if (passBatchIt != passBatches.end())
+            {
+                delete passBatchIt->second;
+                passBatches.erase(batchID);
+            }
+        }
     }
 
     const DescriptorSetLayout& Batcher::get_static_descriptor_set_layout()
@@ -414,30 +450,32 @@ namespace platypus
 
     Batch* Batcher::getBatch(RenderPassType renderPassType, UUID_t identifier)
     {
-        if (_batches.find(renderPassType) == _batches.end())
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::iterator passBatchIt = _batches.find(renderPassType);
+        if (passBatchIt == _batches.end())
             return nullptr;
 
-        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, size_t>>::iterator passBatchIndexIt = _identifierBatchMapping.find(renderPassType);
-        if (passBatchIndexIt != _identifierBatchMapping.end())
-        {
-            std::unordered_map<UUID_t, size_t>& passBatchIndices = passBatchIndexIt->second;
-            std::unordered_map<UUID_t, size_t>::iterator passBatchIt = passBatchIndices.find(identifier);
-            if (passBatchIt != passBatchIndices.end())
-            {
-                size_t batchIndex = passBatchIt->second;
-                return _batches[renderPassType][batchIndex];
-            }
-        }
+        std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+        std::unordered_map<UUID_t, Batch*>::iterator batchIt = passBatches.find(identifier);
+        if (batchIt != passBatches.end())
+            return batchIt->second;
+
         return nullptr;
     }
 
     // Returns all batches for a render pass
-    const std::vector<Batch*>& Batcher::getBatches(RenderPassType renderPassType)
+    const std::vector<Batch*> Batcher::getBatches(RenderPassType renderPassType) const
     {
-        // NOTE: Not sure is this really okay??
-        // ...Should be fine to just add the key here if it doesn't exist since the vector
-        // remains empty if there was nothing?
-        return _batches[renderPassType];
+        std::vector<Batch*> outBatches;
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::const_iterator passBatchIt = _batches.find(renderPassType);
+        if (passBatchIt != _batches.end())
+        {
+            outBatches.reserve(passBatchIt->second.size());
+            const std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+            std::unordered_map<UUID_t, Batch*>::const_iterator batchIt;
+            for (batchIt = passBatches.begin(); batchIt != passBatches.end(); ++batchIt)
+                outBatches.emplace_back(batchIt->second);
+        }
+        return outBatches;
     }
 
     // TODO: Optimize!
@@ -456,102 +494,25 @@ namespace platypus
 
     BatchShaderResource* Batcher::getSharedBatchResource(UUID_t batchID, size_t resourceIndex)
     {
-        std::unordered_map<UUID_t, size_t>::const_iterator it = _batchShaderResourceMapping.find(batchID);
-        if (it != _batchShaderResourceMapping.end())
+        std::unordered_map<UUID_t, std::vector<BatchShaderResource>>::iterator it = _allocatedShaderResources.find(batchID);
+        if (it != _allocatedShaderResources.end())
         {
-            // TODO: Make safer!!!!
-            std::vector<BatchShaderResource>& resources = _allocatedShaderResources[it->second];
-            if (resourceIndex < resources.size())
-                return &resources[resourceIndex];
+            // TODO: Make safer!?
+            if (resourceIndex < it->second.size())
+                return &it->second[resourceIndex];
         }
         return nullptr;
     }
 
     bool Batcher::batchResourcesExist(UUID_t batchID) const
     {
-        std::unordered_map<UUID_t, size_t>::const_iterator indexIt = _batchShaderResourceMapping.find(batchID);
-        if (indexIt == _batchShaderResourceMapping.end())
-        {
-            Debug::log(
-                "@Batcher::batchResourcesExist "
-                "No resource indices found for batchID: " + std::to_string(batchID),
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-            return false;
-        }
-        if (indexIt->second >= _allocatedShaderResources.size())
-        {
-            Debug::log(
-                "@Batcher::batchResourcesExist "
-                "Found resource index (" + std::to_string(indexIt->second) + ") out of bounds "
-                "using batchID: " + std::to_string(batchID),
-                Debug::MessageType::PLATYPUS_WARNING
-            );
-            return false;
-        }
-        return true;
+        return _allocatedShaderResources.find(batchID) != _allocatedShaderResources.end();
     }
 
     // NOTE: Resources needs to exist if calling this! (check that with batchResourcesExist)
     std::vector<BatchShaderResource>& Batcher::accessSharedBatchResources(UUID_t batchID)
     {
-        return _allocatedShaderResources[_batchShaderResourceMapping[batchID]];
-    }
-
-    // NOTE: Not used anymore? TODO: Delete?
-    void Batcher::updateHostSideSharedResource(
-        UUID_t batchID,
-        size_t resourceIndex,
-        void* pData,
-        size_t dataSize,
-        size_t offset,
-        size_t currentFrame
-    )
-    {
-        std::unordered_map<UUID_t, size_t>::iterator it = _batchShaderResourceMapping.find(batchID);
-        if (it == _batchShaderResourceMapping.end())
-        {
-            Debug::log(
-                "@Batcher::updateHostSideSharedResource "
-                "No shared shader resource found for batchID: " + std::to_string(batchID),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-        std::vector<BatchShaderResource>& resources = _allocatedShaderResources[it->second];
-        if (resourceIndex >= resources.size())
-        {
-            Debug::log(
-                "@Batcher::updateHostSideSharedResource "
-                "resourceIndex(" + std::to_string(resourceIndex) + ") out of bounds! "
-                "Batch(ID: " + std::to_string(batchID) + ") has " + std::to_string(resources.size()) + " resources.",
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        BatchShaderResource& resource = resources[resourceIndex];
-        if (currentFrame >= resource.buffer.size())
-        {
-            Debug::log(
-                "@Batcher::updateHostSideSharedResource "
-                "No buffer exists for currentFrame(" + std::to_string(currentFrame) + ") "
-                "Batch(ID: " + std::to_string(batchID) + ") has " + std::to_string(resource.buffer.size()) + " buffers "
-                "for resource index " + std::to_string(resourceIndex),
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        resource.buffer[currentFrame]->updateHost(
-            pData,
-            dataSize,
-            offset
-        );
-        resource.requiresDeviceUpdate = true;
+        return _allocatedShaderResources[batchID];
     }
 
     bool Batcher::validateBatchDoesntExist(
@@ -561,24 +522,23 @@ namespace platypus
     ) const
     {
         const std::string locationStr(callLocation);
-        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, size_t>>::const_iterator passIt = _identifierBatchMapping.find(renderPassType);
-        if (passIt != _identifierBatchMapping.end())
-        {
-            const std::unordered_map<UUID_t, size_t>& passBatches = passIt->second;
-            std::unordered_map<UUID_t, size_t>::const_iterator passBatchIt = passBatches.find(batchID);
-            if (passBatchIt != passBatches.end())
-            {
-                Debug::log(
-                    "@Batcher::" + locationStr + " "
-                    "Batch with identifier: " + std::to_string(batchID) + " already exists "
-                    "for render pass: " + render_pass_type_to_string(renderPassType),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return false;
-            }
-        }
-        return true;
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::const_iterator passBatchIt = _batches.find(renderPassType);
+        if (passBatchIt == _batches.end())
+            return true;
+
+        const std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+        if (passBatches.find(batchID) == passBatches.end())
+            return true;
+
+        Debug::log(
+            "@Batcher::" + locationStr + " "
+            "Batch with identifier: " + std::to_string(batchID) + " already exists "
+            "for render pass: " + render_pass_type_to_string(renderPassType),
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return false;
+
     }
 
     void Batcher::destroyManagedPipelines()
@@ -827,8 +787,7 @@ namespace platypus
             instanceAdvance // instance advance
         };
 
-        _identifierBatchMapping[renderPassType][batchID] = _batches[renderPassType].size();
-        _batches[renderPassType].push_back(pBatch);
+        _batches[renderPassType][batchID] = pBatch;
     }
 
     void Batcher::createBatch(
@@ -1013,34 +972,39 @@ namespace platypus
         std::vector<BatchShaderResource>& shaderResources
     )
     {
-        if (_batchShaderResourceMapping.find(batchID) == _batchShaderResourceMapping.end())
+        std::unordered_map<UUID_t, std::vector<BatchShaderResource>>::iterator resourceIt = _allocatedShaderResources.find(batchID);
+        if (resourceIt == _allocatedShaderResources.end())
         {
-            _batchShaderResourceMapping[batchID] = _allocatedShaderResources.size();
-            _allocatedShaderResources.push_back(shaderResources);
+            _allocatedShaderResources[batchID] = shaderResources;
         }
         else
         {
-            std::vector<BatchShaderResource>& existingResources = _allocatedShaderResources[_batchShaderResourceMapping[batchID]];
+            std::vector<BatchShaderResource>& existingResources = _allocatedShaderResources[batchID];
             existingResources.insert(existingResources.end(), shaderResources.begin(), shaderResources.end());
         }
+        _allocatedShaderResourceUseCount[batchID] += 1;
     }
 
     // TODO: delete below after fixing static and skinned batches
+    // UPDATE TO ABOVE: WTF even was wrong with the static and skinned batches?
+    // is this TODO comment relevant anymore at all?
     void Batcher::addToAllocatedShaderResources(
         UUID_t batchID,
         const std::vector<Buffer*>& buffers,
         const std::vector<DescriptorSet> descriptorSets
     )
     {
-        if (_batchShaderResourceMapping.find(batchID) == _batchShaderResourceMapping.end())
+        std::unordered_map<UUID_t, std::vector<BatchShaderResource>>::iterator resourceIt = _allocatedShaderResources.find(batchID);
+        if (resourceIt == _allocatedShaderResources.end())
         {
-            _batchShaderResourceMapping[batchID] = _allocatedShaderResources.size();
-            _allocatedShaderResources.push_back({ { ShaderResourceType::ANY, buffers, descriptorSets } });
+            _allocatedShaderResources[batchID] = { { ShaderResourceType::ANY, buffers, descriptorSets } };
         }
         else
         {
-            _allocatedShaderResources[_batchShaderResourceMapping[batchID]].push_back({ ShaderResourceType::ANY, buffers, descriptorSets });
+            std::vector<BatchShaderResource>& existingResources = _allocatedShaderResources[batchID];
+            existingResources.push_back({ ShaderResourceType::ANY, buffers, descriptorSets });
         }
+        _allocatedShaderResourceUseCount[batchID] += 1;
     }
 
     std::vector<Buffer*> Batcher::getOrCreateSharedInstancedBuffer(
