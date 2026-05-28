@@ -195,7 +195,7 @@ namespace platypus
             false,
             false
         );
-        if (pRenderable3D)
+        if (pRenderable3D && pTransform)
         {
             AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
             const UUID_t meshID = pRenderable3D->meshID;

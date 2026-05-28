@@ -1,6 +1,7 @@
 #include "Batch.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
+#include "platypus/graphics/Device.hpp"
 
 
 // NOTE: IMPORTANT!
@@ -246,29 +247,11 @@ namespace platypus
         }
     }
 
-    void Batcher::freeBatches()
-    {
-        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::iterator passBatchIt;
-        std::unordered_map<RenderPassType, std::set<UUID_t>> toFree;
-        for (passBatchIt = _batches.begin(); passBatchIt != _batches.end(); ++passBatchIt)
-        {
-            std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
-            std::unordered_map<UUID_t, Batch*>::iterator batchIt;
-            for (batchIt = passBatches.begin(); batchIt != passBatches.end(); ++batchIt)
-                toFree[passBatchIt->first].insert(batchIt->first);
-        }
-
-        std::unordered_map<RenderPassType, std::set<UUID_t>>::iterator freePassIt;
-        for (freePassIt = toFree.begin(); freePassIt != toFree.end(); ++freePassIt)
-        {
-            for (UUID_t idToFree : freePassIt->second)
-                freeBatch(idToFree);
-        }
-    }
-
     void Batcher::freeBatch(UUID_t batchID)
     {
+        Device::wait_for_operations();
         // NOTE: Don't remember are manager pipelines shared?
+        //  -> seems fine atm...?
         std::unordered_map<UUID_t, BatchPipelineData*>::iterator managedPipelineIt = _managedPipelineData.find(batchID);
         if (managedPipelineIt != _managedPipelineData.end())
         {
@@ -318,6 +301,63 @@ namespace platypus
             {
                 delete passBatchIt->second;
                 passBatches.erase(batchID);
+            }
+        }
+    }
+
+    void Batcher::freeBatches()
+    {
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::iterator passBatchIt;
+        std::unordered_map<RenderPassType, std::set<UUID_t>> toFree;
+        for (passBatchIt = _batches.begin(); passBatchIt != _batches.end(); ++passBatchIt)
+        {
+            std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+            std::unordered_map<UUID_t, Batch*>::iterator batchIt;
+            for (batchIt = passBatches.begin(); batchIt != passBatches.end(); ++batchIt)
+                toFree[passBatchIt->first].insert(batchIt->first);
+        }
+
+        std::unordered_map<RenderPassType, std::set<UUID_t>>::iterator freePassIt;
+        for (freePassIt = toFree.begin(); freePassIt != toFree.end(); ++freePassIt)
+        {
+            for (UUID_t idToFree : freePassIt->second)
+                freeBatch(idToFree);
+        }
+    }
+
+    void Batcher::pruneEmptyBatches()
+    {
+        std::unordered_map<RenderPassType, std::set<UUID_t>> batchesToPrune;
+        std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>>::iterator passBatchIt;
+        for (passBatchIt = _batches.begin(); passBatchIt != _batches.end(); ++passBatchIt)
+        {
+            std::unordered_map<UUID_t, Batch*>& passBatches = passBatchIt->second;
+            std::unordered_map<UUID_t, Batch*>::iterator batchIt;
+            for (batchIt = passBatches.begin(); batchIt != passBatches.end(); ++batchIt)
+            {
+                Batch* pBatch = batchIt->second;
+                if (pBatch->repeatCount == 0)
+                    batchesToPrune[passBatchIt->first].insert(batchIt->first);
+            }
+        }
+
+        if (!batchesToPrune.empty())
+        {
+            Debug::log("___TEST___pruning batches for render passes:");
+            for (auto passBatches : batchesToPrune)
+            {
+                Debug::log(
+                    "   " + render_pass_type_to_string(passBatches.first) + " " + std::to_string(passBatches.second.size())
+                );
+            }
+
+            std::unordered_map<RenderPassType, std::set<UUID_t>>::iterator passBatchesToPruneIt;
+            for (passBatchesToPruneIt = batchesToPrune.begin();
+                passBatchesToPruneIt != batchesToPrune.end();
+                ++passBatchesToPruneIt)
+            {
+                for (UUID_t batchID : passBatchesToPruneIt->second)
+                    freeBatch(batchID);
             }
         }
     }

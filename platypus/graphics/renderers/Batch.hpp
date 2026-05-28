@@ -177,8 +177,9 @@ namespace platypus
         // Clears instance and repeat counts for next round of submits.
         void resetForNextFrame();
 
-        void freeBatches();
         void freeBatch(UUID_t batchID);
+        void freeBatches();
+        void pruneEmptyBatches();
 
         Batch* getBatch(RenderPassType renderPassType, UUID_t identifier);
         // Returns all batches for a render pass

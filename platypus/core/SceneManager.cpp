@@ -49,6 +49,20 @@ namespace platypus
             if (entity.id != NULL_ENTITY_ID && entity.active)
                 pMasterRenderer->submit(_pCurrentScene, entity);
         }
+
+        // NOTE: Need some way to specify if u really want to do this
+        // or if u want to do this for some batches but not for some
+        // others!
+        //  -> BECAUSE:
+        //      1. It's slow to destroy and allocate new batches!
+        //      2. u might want for some batches to be ready which
+        //      aren't used atm!
+        //
+        // *For debug and editor purposes this might be fine to be
+        // done always..?
+        #ifdef PLATYPUS_DEBUG
+        pMasterRenderer->getBatcher().pruneEmptyBatches();
+        #endif
     }
 
     // triggers scene switching at the end of the frame
