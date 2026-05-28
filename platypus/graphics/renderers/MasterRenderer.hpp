@@ -120,6 +120,9 @@ namespace platypus
 
         inline size_t getCurrentFrame() const { return _currentFrame; }
 
+        inline Batcher& getBatcher() { return _batcher; }
+        inline const Batcher& getBatcher() const { return _batcher; }
+
     private:
         void createOffscreenPassResources();
         void destroyOffscreenPassResources();

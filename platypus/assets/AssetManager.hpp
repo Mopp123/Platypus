@@ -213,6 +213,10 @@ namespace platypus
 
         std::vector<std::string> popErrors();
 
+        // TODO: Figure out better way to deal with asset names!
+        // Checking is name available is horribly slow atm!
+        bool nameAvailable(const std::string& name) const;
+
         inline size_t getAssetTotalCount() const { return _assets.size(); }
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }

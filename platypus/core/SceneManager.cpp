@@ -32,11 +32,18 @@ namespace platypus
         for (System* system : _pCurrentScene->_systems)
             system->update(_pCurrentScene);
 
+
+        Application* pApp = Application::get_instance();
+        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
+
+        // Reset Batcher for next round of submits!
+        // NOTE: This was earlier done in MasterRenderer
+        // before _pRenderer3D->advanceFrame();!
+        pMasterRenderer->getBatcher().resetForNextFrame();
+
         // Submit all "renderable components" for rendering.
         // NOTE: This has to be done here since need quarantee that all necessary components have been
         // properly updated before submission!
-        Application* pApp = Application::get_instance();
-        MasterRenderer* pMasterRenderer = pApp->getMasterRenderer();
         for (const Entity& entity : _pCurrentScene->_entities)
         {
             if (entity.id != NULL_ENTITY_ID && entity.active)

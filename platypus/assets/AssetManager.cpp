@@ -188,6 +188,12 @@ namespace platypus
         UUID_t id
     )
     {
+        if (!name.empty() && !nameAvailable(name))
+        {
+            _errors.push_back("Name " + name + " not available");
+            return nullptr;
+        }
+
         Image* pImage = Image::load_image(_uuidPool, filepath, format, name, id);
         if (!pImage)
         {
@@ -209,6 +215,12 @@ namespace platypus
         UUID_t id
     )
     {
+        if (!name.empty() && !nameAvailable(name))
+        {
+            _errors.push_back("Name " + name + " not available");
+            return nullptr;
+        }
+
         Image* pImage = (Image*)getAsset(imageID, AssetType::ASSET_TYPE_IMAGE);
         if (!pImage)
         {
@@ -305,6 +317,12 @@ namespace platypus
         const std::string& customFragmentShaderFilename
     )
     {
+        if (!name.empty() && !nameAvailable(name))
+        {
+            _errors.push_back("Name " + name + " not available");
+            return nullptr;
+        }
+
         // At least a single diffuse texture is required.
         // If not provided or invalid -> use some default texture
         if (diffuseTextureIDs.empty())
@@ -566,6 +584,12 @@ namespace platypus
         std::vector<UUID_t> meshIDs
     )
     {
+        if (!name.empty() && !nameAvailable(name))
+        {
+            _errors.push_back("Name " + name + " not available");
+            return nullptr;
+        }
+
         std::vector<MeshData> loadedMeshes;
         std::vector<KeyframeAnimationData> animationData;
         if (!load_gltf_model(filepath, loadedMeshes, animationData))
@@ -594,6 +618,7 @@ namespace platypus
         for (size_t i = 0; i < loadedMeshes.size(); ++i)
         {
             const MeshData& meshData = loadedMeshes[i];
+            const std::string meshName = name + "." + meshData.name;
             Buffer* pVertexBuffer = new Buffer(
                 (void*)meshData.vertexBufferData.rawData.data(),
                 meshData.vertexBufferData.elementSize,
@@ -635,7 +660,7 @@ namespace platypus
                 meshData.transformationMatrix,
                 meshData.bindPose,
                 animationAssets,
-                meshData.name,
+                meshName,
                 meshID
             );
             _assets[pMesh->getID()] = pMesh;
@@ -1242,6 +1267,18 @@ namespace platypus
         std::vector<std::string> errors = _errors;
         _errors.clear();
         return errors;
+    }
+
+    // TODO: Figure out better way to deal with asset names!
+    // Checking is name available is horribly slow atm!
+    bool AssetManager::nameAvailable(const std::string& name) const
+    {
+        for (const std::pair<UUID_t, Asset*> asset : _assets)
+        {
+            if (asset.second->getName() == name)
+                return false;
+        }
+        return true;
     }
 
     bool AssetManager::validateAsset(

@@ -840,7 +840,10 @@ namespace platypus
 
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
-        _batcher.resetForNextFrame();
+        // UPDATE: Currently doing this in SceneManager, before beginning new round of submits
+        // so that u can query Batcher's stuff in scene's update()
+        //  -> atm this seems fine BUT NOT SURE IF THIS EVENTUALLY FUCKS SHIT UP!
+        //_batcher.resetForNextFrame();
 
         _pRenderer3D->advanceFrame();
 

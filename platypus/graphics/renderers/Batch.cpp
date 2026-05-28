@@ -967,6 +967,13 @@ namespace platypus
         }
     }
 
+    std::vector<RenderPassType> Batcher::get_available_render_passes()
+    {
+        std::vector<RenderPassType> outPassTypes(PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES);
+        memcpy(outPassTypes.data(), s_availableRenderPasses, sizeof(RenderPassType) * PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES);
+        return outPassTypes;
+    }
+
     void Batcher::addToAllocatedShaderResources(
         UUID_t batchID,
         std::vector<BatchShaderResource>& shaderResources

@@ -270,6 +270,8 @@ namespace platypus
             size_t currentFrame
         );
 
+        static std::vector<RenderPassType> get_available_render_passes();
+
         inline size_t getMaxStaticBatchLength() const { return _maxStaticBatchLength; }
         inline size_t getMaxStaticInstancedBatchLength() const { return _maxStaticInstancedBatchLength; }
         inline size_t getMaxSkinnedBatchLength() const { return _maxSkinnedBatchLength; }
