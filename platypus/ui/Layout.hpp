@@ -62,7 +62,10 @@ namespace platypus
             NONE = 0,
             STRETCH_HORIZONTALLY = 0x1,
             STRETCH_VERTICALLY = 0x1 << 1,
-            INCREMENT_POSITION = 0x1 << 2
+            INCREMENT_POSITION = 0x1 << 2,
+
+            // If this isn't set, element won't affect its' parentwhile inactive!
+            AFFECT_WHILE_INACTIVE = 0x1 << 3
         };
 
         enum InheritParentFlagBits
@@ -77,7 +80,7 @@ namespace platypus
         class Layout
         {
         public:
-            // TODO: Add selectedBorder color?
+            // TODO: Add hoverBorder and selectedBorder colors?
             struct Colors
             {
                 Vector4f base =     NULL_COLOR;

@@ -563,13 +563,13 @@ namespace platypus
             size_t childIndex = 0;
             for (UIElement* pChild : _children)
             {
+                Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);
                 // NOTE: Below actually fucks stuff up!
                 // Don't remember why was that added in the first place...
-                if (!pChild->isActive())
+                if (!pChild->isActive() && !(pChildLayout->effectOnParentFlags & EffectOnParentFlagBits::AFFECT_WHILE_INACTIVE))
                     continue;
 
                 pChild->updateScale();
-                Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);
                 uint32_t childEffectOnParent = pChildLayout->effectOnParentFlags;
                 // If child has no scaling effect on parent at all,
                 // continue AND DON'T INCREMENT THE childIndex! -> otherwise fucks up slightly
