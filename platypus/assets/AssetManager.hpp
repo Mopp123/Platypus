@@ -32,15 +32,24 @@ namespace platypus
         Image* _pWhiteImage = nullptr;
         Image* _pBlackImage = nullptr;
         Image* _pZeroImage = nullptr;
+        Image* _pRedImage = nullptr;
+
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
         Texture* _pZeroTexture = nullptr;
+        Texture* _pRedTexture = nullptr;
+
+        Material* _pErrorMaterial = nullptr;
+
+        Model* _pErrorModel = nullptr;
+        Mesh* _pErrorMesh = nullptr;
 
         std::vector<std::string> _errors;
 
     public:
         AssetManager();
         ~AssetManager();
+        void createDefaultAssets();
         void destroyAssets();
         void destroyAsset(UUID_t assetID);
         void destroyAsset(const std::string& assetName);

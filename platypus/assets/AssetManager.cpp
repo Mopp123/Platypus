@@ -10,6 +10,30 @@ namespace platypus
     AssetManager::AssetManager()
     {
         _uuidPool = UUID::occupy_pool();
+    }
+
+    AssetManager::~AssetManager()
+    {
+        destroyDefaultAssets();
+
+        for (TextureSampler* pSampler : _textureSamplers)
+            delete pSampler;
+
+        if (!_assets.empty())
+        {
+            Debug::log(
+                "All assets haven't yet been destroyed!"
+                " Remaining assets: " + std::to_string(_assets.size()) + " "
+                "from which " + std::to_string(_persistentAssets.size()) + " were persistent.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+    }
+
+    void AssetManager::createDefaultAssets()
+    {
         // Create black and white default textures
         PE_ubyte whitePixels[4] = { 255, 255, 255, 255 };
         _pWhiteImage = createImage(whitePixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
@@ -23,13 +47,19 @@ namespace platypus
         _pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
         _pZeroImage->setSerializable(false);
 
+        PE_ubyte redPixels[4] = { 1, 0, 0, 1 };
+        _pRedImage = createImage(redPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
+        _pRedImage->setSerializable(false);
+
         _persistentAssets[_pWhiteImage->getID()] = _pWhiteImage;
         _persistentAssets[_pBlackImage->getID()] = _pBlackImage;
         _persistentAssets[_pZeroImage->getID()] = _pZeroImage;
+        _persistentAssets[_pRedImage->getID()] = _pRedImage;
 
         _defaultAssets.insert(_pWhiteImage->getID());
         _defaultAssets.insert(_pBlackImage->getID());
         _defaultAssets.insert(_pZeroImage->getID());
+        _defaultAssets.insert(_pRedImage->getID());
 
         const TextureSampler* pDefaultTextureSampler = createTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -55,33 +85,38 @@ namespace platypus
         );
         _pZeroTexture->setSerializable(false);
 
+        _pRedTexture = createTexture(
+            _pRedImage->getID(),
+            pDefaultTextureSampler
+        );
+        _pRedTexture->setSerializable(false);
+
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
         _persistentAssets[_pZeroTexture->getID()] = _pZeroTexture;
+        _persistentAssets[_pRedTexture->getID()] = _pRedTexture;
 
         _defaultAssets.insert(_pWhiteTexture->getID());
         _defaultAssets.insert(_pBlackTexture->getID());
         _defaultAssets.insert(_pZeroTexture->getID());
-    }
+        _defaultAssets.insert(_pRedTexture->getID());
 
-    AssetManager::~AssetManager()
-    {
-        destroyDefaultAssets();
-
-        for (TextureSampler* pSampler : _textureSamplers)
-            delete pSampler;
-
-        if (!_assets.empty())
-        {
-            Debug::log(
-                "All assets haven't yet been destroyed!"
-                " Remaining assets: " + std::to_string(_assets.size()) + " "
-                "from which " + std::to_string(_persistentAssets.size()) + " were persistent.",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
+        _pErrorMaterial = createMaterial(
+            NULL_UUID,
+            { },
+            { },
+            { },
+            0,
+            0,
+            { 0, 0 },
+            { 1, 1 },
+            false,
+            false,
+            false,
+            true // shadeless
+        );
+        makePersistent(_pErrorMaterial);
+        _defaultAssets.insert(_pErrorMaterial->getID());
     }
 
     void AssetManager::destroyAssets()
@@ -1318,21 +1353,12 @@ namespace platypus
 
     void AssetManager::destroyDefaultAssets()
     {
-        std::vector<UUID_t> toDestroy = {
-            _pWhiteTexture->getID(),
-            _pBlackTexture->getID(),
-            _pZeroTexture->getID(),
-
-            _pWhiteImage->getID(),
-            _pBlackImage->getID(),
-            _pZeroImage->getID()
-        };
-
-        for (UUID_t id : toDestroy)
+        for (UUID_t id : _defaultAssets)
         {
             delete _assets[id];
             _assets.erase(id);
             _persistentAssets.erase(id);
         }
+        _defaultAssets.clear();
     }
 }

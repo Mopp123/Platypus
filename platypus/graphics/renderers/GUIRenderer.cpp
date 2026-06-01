@@ -40,7 +40,7 @@ namespace platypus
         ),
 
         _imgPipeline(
-            masterRenderer.getSwapchain().getRenderPassPtr(),
+            Application::get_instance()->getSwapchain()->getRenderPassPtr(),
             // Vertex buffer layouts
             {
                 {
@@ -78,7 +78,7 @@ namespace platypus
         ),
 
         _fontPipeline(
-            masterRenderer.getSwapchain().getRenderPassPtr(),
+            Application::get_instance()->getSwapchain()->getRenderPassPtr(),
             // Vertex buffer layouts
             {
                 {
@@ -324,7 +324,8 @@ namespace platypus
             }
         #endif
 
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Application* pApp = Application::get_instance();
+        AssetManager* pAssetManager = pApp->getAssetManager();
 
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(&renderPass);
@@ -437,7 +438,7 @@ namespace platypus
 
         currentCommandBuffer.end();
 
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        size_t maxFramesInFlight = pApp->getSwapchain()->getMaxFramesInFlight();
         _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
 
         return currentCommandBuffer;
@@ -713,7 +714,7 @@ namespace platypus
             }
         #endif
 
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        size_t maxFramesInFlight = pApp->getSwapchain()->getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
         {
             _textureDescriptorSets[textureID].push_back(

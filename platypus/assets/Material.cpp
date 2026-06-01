@@ -93,7 +93,7 @@ namespace platypus
 
         createShaderResources();
 
-        const size_t maxFramesInFlight = Application::get_instance()->getMasterRenderer()->getSwapchain().getMaxFramesInFlight();
+        const size_t maxFramesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
         for (size_t i = 0; i < maxFramesInFlight; ++i)
             updateUniformBuffers(i);
     }
@@ -306,9 +306,8 @@ namespace platypus
         }
 
         // Omg this is soo fucking stupid DO SOMETHING ABOUT THIS!
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-        size_t framesInFlight = pMasterRenderer->getSwapchain().getMaxFramesInFlight();
+        DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
+        size_t framesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
         _uniformBuffers.resize(framesInFlight);
 
         std::vector<Texture*> allTextures = getTextures();
@@ -354,7 +353,7 @@ namespace platypus
             components.push_back({ DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pUniformBuffer });
 
             _descriptorSets.push_back(
-                descriptorPool.createDescriptorSet(
+                pDescriptorPool->createDescriptorSet(
                     _descriptorSetLayout,
                     components
                 )
@@ -364,20 +363,21 @@ namespace platypus
 
     void Material::destroyShaderResources()
     {
+        Device::wait_for_operations();
+
         for (Buffer* pBuffer : _uniformBuffers)
             delete pBuffer;
 
         _uniformBuffers.clear();
 
-        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-        DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
-        descriptorPool.freeDescriptorSets(_descriptorSets);
+        DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
+        pDescriptorPool->freeDescriptorSets(_descriptorSets);
         _descriptorSets.clear();
     }
 
     void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)
     {
-        DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
+        DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
         for (DescriptorSet& descriptorSet : _descriptorSets)
         {
             DescriptorSetComponent component{
@@ -386,7 +386,7 @@ namespace platypus
             };
             component.depthImageTEST = _transparent && descriptorIndex == _sceneDepthDescriptorIndex;
             descriptorSet.update(
-                descriptorPool,
+                *pDescriptorPool,
                 descriptorIndex,
                 component
             );
@@ -606,7 +606,7 @@ namespace platypus
         _uniformBufferData.textureProperties.w = textureScale.y;
         //const size_t currentFrame = Application::get_instance()->getMasterRenderer()->getCurrentFrame();
         //updateUniformBuffers(currentFrame);
-        const size_t framesInFlight = Application::get_instance()->getMasterRenderer()->getSwapchain().getMaxFramesInFlight();
+        const size_t framesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
         Device::wait_for_operations();
         for (size_t i = 0; i < framesInFlight; ++i)
             updateUniformBuffers(i);

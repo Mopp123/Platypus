@@ -70,7 +70,7 @@ namespace platypus
         s_pInstance = this;
 
         Context::create(name.c_str(), &_window);
-        Device::create(&_window);
+        Device::create(&_window, PLATYPUS_MAX_DESCRIPTOR_SETS);
 
         // NOTE: Some fucking logic how core stuff is initialized and how their
         // lifetimes are controlled... This is fucking disgusting atm!
@@ -80,9 +80,17 @@ namespace platypus
         // window resize (on swapchain recreation)
 
         // NOTE: HUGE ISSUE:
+
+        // Idea:
+        // 1. alloc AssetManager
+        // 2. create Swapchain
+        // 3. create DescriptorPool
+        // 4. create default assets of AssetManager?
         _pAssetManager = new AssetManager;
         bool createSwapchainDepthAttachment = false;
         _pSwapchain = new Swapchain(_window, createSwapchainDepthAttachment);
+
+        _pAssetManager->createDefaultAssets();
 
         // NOTE: Only temporarely figuring shadowmap depth format here!
         // +Not sure if this fallback is enough if D32_SFLOAT not available...
@@ -92,7 +100,11 @@ namespace platypus
         else
             shadowmapDepthFormat = Device::get_first_supported_depth_format();
 
-        _pMasterRenderer = new MasterRenderer(*_pSwapchain, shadowmapDepthFormat);
+        _pMasterRenderer = new MasterRenderer(
+            *Device::get_descriptor_pool(),
+            *_pSwapchain,
+            shadowmapDepthFormat
+        );
 
         #ifdef PLATYPUS_DEBUG
             Debug::log(

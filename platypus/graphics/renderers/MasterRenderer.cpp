@@ -16,12 +16,16 @@
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat) :
+    MasterRenderer::MasterRenderer(
+        DescriptorPool& descriptorPool,
+        Swapchain& swapchain,
+        ImageFormat shadowmapDepthFormat
+    ) :
+        _descriptorPoolRef(descriptorPool),
         _swapchainRef(swapchain),
-        _descriptorPool(_swapchainRef),
         _batcher(
             *this,
-            _descriptorPool,
+            _descriptorPoolRef,
             1000, // max static batch len
             1000, // max static instanced batch len
             500,  // max skinned batch len
@@ -99,13 +103,13 @@ namespace platypus
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
         _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(
-            _descriptorPool,
+            _descriptorPoolRef,
             _swapchainRef.getRenderPassPtr()
         );
 
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
-            _descriptorPool,
+            _descriptorPoolRef,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
@@ -204,13 +208,23 @@ namespace platypus
             // TODO: Make this nicer!
             if (meshID != NULL_UUID && materialID != NULL_UUID)
             {
-                Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-                const MeshType meshType = pMesh->getType();
+                const Mesh * const pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
                 const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+                if (!pMesh || !pMaterial)
+                {
+                    // NOTE: In this case, the mesh or material has been destroyed
+                    //  -> Renderable3D has invalid UUIDs to those!
+                    // TODO: Some "default error" mesh and material to see where
+                    // the error renderables are? At least in debug?
+                    return;
+                }
 
-                // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs!
+                const MeshType meshType = pMesh->getType();
+
+                // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs?
+                // UPDATE TO ABOVE: Why not? Batch UUIDs don't occupy actual
+                // UUID space for any pool
                 UUID_t batchID = UUID::hash(meshID, materialID);
-
                 if (pMaterial->isTransparent())
                 {
                     // Create transparent batch (if required)
@@ -575,7 +589,7 @@ namespace platypus
             _scene3DDataUniformBuffers.push_back(pScene3DDataUniformBuffer);
 
             _scene3DDescriptorSets.push_back(
-                _descriptorPool.createDescriptorSet(
+                _descriptorPoolRef.createDescriptorSet(
                     _scene3DDataDescriptorSetLayout,
                     { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pScene3DDataUniformBuffer } }
                 )
@@ -585,7 +599,7 @@ namespace platypus
 
     void MasterRenderer::destroyCommonShaderResources()
     {
-        _descriptorPool.freeDescriptorSets(_scene3DDescriptorSets);
+        _descriptorPoolRef.freeDescriptorSets(_scene3DDescriptorSets);
         _scene3DDescriptorSets.clear();
 
         for (Buffer* pBuffer : _scene3DDataUniformBuffers)

@@ -735,6 +735,7 @@ namespace platypus
     {
         if (_pImpl)
         {
+            Device::wait_for_operations();
             DeviceImpl* pDeviceImpl = Device::get_impl();
             vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
             if (_pImpl->vmaAllocation != VK_NULL_HANDLE)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/core/Window.hpp"
+#include "Descriptors.hpp"
 #include "CommandBuffer.hpp"
 #include "Swapchain.hpp"
 #include "platypus/assets/Image.hpp"
@@ -16,13 +17,15 @@ namespace platypus
     private:
         static DeviceImpl* s_pImpl;
         static Window* s_pWindow;
+        static DescriptorPool* s_pDescriptorPool;
         static size_t s_minUniformBufferOffsetAlignment;
         static CommandPool* s_pCommandPool;
         static std::vector<ImageFormat> s_supportedDepthFormats;
         static std::vector<ImageFormat> s_supportedColorFormats;
 
     public:
-        static void create(Window* pWindow);
+        // TODO: Multiple descriptor pools
+        static void create(Window* pWindow, size_t maxDescriptorSets);
         static void destroy();
 
         // At the moment all rendering is done in a way that we have a single
@@ -45,6 +48,7 @@ namespace platypus
         // Required for descriptor sets using dynamic offsets of uniform buffers.
         static size_t get_min_uniform_buffer_offset_align();
 
+        static DescriptorPool* get_descriptor_pool();
         static CommandPool* get_command_pool();
 
         static bool is_depth_format_supported(ImageFormat format)

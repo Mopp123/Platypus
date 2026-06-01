@@ -275,8 +275,7 @@ namespace platypus
 
         if (destroyResources)
         {
-            MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
-            DescriptorPool& descriptorPool = pMasterRenderer->getDescriptorPool();
+            DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
             std::unordered_map<UUID_t, std::vector<BatchShaderResource>>::iterator shaderResourceIt = _allocatedShaderResources.find(batchID);
             if (shaderResourceIt != _allocatedShaderResources.end())
             {
@@ -286,7 +285,7 @@ namespace platypus
                     for (Buffer* pBuffer : resource.buffer)
                         delete pBuffer;
 
-                    descriptorPool.freeDescriptorSets(resource.descriptorSet);
+                    pDescriptorPool->freeDescriptorSets(resource.descriptorSet);
                 }
             }
             _allocatedShaderResources.erase(batchID);
@@ -690,7 +689,7 @@ namespace platypus
             receivesShadows = pMaterial->receivesShadows();
         }
 
-        const size_t framesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        const size_t framesInFlight = pApp->getSwapchain()->getMaxFramesInFlight();
 
         // Dynamic vertex buffers
         //

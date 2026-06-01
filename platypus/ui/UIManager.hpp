@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/utils/Maths.hpp"
+#include "platypus/core/InputManager.hpp"
 #include "platypus/core/Scene.hpp"
 #include "Layout.hpp"
 #include "UIElement.hpp"

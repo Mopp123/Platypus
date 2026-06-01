@@ -4,9 +4,6 @@
 #include <vulkan/vulkan.h>
 
 
-#define PLATY_MAX_DESCRIPTOR_SETS 1000
-
-
 namespace platypus
 {
     struct DescriptorSetLayoutImpl

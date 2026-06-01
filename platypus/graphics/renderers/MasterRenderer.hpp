@@ -37,11 +37,11 @@ namespace platypus
     class MasterRenderer
     {
     private:
+        DescriptorPool& _descriptorPoolRef;
         Swapchain& _swapchainRef;
         // NOTE: MasterRenderer shouldn't own DescriptorPool
         // since, for example some Assets are using it too...
         //  -> issue how MasterRenderer and AssetManager gets destroyed!
-        DescriptorPool _descriptorPool;
         Batcher _batcher;
         std::vector<CommandBuffer> _primaryCommandBuffers;
 
@@ -78,7 +78,11 @@ namespace platypus
 
     public:
         // NOTE: CommandPool and Device must exist when creating this
-        MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat);
+        MasterRenderer(
+            DescriptorPool& descriptorPool,
+            Swapchain& swapchain,
+            ImageFormat shadowmapDepthFormat
+        );
         ~MasterRenderer();
         void createPipelines();
 
@@ -105,9 +109,6 @@ namespace platypus
         void setPostProcessingProperties(float bloomIntensity);
 
         inline const RenderPass& getShadowPass() const { return _shadowPass; }
-
-        inline const Swapchain& getSwapchain() const { return _swapchainRef; }
-        inline DescriptorPool& getDescriptorPool() { return _descriptorPool; }
 
         inline const DescriptorSetLayout& getScene3DDataDescriptorSetLayout() const { return _scene3DDataDescriptorSetLayout; }
         inline const DescriptorSetLayout& getShadowmapDescriptorSetLayout() const { return _shadowmapDescriptorSetLayout; }

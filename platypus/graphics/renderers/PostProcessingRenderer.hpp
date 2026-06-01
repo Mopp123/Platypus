@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/graphics/Buffers.hpp"
+#include "platypus/graphics/Framebuffer.hpp"
 #include "platypus/graphics/Descriptors.hpp"
 #include "platypus/graphics/Shader.hpp"
 #include "platypus/graphics/CommandBuffer.hpp"

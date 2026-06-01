@@ -255,13 +255,11 @@ namespace platypus
     }
 
 
-    DescriptorPool::DescriptorPool(const Swapchain& swapchain)
+    DescriptorPool::DescriptorPool(size_t maxDescriptorSets) :
+        _maxDescriptorSets(maxDescriptorSets)
     {
         std::vector<VkDescriptorPoolSize> poolSizes;
 
-        const size_t& maxFramesInFlight = swapchain.getImpl()->maxFramesInFlight;
-        // NOTE: maxDescriptorSets hardcoded here ONLY FOR TESTING!
-        const uint32_t maxDescriptorSets = PLATY_MAX_DESCRIPTOR_SETS * maxFramesInFlight;
         const std::vector<DescriptorType> types =
         {
             DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -271,17 +269,21 @@ namespace platypus
 
         for (size_t i = 0; i < types.size(); ++i)
         {
+            // NOTE: poolSizes have the max allocateable(eng?:D) descriptors
+            // NOT SETS! But atm its' fine to have it be just the _maxDescriptorSets val...
+            //  -> IN THE FUTURE THIS WILL MATTER!!!
+            const uint32_t maxDescriptors = static_cast<uint32_t>(_maxDescriptorSets);
             VkDescriptorPoolSize poolSize{};
             poolSize.type = to_vk_descriptor_type(types[i]);
-            poolSize.descriptorCount = maxDescriptorSets; //maxFramesInFlight;
+            poolSize.descriptorCount = maxDescriptors;
             poolSizes.push_back(poolSize);
         }
 
         VkDescriptorPoolCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        createInfo.poolSizeCount = (uint32_t)poolSizes.size();
+        createInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         createInfo.pPoolSizes = poolSizes.data();
-        createInfo.maxSets = maxDescriptorSets;
+        createInfo.maxSets = static_cast<uint32_t>(_maxDescriptorSets);
         createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         VkDescriptorPool handle = VK_NULL_HANDLE;

@@ -128,7 +128,8 @@ namespace platypus
         );
     }
 
-    DescriptorPool::DescriptorPool(const Swapchain& swapchain)
+    DescriptorPool::DescriptorPool(size_t maxDescriptorSets) :
+        _maxDescriptorSets(maxDescriptorSets)
     {
         _pImpl = new DescriptorPoolImpl;
     }

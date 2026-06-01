@@ -67,6 +67,7 @@ namespace platypus
         bool useExplicitComponentMask = false
     );
 
+    // NOTE: WARNING! Below might actually be fucked atm!?
     void set_transform_position(Transform* pTransform, const Vector3f& position, bool hasParent);
     void set_transform_rotation(Transform* pTransform, float pitch, float yaw, float roll, bool hasParent);
     void set_transform_rotation(Transform* pTransform, const Quaternion& rotation, bool hasParent);
