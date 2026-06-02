@@ -47,7 +47,7 @@ namespace platypus
         _pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
         _pZeroImage->setSerializable(false);
 
-        PE_ubyte redPixels[4] = { 1, 0, 0, 1 };
+        PE_ubyte redPixels[4] = { 255, 0, 0, 255 };
         _pRedImage = createImage(redPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
         _pRedImage->setSerializable(false);
 
@@ -101,10 +101,12 @@ namespace platypus
         _defaultAssets.insert(_pZeroTexture->getID());
         _defaultAssets.insert(_pRedTexture->getID());
 
+        // TODO: Make some dumb shader which isn't using any lighting at all
+        // for "dumb" shadeless materials!
         _pErrorMaterial = createMaterial(
             NULL_UUID,
-            { },
-            { },
+            { _pRedTexture->getID() },
+            { _pWhiteTexture->getID() },
             { },
             0,
             0,
@@ -117,6 +119,22 @@ namespace platypus
         );
         makePersistent(_pErrorMaterial);
         _defaultAssets.insert(_pErrorMaterial->getID());
+
+        _pErrorModel = loadModel(
+            "assets/models/Error.glb",
+            false, // instanced
+            ""
+        );
+        PLATYPUS_ASSERT(_pErrorModel);
+        if (_pErrorModel)
+        {
+            makePersistent(_pErrorModel);
+            _defaultAssets.insert(_pErrorModel->getID());
+            PLATYPUS_ASSERT(!_pErrorModel->getMeshes().empty());
+
+            _pErrorMesh = _pErrorModel->getMeshes()[0];
+            _defaultAssets.insert(_pErrorMesh->getID());
+        }
     }
 
     void AssetManager::destroyAssets()

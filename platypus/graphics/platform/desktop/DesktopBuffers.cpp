@@ -419,6 +419,7 @@ namespace platypus
 
         if (_pImpl)
         {
+            Device::wait_for_operations();
             vmaDestroyBuffer(
                 Device::get_impl()->vmaAllocator,
                 _pImpl->handle,

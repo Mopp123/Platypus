@@ -231,6 +231,9 @@ namespace platypus
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
         inline Texture* getZeroTexture() const { return _pZeroTexture; }
 
+        inline Material* getErrorMaterial() const { return _pErrorMaterial; }
+        inline Mesh* getErrorMesh() const { return _pErrorMesh; }
+
         inline size_t getUUIDPool() const { return _uuidPool; }
 
     private:
