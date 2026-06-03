@@ -32,12 +32,12 @@ namespace platypus
         Image* _pWhiteImage = nullptr;
         Image* _pBlackImage = nullptr;
         Image* _pZeroImage = nullptr;
-        Image* _pRedImage = nullptr;
+        Image* _pErrorImage = nullptr;
 
         Texture* _pWhiteTexture = nullptr;
         Texture* _pBlackTexture = nullptr;
         Texture* _pZeroTexture = nullptr;
-        Texture* _pRedTexture = nullptr;
+        Texture* _pErrorTexture = nullptr;
 
         Material* _pErrorMaterial = nullptr;
 
@@ -230,6 +230,7 @@ namespace platypus
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
         inline Texture* getZeroTexture() const { return _pZeroTexture; }
+        inline Texture* getErrorTexture() const { return _pErrorTexture; }
 
         inline Material* getErrorMaterial() const { return _pErrorMaterial; }
         inline Mesh* getErrorMesh() const { return _pErrorMesh; }

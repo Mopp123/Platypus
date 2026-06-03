@@ -47,19 +47,33 @@ namespace platypus
         _pZeroImage = createImage(zeroPixels, 1, 1, 4, ImageFormat::R8G8B8A8_UNORM);
         _pZeroImage->setSerializable(false);
 
-        PE_ubyte redPixels[4] = { 255, 0, 0, 255 };
-        _pRedImage = createImage(redPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
-        _pRedImage->setSerializable(false);
+        const std::string defaultErrorImageLocation = "assets/textures/Error.png";
+        _pErrorImage = loadImage(
+            defaultErrorImageLocation,
+            ImageFormat::R8G8B8A8_SRGB
+        );
+        if (!_pErrorImage)
+        {
+            Debug::log(
+                "Failed to find default error image from: " + defaultErrorImageLocation + " "
+                "Generating default(red) error image.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+            PE_ubyte redPixels[4] = { 255, 0, 0, 255 };
+            _pErrorImage = createImage(redPixels, 1, 1, 4, ImageFormat::R8G8B8A8_SRGB);
+        }
+        _pErrorImage->setSerializable(false);
 
         _persistentAssets[_pWhiteImage->getID()] = _pWhiteImage;
         _persistentAssets[_pBlackImage->getID()] = _pBlackImage;
         _persistentAssets[_pZeroImage->getID()] = _pZeroImage;
-        _persistentAssets[_pRedImage->getID()] = _pRedImage;
+        _persistentAssets[_pErrorImage->getID()] = _pErrorImage;
 
         _defaultAssets.insert(_pWhiteImage->getID());
         _defaultAssets.insert(_pBlackImage->getID());
         _defaultAssets.insert(_pZeroImage->getID());
-        _defaultAssets.insert(_pRedImage->getID());
+        _defaultAssets.insert(_pErrorImage->getID());
 
         const TextureSampler* pDefaultTextureSampler = createTextureSampler(
             TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
@@ -85,27 +99,27 @@ namespace platypus
         );
         _pZeroTexture->setSerializable(false);
 
-        _pRedTexture = createTexture(
-            _pRedImage->getID(),
+        _pErrorTexture = createTexture(
+            _pErrorImage->getID(),
             pDefaultTextureSampler
         );
-        _pRedTexture->setSerializable(false);
+        _pErrorTexture->setSerializable(false);
 
         _persistentAssets[_pWhiteTexture->getID()] = _pWhiteTexture;
         _persistentAssets[_pBlackTexture->getID()] = _pBlackTexture;
         _persistentAssets[_pZeroTexture->getID()] = _pZeroTexture;
-        _persistentAssets[_pRedTexture->getID()] = _pRedTexture;
+        _persistentAssets[_pErrorTexture->getID()] = _pErrorTexture;
 
         _defaultAssets.insert(_pWhiteTexture->getID());
         _defaultAssets.insert(_pBlackTexture->getID());
         _defaultAssets.insert(_pZeroTexture->getID());
-        _defaultAssets.insert(_pRedTexture->getID());
+        _defaultAssets.insert(_pErrorTexture->getID());
 
         // TODO: Make some dumb shader which isn't using any lighting at all
         // for "dumb" shadeless materials!
         _pErrorMaterial = createMaterial(
             NULL_UUID,
-            { _pRedTexture->getID() },
+            { _pErrorTexture->getID() },
             { _pWhiteTexture->getID() },
             { },
             0,
