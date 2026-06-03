@@ -327,12 +327,15 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        if (_receiveShadows)
-            _shadowmapDescriptorIndex = textureComponents.size() - 1;
+        // TODO:
+        // When findTextureDescriptorIndices() works, get rid of the below commented out stuff!
+        findTextureDescriptorIndices();
+        //if (_receiveShadows)
+        //    _shadowmapDescriptorIndex = textureComponents.size() - 1;
 
         if (_transparent)
         {
-            _sceneDepthDescriptorIndex = textureComponents.size() - 1;
+            //_sceneDepthDescriptorIndex = textureComponents.size() - 1;
             // NOTE: ONLY TESTING ATM!
             textureComponents[_sceneDepthDescriptorIndex].depthImageTEST = true;
         }
@@ -373,6 +376,25 @@ namespace platypus
         DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
         pDescriptorPool->freeDescriptorSets(_descriptorSets);
         _descriptorSets.clear();
+    }
+
+    // NOTE: NOT TESTED, MIGHT BE FUCKED!!
+    void Material::findTextureDescriptorIndices()
+    {
+        // NOTE: If blendmap is used its' descriptor index should always be 0!
+        uint32_t baseIndex = _blendmapTextureID == NULL_UUID ? 0 : 1;
+        for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
+        {
+            _diffuseTextureDescriptorIndices[i] = baseIndex + i;
+            _specularTextureDescriptorIndices[i] = baseIndex + _diffuseTextureCount + i;
+            _normalTextureDescriptorIndices[i] = baseIndex + _diffuseTextureCount + _specularTextureCount + i;
+        }
+        size_t totalTextureCount = getTotalTextureCount();
+        // NOTE: Material can't be transparent and receive shadows atm, so below is fine!
+        if (_transparent)
+            _sceneDepthDescriptorIndex = totalTextureCount - 1;
+        if (_receiveShadows)
+            _shadowmapDescriptorIndex = totalTextureCount - 1;
     }
 
     void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)

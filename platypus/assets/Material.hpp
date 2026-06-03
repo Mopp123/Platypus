@@ -79,6 +79,12 @@ namespace platypus
         bool _receiveShadows = false;
         bool _transparent = false;
         bool _shadeless = false;
+
+        // NOTE: If blendmap is used its' descriptor index should always be 0!
+        uint32_t _blendmapTextureDescriptorIndex = 0;
+        uint32_t _diffuseTextureDescriptorIndices[PE_MAX_MATERIAL_TEX_CHANNELS];
+        uint32_t _specularTextureDescriptorIndices[PE_MAX_MATERIAL_TEX_CHANNELS];
+        uint32_t _normalTextureDescriptorIndices[PE_MAX_MATERIAL_TEX_CHANNELS];
         // TODO: oh my god please PLEASE MAKE THIS SHIT LESS DUMB!
         uint32_t _shadowmapDescriptorIndex = 0;
         uint32_t _sceneDepthDescriptorIndex = 0;
@@ -195,6 +201,7 @@ namespace platypus
         void warnUnassigned(const std::string& beginStr);
 
     private:
+        void findTextureDescriptorIndices();
         void updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex);
         void validateTextureCounts();
         void createDescriptorSetLayout();
