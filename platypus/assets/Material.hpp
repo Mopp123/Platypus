@@ -208,7 +208,12 @@ namespace platypus
         inline const std::vector<DescriptorSet> getDescriptorSets() const { return _descriptorSets; }
 
     private:
-        void setTexture(UUID_t textureID, size_t slot, UUID_t** ppTextures);
+        void setTexture(
+            UUID_t textureID,
+            size_t slot,
+            uint32_t descriptorIndex,
+            UUID_t** ppTextures
+        );
         void findTextureDescriptorIndices();
 
         void updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex);

@@ -831,7 +831,7 @@ namespace platypus
         {
             Debug::log(
                 "Currently this can be used only to update a texture to another "
-                "(requires texture already to exist in this slot!)",
+                "(requires blendmap texture to already exist)",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -864,35 +864,47 @@ namespace platypus
 
     void Material::setDiffuseTexture(UUID_t textureID, size_t slot)
     {
+        UUID_t* pTextures = _diffuseTextureIDs;
+        UUID_t** ppTextures = &pTextures;
+        setTexture(textureID, slot, _diffuseTextureDescriptorIndices[slot], ppTextures);
     }
 
     void Material::setSpecularTexture(UUID_t textureID, size_t slot)
     {
+        UUID_t* pTextures = _specularTextureIDs;
+        UUID_t** ppTextures = &pTextures;
+        setTexture(textureID, slot, _specularTextureDescriptorIndices[slot], ppTextures);
     }
 
     void Material::setNormalTexture(UUID_t textureID, size_t slot)
     {
+        UUID_t* pTextures = _normalTextureIDs;
+        UUID_t** ppTextures = &pTextures;
+        setTexture(textureID, slot, _normalTextureDescriptorIndices[slot], ppTextures);
     }
 
-
-    void Material::setTexture(UUID_t textureID, size_t slot, UUID_t** ppTextures)
+    void Material::setTexture(
+        UUID_t textureID,
+        size_t slot,
+        uint32_t descriptorIndex,
+        UUID_t** ppTextures
+    )
     {
         if (slot > PE_MAX_MATERIAL_TEX_CHANNELS)
         {
             Debug::log(
-                "Texture slot " + std::to_string(slot) + " out of bounds. "
-                "Max texture slot count is " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " "
-                "per channel!",
+                "Texture slot " + std::to_string(slot) + " out of bounds! "
+                "Max texture slots per channel is " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS),
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
-        if ((*ppTextures[slot]) == NULL_UUID)
+        if ((*ppTextures)[slot] == NULL_UUID)
         {
             Debug::log(
                 "Currently this can be used only to update a texture to another "
-                "(requires texture already to exist in slot " + std::to_string(slot) + ")",
+                "(requires texture to already exist in slot " + std::to_string(slot) + ")",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -919,8 +931,8 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         Texture* pNewTexture = reinterpret_cast<Texture*>(pNewTextureAsset);
-        updateDescriptorSetTexture(pNewTexture, _blendmapTextureDescriptorIndex);
-        _blendmapTextureID = textureID;
+        updateDescriptorSetTexture(pNewTexture, descriptorIndex);
+        (*ppTextures)[slot]= textureID;
     }
 
     // NOTE: NOT TESTED, MIGHT BE FUCKED!!
