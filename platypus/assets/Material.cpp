@@ -378,43 +378,6 @@ namespace platypus
         _descriptorSets.clear();
     }
 
-    // NOTE: NOT TESTED, MIGHT BE FUCKED!!
-    void Material::findTextureDescriptorIndices()
-    {
-        // NOTE: If blendmap is used its' descriptor index should always be 0!
-        uint32_t baseIndex = _blendmapTextureID == NULL_UUID ? 0 : 1;
-        for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
-        {
-            _diffuseTextureDescriptorIndices[i] = baseIndex + i;
-            _specularTextureDescriptorIndices[i] = baseIndex + _diffuseTextureCount + i;
-            _normalTextureDescriptorIndices[i] = baseIndex + _diffuseTextureCount + _specularTextureCount + i;
-        }
-        size_t totalTextureCount = getTotalTextureCount();
-        // NOTE: Material can't be transparent and receive shadows atm, so below is fine!
-        if (_transparent)
-            _sceneDepthDescriptorIndex = totalTextureCount - 1;
-        if (_receiveShadows)
-            _shadowmapDescriptorIndex = totalTextureCount - 1;
-    }
-
-    void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)
-    {
-        DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
-        for (DescriptorSet& descriptorSet : _descriptorSets)
-        {
-            DescriptorSetComponent component{
-                DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                pTexture
-            };
-            component.depthImageTEST = _transparent && descriptorIndex == _sceneDepthDescriptorIndex;
-            descriptorSet.update(
-                *pDescriptorPool,
-                descriptorIndex,
-                component
-            );
-        }
-    }
-
     void Material::updateShadowmapDescriptorSet(Texture* pShadowmapTexture)
     {
         #ifdef PLATYPUS_DEBUG
@@ -858,6 +821,143 @@ namespace platypus
             "This Material may have been created but not used by any renderable component.",
             Debug::MessageType::PLATYPUS_WARNING
         );
+    }
+
+    // NOTE: Below setTexture funcs can atm ONLY be used if there was texture in specified slot earlier!
+    // TODO: Allow adding new textures (requires some recreation system?)
+    void Material::setBlendmapTexture(UUID_t textureID)
+    {
+        if (_blendmapTextureID == NULL_UUID)
+        {
+            Debug::log(
+                "Currently this can be used only to update a texture to another "
+                "(requires texture already to exist in this slot!)",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if (textureID == NULL_UUID)
+        {
+            Debug::log(
+                "Given textureID was NULL_UUID",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        AssetManager* pAssetManger = Application::get_instance()->getAssetManager();
+        Asset* pNewTextureAsset = pAssetManger->getAsset(textureID, AssetType::ASSET_TYPE_TEXTURE);
+        if (!pNewTextureAsset)
+        {
+            Debug::log(
+                "Failed to find textureID " + std::to_string(textureID),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        Texture* pNewTexture = reinterpret_cast<Texture*>(pNewTextureAsset);
+        updateDescriptorSetTexture(pNewTexture, _blendmapTextureDescriptorIndex);
+        _blendmapTextureID = textureID;
+    }
+
+    void Material::setDiffuseTexture(UUID_t textureID, size_t slot)
+    {
+    }
+
+    void Material::setSpecularTexture(UUID_t textureID, size_t slot)
+    {
+    }
+
+    void Material::setNormalTexture(UUID_t textureID, size_t slot)
+    {
+    }
+
+
+    void Material::setTexture(UUID_t textureID, size_t slot, UUID_t** ppTextures)
+    {
+        if (slot > PE_MAX_MATERIAL_TEX_CHANNELS)
+        {
+            Debug::log(
+                "Texture slot " + std::to_string(slot) + " out of bounds. "
+                "Max texture slot count is " + std::to_string(PE_MAX_MATERIAL_TEX_CHANNELS) + " "
+                "per channel!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if ((*ppTextures[slot]) == NULL_UUID)
+        {
+            Debug::log(
+                "Currently this can be used only to update a texture to another "
+                "(requires texture already to exist in slot " + std::to_string(slot) + ")",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if (textureID == NULL_UUID)
+        {
+            Debug::log(
+                "Given textureID was NULL_UUID",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        AssetManager* pAssetManger = Application::get_instance()->getAssetManager();
+        Asset* pNewTextureAsset = pAssetManger->getAsset(textureID, AssetType::ASSET_TYPE_TEXTURE);
+        if (!pNewTextureAsset)
+        {
+            Debug::log(
+                "Failed to find textureID " + std::to_string(textureID),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        Texture* pNewTexture = reinterpret_cast<Texture*>(pNewTextureAsset);
+        updateDescriptorSetTexture(pNewTexture, _blendmapTextureDescriptorIndex);
+        _blendmapTextureID = textureID;
+    }
+
+    // NOTE: NOT TESTED, MIGHT BE FUCKED!!
+    void Material::findTextureDescriptorIndices()
+    {
+        // NOTE: If blendmap is used its' descriptor index should always be 0!
+        uint32_t baseIndex = _blendmapTextureID == NULL_UUID ? 0 : 1;
+        for (size_t i = 0; i < PE_MAX_MATERIAL_TEX_CHANNELS; ++i)
+        {
+            _diffuseTextureDescriptorIndices[i] = baseIndex + i;
+            _specularTextureDescriptorIndices[i] = baseIndex + _diffuseTextureCount + i;
+            _normalTextureDescriptorIndices[i] = baseIndex + _diffuseTextureCount + _specularTextureCount + i;
+        }
+        size_t totalTextureCount = getTotalTextureCount();
+        // NOTE: Material can't be transparent and receive shadows atm, so below is fine!
+        if (_transparent)
+            _sceneDepthDescriptorIndex = totalTextureCount - 1;
+        if (_receiveShadows)
+            _shadowmapDescriptorIndex = totalTextureCount - 1;
+    }
+
+    void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)
+    {
+        DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
+        for (DescriptorSet& descriptorSet : _descriptorSets)
+        {
+            DescriptorSetComponent component{
+                DescriptorType::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                pTexture
+            };
+            component.depthImageTEST = _transparent && descriptorIndex == _sceneDepthDescriptorIndex;
+            descriptorSet.update(
+                *pDescriptorPool,
+                descriptorIndex,
+                component
+            );
+        }
     }
 
     void Material::validateTextureCounts()

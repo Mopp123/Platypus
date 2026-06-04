@@ -169,6 +169,15 @@ namespace platypus
 
         static size_t get_serialized_metadata_size();
 
+        void warnUnassigned(const std::string& beginStr);
+
+        // NOTE: Below setTexture funcs can atm ONLY be used if there was texture in specified slot earlier!
+        // TODO: Allow adding new textures (requires some recreation system?)
+        void setBlendmapTexture(UUID_t textureID);
+        void setDiffuseTexture(UUID_t textureID, size_t slot);
+        void setSpecularTexture(UUID_t textureID, size_t slot);
+        void setNormalTexture(UUID_t textureID, size_t slot);
+
         inline UUID_t getBlendmapTextureID() const { return _blendmapTextureID; }
         inline const UUID_t* getDiffuseTextureIDs() const { return _diffuseTextureIDs; }
         inline const UUID_t* getSpecularTextureIDs() const { return _specularTextureIDs; }
@@ -198,10 +207,10 @@ namespace platypus
         inline const DescriptorSetLayout& getDescriptorSetLayout() const { return _descriptorSetLayout; }
         inline const std::vector<DescriptorSet> getDescriptorSets() const { return _descriptorSets; }
 
-        void warnUnassigned(const std::string& beginStr);
-
     private:
+        void setTexture(UUID_t textureID, size_t slot, UUID_t** ppTextures);
         void findTextureDescriptorIndices();
+
         void updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex);
         void validateTextureCounts();
         void createDescriptorSetLayout();
