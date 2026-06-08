@@ -77,7 +77,8 @@ namespace platypus
         inline UUID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }
         inline const std::string& getName() const { return _name; }
-        inline void setSerializable(bool arg) { _serializable = arg; }
+        inline void setName(const std::string& name) { _name = name; }
         inline bool isSerializable() const { return _serializable; }
+        inline void setSerializable(bool arg) { _serializable = arg; }
     };
 }

@@ -1,5 +1,6 @@
 #include "Image.hpp"
 #include "AssetManager.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
 
@@ -258,6 +259,124 @@ namespace platypus
         return _pData[(x + y * _width) * _channels + channelIndex];
     }
 
+    bool Image::reload(const std::string& newFilepath)
+    {
+        // TODO: On OpenGL side we need to flip?
+        bool flipVertically = false;
+        stbi_set_flip_vertically_on_load(flipVertically);
+        unsigned char* pStbImageData = stbi_load(
+            newFilepath.c_str(),
+            &_width,
+            &_height,
+            &_channels,
+            0
+        );
+        if (!pStbImageData)
+        {
+            stbi_image_free(pStbImageData);
+            return false;
+        }
+
+        const size_t size = getSize();
+        delete[] _pData;
+        _pData = new PE_ubyte[size];
+        memcpy(_pData, pStbImageData, size);
+        stbi_image_free(pStbImageData);
+        _filepath = newFilepath;
+
+        // Recreate all textures using this image
+        // NOTE:
+        //  *Not sure should this be done here, but will do for now...
+        //  *THIS IS VERY SLOW!
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        std::vector<Asset*> textureAssets = pAssetManager->getAssets(
+            AssetType::ASSET_TYPE_TEXTURE
+            //bool excludeInternalDefaults = false,
+            //bool excludeNonSerializable = true
+        );
+        for (Asset* pAsset : textureAssets)
+        {
+            Texture* pTexture = reinterpret_cast<Texture*>(pAsset);
+            if (pTexture->getImage() == this)
+            {
+                pTexture->destroy();
+                pTexture->setImage(this); // Is this really needed here?
+                pTexture->create();
+            }
+        }
+        // JUST TESTING HERE ATM! THIS IS DUMB, SHIT AND SLOW AS FUCK!
+        // Recreate every Material's shader resources if its using this reloaded image...
+        std::vector<Asset*> materialAssets = pAssetManager->getAssets(
+            AssetType::ASSET_TYPE_MATERIAL
+            //bool excludeInternalDefaults = false,
+            //bool excludeNonSerializable = true
+        );
+        for (Asset* pAsset : materialAssets)
+        {
+            bool recreateMaterialShaderResources = false;
+            Material* pMaterial = reinterpret_cast<Material*>(pAsset);
+            const UUID_t* pDiffuseTexturesIDs = pMaterial->getDiffuseTextureIDs();
+            const UUID_t* pSpecularTexturesIDs = pMaterial->getSpecularTextureIDs();
+            const UUID_t* pNormalTexturesIDs = pMaterial->getNormalTextureIDs();
+            for (size_t slot = 0; slot < PE_MAX_MATERIAL_TEX_CHANNELS; ++slot)
+            {
+                UUID_t diffuseTextureID = pDiffuseTexturesIDs[slot];
+                UUID_t specularTextureID = pSpecularTexturesIDs[slot];
+                UUID_t normalTextureID = pNormalTexturesIDs[slot];
+                if (diffuseTextureID != NULL_UUID)
+                {
+                    Asset* pMaterialTextureAsset = pAssetManager->getAsset(
+                        diffuseTextureID,
+                        AssetType::ASSET_TYPE_TEXTURE
+                    );
+                    Texture* pMaterialTexture = reinterpret_cast<Texture*>(pMaterialTextureAsset);
+                    if (pMaterialTexture->getImage() == this)
+                        recreateMaterialShaderResources = true;
+                }
+                if (specularTextureID != NULL_UUID)
+                {
+                    Asset* pMaterialTextureAsset = pAssetManager->getAsset(
+                        specularTextureID,
+                        AssetType::ASSET_TYPE_TEXTURE
+                    );
+                    Texture* pMaterialTexture = reinterpret_cast<Texture*>(pMaterialTextureAsset);
+                    if (pMaterialTexture->getImage() == this)
+                        recreateMaterialShaderResources = true;
+                }
+                if (normalTextureID != NULL_UUID)
+                {
+                    Asset* pMaterialTextureAsset = pAssetManager->getAsset(
+                        normalTextureID,
+                        AssetType::ASSET_TYPE_TEXTURE
+                    );
+                    Texture* pMaterialTexture = reinterpret_cast<Texture*>(pMaterialTextureAsset);
+                    if (pMaterialTexture->getImage() == this)
+                        recreateMaterialShaderResources = true;
+                }
+            }
+            if (recreateMaterialShaderResources)
+            {
+                // NOTE: Currently freeing all batches here!
+                // TODO: Find and free only batches using this Material!!
+                //  -> ITS' SLOW AS FUCK TO RECREATE ALL BATCHES!
+                Debug::log(
+                    "Doing very dumb shit here atm! TODO: Make this better!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+                pMaterial->destroyPipeline();
+                pMaterial->recreateExistingPipeline();
+                pMaterial->destroyShaderResources();
+                pMaterial->createShaderResources();
+
+                MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+                pMasterRenderer->getBatcher().freeBatches();
+            }
+        }
+
+        return true;
+    }
+
     Image* Image::load_image(
         size_t uuidPool,
         const std::string& filepath,
@@ -283,6 +402,37 @@ namespace platypus
         pImage->_filepath = filepath;
         stbi_image_free(pStbImageData);
         return pImage;
+    }
+
+    bool Image::read_image_pixels(
+        const std::string& filepath,
+        int* pOutWidth,
+        int* pOutHeight,
+        int* pOutChannels,
+        PE_ubyte** ppPixels
+    )
+    {
+        PLATYPUS_ASSERT(pOutWidth);
+        PLATYPUS_ASSERT(pOutHeight);
+        PLATYPUS_ASSERT(pOutChannels);
+        PLATYPUS_ASSERT(ppPixels);
+        // TODO: On OpenGL side we need to flip?
+        bool flipVertically = false;
+        stbi_set_flip_vertically_on_load(flipVertically);
+        unsigned char* pStbImageData = stbi_load(filepath.c_str(), pOutWidth, pOutHeight, pOutChannels, 0);
+        if (!pStbImageData)
+        {
+            stbi_image_free(pStbImageData);
+            return false;
+        }
+
+        const size_t pixelsSize = (*pOutWidth) * (*pOutHeight) * (*pOutChannels);
+        PE_ubyte* pPixels = new PE_ubyte[pixelsSize];
+        memcpy(pPixels, pStbImageData, pixelsSize);
+        *ppPixels = pPixels;
+
+        stbi_image_free(pStbImageData);
+        return true;
     }
 
     /*

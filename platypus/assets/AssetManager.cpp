@@ -261,6 +261,41 @@ namespace platypus
             return nullptr;
         }
 
+        int width = -1;
+        int height = -1;
+        int channels = -1;
+        PE_ubyte* pPixels = nullptr;
+        if (!Image::read_image_pixels(
+                filepath,
+                &width,
+                &height,
+                &channels,
+                &pPixels
+            ))
+        {
+            std::string error = "Failed to load image from: " + filepath;
+            Debug::log(
+                error,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            _errors.push_back(error);
+            return nullptr;
+        }
+        Image* pImage = new Image(
+            _uuidPool,
+            pPixels,
+            width,
+            height,
+            channels,
+            format,
+            name,
+            id
+        );
+        pImage->setFilepath(filepath);
+        delete[] pPixels;
+        // Old way of loading images below...
+        /*
         Image* pImage = Image::load_image(_uuidPool, filepath, format, name, id);
         if (!pImage)
         {
@@ -271,6 +306,7 @@ namespace platypus
             );
             return nullptr;
         }
+        */
         _assets[pImage->getID()] = pImage;
         return pImage;
     }

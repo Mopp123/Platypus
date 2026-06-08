@@ -551,6 +551,32 @@ namespace platypus
         _pImage(pImage),
         _pSampler(pSampler)
     {
+        setImage(pImage);
+        _pImpl = new TextureImpl;
+        create();
+    }
+
+    Texture::~Texture()
+    {
+        if (_pImpl)
+        {
+            destroy();
+            delete _pImpl;
+        }
+    }
+
+    void Texture::destroy()
+    {
+        Device::wait_for_operations();
+        DeviceImpl* pDeviceImpl = Device::get_impl();
+        vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
+        if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
+            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+    }
+
+    void Texture::setImage(const Image* pImage)
+    {
+        _pImage = pImage;
         ImageFormat imageFormat = _pImage->getFormat();
         if (!is_image_format_valid(imageFormat, pImage->getChannels()))
         {
@@ -560,20 +586,24 @@ namespace platypus
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
+            PLATYPUS_ASSERT(false);
         }
         _imageFormat = imageFormat;
+    }
 
+    void Texture::create()
+    {
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
-            (void*)pImage->getData(),
+            reinterpret_cast<const void*>(_pImage->getData()),
             1, // Single element size is 8 bit "pixel"
-            pImage->getSize(),
+            _pImage->getSize(),
             BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
             false
         );
 
-        VkFormat vkImageFormat = to_vk_format(imageFormat);
+        VkFormat vkImageFormat = to_vk_format(_imageFormat);
 
         // Using vkCmdBlit to create mipmaps, so make sure this is supported!
         //  -> even if the image format is supported, need to make sure that the format feature
@@ -581,7 +611,7 @@ namespace platypus
         if (!is_format_supported(vkImageFormat))
         {
             Debug::log(
-                "Image format " + image_format_to_string(imageFormat) + " "
+                "Image format " + image_format_to_string(_imageFormat) + " "
                 "not supported by the selected device"
                 " "+ std::string(Device::get_impl()->physicalDevice.properties.deviceName),
                 PLATYPUS_CURRENT_FUNC_NAME,
@@ -612,8 +642,8 @@ namespace platypus
             );
         }
 
-        uint32_t imageWidth = (uint32_t)pImage->getWidth();
-        uint32_t imageHeight = (uint32_t)pImage->getHeight();
+        uint32_t imageWidth = static_cast<uint32_t>(_pImage->getWidth());
+        uint32_t imageHeight = static_cast<uint32_t>(_pImage->getHeight());
 
         VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         uint32_t mipLevelCount = 1;
@@ -667,7 +697,6 @@ namespace platypus
             return;
         }
 
-        _pImpl = new TextureImpl;
         _pImpl->image = imageHandle;
         _pImpl->vmaAllocation = vmaAllocation;
         _pImpl->imageLayout = imageCreateInfo.initialLayout;
@@ -729,19 +758,5 @@ namespace platypus
         )[0];
 
         _pImpl->imageView = imageView;
-    }
-
-    Texture::~Texture()
-    {
-        if (_pImpl)
-        {
-            Device::wait_for_operations();
-            DeviceImpl* pDeviceImpl = Device::get_impl();
-            vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
-            if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
-                vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
-
-            delete _pImpl;
-        }
     }
 }

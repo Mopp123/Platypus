@@ -107,12 +107,23 @@ namespace platypus
             uint32_t channelIndex
         ) const;
 
+        bool reload(const std::string& newFilepath);
+
         static Image* load_image(
             size_t uuidPool,
             const std::string& filepath,
             ImageFormat format,
             const std::string& name = "",
             UUID_t id = NULL_UUID
+        );
+
+        // NOTE: This allocates ppPixels on heap which you'll need to free at some point!
+        static bool read_image_pixels(
+            const std::string& filepath,
+            int* pOutWidth,
+            int* pOutHeight,
+            int* pOutChannels,
+            PE_ubyte** ppPixels
         );
 
         virtual void writeToMetadataBuffer(
@@ -128,6 +139,7 @@ namespace platypus
         static size_t get_serialized_metadata_size();
 
         inline const std::string& getFilepath() const { return _filepath; }
+        inline void setFilepath(const std::string& filepath) { _filepath = filepath; }
 
         inline ImageImpl* getImpl() { return _pImpl; }
         inline const PE_ubyte* getData() const { return _pData; }

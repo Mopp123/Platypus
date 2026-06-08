@@ -366,6 +366,36 @@ namespace platypus
         }
     }
 
+    void Texture::destroy()
+    {
+        Debug::log(
+            "Not implemented yet!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+
+    void Texture::setImage(const Image* pImage)
+    {
+        Debug::log(
+            "Not implemented yet!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+
+    void Texture::create()
+    {
+        Debug::log(
+            "Not implemented yet!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+
     void transition_image_layout(
         CommandBuffer& commandBuffer,
         Texture* pTexture,

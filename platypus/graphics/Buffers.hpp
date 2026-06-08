@@ -174,7 +174,7 @@ namespace platypus
 
     public:
         Buffer(
-            void* pData,
+            const void* pData,
             size_t elementSize,
             size_t dataLength,
             uint32_t usageFlags,

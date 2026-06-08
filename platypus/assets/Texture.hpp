@@ -108,6 +108,10 @@ namespace platypus
         );
         Texture(const Texture&) = delete;
         ~Texture();
+        // TODO: Make destroy rather private and some public func to recreate with changed image?
+        void destroy();
+        void setImage(const Image* pImage);
+        void create();
 
         virtual void writeToMetadataBuffer(
             std::vector<char>& targetBuffer
