@@ -84,12 +84,27 @@ namespace platypus
     DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayout& other) :
         _bindings(other._bindings)
     {
+        // NOTE: WARNING! POSSIBLE ISSUE?
+        //  -> shouldn't we destroy() the old layout here, if exists?
         _pImpl = new DescriptorSetLayoutImpl;
         _pImpl->handle = other._pImpl->handle;
     }
 
     DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout&& other)
     {
+        // NOTE: WARNING! POSSIBLE ISSUE?
+        //  -> shouldn't we destroy() the old layout here, if exists?
+        _pImpl = new DescriptorSetLayoutImpl;
+        _pImpl->handle = other._pImpl->handle;
+        _bindings = other._bindings;
+        return *this;
+    }
+
+    //NOTE: Recalled some earlier problem with below, but don't remember anymore...
+    DescriptorSetLayout& DescriptorSetLayout::operator=(const DescriptorSetLayout& other)
+    {
+        // NOTE: WARNING! POSSIBLE ISSUE?
+        //  -> shouldn't we destroy() the old layout here, if exists?
         _pImpl = new DescriptorSetLayoutImpl;
         _pImpl->handle = other._pImpl->handle;
         _bindings = other._bindings;

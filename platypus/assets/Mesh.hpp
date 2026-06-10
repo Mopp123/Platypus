@@ -9,6 +9,7 @@
 
 namespace platypus
 {
+    // TODO: Get rid of MeshType (use MeshPropertyFlagBits instead)
     enum MeshType
     {
         MESH_TYPE_NONE = 0x0,
@@ -17,6 +18,15 @@ namespace platypus
         MESH_TYPE_SKINNED = 0x1 << 2,
     };
     std::string mesh_type_to_string(MeshType type);
+
+    enum class MeshPropertyFlagBits
+    {
+        TYPE_STATIC = 0x1,
+        TYPE_SKINNED = 0x1 << 1,
+
+        HAS_TANGENTS = 0x1 << 2,
+        INSTANCED = 0x1 << 3
+    };
 
     class Mesh : public Asset
     {

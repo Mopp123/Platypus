@@ -121,6 +121,8 @@ namespace platypus
         DescriptorSetLayout(const DescriptorSetLayout& other);
         DescriptorSetLayout& operator=(DescriptorSetLayout&& other);
         //DescriptorSetLayout& operator=(DescriptorSetLayout& other);
+        //NOTE: Recalled some earlier problem with below, but don't remember anymore...
+        DescriptorSetLayout& operator=(const DescriptorSetLayout& other);
         ~DescriptorSetLayout();
 
         void destroy();

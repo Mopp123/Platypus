@@ -128,12 +128,27 @@ namespace platypus
         );
         ~Material();
 
+        void recreate(
+            UUID_t blendmapTextureID,
+            const std::vector<UUID_t>& diffuseTextureIDs,
+            const std::vector<UUID_t>& specularTextureIDs,
+            const std::vector<UUID_t>& normalTextureIDs,
+            float specularStrength,
+            float shininess,
+            const Vector2f& textureOffset,
+            const Vector2f& textureScale,
+            bool castShadows,
+            bool receiveShadows,
+            bool transparent,
+            bool shadeless
+        );
+
         void createPipeline(
             const RenderPass* pRenderPass,
             MeshType meshType
         );
 
-        void recreateExistingPipeline();
+        void recreateExistingPipelines();
         void destroyPipeline();
 
         void createShaderResources();

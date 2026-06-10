@@ -300,12 +300,11 @@ namespace platypus
             if (pTexture->getImage() == this)
             {
                 pTexture->destroy();
-                pTexture->setImage(this); // Is this really needed here?
-                pTexture->create();
+                pTexture->create(this);
             }
         }
-        // JUST TESTING HERE ATM! THIS IS DUMB, SHIT AND SLOW AS FUCK!
         // Recreate every Material's shader resources if its using this reloaded image...
+        // JUST TESTING HERE ATM! THIS IS DUMB, SHIT AND SLOW AS FUCK!
         std::vector<Asset*> materialAssets = pAssetManager->getAssets(
             AssetType::ASSET_TYPE_MATERIAL
             //bool excludeInternalDefaults = false,
@@ -364,8 +363,10 @@ namespace platypus
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_WARNING
                 );
-                pMaterial->destroyPipeline();
-                pMaterial->recreateExistingPipeline();
+                // Don't know why I earlier recreated the pipelines here
+                //  -> shouldn't be necessary!
+                //pMaterial->destroyPipeline();
+                //pMaterial->recreateExistingPipelines();
                 pMaterial->destroyShaderResources();
                 pMaterial->createShaderResources();
 

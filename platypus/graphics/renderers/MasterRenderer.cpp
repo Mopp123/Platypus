@@ -540,7 +540,7 @@ namespace platypus
         // their pipelines according to the current situation
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->recreateExistingPipeline();
+            ((Material*)pAsset)->recreateExistingPipelines();
     }
 
     void MasterRenderer::destroyPipelines()

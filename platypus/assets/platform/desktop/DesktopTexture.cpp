@@ -551,9 +551,8 @@ namespace platypus
         _pImage(pImage),
         _pSampler(pSampler)
     {
-        setImage(pImage);
         _pImpl = new TextureImpl;
-        create();
+        create(pImage);
     }
 
     Texture::~Texture()
@@ -574,25 +573,21 @@ namespace platypus
             vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
     }
 
-    void Texture::setImage(const Image* pImage)
+    void Texture::create(const Image* pImage)
     {
         _pImage = pImage;
-        ImageFormat imageFormat = _pImage->getFormat();
-        if (!is_image_format_valid(imageFormat, pImage->getChannels()))
+        _imageFormat = _pImage->getFormat();
+        if (!is_image_format_valid(_imageFormat, pImage->getChannels()))
         {
             Debug::log(
-                "Invalid target format: " + image_format_to_string(imageFormat) + " "
+                "Invalid target format: " + image_format_to_string(_imageFormat) + " "
                 "for image with " + std::to_string(pImage->getChannels()) + " channels",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
         }
-        _imageFormat = imageFormat;
-    }
 
-    void Texture::create()
-    {
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
             reinterpret_cast<const void*>(_pImage->getData()),

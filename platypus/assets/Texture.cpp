@@ -1,4 +1,5 @@
 #include "Texture.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "AssetManager.hpp"
 
@@ -13,6 +14,7 @@ namespace platypus
         }
     }
 
+
     std::string texture_sampler_address_mode_to_string(TextureSamplerAddressMode mode)
     {
         switch (mode)
@@ -22,6 +24,49 @@ namespace platypus
             case TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: return "SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER";
         }
     }
+
+
+    void Texture::recreate(const Image* pImage, const TextureSampler* pSampler)
+    {
+        destroy();
+        _pSampler = pSampler;
+        create(pImage);
+
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        std::vector<Asset*> materialAssets = pAssetManager->getAssets(
+            AssetType::ASSET_TYPE_MATERIAL
+            //bool excludeInternalDefaults = false,
+            //bool excludeNonSerializable = true
+        );
+        for (Asset* pAsset : materialAssets)
+        {
+            Material* pMaterial = reinterpret_cast<Material*>(pAsset);
+            const std::vector<Texture*> materialTextures = pMaterial->getTextures();
+            for (Texture* pTexture : materialTextures)
+            {
+                if (pTexture == this)
+                {
+                    // NOTE: Currently freeing all batches here!
+                    // TODO: Find and free only batches using this Material!!
+                    //  -> ITS' SLOW AS FUCK TO RECREATE ALL BATCHES!
+                    Debug::log(
+                        "Doing very dumb shit here atm! TODO: Make this better!",
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_WARNING
+                    );
+                    pMaterial->destroyPipeline();
+                    pMaterial->recreateExistingPipelines();
+                    pMaterial->destroyShaderResources();
+                    pMaterial->createShaderResources();
+
+                    MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+                    pMasterRenderer->getBatcher().freeBatches();
+                    break;
+                }
+            }
+        }
+    }
+
 
     /*
         Serialized format (in order):

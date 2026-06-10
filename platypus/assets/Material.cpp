@@ -114,6 +114,102 @@ namespace platypus
         }
     }
 
+    void Material::recreate(
+        UUID_t blendmapTextureID,
+        const std::vector<UUID_t>& diffuseTextureIDs,
+        const std::vector<UUID_t>& specularTextureIDs,
+        const std::vector<UUID_t>& normalTextureIDs,
+        float specularStrength,
+        float shininess,
+        const Vector2f& textureOffset,
+        const Vector2f& textureScale,
+        bool castShadows,
+        bool receiveShadows,
+        bool transparent,
+        bool shadeless
+    )
+    {
+        _blendmapTextureID = blendmapTextureID;
+        _diffuseTextureCount = diffuseTextureIDs.size();
+        _specularTextureCount = specularTextureIDs.size();
+        _normalTextureCount = normalTextureIDs.size();
+        _castShadows = castShadows;
+        _receiveShadows = receiveShadows;
+        _transparent = transparent;
+        _shadeless = shadeless;
+
+        validateTextureCounts();
+
+        memset(_diffuseTextureIDs, NULL_UUID, sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_specularTextureIDs, NULL_UUID, sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+        memset(_normalTextureIDs, NULL_UUID, sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS);
+
+        memcpy(_diffuseTextureIDs, diffuseTextureIDs.data(), sizeof(UUID_t) * _diffuseTextureCount);
+        memcpy(_specularTextureIDs, specularTextureIDs.data(), sizeof(UUID_t) * _specularTextureCount);
+        memcpy(_normalTextureIDs, normalTextureIDs.data(), sizeof(UUID_t) * _normalTextureCount);
+
+        _uniformBufferData.lightingProperties.x = specularStrength;
+        _uniformBufferData.lightingProperties.y = shininess;
+        _uniformBufferData.lightingProperties.z = _shadeless ? 1.0 : 0.0;
+        _uniformBufferData.lightingProperties.w = 0.0f;
+        _uniformBufferData.textureProperties.x = textureOffset.x;
+        _uniformBufferData.textureProperties.y = textureOffset.y;
+        _uniformBufferData.textureProperties.z = textureScale.x;
+        _uniformBufferData.textureProperties.w = textureScale.y;
+
+        // ISSUE!
+        // *If recreating completely, need to solve descriptor set layouts for the pipelines of
+        // each mesh type if exists!
+        //  ->ATM SOLVED IN recreateExistingPipelines()
+        //
+        // *If used mesh didn't earlier have tangents and adding
+        // a normal map, this gets fucked (same issues as with adding blendmap)
+        //  ->figure out what to do!
+        //
+        // *If adding blendmap that didn't earlier exist
+        //  ->this gets fucked, because recreateExistingPipelines(),
+        //  doesn't solve new shaders that blendmapping requires!
+        //      ->figure this out!
+        //
+        // *If using blendmap, shaders exists only for:
+        //  -using diffuse+specular channels (bds)
+        //  -using diffuse+specular+normal channels (bdsn)
+        // +All of these require using ALL SLOTS for each used channel!
+        //
+        // TODO:
+        // *Need some way to fail this gracefully or to query requirements in advance!
+        // *Need to prevent adding Materials using normal maps to Renderable3D's using mesh
+        // that doesn't have tangents?
+        //
+        // CONTINUE HERE!
+        //
+        // IDEAS:
+        // *Most issues could be solved "quickly" by replacing MeshType with MeshPropertyFlagBits
+        // and have pipelines for all unique sets of those flag combinations (having the key
+        // of _pipelines be uint32_t of MeshPropertyFlagBits instead of MeshType)
+        //  -> This still doesn't solve the issue that shaders don't exist for all of those
+        //  combinations, but that can be addressed later...
+
+        Device::wait_for_operations();
+        destroyPipeline();
+        _descriptorSetLayout.destroy();
+        destroyShaderResources();
+
+        createDescriptorSetLayout();
+
+        recreateExistingPipelines();
+        createShaderResources();
+
+        const size_t maxFramesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
+        for (size_t i = 0; i < maxFramesInFlight; ++i)
+            updateUniformBuffers(i);
+
+        // NOTE: IMPORTANT!
+        // Need to recreate all batches using this material if its' descriptor sets changed!
+        MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+        pMasterRenderer->getBatcher().freeBatches();
+    }
+
     void Material::createPipeline(
         const RenderPass* pRenderPass,
         MeshType meshType
@@ -237,7 +333,7 @@ namespace platypus
         pMaterialPipelineData->pPipeline->create();
     }
 
-    void Material::recreateExistingPipeline()
+    void Material::recreateExistingPipelines()
     {
         bool created = false;
 
@@ -250,6 +346,40 @@ namespace platypus
 
             if (it->second->pPipeline)
             {
+                MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+                std::vector<DescriptorSetLayout> descriptorSetLayouts;
+                MeshType meshType = it->first;
+                if (meshType == MeshType::MESH_TYPE_STATIC)
+                {
+                    pMasterRenderer->solveDescriptorSetLayouts(
+                        this,
+                        false, //instanced,
+                        false, //skinned,
+                        false,
+                        descriptorSetLayouts
+                    );
+                }
+                else if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                {
+                    pMasterRenderer->solveDescriptorSetLayouts(
+                        this,
+                        true, //instanced,
+                        false, //skinned,
+                        false,
+                        descriptorSetLayouts
+                    );
+                }
+                else if (meshType == MeshType::MESH_TYPE_SKINNED)
+                {
+                    pMasterRenderer->solveDescriptorSetLayouts(
+                        this,
+                        false, //instanced,
+                        true, //skinned,
+                        false,
+                        descriptorSetLayouts
+                    );
+                }
+                it->second->pPipeline->setDescriptorSetLayouts(descriptorSetLayouts);
                 it->second->pPipeline->create();
                 created = true;
             }

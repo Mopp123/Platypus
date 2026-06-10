@@ -110,8 +110,11 @@ namespace platypus
         ~Texture();
         // TODO: Make destroy rather private and some public func to recreate with changed image?
         void destroy();
-        void setImage(const Image* pImage);
-        void create();
+        void create(const Image* pImage);
+        // calls destroy(), create(..), searches all Materials using this texture
+        // and updates the Material's texture descriptors.
+        // NOTE: This doesn't need platform implementation!
+        void recreate(const Image* pImage, const TextureSampler* pSampler);
 
         virtual void writeToMetadataBuffer(
             std::vector<char>& targetBuffer
