@@ -30,12 +30,14 @@ namespace platypus
                 materialAssetID,
                 AssetType::ASSET_TYPE_MATERIAL
             );
-            if (pMesh->getType() == MeshType::MESH_TYPE_STATIC_INSTANCED && pMaterial->isTransparent())
+            if ((pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
+                (pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
+                pMaterial->isTransparent())
             {
                 Debug::log(
-                    "@create_renderable3D "
-                    "Mesh type was MESH_TYPE_STATIC_INSTANCED and Material was transparent. "
+                    "Mesh property flags had STATIC and INSTANCED bits set while Material was transparent. "
                     "Instanced transparent renderables aren't currently supported!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);

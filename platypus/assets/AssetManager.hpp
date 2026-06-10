@@ -112,14 +112,16 @@ namespace platypus
             const VertexBufferLayout& vertexBufferLayout,
             const std::vector<float>& vertexData,
             const std::vector<uint32_t>& indexData,
-            MeshType meshType
+            uint32_t meshPropertyFlags
         );
         // TODO: Way to load "scenes" containing skinned and non skinned meshes
-        Model* loadStaticModel(const std::string& filepath, bool instanced = true);
-        Model* loadSkinnedModel(
-            const std::string& filepath,
-            std::vector<KeyframeAnimationData>& outAnimations
-        );
+        // TODO: Remove below commented out funcs -> should rather use the loadModel instead!
+        //Model* loadStaticModel(const std::string& filepath, bool instanced = true);
+        //Model* loadSkinnedModel(
+        //    const std::string& filepath,
+        //    std::vector<KeyframeAnimationData>& outAnimations
+        //);
+
         // Can be used to load both, static and skinned meshes
         // TODO: instanced property should be per mesh and NOT per model!
         //  -> Fix everywhere!

@@ -149,7 +149,8 @@ void ShadowTestScene::init()
         true // receive shadows
     );
 
-    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", false)->getMeshes()[0];
+    //Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", false)->getMeshes()[0];
+    Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb", false, "StaticCube")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 15, 0, 11 },
         { { 0, 1, 0 }, 0.0f },
@@ -166,14 +167,15 @@ void ShadowTestScene::init()
         pStaticMeshMaterial->getID()
     );
 
-    std::vector<KeyframeAnimationData> animations;
-    Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
+    Model* pAnimatedModel = pAssetManager->loadModel(
         "assets/models/MultiAnimSkeletonTest.glb",
-        animations
+        false,
+        "AnimatedModel"
     );
     Mesh* pSkinnedMesh = pAnimatedModel->getMeshes()[0];
-    SkeletalAnimationData* pAnimationAsset1 = pAssetManager->createSkeletalAnimation(animations[0]);
-    SkeletalAnimationData* pAnimationAsset2 = pAssetManager->createSkeletalAnimation(animations[1]);
+    const std::vector<SkeletalAnimationData*>& animations = pSkinnedMesh->getAnimations();
+    SkeletalAnimationData* pAnimationAsset1 = animations[0];
+    SkeletalAnimationData* pAnimationAsset2 = animations[1];
 
     int area = 2;
     float spacing = 3.0f;

@@ -89,7 +89,8 @@ namespace platypus
         uint32_t _shadowmapDescriptorIndex = 0;
         uint32_t _sceneDepthDescriptorIndex = 0;
 
-        std::unordered_map<MeshType, MaterialPipelineData*> _pipelines;
+        // Key = mesh property flags
+        std::unordered_map<uint32_t, MaterialPipelineData*> _pipelines;
 
         // TODO: Material instance
         MaterialUniformBufferData _uniformBufferData;
@@ -145,7 +146,7 @@ namespace platypus
 
         void createPipeline(
             const RenderPass* pRenderPass,
-            MeshType meshType
+            uint32_t meshPropertyFlags
         );
 
         void recreateExistingPipelines();
@@ -170,7 +171,7 @@ namespace platypus
         void setLightingProperties(float specularStrength, float shininess, bool shadeless);
         void setTextureProperties(const Vector2f& textureOffset, const Vector2f& textureScale);
 
-        Pipeline* getPipeline(MeshType meshType);
+        Pipeline* getPipeline(uint32_t meshPropertyFlags);
 
         virtual void writeToMetadataBuffer(
             std::vector<char>& targetBuffer
@@ -239,6 +240,6 @@ namespace platypus
         void updateUniformBuffers(size_t frame);
 
         // Returns compiled shader filename depending on given properties
-        std::string getShaderFilename(uint32_t shaderStage, MeshType meshType);
+        std::string getShaderFilename(uint32_t shaderStage, uint32_t meshPropertyFlags);
     };
 }

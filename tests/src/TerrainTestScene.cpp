@@ -154,7 +154,7 @@ void TerrainTestScene::init()
         "assets/textures/DiffuseTest.png",
         true
     );
-    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb")->getMeshes()[0];
+    Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb", false, "StaticModel")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 0, 0, 0 },
         { { 0, 1, 0 }, 0.0f },

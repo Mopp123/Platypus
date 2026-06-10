@@ -103,7 +103,7 @@ namespace platypus
         destroyShaderResources();
         _descriptorSetLayout.destroy();
 
-        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it;
+        std::unordered_map<uint32_t, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
             // NOTE: Maybe should at least warn in this case?
@@ -212,7 +212,7 @@ namespace platypus
 
     void Material::createPipeline(
         const RenderPass* pRenderPass,
-        MeshType meshType
+        uint32_t meshPropertyFlags
     )
     {
         std::string vertexShaderFilename = _customVertexShaderFilename;
@@ -220,7 +220,7 @@ namespace platypus
         {
             vertexShaderFilename = getShaderFilename(
                 ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
-                meshType
+                meshPropertyFlags
             );
         }
         std::string fragmentShaderFilename = _customFragmentShaderFilename;
@@ -228,14 +228,14 @@ namespace platypus
         {
             fragmentShaderFilename = getShaderFilename(
                 ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
-                meshType
+                meshPropertyFlags
             );
         }
         Debug::log(
             "@Material::createPipeline Using shaders:\n    " + vertexShaderFilename + "\n    " + fragmentShaderFilename
         );
 
-        std::unordered_map<MeshType, MaterialPipelineData*>::const_iterator pipelineIt = _pipelines.find(meshType);
+        std::unordered_map<uint32_t, MaterialPipelineData*>::const_iterator pipelineIt = _pipelines.find(meshPropertyFlags);
         if (pipelineIt != _pipelines.end())
         {
             if (pipelineIt->second != nullptr)
@@ -243,7 +243,7 @@ namespace platypus
                 Debug::log(
                     "@Material::createPipeline "
                     "Pipeline data already exists for material with ID: " + std::to_string(getID()) + " "
-                    "for mesh type: " + mesh_type_to_string(meshType),
+                    "for mesh type: " + mesh_type_to_string(get_mesh_type(meshPropertyFlags)),
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -252,11 +252,11 @@ namespace platypus
         }
 
         // TODO: Unfuck below
-        bool instanced = meshType == MeshType::MESH_TYPE_STATIC_INSTANCED;
-        bool skinned = meshType == MeshType::MESH_TYPE_SKINNED;
+        bool instanced = static_cast<bool>(meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED));
+        bool skinned = static_cast<bool>(meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED));
 
-        _pipelines[meshType] = new MaterialPipelineData;
-        MaterialPipelineData* pMaterialPipelineData = _pipelines[meshType];
+        _pipelines[meshPropertyFlags] = new MaterialPipelineData;
+        MaterialPipelineData* pMaterialPipelineData = _pipelines[meshPropertyFlags];
 
         Shader* pVertexShader = new Shader(
             vertexShaderFilename,
@@ -269,18 +269,19 @@ namespace platypus
         pMaterialPipelineData->pVertexShader = pVertexShader;
         pMaterialPipelineData->pFragmentShader = pFragmentShader;
 
+        MeshPropertyFlagBits meshType = get_mesh_type(meshPropertyFlags);
+        bool meshHasTangents = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::HAS_TANGENTS);
         VertexBufferLayout meshVertexBufferLayout;
-        if (meshType == MeshType::MESH_TYPE_STATIC ||
-            meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+        if (meshType == MeshPropertyFlagBits::TYPE_STATIC)
         {
-            if (hasNormalMap())
+            if (meshHasTangents)
                 meshVertexBufferLayout = VertexBufferLayout::get_common_static_tangent_layout();
             else
                 meshVertexBufferLayout = VertexBufferLayout::get_common_static_layout();
         }
-        else if (meshType == MeshType::MESH_TYPE_SKINNED)
+        else if (meshType == MeshPropertyFlagBits::TYPE_SKINNED)
         {
-            if (hasNormalMap())
+            if (meshHasTangents)
                 meshVertexBufferLayout = VertexBufferLayout::get_common_skinned_tangent_layout();
             else
                 meshVertexBufferLayout = VertexBufferLayout::get_common_skinned_layout();
@@ -337,7 +338,7 @@ namespace platypus
     {
         bool created = false;
 
-        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it;
+        std::unordered_map<uint32_t, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
             // NOTE: Maybe should at least warn in this case?
@@ -348,37 +349,16 @@ namespace platypus
             {
                 MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
                 std::vector<DescriptorSetLayout> descriptorSetLayouts;
-                MeshType meshType = it->first;
-                if (meshType == MeshType::MESH_TYPE_STATIC)
-                {
-                    pMasterRenderer->solveDescriptorSetLayouts(
-                        this,
-                        false, //instanced,
-                        false, //skinned,
-                        false,
-                        descriptorSetLayouts
-                    );
-                }
-                else if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
-                {
-                    pMasterRenderer->solveDescriptorSetLayouts(
-                        this,
-                        true, //instanced,
-                        false, //skinned,
-                        false,
-                        descriptorSetLayouts
-                    );
-                }
-                else if (meshType == MeshType::MESH_TYPE_SKINNED)
-                {
-                    pMasterRenderer->solveDescriptorSetLayouts(
-                        this,
-                        false, //instanced,
-                        true, //skinned,
-                        false,
-                        descriptorSetLayouts
-                    );
-                }
+                uint32_t meshPropertyFlags = it->first;
+                bool skinned = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED);
+                bool instanced = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
+                pMasterRenderer->solveDescriptorSetLayouts(
+                    this,
+                    instanced, //instanced,
+                    skinned, //skinned,
+                    false,
+                    descriptorSetLayouts
+                );
                 it->second->pPipeline->setDescriptorSetLayouts(descriptorSetLayouts);
                 it->second->pPipeline->create();
                 created = true;
@@ -393,7 +373,7 @@ namespace platypus
     {
         bool destroyed = false;
 
-        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it;
+        std::unordered_map<uint32_t, MaterialPipelineData*>::iterator it;
         for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
         {
             // NOTE: Maybe should at least warn in this case?
@@ -727,9 +707,9 @@ namespace platypus
             updateUniformBuffers(i);
     }
 
-    Pipeline* Material::getPipeline(MeshType meshType)
+    Pipeline* Material::getPipeline(uint32_t meshPropertyFlags)
     {
-        std::unordered_map<MeshType, MaterialPipelineData*>::iterator it = _pipelines.find(meshType);
+        std::unordered_map<uint32_t, MaterialPipelineData*>::iterator it = _pipelines.find(meshPropertyFlags);
         if (it != _pipelines.end())
             return it->second->pPipeline;
 
@@ -1209,7 +1189,7 @@ namespace platypus
     }
 
     // TODO: Make this convoluted mess cleaner!
-    std::string Material::getShaderFilename(uint32_t shaderStage, MeshType meshType)
+    std::string Material::getShaderFilename(uint32_t shaderStage, uint32_t meshPropertyFlags)
     {
         // Vertex shader "name flags":
         //  t = use tangent input
@@ -1232,37 +1212,41 @@ namespace platypus
         }
 
         // NOTE: Non instanced static and skinned meshes could use the same fragment shaders?
-        switch (meshType)
+        MeshPropertyFlagBits meshType = get_mesh_type(meshPropertyFlags);
+        if (meshType == MeshPropertyFlagBits::TYPE_STATIC)
         {
-            case MeshType::MESH_TYPE_STATIC : shaderName += "Static"; break;
-            case MeshType::MESH_TYPE_STATIC_INSTANCED : shaderName += "Static"; break;
-            case MeshType::MESH_TYPE_SKINNED : shaderName += "Skinned"; break;
-            default:
-            {
-                Debug::log(
-                    "@Material::getShaderFilename "
-                    "Invalid mesh type: " + mesh_type_to_string(meshType),
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                break;
-            }
+            shaderName += "Static";
+        }
+        else if (meshType == MeshPropertyFlagBits::TYPE_SKINNED)
+        {
+            shaderName += "Skinned";
+        }
+        else
+        {
+            Debug::log(
+                "No valid mesh type found from meshPropertyFlags",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
         }
 
         // Using same vertex shader for diffuse and diffuse+specular
         // TODO: Make this less stupid
+        bool meshHasTangents = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::HAS_TANGENTS);
+        bool instanced = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
         if (shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT)
         {
             shaderName += "VertexShader";
-            if (hasNormalMap() || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+            if (meshHasTangents || instanced)
             {
                 shaderName += "_";
-                if (hasNormalMap())
+                if (meshHasTangents)
                 {
                     // t stands for tangent
                     shaderName += "t";
                 }
-                if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                if (instanced)
                 {
                     // i stands for instanced
                     shaderName += "i";
@@ -1275,7 +1259,7 @@ namespace platypus
             // If using non instanced, we got one additional descriptor set containing
             // transformation matrix, etc. -> Need to use fragment shader that takes this into account!
             // ...FUCKING STUPID AND ANNOYING!
-            if (meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+            if (instanced)
                 shaderName += "_i_";
             else
                 shaderName += "_";

@@ -118,7 +118,21 @@ namespace platypus
         MasterRenderer& _masterRendererRef;
         DescriptorPool& _descriptorPoolRef;
 
-        std::unordered_map<MeshType, BatchTemplate> _batchTemplates;
+        // NOTE: Previously used MeshType here as the key!
+        // *MeshTypes were:
+        //  -static,
+        //  -static instanced
+        //  -skinned
+        // *After switched to use mesh property flags, this still works the same way!
+        // SO: We have batch templates for flags with:
+        //  -static bit
+        //  -static and instanced bits
+        //  -skinned bit
+        // IMPORTANT TO NOTE:
+        //  These don't contain info about other flags such as HAS_TANGENTS bit
+        //    ->SO: in order to find the correct batch template, you need to check for
+        //    TYPE_STATIC, INSTANCED and TYPE_SKINNED bits, excluding other bits!
+        std::unordered_map<uint32_t, BatchTemplate> _batchTemplates;
 
         std::unordered_map<RenderPassType, std::unordered_map<UUID_t, Batch*>> _batches;
 

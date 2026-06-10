@@ -219,7 +219,7 @@ namespace platypus
                     return;
                 }
 
-                const MeshType meshType = pMesh->getType();
+                const MeshPropertyFlagBits meshType = get_mesh_type(pMesh->getPropertyFlags());
 
                 // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs?
                 // UPDATE TO ABOVE: Why not? Batch UUIDs don't occupy actual
@@ -242,7 +242,7 @@ namespace platypus
                 if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
                     _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
 
-                if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
+                if (meshType == MeshPropertyFlagBits::TYPE_STATIC)
                 {
                     _batcher.addToBatch(
                         batchID,
@@ -252,7 +252,7 @@ namespace platypus
                         _currentFrame
                     );
                 }
-                else if (meshType == MeshType::MESH_TYPE_SKINNED)
+                else if (meshType == MeshPropertyFlagBits::TYPE_SKINNED)
                 {
                     const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
                         entity.id,

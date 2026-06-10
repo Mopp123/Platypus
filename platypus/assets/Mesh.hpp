@@ -9,29 +9,23 @@
 
 namespace platypus
 {
-    // TODO: Get rid of MeshType (use MeshPropertyFlagBits instead)
-    enum MeshType
-    {
-        MESH_TYPE_NONE = 0x0,
-        MESH_TYPE_STATIC = 0x1,
-        MESH_TYPE_STATIC_INSTANCED = 0x1 << 1,
-        MESH_TYPE_SKINNED = 0x1 << 2,
-    };
-    std::string mesh_type_to_string(MeshType type);
 
-    enum class MeshPropertyFlagBits
+    enum class MeshPropertyFlagBits : uint32_t
     {
+        NONE = 0,
         TYPE_STATIC = 0x1,
         TYPE_SKINNED = 0x1 << 1,
 
         HAS_TANGENTS = 0x1 << 2,
         INSTANCED = 0x1 << 3
     };
+    MeshPropertyFlagBits get_mesh_type(uint32_t meshPropertyFlags);
+    std::string mesh_type_to_string(MeshPropertyFlagBits type);
 
     class Mesh : public Asset
     {
     private:
-        MeshType _type;
+        uint32_t _propertyFlags = 0;
         VertexBufferLayout _vertexBufferLayout;
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
@@ -50,7 +44,7 @@ namespace platypus
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
             size_t uuidPool,
-            MeshType type,
+            uint32_t propertyFlags,
             VertexBufferLayout vertexBufferLayout,
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
@@ -76,7 +70,7 @@ namespace platypus
 
         inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
 
-        inline MeshType getType() const { return _type; }
+        inline uint32_t getPropertyFlags() const { return _propertyFlags; }
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline Buffer* getVertexBuffer() { return _pVertexBuffer; }

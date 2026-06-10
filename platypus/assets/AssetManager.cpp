@@ -513,7 +513,7 @@ namespace platypus
         const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
         const std::vector<uint32_t>& indexData,
-        MeshType meshType
+        uint32_t meshPropertyFlags
     )
     {
         Buffer* pVertexBuffer = new Buffer(
@@ -534,7 +534,7 @@ namespace platypus
         );
         Mesh* pMesh = new Mesh(
             _uuidPool,
-            meshType,
+            meshPropertyFlags,
             vertexBufferLayout,
             pVertexBuffer,
             pIndexBuffer,
@@ -546,6 +546,8 @@ namespace platypus
         return pMesh;
     }
 
+    // TODO: Remove below commented out funcs -> should rather use the loadModel instead!
+    /*
     Model* AssetManager::loadStaticModel(const std::string& filepath, bool instanced)
     {
         std::vector<MeshData> loadedMeshes;
@@ -678,6 +680,7 @@ namespace platypus
         _assets[pModel->getID()] = pModel;
         return pModel;
     }
+    */
 
     Model* AssetManager::loadModel(
         const std::string& filepath,
@@ -740,11 +743,25 @@ namespace platypus
                 false
             );
 
-            MeshType meshType = MeshType::MESH_TYPE_STATIC;
+            uint32_t meshPropertyFlags = 0;
+            if (!animationData.empty())
+                meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED);
+            else
+                meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);
+
             if (instanced)
-                meshType = MeshType::MESH_TYPE_STATIC_INSTANCED;
-            else if (!animationData.empty())
-                meshType = MeshType::MESH_TYPE_SKINNED;
+                meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
+
+            if (instanced && (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED)))
+            {
+                Debug::log(
+                    "Mesh had animations but was also marked to use instancing. "
+                    "Currently instanced animated meshes aren't supported!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
 
             UUID_t meshID = NULL_UUID;
             if (i < meshIDs.size())
@@ -756,7 +773,7 @@ namespace platypus
 
             Mesh* pMesh = new Mesh(
                 _uuidPool,
-                meshType,
+                meshPropertyFlags,
                 meshData.vertexBufferLayout,
                 pVertexBuffer,
                 pIndexBuffer,

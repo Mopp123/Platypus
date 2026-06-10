@@ -6,13 +6,22 @@
 
 namespace platypus
 {
-    std::string mesh_type_to_string(MeshType type)
+    MeshPropertyFlagBits get_mesh_type(uint32_t meshPropertyFlags)
+    {
+        if (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC))
+            return MeshPropertyFlagBits::TYPE_STATIC;
+        else if (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED))
+            return MeshPropertyFlagBits::TYPE_SKINNED;
+
+        return MeshPropertyFlagBits::NONE;
+    }
+
+    std::string mesh_type_to_string(MeshPropertyFlagBits type)
     {
         switch (type)
         {
-            case MeshType::MESH_TYPE_STATIC: return "MESH_TYPE_STATIC";
-            case MeshType::MESH_TYPE_STATIC_INSTANCED: return "MESH_TYPE_STATIC_INSTANCED";
-            case MeshType::MESH_TYPE_SKINNED: return "MESH_TYPE_SKINNED";
+            case platypus::MeshPropertyFlagBits::TYPE_STATIC: return "MESH_TYPE_STATIC";
+            case platypus::MeshPropertyFlagBits::TYPE_SKINNED: return "MESH_TYPE_SKINNED";
             default: return "<Invalid type>";
         }
     }
@@ -20,7 +29,7 @@ namespace platypus
 
     Mesh::Mesh(
         size_t uuidPool,
-        MeshType type,
+        uint32_t propertyFlags,
         VertexBufferLayout vertexBufferLayout,
         Buffer* pVertexBuffer,
         Buffer* pIndexBuffer,
@@ -32,7 +41,7 @@ namespace platypus
         bool persistent
     ) :
         Asset(uuidPool,AssetType::ASSET_TYPE_MESH, name, id, persistent),
-        _type(type),
+        _propertyFlags(propertyFlags),
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),
         _pIndexBuffer(pIndexBuffer),
@@ -222,9 +231,13 @@ namespace platypus
             false // store host side
         );
 
+        uint32_t propertyFlags = static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);
+        if (generateTangents)
+            propertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::HAS_TANGENTS);
+
         Mesh* pMesh = new Mesh(
             uuidPool,
-            MeshType::MESH_TYPE_STATIC,
+            propertyFlags,
             generateTangents ? VertexBufferLayout::get_common_static_tangent_layout() : VertexBufferLayout::get_common_static_layout(),
             pVertexBuffer,
             pIndexBuffer,

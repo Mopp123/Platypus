@@ -159,7 +159,7 @@ void SkinnedMeshTestScene::init()
         0.8f,
         16.0f
     );
-    Model* pBoxModel = pAssetManager->loadStaticModel("assets/TestCube.glb");
+    Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb", false, "BoxModel");
 
     int area = 4;
     float spacing = 3.25f;

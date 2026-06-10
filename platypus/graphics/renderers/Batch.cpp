@@ -10,6 +10,15 @@
 
 namespace platypus
 {
+    uint32_t mesh_property_flags_to_batch_template_key(uint32_t meshPropertyFlags)
+    {
+        uint32_t templateKey = static_cast<uint32_t>(get_mesh_type(meshPropertyFlags));
+        uint32_t instancedFlag = static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
+        if (meshPropertyFlags & instancedFlag)
+            templateKey |= instancedFlag;
+        return templateKey;
+    }
+
     RenderPassType Batcher::s_availableRenderPasses[PLATYPUS_BATCHER_AVAILABLE_RENDER_PASSES] = {
         RenderPassType::SHADOW_PASS,
         RenderPassType::OPAQUE_PASS,
@@ -64,7 +73,10 @@ namespace platypus
         const size_t staticBatchDynamicUBOElemSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f)
         );
-        _batchTemplates[MeshType::MESH_TYPE_STATIC] = {
+        const uint32_t staticMeshPropertyFlags = static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);
+        const uint32_t staticInstancedMeshPropertyFlags = staticMeshPropertyFlags | static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
+        const uint32_t skinnedMeshPropertyFlags = static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED);
+        _batchTemplates[staticMeshPropertyFlags] = {
             _maxStaticBatchLength, // maxBatchLength
             (uint32_t)_maxStaticBatchLength, // maxRepeatCount
             1, // repeatAdvance,
@@ -81,7 +93,7 @@ namespace platypus
             } // uniform resource layouts
         };
 
-        _batchTemplates[MeshType::MESH_TYPE_STATIC_INSTANCED] = {
+        _batchTemplates[staticInstancedMeshPropertyFlags] = {
             _maxStaticInstancedBatchLength, // maxBatchLength
             1, // maxRepeatCount,
             0, // repeatAdvance,
@@ -94,7 +106,7 @@ namespace platypus
         const size_t dynamicJointBufferElemSize = get_dynamic_uniform_buffer_element_size(
             sizeof(Matrix4f) * _maxSkinnedMeshJoints
         );
-        _batchTemplates[MeshType::MESH_TYPE_SKINNED] = {
+        _batchTemplates[skinnedMeshPropertyFlags] = {
             _maxSkinnedBatchLength,
             (uint32_t)_maxSkinnedBatchLength, // maxRepeatCount,
             1, // repeatAdvance,
@@ -122,12 +134,38 @@ namespace platypus
 
     static std::string get_shadowpass_shader_name(
         ShaderStageFlagBits shaderStage,
-        MeshType meshType
+        uint32_t meshPropertyFlags
     )
     {
         std::string shaderName = "shadows/";
         std::string extension;
 
+        bool isStatic = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);
+        bool instanced = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
+        bool isSkinned = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED);
+
+        if (isStatic)
+        {
+            shaderName += "Static";
+            if (instanced)
+                extension = shaderStage == ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT ? "_i" : "";
+        }
+        else if (isSkinned)
+        {
+            shaderName += "Skinned";
+        }
+        else
+        {
+            Debug::log(
+                "Invalid mesh type: " + mesh_type_to_string(get_mesh_type(meshPropertyFlags)),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return "";
+        }
+
+        /*
         switch (meshType)
         {
             case MeshType::MESH_TYPE_STATIC:
@@ -151,6 +189,7 @@ namespace platypus
                 return "";
             }
         }
+        */
 
         switch (shaderStage)
         {
@@ -159,8 +198,8 @@ namespace platypus
             default:
             {
                 Debug::log(
-                    "@(Batcher)get_shadowpass_shader_name "
                     "Invalid shader stage: " + shader_stage_to_string(shaderStage),
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -637,7 +676,7 @@ namespace platypus
         Application* pApp = Application::get_instance();
         AssetManager* pAssetManager = pApp->getAssetManager();
         Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-        MeshType meshType = pMesh->getType();
+        uint32_t meshPropertyFlags = pMesh->getPropertyFlags();
 
         // Currently batching requires valid material in order to figure out some unique batch ID.
         // TODO: Allow creating batches without materials?
@@ -682,10 +721,10 @@ namespace platypus
         if (pMaterial && !shadowPass)
         {
             // Create material pipeline if doesn't exist
-            if (!pMaterial->getPipeline(meshType))
-                pMaterial->createPipeline(pRenderPass, meshType);
+            if (!pMaterial->getPipeline(meshPropertyFlags))
+                pMaterial->createPipeline(pRenderPass, meshPropertyFlags);
 
-            pPipeline = pMaterial->getPipeline(meshType);
+            pPipeline = pMaterial->getPipeline(meshPropertyFlags);
             receivesShadows = pMaterial->receivesShadows();
         }
 
@@ -774,11 +813,13 @@ namespace platypus
         // Allow some more flexible way of creating pipelines without Materials?
         if (!pPipeline)
         {
+            bool instanced = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
+            bool skinned = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED);
             std::vector<VertexBufferLayout> usedVertexBufferLayouts;
             _masterRendererRef.solveVertexBufferLayouts(
                 pMesh->getVertexBufferLayout(),
-                meshType == MeshType::MESH_TYPE_STATIC_INSTANCED, // instanced?
-                meshType == MeshType::MESH_TYPE_SKINNED, // skinned?
+                instanced,
+                skinned,
                 shadowPass, // shadow pipeline?
                 usedVertexBufferLayouts
             );
@@ -788,8 +829,14 @@ namespace platypus
             for (const ShaderResourceLayout& resourceLayout : uniformResourceLayouts)
                 usedDescriptorSetLayouts.push_back(resourceLayout.descriptorSetLayout);
 
-            std::string vertexShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT, meshType);
-            std::string fragmentShaderFilename = get_shadowpass_shader_name(ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT, meshType);
+            std::string vertexShaderFilename = get_shadowpass_shader_name(
+                ShaderStageFlagBits::SHADER_STAGE_VERTEX_BIT,
+                meshPropertyFlags
+            );
+            std::string fragmentShaderFilename = get_shadowpass_shader_name(
+                ShaderStageFlagBits::SHADER_STAGE_FRAGMENT_BIT,
+                meshPropertyFlags
+            );
             BatchPipelineData* pPipelineData = createBatchPipelineData(
                 pRenderPass,
                 vertexShaderFilename,
@@ -849,12 +896,16 @@ namespace platypus
             return;
         }
 
-        std::unordered_map<MeshType, BatchTemplate>::iterator templateIt = _batchTemplates.find(pMesh->getType());
+        // ISSUE:
+        // *Batch templates have keys the old way where static and static instanced meshes were separate!
+        //  -> how to make this coherent with new system?
+        const uint32_t batchTemplateKey = mesh_property_flags_to_batch_template_key(pMesh->getPropertyFlags());
+        std::unordered_map<uint32_t, BatchTemplate>::iterator templateIt = _batchTemplates.find(batchTemplateKey);
         if (templateIt == _batchTemplates.end())
         {
             Debug::log(
-                "@Batcher::submit "
-                "No batch construction template found for: " + mesh_type_to_string(pMesh->getType()),
+                "No batch construction template found for: " + mesh_type_to_string(get_mesh_type(pMesh->getPropertyFlags())),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);

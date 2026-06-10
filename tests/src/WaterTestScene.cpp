@@ -145,7 +145,7 @@ void WaterTestScene::init()
         planeVertexBufferLayout,
         planeVertexData,
         planeIndices,
-        MeshType::MESH_TYPE_STATIC
+        static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)
     );
 
     Texture* pWaterTexture = pAssetManager->loadTexture(
@@ -211,7 +211,7 @@ void WaterTestScene::init()
         false, // transparent
         true // shadeless
     );
-    Mesh* pStaticMesh = pAssetManager->loadStaticModel("assets/TestCube.glb", false)->getMeshes()[0];
+    Mesh* pStaticMesh = pAssetManager->loadModel("assets/TestCube.glb", false, "StaticModel")->getMeshes()[0];
     entityID_t boxEntity = createStaticMeshEntity(
         { 35, 1.0f, 35 },
         { { 0, 1, 0 }, 0.0f },

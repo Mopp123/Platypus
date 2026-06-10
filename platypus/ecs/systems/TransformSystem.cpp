@@ -44,7 +44,7 @@ namespace platypus
                 pRenderable->meshID,
                 AssetType::ASSET_TYPE_MESH
             );
-            if (pMesh->getType() == MeshType::MESH_TYPE_SKINNED)
+            if (pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED))
                 pBindPose = pMesh->getBindPosePtr();
         }
 
