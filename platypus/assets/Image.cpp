@@ -259,7 +259,7 @@ namespace platypus
         return _pData[(x + y * _width) * _channels + channelIndex];
     }
 
-    bool Image::reload(const std::string& newFilepath)
+    bool Image::reload(const std::string& newFilepath, ImageFormat format)
     {
         // TODO: On OpenGL side we need to flip?
         bool flipVertically = false;
@@ -283,6 +283,7 @@ namespace platypus
         memcpy(_pData, pStbImageData, size);
         stbi_image_free(pStbImageData);
         _filepath = newFilepath;
+        _format = format;
 
         // Recreate all textures using this image
         // NOTE:

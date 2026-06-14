@@ -107,7 +107,7 @@ namespace platypus
             uint32_t channelIndex
         ) const;
 
-        bool reload(const std::string& newFilepath);
+        bool reload(const std::string& newFilepath, ImageFormat format);
 
         static Image* load_image(
             size_t uuidPool,
