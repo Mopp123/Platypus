@@ -1,23 +1,24 @@
-#version 300 es
-precision mediump float;
+#version 450
 
-// NOTE: This is exactly the same as receiveShadows/StaticFragmentShader_ds.glsl
+
+// NOTE: This is exactly the same as receiveShadows/SkinnedFragmentShader_ds.glsl
 // TODO: Get rid of duplicate shaders
-in vec3 var_normal;
-in vec2 var_texCoord;
-in vec3 var_fragPos;
-in vec3 var_cameraPos;
-in vec3 var_lightDir;
-in vec4 var_lightColor;
-in vec4 var_ambientLightColor;
+layout(location = 0) in vec3 var_normal;
+layout(location = 1) in vec2 var_texCoord;
+layout(location = 2) in vec3 var_fragPos;
+layout(location = 3) in vec3 var_cameraPos;
+layout(location = 4) in vec3 var_lightDir;
+layout(location = 5) in vec4 var_lightColor;
+layout(location = 6) in vec4 var_ambientLightColor;
 
-in vec4 var_fragPosLightSpace;
-in vec4 var_shadowProperties;
+layout(location = 7) in vec4 var_fragPosLightSpace;
+layout(location = 8) in vec4 var_shadowProperties;
 
-uniform sampler2D diffuseTextureSampler;
-uniform sampler2D specularTextureSampler;
-uniform sampler2D shadowmapTexture;
-layout(std140) uniform MaterialData
+//layout(set = 1, binding = 0) uniform sampler2D textureSampler;
+layout(set = 2, binding = 0) uniform sampler2D diffuseTextureSampler;
+layout(set = 2, binding = 1) uniform sampler2D specularTextureSampler;
+layout(set = 2, binding = 2) uniform sampler2D shadowmapTexture;
+layout(set = 2, binding = 3) uniform MaterialData
 {
     // x = specular strength
     // y = shininess
@@ -45,7 +46,10 @@ float calcShadow(float bias, int pcfCount)
     int texelCount =  texelsCount_width * texelsCount_width;
     vec2 texelSize = 1.0 / vec2(shadowmapWidth, shadowmapWidth);
 
-    vec3 shadowmapCoord = var_fragPosLightSpace.xyz / var_fragPosLightSpace.w;
+    // WHY THE FUCK DOES THIS WORK!!?!?!?!?!?!?!
+    vec4 flippedFragPosLightSpace = var_fragPosLightSpace;
+    flippedFragPosLightSpace.y *= -1.0;
+    vec3 shadowmapCoord = flippedFragPosLightSpace.xyz / flippedFragPosLightSpace.w;
     shadowmapCoord = 0.5 + 0.5 * shadowmapCoord;
 
     for (int x = -pcfCount; x <= pcfCount; x++)
@@ -57,13 +61,13 @@ float calcShadow(float bias, int pcfCount)
                 continue;
 
             float d = texture(shadowmapTexture, sampleCoord).r;
-            shadow += shadowmapCoord.z > d + bias  ? 1.0 : 0.0;
+            shadow += var_fragPosLightSpace.z > d + bias  ? 1.0 : 0.0;
         }
     }
     shadow /= float(texelCount);
 
     // that weird far plane shadow
-    if (shadowmapCoord.z > 1.0)
+    if (var_fragPosLightSpace.z > 1.0)
         return 0.0;
     return shadow;
 }
@@ -80,7 +84,7 @@ void main()
     float shininess = materialData.lightingProperties.y;
     float isShadeless = materialData.lightingProperties.z;
 
-    vec3 unitLightDir = normalize(var_lightDir);
+    vec3 unitLightDir = normalize(var_lightDir.xyz);
     vec3 toLight = -unitLightDir;
     vec3 unitNormal = normalize(var_normal);
     vec3 toCamera = normalize(var_cameraPos - var_fragPos);

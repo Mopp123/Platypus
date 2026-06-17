@@ -144,15 +144,20 @@ namespace platypus
         _pImpl = new VertexBufferElementImpl;
     }
 
-    VertexBufferElement::VertexBufferElement(uint32_t location, ShaderDataType dataType) :
+    VertexBufferElement::VertexBufferElement(
+        uint32_t location,
+        ShaderDataType dataType,
+        VertexAttributeType attribType
+    ) :
         _location(location),
-        _type(dataType)
+        _dataType(dataType),
+        _attribType(attribType)
     {
         _pImpl = new VertexBufferElementImpl;
     }
 
     VertexBufferElement::VertexBufferElement(const VertexBufferElement& other) :
-        VertexBufferElement(other._location, other._type)
+        VertexBufferElement(other._location, other._dataType, other._attribType)
     {
         _pImpl->attribDescription = other._pImpl->attribDescription;
     }
@@ -160,7 +165,8 @@ namespace platypus
     VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement&& other)
     {
         _location = other._location;
-        _type = other._type;
+        _dataType = other._dataType;
+        _attribType = other._attribType;
         _pImpl = new VertexBufferElementImpl;
         _pImpl->attribDescription = other._pImpl->attribDescription;
         return *this;
@@ -169,7 +175,8 @@ namespace platypus
     VertexBufferElement& VertexBufferElement::operator=(const VertexBufferElement& other)
     {
         _location = other._location;
-        _type = other._type;
+        _dataType = other._dataType;
+        _attribType = other._attribType;
         _pImpl = new VertexBufferElementImpl;
         _pImpl->attribDescription = other._pImpl->attribDescription;
         return *this;
@@ -203,7 +210,7 @@ namespace platypus
         uint32_t elementOffset = 0;
         for (const VertexBufferElement& element : elements)
         {
-            ShaderDataType elemType = element.getType();
+            ShaderDataType elemType = element.getDataType();
             size_t elemSize = get_shader_datatype_size(elemType);
 
             // We dont want to touch the original element, we just copy its stuff here

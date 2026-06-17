@@ -63,29 +63,37 @@ namespace platypus
     {
     }
 
-    VertexBufferElement::VertexBufferElement(uint32_t location, ShaderDataType dataType) :
+    VertexBufferElement::VertexBufferElement(
+        uint32_t location,
+        ShaderDataType dataType,
+        VertexAttributeType attribType
+    ) :
         _location(location),
-        _type(dataType)
+        _dataType(dataType),
+        _attribType(attribType)
     {
     }
 
     VertexBufferElement::VertexBufferElement(const VertexBufferElement& other) :
         _location(other._location),
-        _type(other._type)
+        _dataType(other._dataType),
+        _attribType(other._attribType)
     {
     }
 
     VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement&& other)
     {
         _location = other._location;
-        _type = other._type;
+        _dataType = other._dataType;
+        _attribType = other._attribType;
         return *this;
     }
 
     VertexBufferElement& VertexBufferElement::operator=(const VertexBufferElement& other)
     {
         _location = other._location;
-        _type = other._type;
+        _dataType = other._dataType;
+        _attribType = other._attribType;
         return *this;
     }
 

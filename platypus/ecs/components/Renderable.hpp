@@ -4,6 +4,8 @@
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
 #include "platypus/core/Scene.hpp"
+#include "platypus/assets/Mesh.hpp"
+#include "platypus/assets/Material.hpp"
 #include <string>
 
 
@@ -18,6 +20,17 @@ namespace platypus
         UUID_t meshID = NULL_UUID;
         UUID_t materialID = NULL_UUID;
     };
+
+    bool mesh_and_material_compatible(
+        const Mesh* pMesh,
+        const Material* pMaterial
+    );
+
+    bool mesh_and_material_compatible_verbose(
+        const Mesh* pMesh,
+        const Material* pMaterial,
+        std::string& outError
+    );
 
     // NOTE: When adding strings, make sure to take into accout
     // the move constructor thing when allocating from component pool!

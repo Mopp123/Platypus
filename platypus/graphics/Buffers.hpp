@@ -8,7 +8,7 @@
 
 namespace platypus
 {
-    enum ShaderDataType
+    enum class ShaderDataType : uint32_t
     {
         None = 0,
 
@@ -30,6 +30,20 @@ namespace platypus
         Struct
     };
 
+    // TODO:
+    //  *Make this enum class of uint32_t
+    //  *Add to VertexBufferElement
+    enum class VertexAttributeType : uint32_t
+    {
+        CUSTOM = 0,
+        POSITION,
+        WEIGHT,
+        JOINT,
+        NORMAL,
+        TEX_COORD,
+        COLOR,
+        TANGENT
+    };
 
     enum VertexInputRate
     {
@@ -95,11 +109,16 @@ namespace platypus
         friend class Pipeline;
         VertexBufferElementImpl* _pImpl = nullptr;
         uint32_t _location = 0;
-        ShaderDataType _type = ShaderDataType::Float;
+        ShaderDataType _dataType = ShaderDataType::Float;
+        VertexAttributeType _attribType = VertexAttributeType::CUSTOM;
 
     public:
         VertexBufferElement();
-        VertexBufferElement(uint32_t location, ShaderDataType dataType);
+        VertexBufferElement(
+            uint32_t location,
+            ShaderDataType dataType,
+            VertexAttributeType attribType
+        );
         VertexBufferElement(const VertexBufferElement& other);
         VertexBufferElement& operator=(VertexBufferElement&& other);
         //VertexBufferElement& operator=(VertexBufferElement& other);
@@ -111,7 +130,8 @@ namespace platypus
         bool operator!=(const VertexBufferElement& other) const;
 
         inline uint32_t getLocation() const { return _location; }
-        inline ShaderDataType getType() const { return _type; }
+        inline ShaderDataType getDataType() const { return _dataType; }
+        inline VertexAttributeType getAttribType() const { return _attribType; }
     };
 
 

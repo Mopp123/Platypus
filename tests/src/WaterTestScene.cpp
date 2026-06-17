@@ -134,9 +134,9 @@ void WaterTestScene::init()
     };
     VertexBufferLayout planeVertexBufferLayout(
         {
-            { 0, ShaderDataType::Float3 },
-            { 1, ShaderDataType::Float3 },
-            { 2, ShaderDataType::Float2 }
+            { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+            { 1, ShaderDataType::Float3, VertexAttributeType::NORMAL },
+            { 2, ShaderDataType::Float2, VertexAttributeType::TEX_COORD }
         },
         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
         0

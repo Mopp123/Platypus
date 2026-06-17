@@ -322,9 +322,10 @@ namespace platypus
         {
             if (!skinned)
             {
+                // If NOT skinned, add only the vertex position attrib
                 outVertexBufferLayouts.push_back(
                     {
-                        {{ 0, ShaderDataType::Float3 }},
+                        {{ 0, ShaderDataType::Float3, VertexAttributeType::POSITION }},
                         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
                         0,
                         meshVertexBufferLayout.getStride()
@@ -333,6 +334,7 @@ namespace platypus
             }
             else
             {
+                // If skinned, add vertex pos, weight and joint attribs
                 outVertexBufferLayouts.push_back(
                     VertexBufferLayout::get_common_skinned_shadow_layout(
                         meshVertexBufferLayout.getStride()
@@ -343,13 +345,14 @@ namespace platypus
 
         if (instanced)
         {
+            // If instanced, add the "instanced transformation matrix attrib"
             uint32_t meshVBLayoutElements = outVertexBufferLayouts.back().getElements().size();
             VertexBufferLayout instancedVBLayout = {
                 {
-                    { meshVBLayoutElements, ShaderDataType::Float4 },
-                    { meshVBLayoutElements + 1, ShaderDataType::Float4 },
-                    { meshVBLayoutElements + 2, ShaderDataType::Float4 },
-                    { meshVBLayoutElements + 3, ShaderDataType::Float4 }
+                    { meshVBLayoutElements, ShaderDataType::Float4, VertexAttributeType::CUSTOM },
+                    { meshVBLayoutElements + 1, ShaderDataType::Float4, VertexAttributeType::CUSTOM },
+                    { meshVBLayoutElements + 2, ShaderDataType::Float4, VertexAttributeType::CUSTOM },
+                    { meshVBLayoutElements + 3, ShaderDataType::Float4, VertexAttributeType::CUSTOM }
                 },
                 VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                 1

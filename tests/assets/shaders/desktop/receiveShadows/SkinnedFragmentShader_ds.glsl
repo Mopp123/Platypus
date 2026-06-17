@@ -1,5 +1,7 @@
 #version 450
 
+// NOTE: This is exactly the same as receiveShadows/StaticFragmentShader_ds.glsl
+// TODO: Get rid of duplicate shaders
 layout(location = 0) in vec3 var_normal;
 layout(location = 1) in vec2 var_texCoord;
 layout(location = 2) in vec3 var_fragPos;

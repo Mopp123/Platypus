@@ -6,6 +6,61 @@
 
 namespace platypus
 {
+    bool mesh_and_material_compatible(
+        const Mesh* pMesh,
+        const Material* pMaterial
+    )
+    {
+        const uint32_t meshPropertyFlags = pMesh->getPropertyFlags();
+        if ((meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
+            (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
+            pMaterial->isTransparent())
+        {
+            return false;
+        }
+
+        if (pMaterial->hasNormalMap() != !pMesh->hasTangents())
+            return false;
+
+        return true;
+    }
+
+
+    bool mesh_and_material_compatible_verbose(
+        const Mesh* pMesh,
+        const Material* pMaterial,
+        std::string& outError
+    )
+    {
+        const uint32_t meshPropertyFlags = pMesh->getPropertyFlags();
+        if ((meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
+            (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
+            pMaterial->isTransparent())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Mesh was static and instanced while Material was transparent. "
+                "Instanced transparent renderables aren't currently supported!";
+
+            return false;
+        }
+
+        if (pMaterial->hasNormalMap() && !pMesh->hasTangents())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Material is using normal map but the Mesh doesn't have tangents!";
+            return false;
+        }
+        else if (!pMaterial->hasNormalMap() && pMesh->hasTangents())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Mesh has tangents but Material doesn't use normal map!";
+            return false;
+        }
+
+        return true;
+    }
+
+
     Renderable3D* create_renderable3D(
         entityID_t target,
         UUID_t meshAssetID,
@@ -30,17 +85,16 @@ namespace platypus
                 materialAssetID,
                 AssetType::ASSET_TYPE_MATERIAL
             );
-            if ((pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
-                (pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
-                pMaterial->isTransparent())
+            PLATYPUS_ASSERT(pMaterial);
+
+            std::string incompatibilityError;
+            if (!mesh_and_material_compatible_verbose(pMesh, pMaterial, incompatibilityError))
             {
                 Debug::log(
-                    "Mesh property flags had STATIC and INSTANCED bits set while Material was transparent. "
-                    "Instanced transparent renderables aren't currently supported!",
+                    incompatibilityError,
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
-                PLATYPUS_ASSERT(false);
                 return nullptr;
             }
         }

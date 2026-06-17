@@ -664,9 +664,9 @@ namespace platypus
         if (instanceAdvance > 0 && repeatAdvance > 0)
         {
             Debug::log(
-                "@Batcher::createBatch "
                 "Batch was attempting to use both, repeat and instance advance. "
                 "Currently batches can use only one or the other!",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -683,9 +683,9 @@ namespace platypus
         if (materialID == NULL_UUID)
         {
             Debug::log(
-                "@Batcher::createBatch "
                 "materialID was NULL_ID! "
                 "Currently batching requires a material.",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -695,8 +695,8 @@ namespace platypus
         if (!pMaterial)
         {
             Debug::log(
-                "@Batcher::createBatch "
                 "Material with ID: " + std::to_string(materialID) + " was nullptr!",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -779,9 +779,9 @@ namespace platypus
             if (uniformResourceLayouts.size() != 1)
             {
                 Debug::log(
-                    "@Batcher::createBatch "
                     "Currently supporting only a single dynamic shared resource per batch! "
                     "Provided resource layouts: " + std::to_string(uniformResourceLayouts.size()),
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);

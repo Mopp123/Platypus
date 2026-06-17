@@ -58,6 +58,16 @@ namespace platypus
         delete _pIndexBuffer;
     }
 
+    bool Mesh::hasTangents() const
+    {
+        for (const VertexBufferElement& elem : _vertexBufferLayout.getElements())
+        {
+            if (elem.getAttribType() == VertexAttributeType::NORMAL)
+                return true;
+        }
+        return false;
+    }
+
     int32_t Mesh::getAnimationIndex(const std::string& name) const
     {
         for (size_t i = 0; i < _animations.size(); ++i)

@@ -1,7 +1,7 @@
 #version 300 es
 precision mediump float;
 
-// NOTE: This is exactly the same as receiveShadows/StaticFragmentShader_ds.glsl
+// NOTE: This is exactly the same as receiveShadows/SkinnedFragmentShader_ds.glsl
 // TODO: Get rid of duplicate shaders
 in vec3 var_normal;
 in vec2 var_texCoord;

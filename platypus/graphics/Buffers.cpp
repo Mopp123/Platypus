@@ -12,12 +12,16 @@ namespace platypus
 {
     bool VertexBufferElement::operator==(const VertexBufferElement& other) const
     {
-        return _location == other._location && _type == other._type;
+        return _location == other._location &&
+            _dataType == other._dataType &&
+            _attribType == other._attribType;
     }
 
     bool VertexBufferElement::operator!=(const VertexBufferElement& other) const
     {
-        return _location != other._location || _type != other._type;
+        return _location != other._location ||
+            _dataType != other._dataType ||
+            _attribType != other._attribType;
     }
 
 
@@ -180,9 +184,9 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 }, // position
-                { 1, ShaderDataType::Float3 }, // normal
-                { 2, ShaderDataType::Float2 }  // tex coord
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float3, VertexAttributeType::NORMAL },
+                { 2, ShaderDataType::Float2, VertexAttributeType::TEX_COORD }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -193,10 +197,10 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 }, // position
-                { 1, ShaderDataType::Float3 }, // normal
-                { 2, ShaderDataType::Float2 }, // tex coord
-                { 3, ShaderDataType::Float4 }  // tangent
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float3, VertexAttributeType::NORMAL },
+                { 2, ShaderDataType::Float2, VertexAttributeType::TEX_COORD },
+                { 3, ShaderDataType::Float4, VertexAttributeType::TANGENT }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -207,11 +211,11 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 }, // position
-                { 1, ShaderDataType::Float4 }, // weights
-                { 2, ShaderDataType::Float4 }, // jointIDs
-                { 3, ShaderDataType::Float3 }, // normal
-                { 4, ShaderDataType::Float2 }  // tex coord
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float4, VertexAttributeType::WEIGHT },
+                { 2, ShaderDataType::Float4, VertexAttributeType::JOINT },
+                { 3, ShaderDataType::Float3, VertexAttributeType::NORMAL },
+                { 4, ShaderDataType::Float2, VertexAttributeType::TEX_COORD }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -222,12 +226,12 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 }, // position
-                { 1, ShaderDataType::Float4 }, // weights
-                { 2, ShaderDataType::Float4 }, // jointIDs
-                { 3, ShaderDataType::Float3 }, // normal
-                { 4, ShaderDataType::Float2 }, // tex coord
-                { 5, ShaderDataType::Float4 }  // tangent
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float4, VertexAttributeType::WEIGHT },
+                { 2, ShaderDataType::Float4, VertexAttributeType::JOINT },
+                { 3, ShaderDataType::Float3, VertexAttributeType::NORMAL },
+                { 4, ShaderDataType::Float2, VertexAttributeType::TEX_COORD },
+                { 5, ShaderDataType::Float4, VertexAttributeType::TANGENT }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -238,9 +242,9 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 }, // position
-                { 1, ShaderDataType::Float4 }, // weights
-                { 2, ShaderDataType::Float4 } // jointIDs
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float4, VertexAttributeType::WEIGHT },
+                { 2, ShaderDataType::Float4, VertexAttributeType::JOINT }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0,
@@ -252,8 +256,8 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 },
-                { 1, ShaderDataType::Float3 }
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float3, VertexAttributeType::NORMAL }
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0
@@ -264,9 +268,9 @@ namespace platypus
     {
         return {
             {
-                { 0, ShaderDataType::Float3 },
-                { 1, ShaderDataType::Float3 },
-                { 2, ShaderDataType::Float3 } // NOTE: gltf meshes' tangent is vec4 since that's how we get it from the file, but the terrain is generated in a way that tangent is vec3... don't know why I'm doing this...
+                { 0, ShaderDataType::Float3, VertexAttributeType::POSITION },
+                { 1, ShaderDataType::Float3, VertexAttributeType::NORMAL },
+                { 2, ShaderDataType::Float3, VertexAttributeType::TEX_COORD } // NOTE: gltf meshes' tangent is vec4 since that's how we get it from the file, but the terrain is generated in a way that tangent is vec3... don't know why I'm doing this...
             },
             VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
             0

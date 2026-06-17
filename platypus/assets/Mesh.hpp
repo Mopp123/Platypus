@@ -57,6 +57,8 @@ namespace platypus
         );
         ~Mesh();
 
+        bool hasTangents() const;
+
         // returns -1 if not found
         int32_t getAnimationIndex(const std::string& name) const;
 

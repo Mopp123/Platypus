@@ -54,8 +54,8 @@ void main()
 
     float fresnelEffect = dot(toCamera, unitNormal);
 
-    const float waveMultiplier = 0.25;
-    float distortionSpeed = var_time * 0.01;
+    const float waveMultiplier = 0.1;
+    float distortionSpeed = var_time * 0.02;
     vec2 distortedCoord1 = (texture(distortionTextureSampler, vec2(finalTexCoord.x + distortionSpeed, finalTexCoord.y)).rg * 2.0 - 1.0) * waveMultiplier;
     vec2 distortedCoord2 = (texture(distortionTextureSampler, vec2(finalTexCoord.x, finalTexCoord.y + distortionSpeed)).rg * 2.0 - 1.0) * waveMultiplier;
     vec3 distortedColor = texture(diffuseTextureSampler, distortedCoord1 + distortedCoord2).rgb;
@@ -64,7 +64,7 @@ void main()
     // TESTING DEPTH EFFECT
     // *Not perfect, but 'll do for now
     float zNear = 0.1;
-    float zFar = 100.0;
+    float zFar = 500.0;
 
     vec4 tempClip = var_clipPos;
     tempClip.y *= -1.0;
@@ -84,8 +84,8 @@ void main()
     vec4 deepTint = vec4(0.2, 0.2, 0.8, 1.0);
     vec4 totalTint = mix(shallowTint, deepTint, d);
 
-    //vec4 textureColor = vec4(distortedColor, 1.0);
-    vec4 textureColor = mix(vec4(distortedColor, 1.0), totalTint, 0.25);
+    vec4 textureColor = vec4(distortedColor, 1.0);
+    //vec4 textureColor = mix(vec4(distortedColor, 1.0), totalTint, 0.25);
 
     vec4 finalDiffuseColor = lightDiffuseColor * textureColor;
     vec4 finalSpecularColor = lightSpecularColor * textureColor;

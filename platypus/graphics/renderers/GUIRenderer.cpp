@@ -45,18 +45,18 @@ namespace platypus
             {
                 {
                     {
-                        { 0, ShaderDataType::Float2 }
+                        { 0, ShaderDataType::Float2, VertexAttributeType::POSITION }
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
                     0
                 },
                 {
                     {
-                        { 1, ShaderDataType::Float4 }, // translation
-                        { 2, ShaderDataType::Float2 }, // texture offset
-                        { 3, ShaderDataType::Float4 }, // color
-                        { 4, ShaderDataType::Float4 }, // border color
-                        { 5, ShaderDataType::Float }, // border thickness
+                        { 1, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // translation
+                        { 2, ShaderDataType::Float2, VertexAttributeType::CUSTOM }, // texture offset
+                        { 3, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // color
+                        { 4, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // border color
+                        { 5, ShaderDataType::Float, VertexAttributeType::CUSTOM }, // border thickness
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                     1
@@ -83,18 +83,18 @@ namespace platypus
             {
                 {
                     {
-                        { 0, ShaderDataType::Float2 }
+                        { 0, ShaderDataType::Float2, VertexAttributeType::POSITION }
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
                     0
                 },
                 {
                     {
-                        { 1, ShaderDataType::Float4 }, // translation
-                        { 2, ShaderDataType::Float2 }, // texture offset
-                        { 3, ShaderDataType::Float4 }, // color
-                        { 4, ShaderDataType::Float4 }, // border color
-                        { 5, ShaderDataType::Float }, // border thickness
+                        { 1, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // translation
+                        { 2, ShaderDataType::Float2, VertexAttributeType::CUSTOM }, // texture offset
+                        { 3, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // color
+                        { 4, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // border color
+                        { 5, ShaderDataType::Float, VertexAttributeType::CUSTOM }, // border thickness
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                     1
