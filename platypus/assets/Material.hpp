@@ -150,7 +150,7 @@ namespace platypus
         );
 
         void recreateExistingPipelines();
-        void destroyPipeline();
+        void destroyPipelines();
 
         void createShaderResources();
         void destroyShaderResources();

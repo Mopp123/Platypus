@@ -752,6 +752,16 @@ namespace platypus
             if (instanced)
                 meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED);
 
+            // Add TANGENTS to mesh property flags if found from VertexBufferLayout
+            for (const VertexBufferElement& vertexBufferElement : meshData.vertexBufferLayout.getElements())
+            {
+                if (vertexBufferElement.getAttribType() == VertexAttributeType::TANGENT)
+                {
+                    meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::HAS_TANGENTS);
+                    break;
+                }
+            }
+
             if (instanced && (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED)))
             {
                 Debug::log(

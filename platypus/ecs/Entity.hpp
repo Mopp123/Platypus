@@ -21,8 +21,15 @@ namespace platypus
 
     constexpr size_t serialized_entities_header_size = sizeof(uint32_t);
 
-    // TODO: Remove below and use the Scene's entity UUID pool ID!
-    //constexpr uint32_t entity_uuid_pool_id = 1;
+
+    enum class EntityError : uint32_t
+    {
+        NO_ERROR = 0,
+        COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL
+    };
+
+    std::string entity_error_to_string(EntityError error);
+
 
     struct Entity
     {

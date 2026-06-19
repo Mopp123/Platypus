@@ -62,7 +62,7 @@ namespace platypus
     {
         for (const VertexBufferElement& elem : _vertexBufferLayout.getElements())
         {
-            if (elem.getAttribType() == VertexAttributeType::NORMAL)
+            if (elem.getAttribType() == VertexAttributeType::TANGENT)
                 return true;
         }
         return false;

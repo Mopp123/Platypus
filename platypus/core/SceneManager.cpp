@@ -56,7 +56,7 @@ namespace platypus
         //  -> BECAUSE:
         //      1. It's slow to destroy and allocate new batches!
         //      2. u might want for some batches to be ready which
-        //      aren't used atm!
+        //      aren't used atm(empty)!
         //
         // *For debug and editor purposes this might be fine to be
         // done always..?

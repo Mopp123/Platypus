@@ -204,6 +204,7 @@ namespace platypus
             AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
             const UUID_t meshID = pRenderable3D->meshID;
             const UUID_t materialID = pRenderable3D->materialID;
+
             // NOTE: Atm allowing renderables to have meshes and materials as NULL_UUIDs!
             // TODO: Make this nicer!
             if (meshID != NULL_UUID && materialID != NULL_UUID)
@@ -218,6 +219,20 @@ namespace platypus
                     // the error renderables are? At least in debug?
                     return;
                 }
+
+
+                #ifdef PLATYPUS_DEBUG
+                if (!mesh_and_material_compatible(pMesh, pMaterial))
+                {
+                    Debug::log(
+                        "Not submitting Renderable3D for rendering due to incompatible Mesh and Material!",
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    return;
+                }
+                #endif
+
 
                 const MeshPropertyFlagBits meshType = get_mesh_type(pMesh->getPropertyFlags());
 
@@ -553,7 +568,7 @@ namespace platypus
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->destroyPipeline();
+            ((Material*)pAsset)->destroyPipelines();
     }
 
     void MasterRenderer::createShaderResources()

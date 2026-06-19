@@ -673,6 +673,28 @@ namespace platypus
         _activeCameraEntity = entityID;
     }
 
+    void Scene::insertError(UUID_t entityUUID, EntityError error)
+    {
+        Entity entity = getEntity(entityUUID);
+        if (entity.uuid == NULL_UUID)
+        {
+            Debug::log(
+                "Entity with UUID: " + std::to_string(entityUUID) + " not found!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return;
+        }
+        _entityErrors[entityUUID].insert(error);
+    }
+
+    std::unordered_map<UUID_t, std::set<EntityError>> Scene::popErrors()
+    {
+        std::unordered_map<UUID_t, std::set<EntityError>> errors = _entityErrors;
+        _entityErrors.clear();
+        return errors;
+    }
+
     std::vector<char> Scene::serialize(
         const std::vector<entityID_t>& toSerialize
     )

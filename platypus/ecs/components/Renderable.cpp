@@ -19,7 +19,7 @@ namespace platypus
             return false;
         }
 
-        if (pMaterial->hasNormalMap() != !pMesh->hasTangents())
+        if (pMaterial->hasNormalMap() != pMesh->hasTangents())
             return false;
 
         return true;
@@ -58,6 +58,47 @@ namespace platypus
         }
 
         return true;
+    }
+
+
+    std::unordered_map<UUID_t, EntityError> query_renderable3D_compatibility_errors(
+        Scene* pScene,
+        const Material* pMaterial
+    )
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        std::unordered_map<UUID_t, EntityError> entityErrorMapping;
+        for (const Entity& entity : pScene->getEntities())
+        {
+            if (entity.id == NULL_ENTITY_ID || entity.uuid == NULL_UUID)
+                continue;
+            if (!(entity.componentMask & ComponentType::COMPONENT_TYPE_RENDERABLE3D))
+                continue;
+
+            void* pComponent = pScene->getComponent(entity.id, ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+            Renderable3D* pRenderable = reinterpret_cast<Renderable3D*>(pComponent);
+
+            if (pRenderable->materialID != pMaterial->getID())
+                continue;
+
+            Asset* pMeshAsset = pAssetManager->getAsset(pRenderable->meshID, AssetType::ASSET_TYPE_MESH);
+            // NOTE: Should error here?
+            if (!pMeshAsset)
+                continue;
+
+            Mesh* pMesh = reinterpret_cast<Mesh*>(pMeshAsset);
+
+            std::string error;
+            if (!mesh_and_material_compatible_verbose(
+                    pMesh,
+                    pMaterial,
+                    error
+            ))
+            {
+                entityErrorMapping[entity.uuid] = EntityError::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL;
+            }
+        }
+        return entityErrorMapping;
     }
 
 

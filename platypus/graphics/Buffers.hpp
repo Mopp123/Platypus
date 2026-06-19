@@ -160,7 +160,6 @@ namespace platypus
         VertexBufferLayout& operator=(const VertexBufferLayout& other);
         ~VertexBufferLayout();
 
-        // NOTE: This has platform independent definition in Buffers.cpp
         bool operator==(const VertexBufferLayout& other) const;
         bool operator!=(const VertexBufferLayout& other) const;
 

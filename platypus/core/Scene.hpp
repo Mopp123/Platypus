@@ -36,6 +36,8 @@ namespace platypus
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
         std::unordered_map<ComponentType, MemoryPool*> _componentPools;
 
+        std::unordered_map<UUID_t, std::set<EntityError>> _entityErrors;
+
         entityID_t _activeCameraEntity = NULL_ENTITY_ID;
 
     public:
@@ -91,6 +93,9 @@ namespace platypus
         bool isValidComponent(ComponentType, const std::string& errLocation) const;
 
         void setActiveCameraEntity(entityID_t entityID);
+
+        void insertError(UUID_t entityUUID, EntityError error);
+        std::unordered_map<UUID_t, std::set<EntityError>> popErrors();
 
         // Puts all entities and their components into buffer that can be saved on disk
         std::vector<char> serialize(

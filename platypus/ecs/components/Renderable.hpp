@@ -7,6 +7,7 @@
 #include "platypus/assets/Mesh.hpp"
 #include "platypus/assets/Material.hpp"
 #include <string>
+#include <unordered_map>
 
 
 namespace platypus
@@ -30,6 +31,11 @@ namespace platypus
         const Mesh* pMesh,
         const Material* pMaterial,
         std::string& outError
+    );
+
+    std::unordered_map<UUID_t, EntityError> query_renderable3D_compatibility_errors(
+        Scene* pScene,
+        const Material* pMaterial
     );
 
     // NOTE: When adding strings, make sure to take into accout

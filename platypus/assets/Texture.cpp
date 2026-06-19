@@ -54,7 +54,7 @@ namespace platypus
                         PLATYPUS_CURRENT_FUNC_NAME,
                         Debug::MessageType::PLATYPUS_WARNING
                     );
-                    pMaterial->destroyPipeline();
+                    pMaterial->destroyPipelines();
                     pMaterial->recreateExistingPipelines();
                     pMaterial->destroyShaderResources();
                     pMaterial->createShaderResources();

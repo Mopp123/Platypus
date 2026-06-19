@@ -157,6 +157,19 @@ namespace platypus
         _uniformBufferData.textureProperties.z = textureScale.x;
         _uniformBufferData.textureProperties.w = textureScale.y;
 
+        // Check for Renderable3Ds' Mesh/Material incompatibility errors
+        // NOTE: JUST TESTING ATM!
+        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        std::unordered_map<UUID_t, EntityError> incompatibilityErrors = query_renderable3D_compatibility_errors(
+            pScene,
+            this
+        );
+        if (!incompatibilityErrors.empty())
+        {
+            for (std::pair<UUID_t, EntityError> error : incompatibilityErrors)
+                pScene->insertError(error.first, error.second);
+        }
+
         // ISSUE!
         // *If recreating completely, need to solve descriptor set layouts for the pipelines of
         // each mesh type if exists!
@@ -191,13 +204,27 @@ namespace platypus
         //  combinations, but that can be addressed later...
 
         Device::wait_for_operations();
-        destroyPipeline();
+
+        // Testing if "really" destroying pipelines would work...
+        std::unordered_map<uint32_t, MaterialPipelineData*>::iterator it;
+        for (it = _pipelines.begin(); it !=_pipelines.end(); ++it)
+        {
+            // NOTE: Maybe should at least warn in this case?
+            if (!it->second)
+                continue;
+
+            delete it->second;
+        }
+        _pipelines.clear();
+
         _descriptorSetLayout.destroy();
         destroyShaderResources();
 
         createDescriptorSetLayout();
 
-        recreateExistingPipelines();
+        // NOTE: Need to create completely new Pipelines here or set new properties
+        // for existing pipelines for recreation!
+        //recreateExistingPipelines();
         createShaderResources();
 
         const size_t maxFramesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
@@ -369,7 +396,7 @@ namespace platypus
             warnUnassigned("@Material::recreateExistingPipeline");
     }
 
-    void Material::destroyPipeline()
+    void Material::destroyPipelines()
     {
         bool destroyed = false;
 
@@ -388,7 +415,7 @@ namespace platypus
         }
 
         if (!destroyed)
-            warnUnassigned("@Material::destroyPipeline");
+            warnUnassigned("@Material::destroyPipelines");
     }
 
     void Material::createShaderResources()

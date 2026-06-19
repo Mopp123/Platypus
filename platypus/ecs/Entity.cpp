@@ -18,6 +18,17 @@ namespace platypus
         return count;
     }
 
+
+    std::string entity_error_to_string(EntityError error)
+    {
+        switch (error)
+        {
+            case EntityError::NO_ERROR: return "No error";
+            case EntityError::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL: return "Renderable3D's Mesh and Material assets are incompatible";
+        }
+    }
+
+
     Entity::Entity()
     {}
 
