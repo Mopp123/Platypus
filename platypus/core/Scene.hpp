@@ -36,7 +36,12 @@ namespace platypus
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
         std::unordered_map<ComponentType, MemoryPool*> _componentPools;
 
-        std::unordered_map<UUID_t, std::set<EntityError>> _entityErrors;
+        std::unordered_map<UUID_t, std::vector<EntityError>> _entityErrors;
+        const std::unordered_map<EntityErrorType, void(*)(Scene*, EntityError)> _entityErrorFixMapping = {
+            { EntityErrorType::COMPONENT_RENDERABLE3D_MESH_UNAVAILABLE, &handle_mesh_unavailable_error },
+            { EntityErrorType::COMPONENT_RENDERABLE3D_MATERIAL_UNAVAILABLE, &handle_material_unavailable_error },
+            { EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL, &handle_incompatible_mesh_material_error }
+        };
 
         entityID_t _activeCameraEntity = NULL_ENTITY_ID;
 
@@ -94,8 +99,10 @@ namespace platypus
 
         void setActiveCameraEntity(entityID_t entityID);
 
+        // NOTE: WARNING! NOT THREAD SAFE!
         void insertError(UUID_t entityUUID, EntityError error);
-        std::unordered_map<UUID_t, std::set<EntityError>> popErrors();
+        const std::unordered_map<UUID_t, std::vector<EntityError>>& getErrors();
+        void clearErrors();
 
         // Puts all entities and their components into buffer that can be saved on disk
         std::vector<char> serialize(

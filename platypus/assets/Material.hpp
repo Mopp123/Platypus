@@ -12,6 +12,8 @@
 // TODO: IMPORTANT: Replace below definition with something better!
 //  -> That's textures per channel, NOT channel count!
 #define PE_MAX_MATERIAL_TEX_CHANNELS 5
+// TODO: Replace above with below!
+#define PE_MATERIAL_TEX_CHANNEL_SLOTS 5
 
 
 namespace platypus

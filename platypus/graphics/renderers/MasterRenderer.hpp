@@ -88,7 +88,7 @@ namespace platypus
 
         void cleanRenderers();
         void cleanUp();
-        void submit(const Scene* pScene, const Entity& entity);
+        void submit(Scene * const pScene, const Entity& entity);
         void render(const Window& window);
 
         void solveVertexBufferLayouts(

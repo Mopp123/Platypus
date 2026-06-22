@@ -157,7 +157,10 @@ namespace platypus
         for (it = _assets.begin(); it != _assets.end(); ++it)
         {
             if (_persistentAssets.find(it->first) == _persistentAssets.end())
+            {
                 delete it->second;
+                it->second = nullptr;
+            }
         }
         _assets.clear();
 
@@ -1048,6 +1051,9 @@ namespace platypus
         for (const auto& asset : _assets)
         {
             Asset* pAsset = asset.second;
+            if (!pAsset)
+                continue;
+
             if (pAsset->getType() == type)
             {
                 if (excludeInternalDefaults)
@@ -1448,12 +1454,30 @@ namespace platypus
 
     void AssetManager::destroyDefaultAssets()
     {
+        std::set<UUID_t> toErase;
         for (UUID_t id : _defaultAssets)
         {
+            if (_assets[id] == _pErrorImage)
+                _pErrorImage = nullptr;
+            else if (_assets[id] == _pErrorTexture)
+                _pErrorTexture = nullptr;
+            else if (_assets[id] == _pErrorMaterial)
+                _pErrorMaterial = nullptr;
+            else if (_assets[id] == _pErrorModel)
+                _pErrorModel = nullptr;
+            else if (_assets[id] == _pErrorMesh)
+                _pErrorMesh = nullptr;
+
             delete _assets[id];
-            _assets.erase(id);
+            _assets[id] = nullptr;
+
+            toErase.insert(id);
             _persistentAssets.erase(id);
         }
+
+        for (UUID_t idToErase : toErase)
+            _assets.erase(idToErase);
+
         _defaultAssets.clear();
     }
 }

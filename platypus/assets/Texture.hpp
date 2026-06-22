@@ -108,13 +108,22 @@ namespace platypus
         );
         Texture(const Texture&) = delete;
         ~Texture();
+
+        // TODO: IMPORTANT! Add web implementations for:
+        //  *destroy
+        //  *create
+        //  *recreate(1)
+        //  *recreate(2)
+
         // TODO: Make destroy rather private and some public func to recreate with changed image?
         void destroy();
         void create(const Image* pImage);
+
         // calls destroy(), create(..), searches all Materials using this texture
         // and updates the Material's texture descriptors.
         // NOTE: This doesn't need platform implementation!
         void recreate(const Image* pImage, const TextureSampler* pSampler);
+        void recreate(const Image* pImage);
 
         virtual void writeToMetadataBuffer(
             std::vector<char>& targetBuffer
@@ -135,6 +144,12 @@ namespace platypus
         inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
         inline const Image* getImage() const { return _pImage; }
         inline ImageFormat getImageFormat() const { return _imageFormat; }
+
+    private:
+        // NEEDS TO BE CALLED IN TEXTURE'S DESTRUCTOR (in all implementations)!
+        // If Materials are using this texture, set the Materials'
+        // texture slot to "error texture".
+        void fixMaterialsOnDestruction();
     };
 
 

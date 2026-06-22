@@ -557,6 +557,7 @@ namespace platypus
 
     Texture::~Texture()
     {
+        fixMaterialsOnDestruction();
         if (_pImpl)
         {
             destroy();

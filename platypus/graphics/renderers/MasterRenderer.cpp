@@ -171,7 +171,7 @@ namespace platypus
         freeCommandBuffers();
     }
 
-    void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
+    void MasterRenderer::submit(Scene * const pScene, const Entity& entity)
     {
         uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_RENDERABLE3D;
         uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
@@ -210,16 +210,32 @@ namespace platypus
             if (meshID != NULL_UUID && materialID != NULL_UUID)
             {
                 const Mesh * const pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-                const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
-                if (!pMesh || !pMaterial)
+                if (!pMesh)
                 {
-                    // NOTE: In this case, the mesh or material has been destroyed
-                    //  -> Renderable3D has invalid UUIDs to those!
-                    // TODO: Some "default error" mesh and material to see where
-                    // the error renderables are? At least in debug?
+                    pScene->insertError(
+                        entity.uuid,
+                        {
+                            EntityErrorType::COMPONENT_RENDERABLE3D_MESH_UNAVAILABLE,
+                            { {ComponentType::COMPONENT_TYPE_RENDERABLE3D, reinterpret_cast<void*>(pRenderable3D)} },
+                            { }
+                        }
+                    );
                     return;
                 }
 
+                const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+                if (!pMaterial)
+                {
+                    pScene->insertError(
+                        entity.uuid,
+                        {
+                            EntityErrorType::COMPONENT_RENDERABLE3D_MATERIAL_UNAVAILABLE,
+                            { {ComponentType::COMPONENT_TYPE_RENDERABLE3D, reinterpret_cast<void*>(pRenderable3D)} },
+                            { }
+                        }
+                    );
+                    return;
+                }
 
                 #ifdef PLATYPUS_DEBUG
                 if (!mesh_and_material_compatible(pMesh, pMaterial))
@@ -228,6 +244,14 @@ namespace platypus
                         "Not submitting Renderable3D for rendering due to incompatible Mesh and Material!",
                         PLATYPUS_CURRENT_FUNC_NAME,
                         Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    pScene->insertError(
+                        entity.uuid,
+                        {
+                            EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL,
+                            { {ComponentType::COMPONENT_TYPE_RENDERABLE3D, reinterpret_cast<void*>(pRenderable3D)} },
+                            { }
+                        }
                     );
                     return;
                 }

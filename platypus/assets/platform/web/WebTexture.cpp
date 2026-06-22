@@ -359,6 +359,7 @@ namespace platypus
 
     Texture::~Texture()
     {
+        fixMaterialsOnDestruction();
         if (_pImpl)
         {
             glDeleteTextures(1, &_pImpl->id);
@@ -369,32 +370,43 @@ namespace platypus
     void Texture::destroy()
     {
         Debug::log(
-            "Not implemented yet!",
+            "Not implemented!",
             PLATYPUS_CURRENT_FUNC_NAME,
             Debug::MessageType::PLATYPUS_ERROR
         );
         PLATYPUS_ASSERT(false);
     }
 
-    void Texture::setImage(const Image* pImage)
+    void Texture::create(const Image* pImage)
     {
         Debug::log(
-            "Not implemented yet!",
+            "Not implemented!",
             PLATYPUS_CURRENT_FUNC_NAME,
             Debug::MessageType::PLATYPUS_ERROR
         );
         PLATYPUS_ASSERT(false);
     }
 
-    void Texture::create()
+    void Texture::recreate(const Image* pImage, const TextureSampler* pSampler)
     {
         Debug::log(
-            "Not implemented yet!",
+            "Not implemented!",
             PLATYPUS_CURRENT_FUNC_NAME,
             Debug::MessageType::PLATYPUS_ERROR
         );
         PLATYPUS_ASSERT(false);
     }
+
+    void Texture::recreate(const Image* pImage)
+    {
+        Debug::log(
+            "Not implemented!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+
 
     void transition_image_layout(
         CommandBuffer& commandBuffer,

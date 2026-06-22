@@ -33,6 +33,8 @@ namespace platypus
         create(pImage);
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+
+        // Update all materials using this texture so the texture change can take effect!
         std::vector<Asset*> materialAssets = pAssetManager->getAssets(
             AssetType::ASSET_TYPE_MATERIAL
             //bool excludeInternalDefaults = false,
@@ -40,7 +42,9 @@ namespace platypus
         );
         for (Asset* pAsset : materialAssets)
         {
-            Material* pMaterial = reinterpret_cast<Material*>(pAsset);
+            PLATYPUS_ASSERT(pAsset);
+            Material* pMaterial = dynamic_cast<Material*>(pAsset);
+            PLATYPUS_ASSERT(pMaterial);
             const std::vector<Texture*> materialTextures = pMaterial->getTextures();
             for (Texture* pTexture : materialTextures)
             {
@@ -67,6 +71,10 @@ namespace platypus
         }
     }
 
+    void Texture::recreate(const Image* pImage)
+    {
+        recreate(pImage, _pSampler);
+    }
 
     /*
         Serialized format (in order):
@@ -93,7 +101,11 @@ namespace platypus
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
 
-        const UUID_t imageID = _pImage->getID();
+        UUID_t imageID = _pImage->getID();
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        if (_pImage == pAssetManager->getErrorImage())
+            imageID = NULL_UUID;
+
         memcpy(pBuf + pos, &imageID, sizeof(UUID_t));
         pos += sizeof(UUID_t);
 
@@ -163,6 +175,13 @@ namespace platypus
 
         PLATYPUS_ASSERT(get_serialized_metadata_size());
 
+        if (imageID == NULL_UUID)
+        {
+            Image* pErrorImage = pAssetManager->getErrorImage();
+            PLATYPUS_ASSERT(pErrorImage);
+            imageID = pErrorImage->getID();
+        }
+
         Texture* pTexture = pAssetManager->createTexture(
             imageID,
             samplerFilterMode,
@@ -185,5 +204,51 @@ namespace platypus
             sizeof(TextureSamplerAddressMode) +
             sizeof(uint8_t) * 2 +
             asset_metadata_name_size;
+    }
+
+    void Texture::fixMaterialsOnDestruction()
+    {
+        // NOTE: Was unable to get this working properly when destroying "default assets".
+        // That doesn't matter atm since default assets should persist through lifetime of app.
+        // BUT: Wasn't really sure why that didn't work -> MIGHT CAUSE ISSUES LATER IF THIS IS
+        // WORKING JUST BY ACCIDENT ATM!
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        const Asset* pErrorTextureAsset = pAssetManager->getErrorTexture();
+        if (pErrorTextureAsset)
+        {
+            const UUID_t errorTextureID = pErrorTextureAsset->getID();
+
+            std::vector<Asset*> materials = pAssetManager->getAssets(
+                AssetType::ASSET_TYPE_MATERIAL,
+                true, // excludeInternalDefaults,
+                false // excludeNonSerializable
+            );
+            for (Asset* pMaterialAsset : materials)
+            {
+                PLATYPUS_ASSERT(pMaterialAsset);
+                Material* pMaterial = dynamic_cast<Material*>(pMaterialAsset);
+                const UUID_t blendmapTextureID = pMaterial->getBlendmapTextureID();
+                const UUID_t* pDiffuseTextureIDs = pMaterial->getDiffuseTextureIDs();
+                const UUID_t* pSpecularTextureIDs = pMaterial->getSpecularTextureIDs();
+                const UUID_t* pNormalTextureIDs = pMaterial->getNormalTextureIDs();
+
+                if (blendmapTextureID == _id)
+                    pMaterial->setBlendmapTexture(errorTextureID);
+
+                for (size_t slot = 0; slot < PE_MATERIAL_TEX_CHANNEL_SLOTS; ++slot)
+                {
+                    UUID_t diffuseTextureID = pDiffuseTextureIDs[slot];
+                    UUID_t specularTextureID = pSpecularTextureIDs[slot];
+                    UUID_t normalTextureID = pNormalTextureIDs[slot];
+
+                    if (diffuseTextureID == _id)
+                        pMaterial->setDiffuseTexture(errorTextureID, slot);
+                    if (specularTextureID == _id)
+                        pMaterial->setSpecularTexture(errorTextureID, slot);
+                    if (normalTextureID == _id)
+                        pMaterial->setNormalTexture(errorTextureID, slot);
+                }
+            }
+        }
     }
 }

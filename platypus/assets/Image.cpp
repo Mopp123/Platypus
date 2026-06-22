@@ -213,6 +213,31 @@ namespace platypus
 
     Image::~Image()
     {
+        // If textures are using this image, make all those textures use "error image" instead
+        //
+        // NOTE: Was unable to get this working properly when destroying "default assets".
+        // That doesn't matter atm since default assets should persist through lifetime of app.
+        // BUT: Wasn't really sure why that didn't work -> MIGHT CAUSE ISSUES LATER IF THIS IS
+        // WORKING JUST BY ACCIDENT ATM!
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Image* pErrorImage = pAssetManager->getErrorImage();
+        if (pErrorImage)
+        {
+            std::vector<Asset*> textures = pAssetManager->getAssets(
+                AssetType::ASSET_TYPE_TEXTURE,
+                true, // excludeInternalDefaults,
+                false // excludeNonSerializable
+            );
+
+            for (Asset* pTextureAsset : textures)
+            {
+                Texture* pTexture = dynamic_cast<Texture*>(pTextureAsset);
+                PLATYPUS_ASSERT(pTexture);
+                if (pTexture->getImage() == this)
+                    pTexture->recreate(pErrorImage);
+            }
+        }
+
         if (_pData)
             delete[] _pData;
     }
@@ -455,7 +480,11 @@ namespace platypus
         targetBuffer.resize(prevSize + get_serialized_metadata_size());
         char* pBuf = targetBuffer.data() + prevSize;
 
-        memcpy(pBuf, &_id, sizeof(UUID_t));
+        UUID_t useID = _id;
+        if (this == Application::get_instance()->getAssetManager()->getErrorImage())
+            useID = NULL_UUID;
+
+        memcpy(pBuf, &useID, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
 
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));

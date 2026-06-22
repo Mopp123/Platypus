@@ -41,6 +41,10 @@ namespace platypus
         // before _pRenderer3D->advanceFrame();!
         pMasterRenderer->getBatcher().resetForNextFrame();
 
+        // NOTE: New possible entity errors are generated after this which
+        // can be queried by user before this point!
+        _pCurrentScene->clearErrors();
+
         // Submit all "renderable components" for rendering.
         // NOTE: This has to be done here since need quarantee that all necessary components have been
         // properly updated before submission!
@@ -48,6 +52,39 @@ namespace platypus
         {
             if (entity.id != NULL_ENTITY_ID && entity.active)
                 pMasterRenderer->submit(_pCurrentScene, entity);
+        }
+
+
+        // CONTINUE HERE!
+        //PLATYPUS_ASSERT(false);
+        // TODO:
+        //  Quick error fixes (same way as u did earlier in EditorUI::updateAssetLists):
+        //      *If Renderable3D's mesh is unavailable -> use error mesh
+        //      *If Renderable3D's material is unavailable -> use error material
+        //      *If Renderable3D's material's texture becomes unavailable -> use error texture
+        //      *if Renderable3D's mesh and material are incompatible -> use error mesh and material
+        std::unordered_map<UUID_t, std::vector<EntityError>>::const_iterator errorIt;
+        const std::unordered_map<UUID_t, std::vector<EntityError>>& entityErrors = _pCurrentScene->getErrors();
+
+        const std::unordered_map<EntityErrorType, void(*)(Scene*, EntityError)>& fixMapping = _pCurrentScene->_entityErrorFixMapping;
+        for (errorIt = entityErrors.begin(); errorIt != entityErrors.end(); ++errorIt)
+        {
+            const std::vector<EntityError>& errors = errorIt->second;
+            for (const EntityError& error : errors)
+            {
+                std::unordered_map<EntityErrorType, void(*)(Scene*, EntityError)>::const_iterator fixIt = fixMapping.find(error.type);
+                if (fixIt == fixMapping.end())
+                {
+                    Debug::log(
+                        "No fix function found for EntityErrorType: " + entity_error_type_to_string(error.type),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+                void(*pFixFunc)(Scene*, EntityError) = fixIt->second;
+                (*pFixFunc)(_pCurrentScene, error);
+            }
         }
 
         // NOTE: Need some way to specify if u really want to do this

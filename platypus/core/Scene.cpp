@@ -685,14 +685,17 @@ namespace platypus
             );
             return;
         }
-        _entityErrors[entityUUID].insert(error);
+        _entityErrors[entityUUID].push_back(error);
     }
 
-    std::unordered_map<UUID_t, std::set<EntityError>> Scene::popErrors()
+    const std::unordered_map<UUID_t, std::vector<EntityError>>& Scene::getErrors()
     {
-        std::unordered_map<UUID_t, std::set<EntityError>> errors = _entityErrors;
+        return _entityErrors;
+    }
+
+    void Scene::clearErrors()
+    {
         _entityErrors.clear();
-        return errors;
     }
 
     std::vector<char> Scene::serialize(
@@ -828,7 +831,6 @@ namespace platypus
             size_t componentCount = get_component_count(entity.componentMask);
             for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
             {
-                Debug::log("___TEST___reading component from pos: " + std::to_string(pos));
                 ComponentType componentType;
                 memcpy(
                     &componentType,

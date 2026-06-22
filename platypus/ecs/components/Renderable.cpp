@@ -95,7 +95,11 @@ namespace platypus
                     error
             ))
             {
-                entityErrorMapping[entity.uuid] = EntityError::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL;
+                entityErrorMapping[entity.uuid] = {
+                    EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL,
+                    { { ComponentType::COMPONENT_TYPE_RENDERABLE3D, pComponent } },
+                    { }
+                };
             }
         }
         return entityErrorMapping;

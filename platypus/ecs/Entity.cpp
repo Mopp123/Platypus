@@ -1,4 +1,6 @@
 #include "Entity.hpp"
+#include "components/Renderable.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
@@ -19,13 +21,67 @@ namespace platypus
     }
 
 
-    std::string entity_error_to_string(EntityError error)
+    std::string entity_error_type_to_string(EntityErrorType error)
     {
         switch (error)
         {
-            case EntityError::NO_ERROR: return "No error";
-            case EntityError::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL: return "Renderable3D's Mesh and Material assets are incompatible";
+            case EntityErrorType::NO_ERROR: return "";
+            case EntityErrorType::COMPONENT_RENDERABLE3D_MESH_UNAVAILABLE: return "Mesh unavailable";
+            case EntityErrorType::COMPONENT_RENDERABLE3D_MATERIAL_UNAVAILABLE: return "Material unavailable";
+            case EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL: return "Incompatible Mesh and Material";
         }
+    }
+
+
+    void handle_mesh_unavailable_error(Scene* pScene, EntityError error)
+    {
+        PLATYPUS_ASSERT(error.type == EntityErrorType::COMPONENT_RENDERABLE3D_MESH_UNAVAILABLE);
+        PLATYPUS_ASSERT(error.targetComponents.size() == 1);
+        uint32_t componentType = error.targetComponents.begin()->first;
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+
+        Mesh* pErrorMesh = Application::get_instance()->getAssetManager()->getErrorMesh();
+        PLATYPUS_ASSERT(pErrorMesh);
+
+        void* pRenderableComponent = error.targetComponents.begin()->second;
+        Renderable3D* pRenderable = reinterpret_cast<Renderable3D*>(pRenderableComponent);
+        pRenderable->meshID = pErrorMesh->getID();
+    }
+
+
+    void handle_material_unavailable_error(Scene* pScene, EntityError error)
+    {
+        PLATYPUS_ASSERT(error.type == EntityErrorType::COMPONENT_RENDERABLE3D_MATERIAL_UNAVAILABLE);
+        PLATYPUS_ASSERT(error.targetComponents.size() == 1);
+        uint32_t componentType = error.targetComponents.begin()->first;
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+
+        Material* pErrorMaterial = Application::get_instance()->getAssetManager()->getErrorMaterial();
+        PLATYPUS_ASSERT(pErrorMaterial);
+
+        void* pRenderableComponent = error.targetComponents.begin()->second;
+        Renderable3D* pRenderable = reinterpret_cast<Renderable3D*>(pRenderableComponent);
+        pRenderable->materialID = pErrorMaterial->getID();
+    }
+
+
+    void handle_incompatible_mesh_material_error(Scene* pScene, EntityError error)
+    {
+        PLATYPUS_ASSERT(error.type == EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL);
+        PLATYPUS_ASSERT(error.targetComponents.size() == 1);
+        uint32_t componentType = error.targetComponents.begin()->first;
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Mesh* pErrorMesh = pAssetManager->getErrorMesh();
+        Material* pErrorMaterial = pAssetManager->getErrorMaterial();
+        PLATYPUS_ASSERT(pErrorMesh);
+        PLATYPUS_ASSERT(pErrorMaterial);
+
+        void* pRenderableComponent = error.targetComponents.begin()->second;
+        Renderable3D* pRenderable = reinterpret_cast<Renderable3D*>(pRenderableComponent);
+        pRenderable->meshID = pErrorMesh->getID();
+        pRenderable->materialID = pErrorMaterial->getID();
     }
 
 

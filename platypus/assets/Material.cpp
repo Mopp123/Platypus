@@ -157,19 +157,6 @@ namespace platypus
         _uniformBufferData.textureProperties.z = textureScale.x;
         _uniformBufferData.textureProperties.w = textureScale.y;
 
-        // Check for Renderable3Ds' Mesh/Material incompatibility errors
-        // NOTE: JUST TESTING ATM!
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        std::unordered_map<UUID_t, EntityError> incompatibilityErrors = query_renderable3D_compatibility_errors(
-            pScene,
-            this
-        );
-        if (!incompatibilityErrors.empty())
-        {
-            for (std::pair<UUID_t, EntityError> error : incompatibilityErrors)
-                pScene->insertError(error.first, error.second);
-        }
-
         // ISSUE!
         // *If recreating completely, need to solve descriptor set layouts for the pipelines of
         // each mesh type if exists!
@@ -810,16 +797,41 @@ namespace platypus
         memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        memcpy(pBuf + pos, &_blendmapTextureID, sizeof(UUID_t));
+        UUID_t useBlendmapID = _blendmapTextureID;
+        const Asset* pErrorTexture = Application::get_instance()->getAssetManager()->getErrorTexture();
+        PLATYPUS_ASSERT(pErrorTexture);
+        const UUID_t errorTextureID = pErrorTexture->getID();
+
+        if (useBlendmapID == errorTextureID)
+            useBlendmapID = NULL_UUID;
+
+        const size_t texturesPerChannel = PE_MATERIAL_TEX_CHANNEL_SLOTS;
+        const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
+
+        UUID_t useDiffuseTextureIDs[texturesPerChannel];
+        UUID_t useSpecularTextureIDs[texturesPerChannel];
+        UUID_t useNormalTextureIDs[texturesPerChannel];
+        memcpy(&useDiffuseTextureIDs, _diffuseTextureIDs, textureChannelSize);
+        memcpy(&useSpecularTextureIDs, _specularTextureIDs, textureChannelSize);
+        memcpy(&useNormalTextureIDs, _normalTextureIDs, textureChannelSize);
+        for (size_t slot = 0; slot < texturesPerChannel; ++slot)
+        {
+            if (useDiffuseTextureIDs[slot] == errorTextureID)
+                useDiffuseTextureIDs[slot] = errorTextureID;
+            if (useSpecularTextureIDs[slot] == errorTextureID)
+                useSpecularTextureIDs[slot] = errorTextureID;
+            if (useNormalTextureIDs[slot] == errorTextureID)
+                useNormalTextureIDs[slot] = errorTextureID;
+        }
+
+        memcpy(pBuf + pos, &useBlendmapID, sizeof(UUID_t));
         pos += sizeof(UUID_t);
 
-        const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
-        const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
-        memcpy(pBuf + pos, &_diffuseTextureIDs, textureChannelSize);
+        memcpy(pBuf + pos, &useDiffuseTextureIDs, textureChannelSize);
         pos += textureChannelSize;
-        memcpy(pBuf + pos, &_specularTextureIDs, textureChannelSize);
+        memcpy(pBuf + pos, &useSpecularTextureIDs, textureChannelSize);
         pos += textureChannelSize;
-        memcpy(pBuf + pos, &_normalTextureIDs, textureChannelSize);
+        memcpy(pBuf + pos, &useNormalTextureIDs, textureChannelSize);
         pos += textureChannelSize;
 
         memset(pBuf + pos, 0, asset_metadata_name_size);
@@ -829,6 +841,10 @@ namespace platypus
         PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
     }
 
+    // NOTE: IMPORTANT!
+    //  *If used error textures in some channels' slots, there's no serialized info
+    //  which of those slots are unused and which are using error textures!
+    // TODO: Need some static predefined UUID_t for error assets!
     Material* Material::create_from_metadata_buffer(
         AssetManager* pAssetManager,
         const std::vector<char>& targetBuffer,
@@ -1093,6 +1109,7 @@ namespace platypus
 
     void Material::updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex)
     {
+        Device::wait_for_operations();
         DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
         for (DescriptorSet& descriptorSet : _descriptorSets)
         {

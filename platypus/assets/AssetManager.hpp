@@ -229,6 +229,9 @@ namespace platypus
         bool nameAvailable(const std::string& name) const;
 
         inline size_t getAssetTotalCount() const { return _assets.size(); }
+
+        inline Image* getErrorImage() const { return _pErrorImage; }
+
         inline Texture* getWhiteTexture() const { return _pWhiteTexture; }
         inline Texture* getBlackTexture() const { return _pBlackTexture; }
         inline Texture* getZeroTexture() const { return _pZeroTexture; }

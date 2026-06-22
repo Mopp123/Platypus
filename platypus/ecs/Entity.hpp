@@ -1,6 +1,6 @@
 #pragma once
-
 #include "platypus/utils/UUID.hpp"
+#include "platypus/assets/Asset.hpp"
 #include <vector>
 #include <cstdint>
 
@@ -22,13 +22,27 @@ namespace platypus
     constexpr size_t serialized_entities_header_size = sizeof(uint32_t);
 
 
-    enum class EntityError : uint32_t
+    enum class EntityErrorType : uint32_t
     {
         NO_ERROR = 0,
+        COMPONENT_RENDERABLE3D_MESH_UNAVAILABLE,
+        COMPONENT_RENDERABLE3D_MATERIAL_UNAVAILABLE,
         COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL
     };
 
-    std::string entity_error_to_string(EntityError error);
+    std::string entity_error_type_to_string(EntityErrorType error);
+
+    struct EntityError
+    {
+        EntityErrorType type;
+        // pair's first = ComponentType!
+        std::set<std::pair<uint32_t, void*>> targetComponents;
+        std::set<Asset*> targetAssets;
+    };
+
+    void handle_mesh_unavailable_error(Scene* pScene, EntityError error);
+    void handle_material_unavailable_error(Scene* pScene, EntityError error);
+    void handle_incompatible_mesh_material_error(Scene* pScene, EntityError error);
 
 
     struct Entity
