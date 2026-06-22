@@ -42,7 +42,13 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
-        glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+
+        // Hyprland issues...
+        // TODO: Figure out some way to create resizable floating windows in Hyprland...
+        bool floatingStaticWindow = !resizable && (mode != WindowMode::FULLSCREEN);
+        if (floatingStaticWindow)
+            glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
         // TODO: Fullscreen support?
@@ -53,6 +59,7 @@ namespace platypus
             mode == WindowMode::FULLSCREEN ? glfwGetPrimaryMonitor() : NULL,
             NULL
         );
+
         if (!pGLFWwindow)
         {
             const char* errDescription;
@@ -66,6 +73,15 @@ namespace platypus
             );
             glfwTerminate();
             PLATYPUS_ASSERT(false);
+        }
+
+        // If non resizable floating window, at least on Hyprland, need to set the
+        // window size after creation or fucks up the scale...
+        // TODO: Test with other window managers!
+        if (floatingStaticWindow)
+        {
+            glfwSetWindowSizeLimits(pGLFWwindow, _width, _height, _width, _height);
+            glfwSetWindowSize(pGLFWwindow, _width, _height);
         }
 
         _pImpl = new WindowImpl;
