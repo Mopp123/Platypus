@@ -94,7 +94,8 @@ namespace platypus
                 const Layout* pLayout,
                 bool createRenderable,
                 UUID_t textureID = NULL_UUID,
-                UIElement::OnClickEvent* pOnClickEvent = nullptr
+                void(*pOnClick)(MouseButtonName, InputAction, void*) = nullptr,
+                void* pOnClickUserData = nullptr
             );
 
             Text* createText(
@@ -116,18 +117,24 @@ namespace platypus
                 const Layout* pTextLayout,
                 const std::string& text,
                 const Font* pFont,
-                UIElement::OnClickEvent* pOnClick,
-                UIElement::MouseEnterEvent* pOnEnter = nullptr,
-                UIElement::MouseExitEvent* pOnExit = nullptr
+                void(*pOnClick)(MouseButtonName, InputAction, void*),
+                void* pOnClickUserData,
+                void(*pOnMouseEnter)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseEnterUserData = nullptr,
+                void(*pOnMouseExit)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseExitUserData = nullptr
             );
 
             Button* createButton(
                 UIElement* pParent,
                 const std::string& text,
                 const Font* pFont,
-                UIElement::OnClickEvent* pOnClick,
-                UIElement::MouseEnterEvent* pOnEnter = nullptr,
-                UIElement::MouseExitEvent* pOnExit = nullptr
+                void(*pOnClick)(MouseButtonName, InputAction, void*),
+                void* pOnClickUserData,
+                void(*pOnMouseEnter)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseEnterUserData = nullptr,
+                void(*pOnMouseExit)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseExitUserData = nullptr
             );
 
             Checkbox* createCheckbox(

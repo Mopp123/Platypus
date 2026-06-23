@@ -25,55 +25,23 @@ namespace platypus
             UIManager& _managerRef;
 
         public:
-            class MouseEnterEvent
-            {
-            public:
-                virtual ~MouseEnterEvent() {}
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class MouseOverEvent
-            {
-            public:
-                virtual ~MouseOverEvent() {}
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class MouseExitEvent
-            {
-            public:
-                virtual ~MouseExitEvent() {}
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class DragEvent
-            {
-            protected:
-                // *Where the dragging begins..
-                int _beginX = 0;
-                int _beginY = 0;
-
-            public:
-                virtual ~DragEvent() {}
-                inline void setBeginPos(int x, int y) { _beginX = x, _beginY = y; }
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class OnClickEvent
-            {
-            public:
-                virtual ~OnClickEvent() {}
-                virtual void func(MouseButtonName button, InputAction action) = 0;
-            };
-
             Vector2f _previousItemPosition;
             Vector2f _previousItemScale;
 
-            MouseEnterEvent* _pMouseEnterEvent = nullptr;
-            MouseOverEvent* _pMouseOverEvent = nullptr;
-            MouseExitEvent* _pMouseExitEvent = nullptr;
-            DragEvent* _pDragEvent = nullptr;
-            OnClickEvent* _pOnClickEvent = nullptr;
+            void(*_pOnClick)(MouseButtonName, InputAction, void*) = nullptr;
+            void* _pOnClickUserData = nullptr;
+
+            void(*_pOnMouseEnter)(int, int, void*) = nullptr;
+            void* _pOnMouseEnterUserData = nullptr;
+
+            void(*_pOnMouseOver)(int, int, void*) = nullptr;
+            void* _pOnMouseOverUserData = nullptr;
+
+            void(*_pOnMouseExit)(int, int, void*) = nullptr;
+            void* _pOnMouseExitUserData = nullptr;
+
+            void(*_pOnDrag)(int, int, void*) = nullptr;
+            void* _pOnDragUserData = nullptr;
 
         protected:
             friend class UIManager;
@@ -130,6 +98,7 @@ namespace platypus
 
             bool _isCursorOver = false;
             bool _dragged = false;
+            Vector2f _dragBeginPos;
             bool _selected = false; // NOTE: this is atm only used by InputField
             bool _groupRoot = false;
 
@@ -147,7 +116,8 @@ namespace platypus
                 bool createRenderable,
                 UUID_t textureID,
                 const Font* pFont,
-                OnClickEvent* pOnClickEvent,
+                void(*pOnClick)(MouseButtonName, InputAction, void*),
+                void* pOnClickUserData,
                 bool ignoreInput = false
             );
 
@@ -231,6 +201,8 @@ namespace platypus
             inline bool isCursorOver() const { return _isCursorOver; }
             inline bool isSelected() const { return _selected; }
             inline bool isUpdatePending() const { return _updatePending; }
+            inline Vector2f getDragBeginPos() const { return _dragBeginPos; }
+            inline void setDragBeginPos(int mx, int my) { _dragBeginPos.x = static_cast<float>(mx); _dragBeginPos.y = static_cast<float>(my); }
 
             static void add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
             static void remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);

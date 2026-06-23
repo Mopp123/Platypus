@@ -26,7 +26,8 @@ namespace platypus
                 false,
                 NULL_UUID,
                 pFont,
-                nullptr,
+                nullptr, // pOnClick
+                nullptr, // pOnClickUserData
                 true // NOTE: All mouse input is ignored for Text atm!! TODO: ALLOW MORE CONTROL OVER THIS!
             ),
             _fullStr(txt)

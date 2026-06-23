@@ -39,8 +39,8 @@ namespace platypus
                         if (_pElement->_isCursorOver)
                         {
                             remove_from_cursor_over_layers(elementAbsoluteLayer, _pElement->getEntityID());
-                            if (_pElement->_pMouseExitEvent)
-                                _pElement->_pMouseExitEvent->func(x, y);
+                            if (_pElement->_pOnMouseExit)
+                                _pElement->_pOnMouseExit(x, y, _pElement->_pOnMouseExitUserData);
                         }
                         _pElement->_isCursorOver = false;
                     }
@@ -48,12 +48,12 @@ namespace platypus
                     {
                         if (!_pElement->_isCursorOver)
                         {
-                            if (_pElement->_pMouseEnterEvent)
-                                _pElement->_pMouseEnterEvent->func(x, y);
+                            if (_pElement->_pOnMouseEnter)
+                                _pElement->_pOnMouseEnter(x, y, _pElement->_pOnMouseEnterUserData);
                         }
 
-                        if (_pElement->_pMouseOverEvent)
-                            _pElement->_pMouseOverEvent->func(x, y);
+                        if (_pElement->_pOnMouseOver)
+                            _pElement->_pOnMouseOver(x, y, _pElement->_pOnMouseOverUserData);
 
                         _pElement->_isCursorOver = true;
                     }
@@ -62,16 +62,16 @@ namespace platypus
                 {
                     if (_pElement->_isCursorOver)
                     {
-                        if (_pElement->_pMouseExitEvent)
-                            _pElement->_pMouseExitEvent->func(x, y);
+                        if (_pElement->_pOnMouseExit)
+                            _pElement->_pOnMouseExit(x, y, _pElement->_pOnMouseExitUserData);
                     }
                     _pElement->_isCursorOver = false;
                     remove_from_cursor_over_layers(elementAbsoluteLayer, _pElement->getEntityID());
                 }
             }
 
-            if (_pElement->_pDragEvent && _pElement->_dragged)
-                _pElement->_pDragEvent->func(x, y);
+            if (_pElement->_pOnDrag && _pElement->_dragged)
+                _pElement->_pOnDrag(x, y, _pElement->_pOnDragUserData);
         }
 
 
@@ -86,9 +86,8 @@ namespace platypus
 
             if (_pElement->_isCursorOver)
             {
-                UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
-                if (pOnClickEvent)
-                    pOnClickEvent->func(button, action);
+                if (_pElement->_pOnClick)
+                    (*_pElement->_pOnClick)(button, action, _pElement->_pOnClickUserData);
 
                 UIElement* pParent = _pElement->_pParent;
                 if (pParent)
@@ -101,13 +100,13 @@ namespace platypus
                 }
 
                 // If drag event -> get where the dragging begins..
-                if (_pElement->_pDragEvent && !_pElement->_dragged)
+                if (_pElement->_pOnDrag && !_pElement->_dragged)
                 {
                     InputManager& inputManager = Application::get_instance()->getInputManager();
-                    _pElement->_pDragEvent->setBeginPos(
-                        inputManager.getMouseX(),
-                        inputManager.getMouseY()
-                    );
+                    _pElement->_dragBeginPos = {
+                        static_cast<float>(inputManager.getMouseX()),
+                        static_cast<float>(inputManager.getMouseY())
+                    };
                 }
                 _pElement->_dragged = true;
             }
@@ -125,11 +124,13 @@ namespace platypus
             bool createRenderable,
             UUID_t textureID,
             const Font* pFont,
-            OnClickEvent* pOnClickEvent,
+            void(*pOnClick)(MouseButtonName, InputAction, void*),
+            void* pOnClickUserData,
             bool ignoreInput
         ) :
             _managerRef(uiManager),
-            _pOnClickEvent(pOnClickEvent),
+            _pOnClick(pOnClick),
+            _pOnClickUserData(pOnClickUserData),
             _layoutID(pLayout->id),
             _pFont(pFont)
         {
@@ -213,17 +214,6 @@ namespace platypus
         UIElement::~UIElement()
         {
             remove_from_cursor_over_layers(_absoluteLayer, _entityID);
-
-            if (_pMouseEnterEvent)
-                delete _pMouseEnterEvent;
-            if (_pMouseOverEvent)
-                delete _pMouseOverEvent;
-            if (_pMouseExitEvent)
-                delete _pMouseExitEvent;
-            if (_pDragEvent)
-                delete _pDragEvent;
-            if (_pOnClickEvent)
-                delete _pOnClickEvent;
 
             Application* pApp = Application::get_instance();
             InputManager& inputManager = pApp->getInputManager();

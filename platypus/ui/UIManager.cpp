@@ -179,7 +179,8 @@ namespace platypus
             const Layout* pLayout,
             bool createRenderable,
             UUID_t textureID,
-            UIElement::OnClickEvent* pOnClickEvent
+            void(*pOnClick)(MouseButtonName, InputAction, void*),
+            void* pOnClickUserData
         )
         {
             UIElement* pElement = new UIElement(
@@ -189,7 +190,8 @@ namespace platypus
                 createRenderable,
                 textureID,
                 nullptr, // font
-                pOnClickEvent
+                pOnClick,
+                pOnClickUserData
             );
             // *Need to update the "tree" even if contains only single element
             // so that scale and pos is immediately correct..
@@ -244,9 +246,12 @@ namespace platypus
             const Layout* pTextLayout,
             const std::string& text,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClick,
-            UIElement::MouseEnterEvent* pOnEnter,
-            UIElement::MouseExitEvent* pOnExit
+            void(*pOnClick)(MouseButtonName, InputAction, void*),
+            void* pOnClickUserData,
+            void(*pOnMouseEnter)(int mx, int my, void* pUserData),
+            void* pOnMouseEnterUserData,
+            void(*pOnMouseExit)(int mx, int my, void* pUserData),
+            void* pOnMouseExitUserData
         )
         {
             Button* pButton = new Button(
@@ -257,8 +262,11 @@ namespace platypus
                 text,
                 pFont,
                 pOnClick,
-                pOnEnter,
-                pOnExit
+                pOnClickUserData,
+                pOnMouseEnter,
+                pOnMouseEnterUserData,
+                pOnMouseExit,
+                pOnMouseExitUserData
             );
 
             if (!pParent)
@@ -273,9 +281,12 @@ namespace platypus
             UIElement* pParent,
             const std::string& text,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClick,
-            UIElement::MouseEnterEvent* pOnEnter,
-            UIElement::MouseExitEvent* pOnExit
+            void(*pOnClick)(MouseButtonName, InputAction, void*),
+            void* pOnClickUserData,
+            void(*pOnMouseEnter)(int mx, int my, void* pUserData),
+            void* pOnMouseEnterUserData,
+            void(*pOnMouseExit)(int mx, int my, void* pUserData),
+            void* pOnMouseExitUserData
         )
         {
             return createButton(
@@ -285,8 +296,11 @@ namespace platypus
                 text,
                 pFont,
                 pOnClick,
-                pOnEnter,
-                pOnExit
+                pOnClickUserData,
+                pOnMouseEnter,
+                pOnMouseEnterUserData,
+                pOnMouseExit,
+                pOnMouseExitUserData
             );
         }
 

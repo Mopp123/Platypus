@@ -11,20 +11,22 @@ namespace platypus
 {
     namespace ui
     {
-        void InputField::MouseEnterEvent::func(int mx, int my)
+        void on_mouse_enter_input_field_default(int mx, int my, void* pUserData)
         {
-            Button* pButton = _inputFieldRef._pButton;
+            InputField* pInputField = reinterpret_cast<InputField*>(pUserData);
+            Button* pButton = pInputField->_pButton;
             GUIRenderable* pButtonRenderable = pButton->getRenderable();
-            if (pButtonRenderable && !_inputFieldRef.isSelected())
+            if (pButtonRenderable && !pInputField->isSelected())
                 pButtonRenderable->color = pButton->getLayout()->colors.hover;
         }
 
 
-        void InputField::MouseExitEvent::func(int mx, int my)
+        void on_mouse_exit_input_field_default(int mx, int my, void* pUserData)
         {
-            Button* pButton = _inputFieldRef._pButton;
+            InputField* pInputField = reinterpret_cast<InputField*>(pUserData);
+            Button* pButton = pInputField->_pButton;
             GUIRenderable* pButtonRenderable = pButton->getRenderable();
-            if (pButtonRenderable && !_inputFieldRef.isSelected())
+            if (pButtonRenderable && !pInputField->isSelected())
                 pButtonRenderable->color = pButton->getLayout()->colors.base;
         }
 
@@ -139,8 +141,9 @@ namespace platypus
                false,
                NULL_UUID,
                nullptr,
-               nullptr,
-               false
+               nullptr, // pOnClick
+               nullptr, // pOnClickUserData
+               false // ignore input?
             ),
             _pOnFinishInput(pOnFinishInput),
             _pOnFinishInputUserData(pOnFinishInputUserData),
@@ -176,9 +179,12 @@ namespace platypus
                 pFieldTextLayout,
                 "",
                 pFont,
-                nullptr, //UIElement::OnClickEvent* pOnClick,
-                nullptr, //UIElement::MouseEnterEvent* pOnEnter,
-                nullptr //UIElement::MouseExitEvent* pOnExit
+                nullptr, // pOnClick
+                nullptr, // pOnClickUserData
+                &on_mouse_enter_input_field_default,
+                this,
+                &on_mouse_exit_input_field_default,
+                this
             );
 
             // TODO: When adding the functionality to move the cursor, instead of being at the
@@ -195,15 +201,6 @@ namespace platypus
 
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-
-            // ABSOLUTELY DISGUSTING but need to do this this way for now...
-            //  -> The previous ones need to be deleted before assigning these new ones!!!
-            if (_pButton->_pMouseEnterEvent)
-                delete _pButton->_pMouseEnterEvent;
-            if (_pButton->_pMouseExitEvent)
-                delete _pButton->_pMouseExitEvent;
-            _pButton->_pMouseEnterEvent = new InputField::MouseEnterEvent(pScene, *this);
-            _pButton->_pMouseExitEvent = new InputField::MouseExitEvent(pScene, *this);
 
             InputManager& inputManager = pApp->getInputManager();
             inputManager.addMouseButtonEvent(new InputFieldMouseButtonEvent(pScene, *this));

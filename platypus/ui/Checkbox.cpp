@@ -6,12 +6,14 @@ namespace platypus
 {
     namespace ui
     {
-        void Checkbox::OnSelect::func(MouseButtonName button, InputAction action)
+        static void on_click_checkbox(MouseButtonName button, InputAction action, void* pUserData)
         {
             if (button == MouseButtonName::MOUSE_LEFT && action == InputAction::PRESS)
-                _checkboxRef.setChecked(!_checkboxRef.isChecked());
+            {
+                Checkbox* pCheckbox = reinterpret_cast<Checkbox*>(pUserData);
+                pCheckbox->setChecked(!pCheckbox->isChecked());
+            }
         }
-
 
         Checkbox::Checkbox(
             UIManager& uiManager,
@@ -30,7 +32,8 @@ namespace platypus
                 false,
                 NULL_UUID,
                 nullptr,
-                nullptr,
+                nullptr, // pOnClick
+                nullptr, // pOnClickUserData
                 false // ignore input?
             )
         {
@@ -47,7 +50,8 @@ namespace platypus
                 pButtonTextLayout,
                 "",
                 pFont,
-                new OnSelect(*this)
+                &on_click_checkbox,
+                this
             );
             triggerFullTreeUpdate();
         }

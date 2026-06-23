@@ -12,29 +12,6 @@ namespace platypus
         class Button : public UIElement
         {
         private:
-            // NOTE: WARNING! Not sure if these MouseEnter and Exit events' names
-            // are ambiguous here, since UIElement has those too...
-            //  ...that should be separate namespace tho?
-            class MouseEnterEvent : public UIElement::MouseEnterEvent
-            {
-            private:
-                Button& _buttonRef;
-
-            public:
-                MouseEnterEvent(Button& button) : _buttonRef(button) { }
-                virtual void func(int mx, int my);
-            };
-
-            class MouseExitEvent : public UIElement::MouseExitEvent
-            {
-            private:
-                Button& _buttonRef;
-
-            public:
-                MouseExitEvent(Button& button) : _buttonRef(button) { }
-                virtual void func(int mx, int my);
-            };
-
             Text* _pText = nullptr;
 
         protected:
@@ -48,9 +25,12 @@ namespace platypus
                 const Layout* pTextLayout,
                 const std::string& text,
                 const Font* pFont,
-                UIElement::OnClickEvent* pOnClick,
-                UIElement::MouseEnterEvent* pOnEnter = nullptr,
-                UIElement::MouseExitEvent* pOnExit = nullptr
+                void(*pOnClick)(MouseButtonName, InputAction, void*),
+                void* pOnClickUserData,
+                void(*pOnMouseEnter)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseEnterUserData = nullptr,
+                void(*pOnMouseExit)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseExitUserData = nullptr
             );
             ~Button() { }
 
@@ -61,6 +41,10 @@ namespace platypus
 
             void reset();
             inline Text* getText() { return _pText; }
+
+        private:
+            friend void on_mouse_enter_button_default(int mx, int my, void* pUserData);
+            friend void on_mouse_exit_button_default(int mx, int my, void* pUserData);
         };
     }
 }

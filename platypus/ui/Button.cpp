@@ -10,45 +10,47 @@ namespace platypus
 {
     namespace ui
     {
-        void Button::MouseEnterEvent::func(int mx, int my)
+        void on_mouse_enter_button_default(int mx, int my, void* pUserData)
         {
+            Button* pButton = reinterpret_cast<Button*>(pUserData);
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef.getEntityID(),
+                pButton->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             GUIRenderable* pTextRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef._pText->getEntityID(),
+                pButton->_pText->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
 
             if (pBoxRenderable)
-                pBoxRenderable->color = _buttonRef.getLayout()->colors.hover;
+                pBoxRenderable->color = pButton->getLayout()->colors.hover;
             if (pTextRenderable)
-                pTextRenderable->color = _buttonRef._pText->getLayout()->colors.hover;
+                pTextRenderable->color = pButton->_pText->getLayout()->colors.hover;
         }
 
-        void Button::MouseExitEvent::func(int mx, int my)
+        void on_mouse_exit_button_default(int mx, int my, void* pUserData)
         {
+            Button* pButton = reinterpret_cast<Button*>(pUserData);
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
             GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef.getEntityID(),
+                pButton->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             GUIRenderable* pTextRenderable = (GUIRenderable*)pScene->getComponent(
-                _buttonRef._pText->getEntityID(),
+                pButton->_pText->getEntityID(),
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
 
-            if (_buttonRef.isSelected())
+            if (pButton->isSelected())
             {
-                pBoxRenderable->color = _buttonRef.getLayout()->colors.selected;
-                pTextRenderable->color = _buttonRef._pText->getLayout()->colors.selected;
+                pBoxRenderable->color = pButton->getLayout()->colors.selected;
+                pTextRenderable->color = pButton->_pText->getLayout()->colors.selected;
             }
             else
             {
-                pBoxRenderable->color = _buttonRef.getLayout()->colors.base;
-                pTextRenderable->color = _buttonRef._pText->getLayout()->colors.base;
+                pBoxRenderable->color = pButton->getLayout()->colors.base;
+                pTextRenderable->color = pButton->_pText->getLayout()->colors.base;
             }
         }
 
@@ -59,9 +61,12 @@ namespace platypus
             const Layout* pTextLayout,
             const std::string& text,
             const Font* pFont,
-            UIElement::OnClickEvent* pOnClick,
-            UIElement::MouseEnterEvent* pOnEnter,
-            UIElement::MouseExitEvent* pOnExit
+            void(*pOnClick)(MouseButtonName, InputAction, void*),
+            void* pOnClickUserData,
+            void(*pOnMouseEnter)(int mx, int my, void* pUserData),
+            void* pOnMouseEnterUserData,
+            void(*pOnMouseExit)(int mx, int my, void* pUserData),
+            void* pOnMouseExitUserData
         ) :
             UIElement(
                 uiManager,
@@ -70,7 +75,8 @@ namespace platypus
                 true,
                 NULL_UUID,
                 nullptr,
-                pOnClick
+                pOnClick,
+                pOnClickUserData
             )
         {
             _pText = uiManager.createText(
@@ -80,15 +86,27 @@ namespace platypus
                 pFont
             );
 
-            if (pOnEnter)
-                _pMouseEnterEvent = pOnEnter;
+            if (pOnMouseEnter)
+            {
+                _pOnMouseEnter = pOnMouseEnter;
+                _pOnMouseEnterUserData = pOnMouseEnterUserData;
+            }
             else
-                _pMouseEnterEvent = new Button::MouseEnterEvent(*this);
+            {
+                _pOnMouseEnter = &on_mouse_enter_button_default;
+                _pOnMouseEnterUserData = this;
+            }
 
-            if (pOnExit)
-                _pMouseExitEvent = pOnExit;
+            if (pOnMouseExit)
+            {
+                _pOnMouseExit = pOnMouseExit;
+                _pOnMouseExitUserData = pOnMouseExitUserData;
+            }
             else
-                _pMouseExitEvent = new Button::MouseExitEvent(*this);
+            {
+                _pOnMouseExit = &on_mouse_exit_button_default;
+                _pOnMouseExitUserData = this;
+            }
 
             // Need to update full tree since after adding the
             // text element, the scale changes

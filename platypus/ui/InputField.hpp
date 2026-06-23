@@ -12,34 +12,6 @@ namespace platypus
         class InputField : public UIElement
         {
         private:
-            class MouseEnterEvent : public UIElement::MouseEnterEvent
-            {
-            private:
-                Scene* _pScene = nullptr;
-                InputField& _inputFieldRef;
-            public:
-                MouseEnterEvent(Scene* pScene, InputField& inputField) :
-                    _pScene(pScene),
-                    _inputFieldRef(inputField)
-                {}
-                virtual void func(int mx, int my);
-            };
-
-
-            class MouseExitEvent : public UIElement::MouseExitEvent
-            {
-            private:
-                Scene* _pScene = nullptr;
-                InputField& _inputFieldRef;
-            public:
-                MouseExitEvent(Scene* pScene, InputField& inputField) :
-                    _pScene(pScene),
-                    _inputFieldRef(inputField)
-                {}
-                virtual void func(int mx, int my);
-            };
-
-
             class InputFieldMouseButtonEvent : public MouseButtonEvent
             {
             private:
@@ -132,6 +104,9 @@ namespace platypus
 
         private:
             void setInputMode(bool active);
+
+            friend void on_mouse_enter_input_field_default(int mx, int my, void* pUserData);
+            friend void on_mouse_exit_input_field_default(int mx, int my, void* pUserData);
         };
     }
 }

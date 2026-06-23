@@ -10,16 +10,6 @@ namespace platypus
         class Checkbox : public UIElement
         {
         private:
-            class OnSelect : public UIElement::OnClickEvent
-            {
-            private:
-                Checkbox& _checkboxRef;
-            public:
-                OnSelect(Checkbox& checkboxRef) : _checkboxRef(checkboxRef) { }
-                virtual ~OnSelect() {}
-                virtual void func(MouseButtonName button, InputAction action);
-            };
-
             Text* _pText = nullptr;
             Button* _pButton = nullptr;
         public:
