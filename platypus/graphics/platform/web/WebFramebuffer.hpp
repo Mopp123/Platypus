@@ -23,7 +23,7 @@ namespace platypus
 
         // *Need this since the actual asset may get destroyed before Framebuffer's destructor in
         // which we'll erase the used depth attachment's ID from the s_boundFramebufferAttachments
-        ID_t originalDepthAttachmentAssetID = NULL_ID;
+        UUID_t originalDepthAttachmentAssetID = NULL_UUID;
         uint32_t copySourceID = 0;
         Texture* pCopyDepthAttachment = nullptr;
     };

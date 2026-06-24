@@ -5,6 +5,7 @@
 #include "WebContext.hpp"
 #include "platypus/Common.h"
 #include <cstdlib>
+#include <cstring>
 
 
 namespace platypus
@@ -126,7 +127,7 @@ namespace platypus
         else
         {
             for (const VertexBufferElement& element : elements)
-                _stride += get_shader_datatype_size(element.getType());
+                _stride += get_shader_datatype_size(element.getDataType());
         }
     }
 
@@ -169,7 +170,7 @@ namespace platypus
 
 
     Buffer::Buffer(
-        void* pData,
+        const void* pData,
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,

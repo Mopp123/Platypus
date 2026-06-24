@@ -159,7 +159,8 @@ namespace platypus
             if (_persistentAssets.find(it->first) == _persistentAssets.end())
             {
                 delete it->second;
-                it->second = nullptr;
+                //it->second = nullptr;
+                _assets[it->first] = nullptr;
             }
         }
         _assets.clear();

@@ -3,6 +3,7 @@
 #include "platypus/assets/Texture.hpp"
 #include "platypus/assets/platform/web/WebTexture.hpp"
 #include "WebContext.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <GL/glew.h>
 
@@ -12,7 +13,7 @@
 namespace platypus
 {
     // First = attachment asset ID, second = framebuffer ID
-    std::unordered_map<ID_t, uint32_t> s_boundFramebufferAttachments;
+    std::unordered_map<UUID_t, uint32_t> s_boundFramebufferAttachments;
 
     // TODO: Deal with attachments individually
     Framebuffer::Framebuffer(
@@ -46,20 +47,22 @@ namespace platypus
         if (_colorAttachments.size() > 0)
             GL_FUNC(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _colorAttachments[0]->getImpl()->id, 0));
 
-        ID_t originalDepthAttachmentAssetID = NULL_ID;
+        UUID_t originalDepthAttachmentAssetID = NULL_UUID;
         Texture* pCopyDepthAttachment = nullptr;
         uint32_t copySourceID = 0;
         uint32_t depthRenderBuffer = 0;
         if (_pDepthAttachment)
         {
+            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
             // If another framebuffer is using the depth attachment, make a copy in which we
             // blit the original when we begin render pass using this framebuffer.
             //  -> so we can sample that attachment
             Texture* pUseDepthAttachment = _pDepthAttachment;
-            std::unordered_map<ID_t, uint32_t>::const_iterator existingIt = s_boundFramebufferAttachments.find(_pDepthAttachment->getID());
+            std::unordered_map<UUID_t, uint32_t>::const_iterator existingIt = s_boundFramebufferAttachments.find(_pDepthAttachment->getID());
             if (existingIt != s_boundFramebufferAttachments.end())
             {
                 pCopyDepthAttachment = new Texture(
+                    pAssetManager->getUUIDPool(),
                     TextureType::DEPTH_TEXTURE,
                     _pDepthAttachment->getTextureSampler(),
                     _pDepthAttachment->getImageFormat(),
@@ -118,7 +121,7 @@ namespace platypus
             }
             else
             {
-                if (_pImpl->originalDepthAttachmentAssetID != NULL_ID)
+                if (_pImpl->originalDepthAttachmentAssetID != NULL_UUID)
                 {
                     if (s_boundFramebufferAttachments.erase(_pImpl->originalDepthAttachmentAssetID) != 1)
                     {

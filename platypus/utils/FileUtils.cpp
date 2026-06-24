@@ -96,7 +96,7 @@ namespace platypus
     }
 
 
-    std::string load_text_file(const std::string& filepath)
+    std::string read_text_file(const std::string& filepath)
     {
         FILE* pFile = fopen(filepath.c_str(), "rb");
         if (!pFile)

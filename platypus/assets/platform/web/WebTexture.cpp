@@ -231,21 +231,42 @@ namespace platypus
         bool persistent
     ) :
         Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
-        _pImage(pImage),
         _pSampler(pSampler)
     {
-        ImageFormat imageFormat = _pImage->getFormat();
-        if (!is_image_format_valid(imageFormat, pImage->getChannels()))
+        _pImpl = new TextureImpl;
+        create(pImage);
+    }
+
+    Texture::~Texture()
+    {
+        fixMaterialsOnDestruction();
+        if (_pImpl)
+        {
+            destroy();
+            delete _pImpl;
+        }
+    }
+
+    void Texture::destroy()
+    {
+        glDeleteTextures(1, &_pImpl->id);
+    }
+
+    void Texture::create(const Image* pImage)
+    {
+        _pImage = pImage;
+        _imageFormat = _pImage->getFormat();
+        if (!is_image_format_valid(_imageFormat, _pImage->getChannels()))
         {
             Debug::log(
                 "@Texture::Texture "
-                "Invalid target format: " + image_format_to_string(imageFormat) + " "
-                "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                "Invalid target format: " + image_format_to_string(_imageFormat) + " "
+                "for image with " + std::to_string(_pImage->getChannels()) + " channels",
                 Debug::MessageType::PLATYPUS_ERROR
             );
         }
 
-        if (!pImage)
+        if (!_pImage)
         {
             Debug::log(
                 "@Texture::Texture "
@@ -255,7 +276,7 @@ namespace platypus
             );
             return;
         }
-        if (!pImage->getData())
+        if (!_pImage->getData())
         {
             Debug::log(
                 "@Texture::Texture "
@@ -270,11 +291,11 @@ namespace platypus
         // -> "desktop opengl" needs to convert this to single red channel
         // UPDATE: This was problem at some point, but might have been fixed by swithcing to
         // WebGL2 (GLES3)?
-        GLint glFormat = to_gl_format(imageFormat);
-        GLint glInternalFormat = to_gl_internal_format(imageFormat);
+        GLint glFormat = to_gl_format(_imageFormat);
+        GLint glInternalFormat = to_gl_internal_format(_imageFormat);
 
-        const int width = pImage->getWidth();
-        const int height = pImage->getHeight();
+        const int width = _pImage->getWidth();
+        const int height = _pImage->getHeight();
 
         uint32_t glTextureID = 0;
         GL_FUNC(glGenTextures(1, &glTextureID));
@@ -288,7 +309,7 @@ namespace platypus
             0,
             glFormat,
             GL_UNSIGNED_BYTE,
-            (const void*)pImage->getData()
+            reinterpret_cast<const void*>(_pImage->getData())
         ));
 
         // Address mode
@@ -353,58 +374,7 @@ namespace platypus
         // NOTE: Not sure why not previously unbinding the texture here??
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
 
-        _pImpl = new TextureImpl;
         _pImpl->id = glTextureID;
-    }
-
-    Texture::~Texture()
-    {
-        fixMaterialsOnDestruction();
-        if (_pImpl)
-        {
-            glDeleteTextures(1, &_pImpl->id);
-            delete _pImpl;
-        }
-    }
-
-    void Texture::destroy()
-    {
-        Debug::log(
-            "Not implemented!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-    }
-
-    void Texture::create(const Image* pImage)
-    {
-        Debug::log(
-            "Not implemented!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-    }
-
-    void Texture::recreate(const Image* pImage, const TextureSampler* pSampler)
-    {
-        Debug::log(
-            "Not implemented!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-    }
-
-    void Texture::recreate(const Image* pImage)
-    {
-        Debug::log(
-            "Not implemented!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
     }
 
 

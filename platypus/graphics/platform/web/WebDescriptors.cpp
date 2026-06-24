@@ -7,13 +7,13 @@ namespace platypus
 {
     static void update_descriptor_pool_set(
         DescriptorPoolImpl* pDescriptorPoolImpl,
-        size_t descriptorSetID,
+        UUID_t descriptorSetID,
         uint32_t binding,
         DescriptorSetComponent component
     )
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSetComponent>>& poolSetData = pDescriptorPoolImpl->descriptorSetData;
-        std::unordered_map<ID_t, std::vector<DescriptorSetComponent>>::iterator it = poolSetData.find(descriptorSetID);
+        std::unordered_map<UUID_t, std::vector<DescriptorSetComponent>>& poolSetData = pDescriptorPoolImpl->descriptorSetData;
+        std::unordered_map<UUID_t, std::vector<DescriptorSetComponent>>::iterator it = poolSetData.find(descriptorSetID);
         if (it == poolSetData.end())
         {
             Debug::log(
@@ -45,7 +45,7 @@ namespace platypus
     // TODO: Make safer?
     DescriptorSetComponent* get_pool_descriptor_set_data(
         DescriptorPoolImpl* pDescriptorPoolImpl,
-        ID_t descriptorSetID,
+        UUID_t descriptorSetID,
         uint32_t binding
     )
     {
@@ -79,11 +79,11 @@ namespace platypus
         return *this;
     }
 
-    //DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout& other)
-    //{
-    //    _bindings = other._bindings;
-    //    return *this;
-    //}
+    DescriptorSetLayout& DescriptorSetLayout::operator=(const DescriptorSetLayout& other)
+    {
+        _bindings = other._bindings;
+        return *this;
+    }
 
     DescriptorSetLayout::~DescriptorSetLayout()
     {
@@ -128,6 +128,16 @@ namespace platypus
         );
     }
 
+    DescriptorPoolImpl::DescriptorPoolImpl()
+    {
+        uuidPool = UUID::occupy_pool();
+    }
+
+    DescriptorPoolImpl::~DescriptorPoolImpl()
+    {
+        UUID::erase_pool(uuidPool);
+    }
+
     DescriptorPool::DescriptorPool(size_t maxDescriptorSets) :
         _maxDescriptorSets(maxDescriptorSets)
     {
@@ -149,7 +159,7 @@ namespace platypus
     )
     {
         DescriptorSet newDescriptorSet;
-        ID_t id = ID::generate();
+        UUID_t id = UUID::generate(_pImpl->uuidPool);
         newDescriptorSet._pImpl->id = id;
         _pImpl->descriptorSetData[id] = components;
         return newDescriptorSet;
@@ -158,10 +168,11 @@ namespace platypus
     // NOTE: No idea if this works properly!
     void DescriptorPool::freeDescriptorSets(const std::vector<DescriptorSet>& descriptorSets)
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSetComponent>>& poolSetData = _pImpl->descriptorSetData;
+        std::unordered_map<UUID_t, std::vector<DescriptorSetComponent>>& poolSetData = _pImpl->descriptorSetData;
+        std::set<UUID_t> idsToErase;
         for (const DescriptorSet& descriptorSet : descriptorSets)
         {
-            std::unordered_map<ID_t, std::vector<DescriptorSetComponent>>::iterator it = poolSetData.find(descriptorSet._pImpl->id);
+            std::unordered_map<UUID_t, std::vector<DescriptorSetComponent>>::iterator it = poolSetData.find(descriptorSet._pImpl->id);
             if (it == poolSetData.end())
             {
                 Debug::log(
@@ -172,8 +183,12 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
                 return;
             }
-            ID::erase(descriptorSet._pImpl->id);
-            poolSetData.erase(it);
+            UUID::erase(descriptorSet._pImpl->id, _pImpl->uuidPool);
+            //poolSetData.erase(it);
+            idsToErase.insert(it->first);
         }
+
+        for (UUID_t idToErase : idsToErase)
+            poolSetData.erase(idToErase);
     }
 }

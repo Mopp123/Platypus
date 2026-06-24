@@ -926,7 +926,6 @@ namespace platypus
 
     void MasterRenderer::handleWindowResize()
     {
-        Debug::log("___TEST___WINDOW RESIZE!");
         Application* pApp = Application::get_instance();
         Device::wait_for_operations();
 

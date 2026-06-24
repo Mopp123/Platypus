@@ -548,7 +548,6 @@ namespace platypus
         bool persistent
     ) :
         Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
-        _pImage(pImage),
         _pSampler(pSampler)
     {
         _pImpl = new TextureImpl;
