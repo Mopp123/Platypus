@@ -138,6 +138,17 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
             }
+            // Not allowing spaces in name atm!
+            if (name.find(" ") != std::string::npos)
+            {
+                Debug::log(
+                    "Invalid entity name: " + name + " "
+                    "name can't currently contain any spaces!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
         }
 
         if (!_freeEntityIDs.empty())
@@ -208,6 +219,17 @@ namespace platypus
 
     void Scene::setEntityName(const std::string& currentName, const std::string& newName)
     {
+        // Not allowing spaces in name atm!
+        if (newName.find(" ") != std::string::npos)
+        {
+            Debug::log(
+                "Invalid entity name: " + newName + " "
+                "name can't currently contain any spaces!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
         #ifdef PLATYPUS_DEBUG
         if (_nameEntityMapping.find(newName) != _nameEntityMapping.end())
         {
