@@ -355,6 +355,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return;
         }
+
         // Check if entity has parent -> remove it from parent's child list
         Parent* pParent = (Parent*)getComponent(
             entityID,
@@ -362,10 +363,18 @@ namespace platypus
             false,
             false
         );
+        // If this entity has parent, first remove this from being child of the parent
+        //
+        // NOTE: HUGE ISSUE HERE + LATER WHEN DESTROYING CHILD ENTITIES
+        //  -> due to "packing children" in remove_child func, indices gets fucked when later
+        //  iterating the child entities
+        //  + When calling remove_child func, it decreases the child count and if iterating from
+        //  parent -> recursion fuckery, it stops iterating earlier than its' supposed to!
+        //
+        //  TODO: Need to think the removal more thoroughtly
         if (pParent)
-        {
             remove_child(pParent->entityID, entityID);
-        }
+
         // Check if entity has children -> destroy those first
         Children* pChildren = (Children*)getComponent(
             entityID,
@@ -375,8 +384,21 @@ namespace platypus
         );
         if (pChildren)
         {
-            for (size_t i = 0; i < pChildren->count; ++i)
+            // NOTE: IMPORTANT to copy the childCount here since the child is about to decrease the
+            // pChildren component's child count in following loop...
+            size_t originalChildCount = pChildren->count;
+            for (size_t i = 0; i < originalChildCount; ++i)
             {
+                // NOTE: Currently this is required since packing children is disabled
+                // in remove_child func atm which would otherwise fuck this iterating completely!
+                if (pChildren->entityIDs[i] == NULL_ENTITY_ID)
+                {
+                    Debug::log(
+                        "   *EntityID was null at index: " + std::to_string(i) + " skipping..."
+                    );
+                    continue;
+                }
+
                 destroyEntity(pChildren->entityIDs[i]);
             }
         }

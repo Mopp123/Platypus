@@ -538,7 +538,6 @@ namespace platypus
         {
             //uint32_t codepoint = (uint32_t)utf8::next(charIterator, tmpStr.end());
             uint32_t codepoint = static_cast<uint32_t>(*charIt);
-            //Debug::log("___TEST___codepoint = " + std::to_string(codepoint));
 
             // Check, do we want to change line? (0xA = '\n')
             if (codepoint == 0xA)
@@ -624,7 +623,6 @@ namespace platypus
             }
         #endif
 
-        Debug::log("___TEST___occupying new batch for layer: " + std::to_string(layer) + " using texture: " + std::to_string(textureID));
         BatchData& batchData = _batches[batchIndex];
         batchData.type = batchType;
         batchData.textureID = textureID;
@@ -678,13 +676,13 @@ namespace platypus
             //PLATYPUS_ASSERT(false);
         }
 
-        Debug::log(
-            "@GUIRenderer::freeBatch "
-            "Freed batch from layer: " + std::to_string(layer) +" "
-            "using textureID: " + std::to_string(textureID) + " "
-            "remaining layer batches: " + std::to_string(_toRender[layer].size()),
-            Debug::MessageType::PLATYPUS_WARNING
-        );
+        //Debug::log(
+        //    "@GUIRenderer::freeBatch "
+        //    "Freed batch from layer: " + std::to_string(layer) +" "
+        //    "using textureID: " + std::to_string(textureID) + " "
+        //    "remaining layer batches: " + std::to_string(_toRender[layer].size()),
+        //    Debug::MessageType::PLATYPUS_WARNING
+        //);
 
         return true;
     }

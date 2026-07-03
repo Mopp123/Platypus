@@ -551,7 +551,12 @@ namespace platypus
                         "Children component destroyed"
                     );
                 }
-                pack_children(pChildren, i);
+                // NOTE: packing kind of fucked up hierarchical entity destruction in Scene's
+                // destroyEntity(entityID_t)
+                // TODO: Figure out is it safe to get rid of pack_children()!
+                // CONTINUE HERE!
+                PLATYPUS_ASSERT(false);
+                //pack_children(pChildren, i);
                 return;
             }
         }
