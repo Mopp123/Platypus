@@ -543,27 +543,16 @@ namespace platypus
                 pChildren->entityIDs[i] = NULL_ENTITY_ID;
                 pChildren->count -= 1;
                 if (pChildren->count == 0)
-                {
                     pUseScene->destroyComponent(target, ComponentType::COMPONENT_TYPE_CHILDREN);
-                    Debug::log(
-                        "@remove_child "
-                        "Last child of entity: " + std::to_string(target) + " destroyed. "
-                        "Children component destroyed"
-                    );
-                }
-                // NOTE: packing kind of fucked up hierarchical entity destruction in Scene's
-                // destroyEntity(entityID_t)
-                // TODO: Figure out is it safe to get rid of pack_children()!
-                // CONTINUE HERE!
-                PLATYPUS_ASSERT(false);
-                //pack_children(pChildren, i);
+
+                pack_children(pChildren, i);
                 return;
             }
         }
         Debug::log(
-            "@remove_child "
             "No child entity found with ID: " + std::to_string(child) + " "
             "from parent entity: " + std::to_string(target),
+            PLATYPUS_CURRENT_FUNC_NAME,
             Debug::MessageType::PLATYPUS_ERROR
         );
         PLATYPUS_ASSERT(false);
@@ -577,10 +566,10 @@ namespace platypus
         if (pChildren->count >= PLATYPUS_MAX_CHILD_ENTITIES)
         {
             Debug::log(
-                "@defrag_children "
                 "Child count (" + std::to_string(pChildren->count) + ") "
                 "exceeded maximum limit (" + std::to_string(PLATYPUS_MAX_CHILD_ENTITIES) + ") "
                 "THIS SHOULD NEVER HAPPEN WHEN CALLING THIS FUCNTION! YOU'VE DONE FUCKED UP!",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);

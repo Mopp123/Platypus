@@ -356,6 +356,9 @@ namespace platypus
             return;
         }
 
+        std::string entityName = getEntityName(entityID);
+        Debug::log("___TEST___DESTROYING ENTITY: " + entityName);
+
         // Check if entity has parent -> remove it from parent's child list
         Parent* pParent = (Parent*)getComponent(
             entityID,
@@ -364,43 +367,27 @@ namespace platypus
             false
         );
         // If this entity has parent, first remove this from being child of the parent
-        //
-        // NOTE: HUGE ISSUE HERE + LATER WHEN DESTROYING CHILD ENTITIES
-        //  -> due to "packing children" in remove_child func, indices gets fucked when later
-        //  iterating the child entities
-        //  + When calling remove_child func, it decreases the child count and if iterating from
-        //  parent -> recursion fuckery, it stops iterating earlier than its' supposed to!
-        //
-        //  TODO: Need to think the removal more thoroughtly
         if (pParent)
             remove_child(pParent->entityID, entityID);
 
         // Check if entity has children -> destroy those first
-        Children* pChildren = (Children*)getComponent(
+        void* pChildrenComponent = getComponent(
             entityID,
             ComponentType::COMPONENT_TYPE_CHILDREN,
             false,
             false
         );
-        if (pChildren)
+        if (pChildrenComponent)
         {
-            // NOTE: IMPORTANT to copy the childCount here since the child is about to decrease the
-            // pChildren component's child count in following loop...
-            size_t originalChildCount = pChildren->count;
-            for (size_t i = 0; i < originalChildCount; ++i)
-            {
-                // NOTE: Currently this is required since packing children is disabled
-                // in remove_child func atm which would otherwise fuck this iterating completely!
-                if (pChildren->entityIDs[i] == NULL_ENTITY_ID)
-                {
-                    Debug::log(
-                        "   *EntityID was null at index: " + std::to_string(i) + " skipping..."
-                    );
-                    continue;
-                }
-
-                destroyEntity(pChildren->entityIDs[i]);
-            }
+            // NOTE: POSSIBLE DANGER!
+            // *This works atm because earlier calling the remove_child which packs the pChildren
+            // child IDs so that they are always contiguous starting from 0 index and
+            // it also decreases the child count -> so destroy the the child entity[0] until count
+            // goes to 0
+            //  -> Probably fuck stuff up in the future because u forget this:D
+            Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
+            while (pChildren->count != 0)
+                destroyEntity(pChildren->entityIDs[0]);
         }
 
         // Destroy/free all this entity's components

@@ -6,6 +6,8 @@
 #include "platypus/core/Scene.hpp"
 #include <vector>
 
+// This is quite low...
+// TODO: Figure out better way to set limits like this..
 #define PLATYPUS_MAX_CHILD_ENTITIES 10
 
 namespace platypus
@@ -117,7 +119,7 @@ namespace platypus
     void add_child(entityID_t target, entityID_t child, Scene* pScene = nullptr);
     void remove_child(entityID_t target, entityID_t child, Scene* pScene = nullptr);
     // Moves all children after freedPosition, so that all child IDs are contiguous.
-    // Calling this assumes that there was only a single gap in contiguous IDs!
+    // Calling this assumes that there was only a single gap in child entity IDs!
     void pack_children(Children* pChildren, size_t freedPosition);
 
     std::vector<char> serialize(const Transform* pTransform);
