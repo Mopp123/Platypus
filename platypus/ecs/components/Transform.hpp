@@ -20,14 +20,16 @@ namespace platypus
         sizeof(ComponentType) +
         sizeof(Vector2f) * 2;
 
+    // NOTE: IMPORTANT!
+    // serialized Parent and Children components has their target entities as UUIDs NOT entityID_t!!!
     constexpr size_t serialized_parent_size =
         sizeof(ComponentType) +
-        sizeof(entityID_t);
+        sizeof(UUID_t);
 
     constexpr size_t serialized_children_size =
         sizeof(ComponentType) +
         sizeof(size_t) +
-        sizeof(entityID_t) * PLATYPUS_MAX_CHILD_ENTITIES;
+        sizeof(UUID_t) * PLATYPUS_MAX_CHILD_ENTITIES;
 
     struct Transform
     {

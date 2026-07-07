@@ -845,6 +845,7 @@ namespace platypus
             pos += sizeof(entityID_t);
         }
 
-        *ppChildren = create_children(entityID, childEntityIDs, pScene, true);
+        Children* pChildren = create_children(entityID, childEntityIDs, pScene, true);
+        ppChildren = &pChildren;
     }
 }

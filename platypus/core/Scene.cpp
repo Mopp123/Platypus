@@ -356,9 +356,6 @@ namespace platypus
             return;
         }
 
-        std::string entityName = getEntityName(entityID);
-        Debug::log("___TEST___DESTROYING ENTITY: " + entityName);
-
         // Check if entity has parent -> remove it from parent's child list
         Parent* pParent = (Parent*)getComponent(
             entityID,
@@ -784,7 +781,11 @@ namespace platypus
         const char* pData = serializedData.data() + serializedDataPos;
         uint32_t entityCount = 0;
         memcpy(&entityCount, pData, serialized_entities_header_size);
-        if (pEntityCount) *pEntityCount = static_cast<size_t>(entityCount);
+        if (pEntityCount)
+        {
+            *pEntityCount = static_cast<size_t>(entityCount);
+            Debug::log("___TEST___deserializing: " + std::to_string(*pEntityCount) + " entities");
+        }
         return serializedDataPos + serialized_entities_header_size;
     }
 
@@ -794,6 +795,7 @@ namespace platypus
         size_t& bufferReadEndPos
     )
     {
+        size_t beginReadPos = bufferReadPos;
         PLATYPUS_ASSERT((bufferReadPos + serialized_entity_size) <= serializedData.size());
         const char* pData = serializedData.data();
         Entity entity;
@@ -804,6 +806,11 @@ namespace platypus
             pData + bufferReadPos
         );
         bufferReadPos += serialized_entity_size;
+
+        Debug::log(
+            "___TEST___Attempting to deserialize components for entity: " + getEntityName(entity.id)
+        );
+        PLATYPUS_ASSERT(!getEntityName(entity.id).empty());
 
         size_t componentCount = get_component_count(entity.componentMask);
         for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
@@ -826,9 +833,19 @@ namespace platypus
                 serializedComponentSize,
                 pData + bufferReadPos
             );
+            Debug::log(
+                "   deserialized component: " + component_type_to_string(componentType) + " "
+                "size = " + std::to_string(serializedComponentSize)
+            );
             bufferReadPos += serializedComponentSize;
         }
         bufferReadEndPos = bufferReadPos;
+
+        Debug::log(
+            "___TEST___Entity: " + getEntityName(entity.id) + " components read. "
+            "bufferReadBeginPos = " + std::to_string(beginReadPos) + " "
+            "BufferReadEndPos = " + std::to_string(bufferReadEndPos)
+        );
         return entity.id;
     }
 

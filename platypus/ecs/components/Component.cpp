@@ -134,9 +134,6 @@ namespace platypus
         const void* pData
     )
     {
-        Debug::log(
-            "___TEST___deserializing component: " + component_type_to_string(componentType)
-        );
         PLATYPUS_ASSERT(dataSize == get_component_serialized_size(componentType));
 
         // TODO: UNFUCK BELOW!
