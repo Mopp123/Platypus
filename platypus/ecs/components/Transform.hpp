@@ -22,6 +22,7 @@ namespace platypus
 
     // NOTE: IMPORTANT!
     // serialized Parent and Children components has their target entities as UUIDs NOT entityID_t!!!
+    //  The actual entityID_ts gets eventually resolved in the deserialization process.
     constexpr size_t serialized_parent_size =
         sizeof(ComponentType) +
         sizeof(UUID_t);

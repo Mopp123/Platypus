@@ -104,6 +104,11 @@ namespace platypus
         const std::unordered_map<UUID_t, std::vector<EntityError>>& getErrors();
         void clearErrors();
 
+        // These both are supposed to resolve all Parent and Children components' actual entityID_ts
+        // after all entities have been deserialized!
+        void addToDeserializationParentIDQuery(entityID_t target, UUID_t parentEntityUUID);
+        void addToDeserializationChildrenIDQuery(entityID_t target, const std::vector<UUID_t>& childUUIDs);
+
         // Puts all entities and their components into buffer that can be saved on disk
         std::vector<char> serialize(
             const std::vector<entityID_t>& toSerialize

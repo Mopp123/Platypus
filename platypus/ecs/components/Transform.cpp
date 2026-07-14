@@ -655,10 +655,15 @@ namespace platypus
         );
         size_t pos = sizeof(ComponentType);
 
+        const Scene* pScene = Application::get_instance()->getSceneManager().getCurrentScene();
+        const Entity parentEntity = pScene->getEntity(pParent->entityID);
+        PLATYPUS_ASSERT(parentEntity.id != NULL_ENTITY_ID);
+        const UUID_t parentUUID = pScene->getEntity(pParent->entityID).uuid;
+        PLATYPUS_ASSERT(parentUUID != NULL_UUID);
         memcpy(
             serializedData.data() + pos,
-            &(pParent->entityID),
-            sizeof(entityID_t)
+            &parentUUID,
+            sizeof(UUID_t)
         );
 
         return serializedData;
@@ -676,6 +681,7 @@ namespace platypus
         );
         size_t pos = sizeof(ComponentType);
 
+        const size_t childCount = pChildren->count;
         memcpy(
             serializedData.data() + pos,
             &(pChildren->count),
@@ -683,10 +689,22 @@ namespace platypus
         );
         pos += sizeof(size_t);
 
+        const Scene* pScene = Application::get_instance()->getSceneManager().getCurrentScene();
+        UUID_t childUUIDs[PLATYPUS_MAX_CHILD_ENTITIES];
+        memset(childUUIDs, NULL_UUID, sizeof(UUID_t) * PLATYPUS_MAX_CHILD_ENTITIES);
+        for (size_t i = 0; i < childCount; ++i)
+        {
+            const Entity childEntity = pScene->getEntity(pChildren->entityIDs[i]);
+            PLATYPUS_ASSERT(childEntity.id != NULL_ENTITY_ID);
+            const UUID_t childUUID = childEntity.uuid;
+            PLATYPUS_ASSERT(childUUID != NULL_UUID);
+            childUUIDs[i] = childUUID;
+        }
+
         memcpy(
             serializedData.data() + pos,
-            pChildren->entityIDs,
-            sizeof(entityID_t) * PLATYPUS_MAX_CHILD_ENTITIES
+            childUUIDs,
+            sizeof(UUID_t) * PLATYPUS_MAX_CHILD_ENTITIES
         );
 
         return serializedData;
@@ -795,14 +813,26 @@ namespace platypus
         PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_PARENT);
         size_t pos = sizeof(ComponentType);
 
-        entityID_t parentEntityID;
+        // TODO:
+        //  Some system to find the existing parent Entity's UUID here OR
+        //  wait until the parent entity gets constructed
 
+        // Attempt to find the actual entity ID of the parent
+        //  -> if not found?
+        //      -> add to "requested list" which resolves this later in deserialization process
+        UUID_t parentUUID = NULL_UUID;
         memcpy(
-            &parentEntityID,
+            &parentUUID,
             reinterpret_cast<const char*>(pData) + pos,
-            sizeof(entityID_t)
+            sizeof(UUID_t)
         );
+        entityID_t parentEntityID = pScene->getEntity(parentUUID).id;
+        // TODO: Make below actually possible!
+        if (parentEntityID == NULL_ENTITY_ID)
+            pScene->addToDeserializationParentIDQuery(entityID, parentUUID);
 
+        // TODO: Allow to creating Parent components with initial parent entityID_t being
+        // NULL_ENTITY_ID, which gets resloved later in the deserialization process
         *ppParent = create_parent(entityID, parentEntityID, pScene, true);
     }
 
@@ -831,20 +861,26 @@ namespace platypus
         );
         pos += sizeof(size_t);
 
-        std::vector<entityID_t> childEntityIDs(childCount);
-
+        std::vector<UUID_t> requestedChildEntityUUIDs;
         for (size_t i = 0; i < childCount; ++i)
         {
-            entityID_t childID;
+            UUID_t childUUID = NULL_UUID;
             memcpy(
-                &childID,
+                &childUUID,
                 reinterpret_cast<const char*>(pData) + pos,
-                sizeof(entityID_t)
+                sizeof(UUID_t)
             );
-            childEntityIDs[i] = childID;
-            pos += sizeof(entityID_t);
+
+            requestedChildEntityUUIDs.push_back(childUUID);
+            pos += sizeof(UUID_t);
         }
 
+        pScene->addToDeserializationChildrenIDQuery(entityID, requestedChildEntityUUIDs);
+
+        // TODO: Allow to creating Children components with initial child entityID_ts being
+        // NULL_ENTITY_IDs, which gets resloved later in the deserialization process
+        std::vector<entityID_t> childEntityIDs(childCount);
+        memset(childEntityIDs.data(), NULL_ENTITY_ID, sizeof(entityID_t) * childCount);
         Children* pChildren = create_children(entityID, childEntityIDs, pScene, true);
         ppChildren = &pChildren;
     }
