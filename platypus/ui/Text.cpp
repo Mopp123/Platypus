@@ -1,4 +1,5 @@
 #include "Text.hpp"
+#include "UIManager.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
@@ -11,30 +12,62 @@ namespace platypus
 {
     namespace ui
     {
-        UIElement* add_text_element(
-            LayoutUI& ui,
+        Text::Text(
+            UIManager& uiManager,
             UIElement* pParent,
-            const std::string& text,
-            const Vector4f& color,
-            const Font* pFont
-        )
+            const Layout* pLayout,
+            const Font* pFont,
+            const std::string& txt
+        ) :
+            UIElement(
+                uiManager,
+                pParent,
+                pLayout, // Need to create for inherited UIElement -> will be modified here immediately tho!
+                false,
+                NULL_UUID,
+                pFont,
+                nullptr, // pOnClick
+                nullptr, // pOnClickUserData
+                true // NOTE: All mouse input is ignored for Text atm!! TODO: ALLOW MORE CONTROL OVER THIS!
+            ),
+            _fullStr(txt)
         {
-            Layout parentLayout = pParent->getLayout();
+            WordWrap useWordWrap = WordWrap::NONE;
+            TextOverflow useTextOverflow = TextOverflow::NONE;
+            if (pParent)
+            {
+                const Layout* pParentLayout = pParent->getLayout();
+                useWordWrap = pParentLayout->wordWrap;
+                useTextOverflow = pParentLayout->textOverflow;
+            }
 
-            float charHeight = static_cast<float>(pFont->getMaxCharHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
             std::string finalText;
-            if (parentLayout.wordWrap == WordWrap::NONE)
+            if (useWordWrap == WordWrap::NONE)
             {
-                maxLineWidth = get_text_scale(text, pFont).x;
-                finalText = text;
+                if (useTextOverflow == TextOverflow::NONE)
+                {
+                    finalText = txt;
+                    maxLineWidth = get_text_scale(finalText, pFont).x;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        pParent,
+                        pFont,
+                        "",
+                        txt,
+                        useTextOverflow,
+                        &maxLineWidth
+                    );
+                }
             }
-            else if (parentLayout.wordWrap == WordWrap::NORMAL)
+            else if (useWordWrap == WordWrap::NORMAL)
             {
                 finalText = wrap_text(
-                    text,
+                    txt,
                     pFont,
                     pParent,
                     maxLineWidth,
@@ -42,19 +75,18 @@ namespace platypus
                 );
             }
 
-            Layout layout;
             // NOTE: If word wrapping, this scale isn't really usable for anything, since
             // it's just w*h rect and doesn't hold info about specific line sizes...
             //  -> if want to have some text mouse over, this can't be used for anything
             //  but single line text elements
-            layout.scale = { maxLineWidth, charHeight * lineCount };
+            float totalHeight = static_cast<float>(pFont->getFittingHeight()) * static_cast<float>(lineCount);
+            overrideScale({ maxLineWidth,  totalHeight });
 
-            UIElement* pElement = add_container(ui, pParent, layout, false, NULL_ID, pFont);
             GUIRenderable* pTextRenderable = create_gui_renderable(
-                pElement->getEntityID(),
+                _entityID,
                 pFont->getTextureID(),
                 pFont->getID(),
-                color,
+                pLayout->colors.base,
                 { 0, 0, 0, 0 }, // border color
                 0.0f, // border thickness
                 { 0, 0 }, // texture offset
@@ -62,9 +94,126 @@ namespace platypus
                 true, // isText?
                 finalText
             );
-
-            return pElement;
+            triggerFullTreeUpdate();
         }
+
+        // TODO: Replace this with the new one!
+        void Text::set(
+            UIElement* pParentElement,
+            const std::string& text
+        )
+        {
+            PLATYPUS_ASSERT(pParentElement);
+            _fullStr = text;
+
+            // TODO: Make App, SceneManager and Scene accessing safer here!
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const Layout* pParentLayout = pParentElement->getLayout();
+            float charHeight = static_cast<float>(_pFont->getFittingHeight());
+            float maxLineWidth = 0.0f;
+            size_t lineCount = 1;
+
+            std::string finalText;
+            if (pParentLayout->wordWrap == WordWrap::NONE)
+            {
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
+                {
+                    maxLineWidth = get_text_scale(text, _pFont).x;
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        pParentElement,
+                        _pFont,
+                        "", // header... which shouldn't probably be used anymore...
+                        text,
+                        pParentLayout->textOverflow,
+                        &maxLineWidth
+                    );
+                }
+            }
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
+            {
+                finalText = wrap_text(
+                    text,
+                    _pFont,
+                    pParentElement,
+                    maxLineWidth,
+                    lineCount
+                );
+            }
+
+            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+            );
+            pRenderable->text = finalText;
+
+            overrideScale({ maxLineWidth, charHeight * lineCount });
+            triggerFullTreeUpdate();
+        }
+
+        void Text::set(const std::string& text)
+        {
+            PLATYPUS_ASSERT(_pParent);
+            _fullStr = text;
+
+            // TODO: Make App, SceneManager and Scene accessing safer here!
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const Layout* pParentLayout = _pParent->getLayout();
+            float charHeight = static_cast<float>(_pFont->getFittingHeight());
+            float maxLineWidth = 0.0f;
+            size_t lineCount = 1;
+
+            std::string finalText;
+            if (pParentLayout->wordWrap == WordWrap::NONE)
+            {
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
+                {
+                    maxLineWidth = get_text_scale(text, _pFont).x;
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        _pParent,
+                        _pFont,
+                        "", // header... which shouldn't probably be used anymore...
+                        text,
+                        pParentLayout->textOverflow,
+                        &maxLineWidth
+                    );
+                }
+            }
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
+            {
+                finalText = wrap_text(
+                    text,
+                    _pFont,
+                    _pParent,
+                    maxLineWidth,
+                    lineCount
+                );
+            }
+
+            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+            );
+            pRenderable->text = finalText;
+
+            overrideScale({ maxLineWidth, charHeight * lineCount });
+            triggerFullTreeUpdate();
+        }
+
+        std::string Text::getVisualStr() const
+        {
+            const GUIRenderable* pRenderable = getRenderable();
+            PLATYPUS_ASSERT(pRenderable);
+            return pRenderable->text;
+        }
+
 
         // NOTE: VERY inefficient!
         // DO NOT USE if editing some text, like input field
@@ -78,9 +227,9 @@ namespace platypus
             size_t& outLineCount
         )
         {
-            const Layout& parentLayout = pParentElement->getLayout();
+            const Layout* pParentLayout = pParentElement->getLayout();
             #ifdef PLATYPUS_DEBUG
-            if (parentLayout.wordWrap != WordWrap::NORMAL)
+            if (pParentLayout->wordWrap != WordWrap::NORMAL)
             {
                 Debug::log(
                     "@ui::wrap_text "
@@ -95,7 +244,7 @@ namespace platypus
             outLineCount = 1;
             std::string wrappedText;
 
-            float parentLayoutWidth = parentLayout.scale.x - parentLayout.padding.x;
+            float parentLayoutWidth = pParentLayout->scale.x - pParentLayout->padding.x;
 
             std::istringstream stream(text);
             std::string word;
@@ -105,7 +254,7 @@ namespace platypus
             while (getline(stream, word, ' '))
                 words.push_back(word);
 
-            float lineWidth = parentLayout.padding.x;
+            float lineWidth = pParentLayout->padding.x;
             float spaceWidth = get_char_scale(0x20, pFont).x;
             for (size_t i = 0; i < words.size(); ++i)
             {
@@ -115,7 +264,7 @@ namespace platypus
                 bool lastWord = i == words.size() - 1;
 
                 // If single word goes out of bounds split into 2 words
-                if (parentLayout.padding.x + wordWidth >= parentLayoutWidth)
+                if (pParentLayout->padding.x + wordWidth >= parentLayoutWidth)
                 {
                     const size_t wordSize = str.size();
                     const char* pWordData = reinterpret_cast<const char*>(str.data());
@@ -129,7 +278,7 @@ namespace platypus
                         uint32_t codepoint = (uint32_t)*charIt;
                         const float charWidth = get_char_scale(codepoint, pFont).x;
                         partialWordWidth += charWidth;
-                        if (parentLayout.padding.x + partialWordWidth < parentLayoutWidth)
+                        if (pParentLayout->padding.x + partialWordWidth < parentLayoutWidth)
                         {
                             util::str::append_utf8(codepoint, s1);
                         }
@@ -150,7 +299,7 @@ namespace platypus
                 if (lineWidth + wordWidth >= parentLayoutWidth)
                 {
                     wrappedText += '\n';
-                    lineWidth = parentLayout.padding.x;
+                    lineWidth = pParentLayout->padding.x;
                     ++outLineCount;
                 }
 
@@ -167,6 +316,8 @@ namespace platypus
             return wrappedText;
         }
 
+        // TODO: remove
+        /*
         void set_text(
             UIElement* pTextElement,
             UIElement* pParentElement,
@@ -176,19 +327,33 @@ namespace platypus
             // TODO: Make App, SceneManager and Scene accessing safer here!
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
 
-            const Layout& parentLayout = pParentElement->getLayout();
+            const Layout* pParentLayout = pParentElement->getLayout();
             const Font* pFont = pTextElement->getFont();
-            float charHeight = static_cast<float>(pFont->getMaxCharHeight());
+            float charHeight = static_cast<float>(pFont->getFittingHeight());
             float maxLineWidth = 0.0f;
             size_t lineCount = 1;
 
             std::string finalText;
-            if (parentLayout.wordWrap == WordWrap::NONE)
+            if (pParentLayout->wordWrap == WordWrap::NONE)
             {
                 maxLineWidth = get_text_scale(text, pFont).x;
-                finalText = text;
+
+                if (pParentLayout->textOverflow == TextOverflow::NONE)
+                {
+                    finalText = text;
+                }
+                else
+                {
+                    finalText = strip_text_overflow_ellipsis(
+                        pParentElement,
+                        pFont,
+                        "", // header... which shouldn't probably be used anymore...
+                        text,
+                        pParentLayout->textOverflow
+                    );
+                }
             }
-            else if (parentLayout.wordWrap == WordWrap::NORMAL)
+            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
             {
                 finalText = wrap_text(
                     text,
@@ -204,9 +369,108 @@ namespace platypus
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
             pRenderable->text = finalText;
-
-            pTextElement->setScale({ maxLineWidth, charHeight * lineCount });
+            pTextElement->setLayoutScale({ maxLineWidth, charHeight * lineCount });
         }
+        */
+
+
+        std::string strip_text_overflow_ellipsis(
+            UIElement* pParentElement,
+            const Font* pFont,
+            const std::string& header,
+            const std::string& text,
+            TextOverflow overflow,
+            float* pOutWidth
+        )
+        {
+            PLATYPUS_ASSERT((overflow == TextOverflow::ELLIPSIS_LEFT) || (overflow == TextOverflow::ELLIPSIS_RIGHT));
+            const std::string fullText = header + text;
+            if (fullText.empty())
+            {
+                if (pOutWidth)
+                    *pOutWidth = 0.0f;
+                return fullText;
+            }
+
+            const float fullVisualWidth = ui::get_text_scale(fullText, pFont).x;
+
+            const Layout* pParentLayout = pParentElement->getLayout();
+            const float parentWidth = pParentElement->getGlobalScale().x;
+            const float parentContentWidth = parentWidth - pParentLayout->padding.x * 2.0f - pParentLayout->borderThickness * 2.0f;
+            if (fullVisualWidth <= parentContentWidth)
+            {
+                if (pOutWidth)
+                    *pOutWidth = fullVisualWidth;
+                return header + text;
+            }
+
+            const size_t size = text.size();
+            char* pData = (char*)text.data();
+            //utf8::iterator<char*> it(pData + size - 1, pData, pData + size);
+            //utf8::iterator<char*> beginIt(pData, pData, pData + size);
+            utf8::iterator<char*> it;
+            utf8::iterator<char*> stopIt;
+            if (overflow == TextOverflow::ELLIPSIS_LEFT)
+            {
+                // Need to start past the last element and decrement the it immediately
+                // if the last char more than 1 byte so were at the actual last element's
+                // beginning!
+                it = utf8::iterator<char*>(pData + size, pData, pData + size);
+                --it;
+                stopIt = utf8::iterator<char*>(pData, pData, pData + size);
+            }
+            //if (overflow == TextOverflow::ELLIPSIS_RIGHT)
+            else
+            {
+                it = utf8::iterator<char*>(pData, pData, pData + size);
+                stopIt = utf8::iterator<char*>(pData + size, pData, pData + size);
+                // Need to decrement the stopIt to get the actual last elem ( similar thing
+                // to the above case -> last elem might not be pData + size - 1, if its more
+                // than one bytes!)
+                --stopIt;
+            }
+
+            const std::string visualBuffer = "...";
+            const float visualBufferWidth = ui::get_text_scale(visualBuffer, pFont).x;
+
+            float headerVisualWidth = ui::get_text_scale(header, pFont).x;
+            float currentWidth = headerVisualWidth + visualBufferWidth;
+            std::string strippedStr;
+            while (true)
+            {
+                uint32_t codepoint = static_cast<uint32_t>(*it);
+                std::string charStr;
+                util::str::append_utf8(codepoint, charStr);
+                float charVisualWidth = ui::get_text_scale(charStr, pFont).x;
+
+                // NOTE: Should maybe allow adding this char tho?
+                if (currentWidth + charVisualWidth >= parentContentWidth)
+                    break;
+
+                currentWidth += charVisualWidth;
+                util::str::append_utf8(codepoint, strippedStr);
+
+                if (it == stopIt)
+                    break;
+
+                if (overflow == TextOverflow::ELLIPSIS_LEFT)
+                    --it;
+                else
+                    ++it;
+            }
+
+            if (pOutWidth)
+                *pOutWidth = currentWidth;
+            if (overflow == TextOverflow::ELLIPSIS_LEFT)
+            {
+                return header + visualBuffer + util::str::reverse(strippedStr);
+            }
+            else
+            {
+                return header + strippedStr + visualBuffer;
+            }
+        }
+
 
         Vector2f get_char_scale(uint32_t codepoint, const Font* pFont)
         {
@@ -215,7 +479,8 @@ namespace platypus
             {
                 return {
                     static_cast<float>(pGlyph->advance >> 6),
-                    static_cast<float>(pFont->getMaxCharHeight())
+                    static_cast<float>(pFont->getFittingHeight())
+                    //static_cast<float>(pFont->getMaxCharHeight())
                 };
             }
             return { 0, 0 };
@@ -226,8 +491,7 @@ namespace platypus
         {
             Vector2f scale(
                 0,
-                static_cast<float>(pFont->getMaxCharHeight()) +
-                static_cast<float>(pFont->getMaxBaselineDrop())
+                static_cast<float>(pFont->getFittingHeight())
             );
 
             const size_t textSize = text.size();

@@ -107,35 +107,44 @@ void SkinnedMeshTestScene::init()
     );
     _camController.setOffsetPos({ 0, 0, 0 });
 
-    std::vector<KeyframeAnimationData> animations;
-    Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
-        "assets/models/MultiAnimSkeletonTest.glb",
-        animations
-    );
-    Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
-    _pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
-    _pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
+    //std::vector<KeyframeAnimationData> animations;
+    //Model* pAnimatedModel = pAssetManager->loadSkinnedModel(
+    //    "assets/models/MultiAnimSkeletonTest.glb",
+    //    animations
+    //);
 
-    TextureSampler textureSampler(
+    Model* pAnimatedModel = pAssetManager->loadModel(
+        "assets/models/MultiAnimSkeletonTest.glb",
+        false,
+        "AnimatedModel"
+    );
+
+    Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
+    //_pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
+    //_pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
+    const std::vector<SkeletalAnimationData*>& animations = pAnimatedMesh->getAnimations();
+    _pIdleAnimationAsset = animations[0];
+    _pRunAnimationAsset = animations[1];
+
+    const TextureSampler* pTextureSampler = pAssetManager->getOrCreateTextureSampler(
         TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
         TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT,
-        true,
-        0
+        true
     );
 
     Texture* pDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/characterTest.png",
         ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
+        pTextureSampler
     );
     Texture* pBoxDiffuseTexture = pAssetManager->loadTexture(
         "assets/textures/DiffuseTest.png",
         ImageFormat::R8G8B8A8_SRGB,
-        textureSampler
+        pTextureSampler
     );
 
     Material* pMaterial = pAssetManager->createMaterial(
-        NULL_ID,
+        NULL_UUID,
         { pDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
         { },
@@ -143,14 +152,14 @@ void SkinnedMeshTestScene::init()
         16.0f
     );
     Material* pBoxMaterial = pAssetManager->createMaterial(
-        NULL_ID,
+        NULL_UUID,
         { pBoxDiffuseTexture->getID() },
         { pAssetManager->getWhiteTexture()->getID() },
         { },
         0.8f,
         16.0f
     );
-    Model* pBoxModel = pAssetManager->loadStaticModel("assets/TestCube.glb");
+    Model* pBoxModel = pAssetManager->loadModel("assets/TestCube.glb", false, "BoxModel");
 
     int area = 4;
     float spacing = 3.25f;

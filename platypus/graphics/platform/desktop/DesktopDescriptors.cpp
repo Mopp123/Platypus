@@ -84,12 +84,27 @@ namespace platypus
     DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetLayout& other) :
         _bindings(other._bindings)
     {
+        // NOTE: WARNING! POSSIBLE ISSUE?
+        //  -> shouldn't we destroy() the old layout here, if exists?
         _pImpl = new DescriptorSetLayoutImpl;
         _pImpl->handle = other._pImpl->handle;
     }
 
     DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout&& other)
     {
+        // NOTE: WARNING! POSSIBLE ISSUE?
+        //  -> shouldn't we destroy() the old layout here, if exists?
+        _pImpl = new DescriptorSetLayoutImpl;
+        _pImpl->handle = other._pImpl->handle;
+        _bindings = other._bindings;
+        return *this;
+    }
+
+    //NOTE: Recalled some earlier problem with below, but don't remember anymore...
+    DescriptorSetLayout& DescriptorSetLayout::operator=(const DescriptorSetLayout& other)
+    {
+        // NOTE: WARNING! POSSIBLE ISSUE?
+        //  -> shouldn't we destroy() the old layout here, if exists?
         _pImpl = new DescriptorSetLayoutImpl;
         _pImpl->handle = other._pImpl->handle;
         _bindings = other._bindings;
@@ -184,7 +199,7 @@ namespace platypus
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             imageInfo.imageView = pTexture->getImpl()->imageView;
-            imageInfo.sampler = pTexture->getSamplerImpl()->handle;
+            imageInfo.sampler = pTexture->getTextureSampler()->getImpl()->handle;
         }
         else
         {
@@ -255,13 +270,11 @@ namespace platypus
     }
 
 
-    DescriptorPool::DescriptorPool(const Swapchain& swapchain)
+    DescriptorPool::DescriptorPool(size_t maxDescriptorSets) :
+        _maxDescriptorSets(maxDescriptorSets)
     {
         std::vector<VkDescriptorPoolSize> poolSizes;
 
-        const size_t& maxFramesInFlight = swapchain.getImpl()->maxFramesInFlight;
-        // NOTE: maxDescriptorSets hardcoded here ONLY FOR TESTING!
-        const uint32_t maxDescriptorSets = PLATY_MAX_DESCRIPTOR_SETS * maxFramesInFlight;
         const std::vector<DescriptorType> types =
         {
             DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -271,17 +284,21 @@ namespace platypus
 
         for (size_t i = 0; i < types.size(); ++i)
         {
+            // NOTE: poolSizes have the max allocateable(eng?:D) descriptors
+            // NOT SETS! But atm its' fine to have it be just the _maxDescriptorSets val...
+            //  -> IN THE FUTURE THIS WILL MATTER!!!
+            const uint32_t maxDescriptors = static_cast<uint32_t>(_maxDescriptorSets);
             VkDescriptorPoolSize poolSize{};
             poolSize.type = to_vk_descriptor_type(types[i]);
-            poolSize.descriptorCount = maxDescriptorSets; //maxFramesInFlight;
+            poolSize.descriptorCount = maxDescriptors;
             poolSizes.push_back(poolSize);
         }
 
         VkDescriptorPoolCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        createInfo.poolSizeCount = (uint32_t)poolSizes.size();
+        createInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         createInfo.pPoolSizes = poolSizes.data();
-        createInfo.maxSets = maxDescriptorSets;
+        createInfo.maxSets = static_cast<uint32_t>(_maxDescriptorSets);
         createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         VkDescriptorPool handle = VK_NULL_HANDLE;
@@ -539,7 +556,11 @@ namespace platypus
                     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                 imageInfo.imageView = pTexture->getImpl()->imageView;
-                imageInfo.sampler = pTexture->getSamplerImpl()->handle;
+                PLATYPUS_ASSERT(pTexture);
+                PLATYPUS_ASSERT(pTexture->getTextureSampler());
+                PLATYPUS_ASSERT(pTexture->getTextureSampler()->getImpl());
+                PLATYPUS_ASSERT(pTexture->getTextureSampler()->getImpl()->handle);
+                imageInfo.sampler = pTexture->getTextureSampler()->getImpl()->handle;
             }
             else
             {

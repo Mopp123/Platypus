@@ -30,8 +30,8 @@ namespace platypus
     class Font : public Asset
     {
     private:
-        ID_t _imageID = NULL_ID;
-        ID_t _textureID = NULL_ID;
+        UUID_t _imageID = NULL_UUID;
+        UUID_t _textureID = NULL_UUID;
 
         unsigned int _pixelSize = 1;
         int _textureAtlasRowCount = 1;
@@ -48,7 +48,7 @@ namespace platypus
         std::unordered_map<uint32_t, FontGlyphData> _glyphMapping;
 
     public:
-        Font();
+        Font(size_t uuidPool);
         ~Font();
 
         // NOTE: Some "pixelSize" values doesn't work on some fonts!
@@ -66,7 +66,11 @@ namespace platypus
         inline int getTilePixelWidth() const { return _textureAtlasTileWidth; }
         inline int getMaxCharHeight() const { return _maxCharHeight; }
         inline int getMaxBaselineDrop() const { return _maxBaselineDrop; }
-        inline ID_t getTextureID() const { return _textureID; }
+
+        // Returns vertical boundary in which each glyph fits in.
+        // -> _maxCharHeight doesn't take into account that some glyphs go below the baseline!
+        inline int getFittingHeight() const { return _maxCharHeight + _maxBaselineDrop; }
+        inline UUID_t getTextureID() const { return _textureID; }
 
     private:
         bool createFont(const std::string& filepath, std::string charsToLoad);

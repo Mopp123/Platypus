@@ -3,6 +3,8 @@
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Timing.hpp"
 #include "platypus/core/Debug.hpp"
+#include "platypus/ui/UIElement.hpp"
+#include "platypus/ui/InputField.hpp"
 #include <cmath>
 
 
@@ -25,6 +27,11 @@ namespace platypus
 
     void CameraController::ControllerCursorPosEvent::func(int x, int y)
     {
+        // TODO: Allow rotating if the start click of rotation button is outside of ui
+        // instead how its done now!
+        if (ui::UIElement::get_cursor_over_layer_count() != 0)
+            return;
+
         float dx = x - _lastX;
         float dy = y - _lastY;
 
@@ -45,6 +52,9 @@ namespace platypus
 
     void CameraController::ControllerScrollEvent::func(double xOffset, double yOffset)
     {
+        if (ui::UIElement::get_cursor_over_layer_count() != 0)
+            return;
+
         float val = yOffset > 0.0 ? 1.0f : -1.0f;
         float newZoom = _zoomRef - val * _zoomSpeedRef;
         if (newZoom >= 0.0f && newZoom <= _maxZoomRef)
@@ -75,6 +85,9 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
+
+        if (ui::InputField::in_input_mode())
+            return;
 
         // NOTE: This is done in a way that _yaw=0 is pointing towards -z axis
         float halfPI = PLATY_MATH_PI * 0.5f;

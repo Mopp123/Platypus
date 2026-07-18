@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Buffers.hpp"
-#include "Swapchain.hpp"
 #include <memory>
+
+#define PLATYPUS_MAX_DESCRIPTOR_SETS 1000
 
 
 namespace platypus
@@ -120,6 +121,8 @@ namespace platypus
         DescriptorSetLayout(const DescriptorSetLayout& other);
         DescriptorSetLayout& operator=(DescriptorSetLayout&& other);
         //DescriptorSetLayout& operator=(DescriptorSetLayout& other);
+        //NOTE: Recalled some earlier problem with below, but don't remember anymore...
+        DescriptorSetLayout& operator=(const DescriptorSetLayout& other);
         ~DescriptorSetLayout();
 
         void destroy();
@@ -182,9 +185,16 @@ namespace platypus
     {
     private:
         DescriptorPoolImpl* _pImpl = nullptr;
+        size_t _maxDescriptorSets = 0;
 
     public:
-        DescriptorPool(const Swapchain& swapchain);
+        // NOTE: This requires swapchain ONLY to figure out how
+        // many descriptor sets can be allocated depending which
+        // depends on number of frames in flight!
+        // TODO: Maybe just have hard limit of descriptor sets
+        // per pool, no matter the num of frames in flight?
+        // DESCRIPTOR POOL SHOULD NOT "DEPEND" ON SWAPCHAIN!
+        DescriptorPool(size_t maxDescriptorSets);
         ~DescriptorPool();
 
         DescriptorSet createDescriptorSet(

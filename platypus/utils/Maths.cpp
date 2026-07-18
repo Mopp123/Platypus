@@ -27,6 +27,11 @@ namespace platypus
         return { x + other.x, y + other.y };
     }
 
+    Vector2f Vector2f::operator-(const Vector2f& other) const
+    {
+        return { x - other.x, y - other.y };
+    }
+
     Vector2f Vector2f::operator*(const Vector2f& other) const
     {
         return { x * other.x, y * other.y };
@@ -532,6 +537,16 @@ namespace platypus
     }
 
 
+    Matrix4f create_translation_matrix(const Vector3f& position)
+    {
+        Matrix4f m(1.0f);
+        m[0 + 3 * 4] = position.x;
+        m[1 + 3 * 4] = position.y;
+        m[2 + 3 * 4] = position.z;
+        return m;
+    }
+
+
     Matrix4f create_rotation_matrix(float pitch, float yaw, float roll)
     {
         Matrix4f pitchMatrix(1.0f);
@@ -555,6 +570,17 @@ namespace platypus
 
         return yawMatrix * pitchMatrix * rollMatrix;
     }
+
+
+    Matrix4f create_scale_matrix(const Vector3f& scale)
+    {
+        Matrix4f m(1.0f);
+        m[0 + 0 * 4] = scale.x;
+        m[1 + 1 * 4] = scale.y;
+        m[2 + 2 * 4] = scale.z;
+        return m;
+    }
+
 
     Matrix4f create_view_matrix(const Vector3f& position, const Matrix4f& rotationMatrix)
     {

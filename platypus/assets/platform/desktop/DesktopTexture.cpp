@@ -443,37 +443,34 @@ namespace platypus
             );
             PLATYPUS_ASSERT(false);
         }
-        _pImpl = std::make_shared<TextureSamplerImpl>();
+        _pImpl = new TextureSamplerImpl;
         _pImpl->handle = handle;
     }
 
-    TextureSampler::TextureSampler(const TextureSampler& other) :
-        _pImpl(other._pImpl),
-        _filterMode(other._filterMode),
-        _addressMode(other._addressMode),
-        _mipmapping(other._mipmapping)
-    {}
-
     TextureSampler::~TextureSampler()
-    {}
+    {
+        if (_pImpl)
+            delete _pImpl;
+    }
 
 
-    Texture::Texture(ImageFormat format) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
+    Texture::Texture(size_t uuidPool, ImageFormat format) :
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
         _imageFormat(format)
     {
         _pImpl = new TextureImpl;
     }
 
     Texture::Texture(
+        size_t uuidPool,
         TextureType type,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         ImageFormat format,
         uint32_t width,
         uint32_t height
     ):
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pSamplerImpl(sampler.getImpl()),
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
+        _pSampler(pSampler),
         _imageFormat(format)
     {
         VkFormat vkImageFormat = to_vk_format(format);
@@ -543,38 +540,65 @@ namespace platypus
     }
 
     Texture::Texture(
+        size_t uuidPool,
         const Image* pImage,
-        const TextureSampler& sampler,
-        uint32_t atlasRowCount
+        const TextureSampler* pSampler,
+        const std::string& name,
+        UUID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pImage(pImage),
-        _pSamplerImpl(sampler.getImpl()),
-        _atlasRowCount(atlasRowCount)
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
+        _pSampler(pSampler)
     {
-        ImageFormat imageFormat = _pImage->getFormat();
-        if (!is_image_format_valid(imageFormat, pImage->getChannels()))
+        _pImpl = new TextureImpl;
+        create(pImage);
+    }
+
+    Texture::~Texture()
+    {
+        fixMaterialsOnDestruction();
+        if (_pImpl)
+        {
+            destroy();
+            delete _pImpl;
+        }
+    }
+
+    void Texture::destroy()
+    {
+        Device::wait_for_operations();
+        DeviceImpl* pDeviceImpl = Device::get_impl();
+        vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
+        if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
+            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+    }
+
+    void Texture::create(const Image* pImage)
+    {
+        _pImage = pImage;
+        _imageFormat = _pImage->getFormat();
+        if (!is_image_format_valid(_imageFormat, pImage->getChannels()))
         {
             Debug::log(
-                "@Texture::Texture "
-                "Invalid target format: " + image_format_to_string(imageFormat) + " "
+                "Invalid target format: " + image_format_to_string(_imageFormat) + " "
                 "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
+            PLATYPUS_ASSERT(false);
         }
-        _imageFormat = imageFormat;
 
         // NOTE: Not sure if our buffers can be used as staging buffers here without modifying?
         Buffer* pStagingBuffer = new Buffer(
-            (void*)pImage->getData(),
+            reinterpret_cast<const void*>(_pImage->getData()),
             1, // Single element size is 8 bit "pixel"
-            pImage->getSize(),
+            _pImage->getSize(),
             BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
             false
         );
 
-        VkFormat vkImageFormat = to_vk_format(imageFormat);
+        VkFormat vkImageFormat = to_vk_format(_imageFormat);
 
         // Using vkCmdBlit to create mipmaps, so make sure this is supported!
         //  -> even if the image format is supported, need to make sure that the format feature
@@ -582,7 +606,7 @@ namespace platypus
         if (!is_format_supported(vkImageFormat))
         {
             Debug::log(
-                "Image format " + image_format_to_string(imageFormat) + " "
+                "Image format " + image_format_to_string(_imageFormat) + " "
                 "not supported by the selected device"
                 " "+ std::string(Device::get_impl()->physicalDevice.properties.deviceName),
                 PLATYPUS_CURRENT_FUNC_NAME,
@@ -613,12 +637,12 @@ namespace platypus
             );
         }
 
-        uint32_t imageWidth = (uint32_t)pImage->getWidth();
-        uint32_t imageHeight = (uint32_t)pImage->getHeight();
+        uint32_t imageWidth = static_cast<uint32_t>(_pImage->getWidth());
+        uint32_t imageHeight = static_cast<uint32_t>(_pImage->getHeight());
 
         VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         uint32_t mipLevelCount = 1;
-        if (sampler.isMipmapped())
+        if (_pSampler->isMipmapped())
         {
             mipLevelCount = (uint32_t)(std::floor(
                 std::log2(std::max(imageWidth, imageHeight))
@@ -668,7 +692,6 @@ namespace platypus
             return;
         }
 
-        _pImpl = new TextureImpl;
         _pImpl->image = imageHandle;
         _pImpl->vmaAllocation = vmaAllocation;
         _pImpl->imageLayout = imageCreateInfo.initialLayout;
@@ -698,7 +721,7 @@ namespace platypus
                 imageWidth,
                 imageHeight,
                 mipLevelCount,
-                to_vk_sampler_filter_mode(sampler.getFilterMode())
+                to_vk_sampler_filter_mode(_pSampler->getFilterMode())
             );
         }
         else
@@ -730,18 +753,5 @@ namespace platypus
         )[0];
 
         _pImpl->imageView = imageView;
-    }
-
-    Texture::~Texture()
-    {
-        if (_pImpl)
-        {
-            DeviceImpl* pDeviceImpl = Device::get_impl();
-            vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
-            if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
-                vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
-
-            delete _pImpl;
-        }
     }
 }

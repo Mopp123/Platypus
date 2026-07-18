@@ -1,4 +1,5 @@
 #include "platypus/core/InputManager.hpp"
+#include "platypus/core/Debug.hpp"
 #include "DesktopWindow.hpp"
 #include <GLFW/glfw3.h>
 
@@ -145,9 +146,12 @@ namespace platypus
         //const int windowHeight = Application::get_instance()->getWindow().getHeight();
         //int my = windowHeight - (int)y;
 
-        int mx = (int)x;
-        int my = (int)y;
+        int mx = static_cast<int>(x);
+        int my = static_cast<int>(y);
+        float mdx = static_cast<float>(mx) - static_cast<float>(pInputManager->getMouseX());
+        float mdy = static_cast<float>(my) - static_cast<float>(pInputManager->getMouseY());
         pInputManager->setMousePos(mx, my);
+        pInputManager->setMouseMove(mdx, mdy);
         pInputManager->processCursorPosEvents(mx, my);
     }
 

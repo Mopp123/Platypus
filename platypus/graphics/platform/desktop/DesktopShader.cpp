@@ -48,7 +48,7 @@ namespace platypus
         _filename(filename)
     {
         const std::string fullPath = "assets/shaders/desktop/" + filename + ".spv";
-        std::vector<char> source = load_file(fullPath);
+        std::vector<char> source = read_file(fullPath);
         if (source.empty())
         {
             Debug::log(

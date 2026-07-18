@@ -36,6 +36,7 @@ namespace platypus
         std::string name;
         int location;
         ShaderDataType dataType;
+        VertexAttributeType attribType;
         int bufferViewIndex;
         size_t accessorByteOffset;
     };
@@ -57,6 +58,8 @@ namespace platypus
     std::string gltf_accessor_type_to_string(
         int gltfAccessorType
     );
+
+    VertexAttributeType gltf_attrib_type_to_engine(const std::string& gltfAttribType);
 
     Quaternion to_engine_quaternion(const std::vector<double>& gltfQuaternion);
     Vector3f to_engine_vector3(const std::vector<double>& gltfVector);

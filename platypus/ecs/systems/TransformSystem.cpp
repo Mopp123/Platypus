@@ -32,55 +32,68 @@ namespace platypus
     {
         // Attempt to find bind pose if exists
         // NOTE: Kind of rough to check for each possible joint...
-        Renderable3D* pRenderable = (Renderable3D*)pScene->getComponent(
-            entity,
-            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
-            false,
-            false
+        Renderable3D* pRenderable = reinterpret_cast<Renderable3D*>(
+            pScene->getComponent(
+                entity,
+                ComponentType::COMPONENT_TYPE_RENDERABLE3D,
+                false,
+                false
+            )
         );
         if (pRenderable)
         {
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(
-                pRenderable->meshID,
-                AssetType::ASSET_TYPE_MESH
+            Mesh* pMesh = reinterpret_cast<Mesh*>(
+                pAssetManager->getAsset(
+                    pRenderable->meshID,
+                    AssetType::ASSET_TYPE_MESH
+                )
             );
-            if (pMesh->getType() == MeshType::MESH_TYPE_SKINNED)
-                pBindPose = pMesh->getBindPosePtr();
+            if (pMesh)
+            {
+                if (pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED))
+                    pBindPose = pMesh->getBindPosePtr();
+            }
         }
 
 
         // Check if animation changes for this entity and its children
         //  -> need to find new animation asset
-        SkeletalAnimation* pEntityAnimation = (SkeletalAnimation*)pScene->getComponent(
-            entity,
-            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
-            false,
-            false
+        SkeletalAnimation* pEntityAnimation = reinterpret_cast<SkeletalAnimation*>(
+            pScene->getComponent(
+                entity,
+                ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
+                false,
+                false
+            )
         );
         if (pEntityAnimation && (pEntityAnimation != pUseAnimation))
         {
-            ID_t prevAnimAssetID = NULL_ID;
+            UUID_t prevAnimAssetID = NULL_UUID;
             if (pUseAnimation)
                 prevAnimAssetID = pUseAnimation->animationID;
             pUseAnimation = pEntityAnimation;
             if (prevAnimAssetID != pUseAnimation->animationID)
             {
-                pAnimationAsset = (SkeletalAnimationData*)pAssetManager->getAsset(
-                    pUseAnimation->animationID,
-                    AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
+                pAnimationAsset = reinterpret_cast<SkeletalAnimationData*>(
+                    pAssetManager->getAsset(
+                        pUseAnimation->animationID,
+                        AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
+                    )
                 );
             }
         }
 
-        Transform* pTransform = (Transform*)pScene->getComponent(
-            entity,
-            ComponentType::COMPONENT_TYPE_TRANSFORM
+        Transform* pTransform = reinterpret_cast<Transform*>(
+            pScene->getComponent(
+                entity,
+                ComponentType::COMPONENT_TYPE_TRANSFORM
+            )
         );
         if (!pTransform)
         {
             Debug::log(
-                "@apply_transform_hierarchy "
                 "Entity " + std::to_string(entity) + " doesn't have a Transform component!",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -91,11 +104,13 @@ namespace platypus
         SkeletonJoint* pJoint = nullptr;
         if (pUseAnimation && pAnimationAsset)
         {
-            pJoint = (SkeletonJoint*)pScene->getComponent(
-                entity,
-                ComponentType::COMPONENT_TYPE_JOINT,
-                false,
-                false
+            pJoint = reinterpret_cast<SkeletonJoint*>(
+                pScene->getComponent(
+                    entity,
+                    ComponentType::COMPONENT_TYPE_JOINT,
+                    false,
+                    false
+                )
             );
             if (pJoint)
             {
@@ -118,24 +133,26 @@ namespace platypus
         Matrix4f parentMatrix(1.0f);
         if (parent != NULL_ENTITY_ID)
         {
-            Transform* pParentTransform = (Transform*)pScene->getComponent(
-                parent,
-                ComponentType::COMPONENT_TYPE_TRANSFORM
+            Transform* pParentTransform = reinterpret_cast<Transform*>(
+                pScene->getComponent(
+                    parent,
+                    ComponentType::COMPONENT_TYPE_TRANSFORM
+                )
             );
             parentMatrix = pParentTransform->globalMatrix;
             pTransform->globalMatrix = parentMatrix * localMatrix;
         }
 
         if (pJoint && pUseAnimation && pBindPose)
-        {
             pUseAnimation->jointMatrices[pJoint->jointIndex] = pTransform->globalMatrix * pBindPose->joints[pJoint->jointIndex].inverseMatrix;
-        }
 
-        Children* pChildren = (Children*)pScene->getComponent(
-            entity,
-            ComponentType::COMPONENT_TYPE_CHILDREN,
-            false,
-            false
+        Children* pChildren = reinterpret_cast<Children*>(
+            pScene->getComponent(
+                entity,
+                ComponentType::COMPONENT_TYPE_CHILDREN,
+                false,
+                false
+            )
         );
         if (!pChildren)
             return;
@@ -180,7 +197,7 @@ namespace platypus
             // -> their children are handled by the apply_transform_hierarchy func
             bool hasRequiredComponentMask = (entity.componentMask & _requiredComponentMask) == _requiredComponentMask;
             bool isRoot = (entity.componentMask & ComponentType::COMPONENT_TYPE_PARENT) == 0;
-            if (!hasRequiredComponentMask || !isRoot)
+            if (!hasRequiredComponentMask || !isRoot || !entity.active)
             {
                 continue;
             }

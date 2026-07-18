@@ -1,4 +1,5 @@
 ﻿#include "InputManager.hpp"
+#include "Debug.hpp"
 
 
 namespace platypus
@@ -28,6 +29,64 @@ namespace platypus
         _windowResizeEvent.push_back(std::make_pair(ev, &WindowResizeEvent::func));
     }
 
+    // *Inefficient as fuck atm...
+    void InputManager::destroyMouseButtonEvent(MouseButtonEvent* ev)
+    {
+        int32_t eraseIndex = -1;
+        for (size_t i = 0; i < _mouseButtonEvents.size(); ++i)
+        {
+            std::pair<MouseButtonEvent*, void(MouseButtonEvent::*)(MouseButtonName, InputAction, int)>& event = _mouseButtonEvents[i];
+            if (event.first == ev)
+            {
+                delete event.first;
+                eraseIndex = static_cast<int32_t>(i);
+                break;
+            }
+        }
+        if (eraseIndex >= 0)
+        {
+            _mouseButtonEvents.erase(_mouseButtonEvents.begin() + static_cast<size_t>(eraseIndex));
+        }
+        #ifdef PLATYPUS_DEBUG
+        else
+        {
+            Debug::log(
+                "MouseButtonEvent wasn't found! The event may have beed destroyed already.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
+        #endif
+    }
+
+    void InputManager::destroyCursorPosEvent(CursorPosEvent* ev)
+    {
+        int32_t eraseIndex = -1;
+        for (size_t i = 0; i < _cursorPosEvents.size(); ++i)
+        {
+            std::pair<CursorPosEvent*, void(CursorPosEvent::*)(int, int)>& event = _cursorPosEvents[i];
+            if (event.first == ev)
+            {
+                delete event.first;
+                eraseIndex = static_cast<int32_t>(i);
+                break;
+            }
+        }
+        if (eraseIndex >= 0)
+        {
+            _cursorPosEvents.erase(_cursorPosEvents.begin() + static_cast<size_t>(eraseIndex));
+        }
+        #ifdef PLATYPUS_DEBUG
+        else
+        {
+            Debug::log(
+                "CursorPosEvent wasn't found! The event may have beed destroyed already.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
+        #endif
+    }
 
     void InputManager::destroyEvents()
     {

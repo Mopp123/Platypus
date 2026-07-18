@@ -1,6 +1,8 @@
 #version 300 es
 precision mediump float;
 
+// NOTE: This is exactly the same as receiveShadows/StaticFragmentShader_ds.glsl
+// TODO: Get rid of duplicate shaders
 in vec3 var_normal;
 in vec2 var_texCoord;
 in vec3 var_fragPos;
@@ -78,7 +80,7 @@ void main()
     float shininess = materialData.lightingProperties.y;
     float isShadeless = materialData.lightingProperties.z;
 
-    vec3 unitLightDir = normalize(var_lightDir.xyz);
+    vec3 unitLightDir = normalize(var_lightDir);
     vec3 toLight = -unitLightDir;
     vec3 unitNormal = normalize(var_normal);
     vec3 toCamera = normalize(var_cameraPos - var_fragPos);

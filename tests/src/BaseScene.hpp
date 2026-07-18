@@ -29,10 +29,10 @@ public:
     void initBase();
     void updateBase();
 
-    std::vector<ID_t> loadTextures(
+    std::vector<UUID_t> loadTextures(
         platypus::AssetManager* pAssetManager,
         platypus::ImageFormat imageFormat,
-        platypus::TextureSampler sampler,
+        const platypus::TextureSampler* pSampler,
         std::vector<std::string> filepaths
     );
 
@@ -50,8 +50,8 @@ public:
         const platypus::Vector3f& position,
         const platypus::Quaternion& rotation,
         const platypus::Vector3f& scale,
-        ID_t meshAssetID,
-        ID_t materialAssetID
+        UUID_t meshAssetID,
+        UUID_t materialAssetID
     );
 
     entityID_t createSkinnedMeshEntity(
@@ -60,7 +60,7 @@ public:
         const platypus::Vector3f& scale,
         platypus::Mesh* pMesh,
         platypus::SkeletalAnimationData* pAnimationAsset,
-        ID_t materialAssetID,
+        UUID_t materialAssetID,
         std::vector<entityID_t>& outJointEntities
     );
 

@@ -1,0 +1,6 @@
+add_subdirectory(core)
+add_subdirectory(assets)
+add_subdirectory(ecs)
+add_subdirectory(graphics)
+add_subdirectory(ui)
+add_subdirectory(utils)

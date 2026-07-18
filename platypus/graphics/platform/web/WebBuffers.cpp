@@ -5,6 +5,7 @@
 #include "WebContext.hpp"
 #include "platypus/Common.h"
 #include <cstdlib>
+#include <cstring>
 
 
 namespace platypus
@@ -63,29 +64,37 @@ namespace platypus
     {
     }
 
-    VertexBufferElement::VertexBufferElement(uint32_t location, ShaderDataType dataType) :
+    VertexBufferElement::VertexBufferElement(
+        uint32_t location,
+        ShaderDataType dataType,
+        VertexAttributeType attribType
+    ) :
         _location(location),
-        _type(dataType)
+        _dataType(dataType),
+        _attribType(attribType)
     {
     }
 
     VertexBufferElement::VertexBufferElement(const VertexBufferElement& other) :
         _location(other._location),
-        _type(other._type)
+        _dataType(other._dataType),
+        _attribType(other._attribType)
     {
     }
 
     VertexBufferElement& VertexBufferElement::operator=(VertexBufferElement&& other)
     {
         _location = other._location;
-        _type = other._type;
+        _dataType = other._dataType;
+        _attribType = other._attribType;
         return *this;
     }
 
     VertexBufferElement& VertexBufferElement::operator=(const VertexBufferElement& other)
     {
         _location = other._location;
-        _type = other._type;
+        _dataType = other._dataType;
+        _attribType = other._attribType;
         return *this;
     }
 
@@ -118,7 +127,7 @@ namespace platypus
         else
         {
             for (const VertexBufferElement& element : elements)
-                _stride += get_shader_datatype_size(element.getType());
+                _stride += get_shader_datatype_size(element.getDataType());
         }
     }
 
@@ -161,7 +170,7 @@ namespace platypus
 
 
     Buffer::Buffer(
-        void* pData,
+        const void* pData,
         size_t elementSize,
         size_t dataLength,
         uint32_t usageFlags,
@@ -248,6 +257,37 @@ namespace platypus
         {
             GL_FUNC(glBufferSubData(glBufferType, (GLintptr)offset, (GLsizeiptr)dataSize, pData));
         }
+        GL_FUNC(glBindBuffer(glBufferType, 0));
+    }
+
+    // NOTE: THIS IS NEW, NOT TESTED YET!
+    void Buffer::updateDevice()
+    {
+        if (!_hostSideUpdated && _pData)
+        {
+            Debug::log(
+                "Host side buffer exists but wasn't updated!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_WARNING
+            );
+        }
+        const size_t dataSize = getTotalSize();
+        const size_t offset = 0;
+        if (!validateUpdate(_pData, dataSize, offset))
+        {
+            Debug::log(
+                "@Buffer::updateDevice "
+                "Failed to update buffer!",
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        GLenum glBufferType = to_opengl_buffer_type(_bufferUsageFlags);
+        GL_FUNC(glBindBuffer(glBufferType, _pImpl->id));
+        GLenum glBufferUpdateFrequency = to_opengl_buffer_update_frequency(_updateFrequency);
+        GL_FUNC(glBufferData(glBufferType, dataSize, _pData, glBufferUpdateFrequency));
         GL_FUNC(glBindBuffer(glBufferType, 0));
     }
 }

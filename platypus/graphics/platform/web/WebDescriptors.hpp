@@ -1,7 +1,7 @@
 #pragma once
 
 #include <platypus/graphics/Descriptors.hpp>
-#include <platypus/utils/ID.hpp>
+#include <platypus/utils/UUID.hpp>
 #include <unordered_map>
 
 
@@ -9,18 +9,22 @@ namespace platypus
 {
     struct DescriptorSetImpl
     {
-        ID_t id = NULL_ID;
+        UUID_t id = NULL_UUID;
     };
 
     struct DescriptorPoolImpl
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSetComponent>> descriptorSetData;
+        size_t uuidPool = NULL_UUID;
+        std::unordered_map<UUID_t, std::vector<DescriptorSetComponent>> descriptorSetData;
+
+        DescriptorPoolImpl();
+        ~DescriptorPoolImpl();
     };
 
     // TODO: Make safer?
     DescriptorSetComponent* get_pool_descriptor_set_data(
         DescriptorPoolImpl* pDescriptorPoolImpl,
-        ID_t descriptorSetID,
+        UUID_t descriptorSetID,
         uint32_t binding
     );
 }

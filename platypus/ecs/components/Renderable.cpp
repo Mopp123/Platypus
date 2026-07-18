@@ -1,48 +1,160 @@
 #include "Renderable.hpp"
 #include "platypus/core/Application.hpp"
-#include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/assets/AssetManager.hpp"
 
 
 namespace platypus
 {
+    bool mesh_and_material_compatible(
+        const Mesh* pMesh,
+        const Material* pMaterial
+    )
+    {
+        const uint32_t meshPropertyFlags = pMesh->getPropertyFlags();
+        if ((meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
+            (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
+            pMaterial->isTransparent())
+        {
+            return false;
+        }
+
+        if (pMaterial->hasNormalMap() != pMesh->hasTangents())
+            return false;
+
+        return true;
+    }
+
+
+    bool mesh_and_material_compatible_verbose(
+        const Mesh* pMesh,
+        const Material* pMaterial,
+        std::string& outError
+    )
+    {
+        const uint32_t meshPropertyFlags = pMesh->getPropertyFlags();
+        if ((meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
+            (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
+            pMaterial->isTransparent())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Mesh was static and instanced while Material was transparent. "
+                "Instanced transparent renderables aren't currently supported!";
+
+            return false;
+        }
+
+        if (pMaterial->hasNormalMap() && !pMesh->hasTangents())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Material is using normal map but the Mesh doesn't have tangents!";
+            return false;
+        }
+        else if (!pMaterial->hasNormalMap() && pMesh->hasTangents())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Mesh has tangents but Material doesn't use normal map!";
+            return false;
+        }
+
+        return true;
+    }
+
+
+    std::unordered_map<UUID_t, EntityError> query_renderable3D_compatibility_errors(
+        Scene* pScene,
+        const Material* pMaterial
+    )
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        std::unordered_map<UUID_t, EntityError> entityErrorMapping;
+        for (const Entity& entity : pScene->getEntities())
+        {
+            if (entity.id == NULL_ENTITY_ID || entity.uuid == NULL_UUID)
+                continue;
+            if (!(entity.componentMask & ComponentType::COMPONENT_TYPE_RENDERABLE3D))
+                continue;
+
+            void* pComponent = pScene->getComponent(entity.id, ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+            Renderable3D* pRenderable = reinterpret_cast<Renderable3D*>(pComponent);
+
+            if (pRenderable->materialID != pMaterial->getID())
+                continue;
+
+            Asset* pMeshAsset = pAssetManager->getAsset(pRenderable->meshID, AssetType::ASSET_TYPE_MESH);
+            // NOTE: Should error here?
+            if (!pMeshAsset)
+                continue;
+
+            Mesh* pMesh = reinterpret_cast<Mesh*>(pMeshAsset);
+
+            std::string error;
+            if (!mesh_and_material_compatible_verbose(
+                    pMesh,
+                    pMaterial,
+                    error
+            ))
+            {
+                entityErrorMapping[entity.uuid] = {
+                    EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL,
+                    { { ComponentType::COMPONENT_TYPE_RENDERABLE3D, pComponent } },
+                    { }
+                };
+            }
+        }
+        return entityErrorMapping;
+    }
+
+
     Renderable3D* create_renderable3D(
         entityID_t target,
-        ID_t meshAssetID,
-        ID_t materialAssetID
+        UUID_t meshAssetID,
+        UUID_t materialAssetID,
+        Scene* pScene,
+        bool useExplicitComponentMask,
+        bool allowNullAssets // ATM JUST FOR TESTING Renderable3D creation in Editor
     )
     {
         Application* pApp = Application::get_instance();
-        AssetManager* pAssetManager = pApp->getAssetManager();
-        const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
-            meshAssetID,
-            AssetType::ASSET_TYPE_MESH
-        );
-        const Material* pMaterial = (const Material*)pAssetManager->getAsset(
-            materialAssetID,
-            AssetType::ASSET_TYPE_MATERIAL
-        );
-        if (pMesh->getType() == MeshType::MESH_TYPE_STATIC_INSTANCED && pMaterial->isTransparent())
+
+        if (!allowNullAssets)
         {
-            Debug::log(
-                "@create_renderable3D "
-                "Mesh type was MESH_TYPE_STATIC_INSTANCED and Material was transparent. "
-                "Instanced transparent renderables aren't currently supported!",
-                Debug::MessageType::PLATYPUS_ERROR
+            AssetManager* pAssetManager = pApp->getAssetManager();
+            const Mesh* pMesh = (const Mesh*)pAssetManager->getAsset(
+                meshAssetID,
+                AssetType::ASSET_TYPE_MESH
             );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
+            PLATYPUS_ASSERT(pMesh);
+
+            const Material* pMaterial = (const Material*)pAssetManager->getAsset(
+                materialAssetID,
+                AssetType::ASSET_TYPE_MATERIAL
+            );
+            PLATYPUS_ASSERT(pMaterial);
+
+            std::string incompatibilityError;
+            if (!mesh_and_material_compatible_verbose(pMesh, pMaterial, incompatibilityError))
+            {
+                Debug::log(
+                    incompatibilityError,
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                return nullptr;
+            }
         }
 
-        Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_renderable3D"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = pApp->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_renderable3D"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_RENDERABLE3D;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -53,7 +165,9 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
         Renderable3D* pRenderable = (Renderable3D*)pComponent;
         pRenderable->meshID = meshAssetID;
         pRenderable->materialID = materialAssetID;
@@ -64,25 +178,29 @@ namespace platypus
 
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID,
-        ID_t fontID,
+        UUID_t textureID,
+        UUID_t fontID,
         Vector4f color,
         Vector4f borderColor,
         float borderThickness,
         Vector2f textureOffset,
         uint32_t layer,
         bool isText,
-        std::string text
+        std::string text,
+        Scene* pScene
     )
     {
-        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-        if (!pScene->isValidEntity(target, "create_gui_renderable(1)"))
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_gui_renderable(1)"))
         {
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
         ComponentType componentType = ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
-        void* pComponent = pScene->allocateComponent(target, componentType);
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
         if (!pComponent)
         {
             Debug::log(
@@ -93,7 +211,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        pScene->addToComponentMask(target, componentType);
+        pUseScene->addToComponentMask(target, componentType);
         GUIRenderable* pRenderable = (GUIRenderable*)pComponent;
         pRenderable->textureID = textureID;
         pRenderable->fontID = fontID;
@@ -123,41 +241,118 @@ namespace platypus
         return pRenderable;
     }
 
+
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        const Vector4f color
+        const Vector4f color,
+        Scene* pScene
     )
     {
         return create_gui_renderable(
             target,
-            NULL_ID,
-            NULL_ID,
+            NULL_UUID,
+            NULL_UUID,
             color,
             { 0, 0, 0, 0 }, // border color
             0.0f, // border thickness
             { 0, 0 },
             0,
             false,
-            ""
+            "",
+            pScene
         );
     }
 
+
     GUIRenderable* create_gui_renderable(
         entityID_t target,
-        ID_t textureID
+        UUID_t textureID,
+        Scene* pScene
     )
     {
         return create_gui_renderable(
             target,
             textureID,
-            NULL_ID,
+            NULL_UUID,
             { 1, 1, 1, 1 }, // color
             { 0, 0, 0, 0 }, // border color
             0.0f, // border thickness
             { 0, 0 },
             0,
             false,
-            ""
+            "",
+            pScene
+        );
+    }
+
+
+    std::vector<char> serialize(const Renderable3D* pRenderable)
+    {
+        std::vector<char> serializedData(serialized_renderable3D_size);
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_RENDERABLE3D;
+        memcpy(
+            serializedData.data(),
+            &componentType,
+            sizeof(ComponentType)
+        );
+        size_t pos = sizeof(ComponentType);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pRenderable->meshID),
+            sizeof(UUID_t)
+        );
+        pos += sizeof(UUID_t);
+
+        memcpy(
+            serializedData.data() + pos,
+            &(pRenderable->materialID),
+            sizeof(UUID_t)
+        );
+
+        return serializedData;
+    }
+
+
+    void deserialize(
+        Scene* pScene,
+        Renderable3D** ppRenderable,
+        entityID_t entityID,
+        size_t dataSize,
+        const void* pData
+    )
+    {
+        PLATYPUS_ASSERT(pScene->entityExists(entityID));
+        PLATYPUS_ASSERT(dataSize == serialized_renderable3D_size);
+
+        ComponentType componentType;
+        memcpy(&componentType, pData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_RENDERABLE3D);
+        size_t pos = sizeof(ComponentType);
+
+        UUID_t meshID ;
+        UUID_t materialID;
+
+        memcpy(
+            &meshID,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
+            sizeof(UUID_t)
+        );
+        pos += sizeof(UUID_t);
+
+        memcpy(
+            &materialID,
+            reinterpret_cast<const uint8_t*>(pData) + pos,
+            sizeof(UUID_t)
+        );
+
+        *ppRenderable = create_renderable3D(
+            entityID,
+            meshID,
+            materialID,
+            pScene,
+            true,
+            true
         );
     }
 }

@@ -16,12 +16,16 @@
 
 namespace platypus
 {
-    MasterRenderer::MasterRenderer(Swapchain& swapchain, ImageFormat shadowmapDepthFormat) :
+    MasterRenderer::MasterRenderer(
+        DescriptorPool& descriptorPool,
+        Swapchain& swapchain,
+        ImageFormat shadowmapDepthFormat
+    ) :
+        _descriptorPoolRef(descriptorPool),
         _swapchainRef(swapchain),
-        _descriptorPool(_swapchainRef),
         _batcher(
             *this,
-            _descriptorPool,
+            _descriptorPoolRef,
             1000, // max static batch len
             1000, // max static instanced batch len
             500,  // max skinned batch len
@@ -80,7 +84,7 @@ namespace platypus
             _shadowPass,
             _shadowmapWidth,
             _shadowmapWidth,
-            _offscreenTextureSampler,
+            &_offscreenTextureSampler,
             false
         ),
         _shadowmapDescriptorSetLayout(
@@ -99,13 +103,13 @@ namespace platypus
     {
         _pRenderer3D = std::make_unique<Renderer3D>(*this);
         _pPostProcessingRenderer = std::make_unique<PostProcessingRenderer>(
-            _descriptorPool,
+            _descriptorPoolRef,
             _swapchainRef.getRenderPassPtr()
         );
 
         _pGUIRenderer = std::make_unique<GUIRenderer>(
             *this,
-            _descriptorPool,
+            _descriptorPoolRef,
             ComponentType::COMPONENT_TYPE_GUI_RENDERABLE | ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
@@ -167,7 +171,7 @@ namespace platypus
         freeCommandBuffers();
     }
 
-    void MasterRenderer::submit(const Scene* pScene, const Entity& entity)
+    void MasterRenderer::submit(Scene * const pScene, const Entity& entity)
     {
         uint64_t requiredMask1 = ComponentType::COMPONENT_TYPE_TRANSFORM | ComponentType::COMPONENT_TYPE_RENDERABLE3D;
         uint64_t requiredMask2 = ComponentType::COMPONENT_TYPE_GUI_TRANSFORM | ComponentType::COMPONENT_TYPE_GUI_RENDERABLE;
@@ -195,57 +199,112 @@ namespace platypus
             false,
             false
         );
-        if (pRenderable3D)
+        if (pRenderable3D && pTransform)
         {
             AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-            const ID_t meshID = pRenderable3D->meshID;
-            Mesh* pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
-            const MeshType meshType = pMesh->getType();
-            const ID_t materialID = pRenderable3D->materialID;
-            const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+            const UUID_t meshID = pRenderable3D->meshID;
+            const UUID_t materialID = pRenderable3D->materialID;
 
-            ID_t batchID = ID::hash(meshID, materialID);
+            // NOTE: Atm allowing renderables to have meshes and materials as NULL_UUIDs!
+            // TODO: Make this nicer!
+            if (meshID != NULL_UUID && materialID != NULL_UUID)
+            {
+                const Mesh * const pMesh = (Mesh*)pAssetManager->getAsset(meshID, AssetType::ASSET_TYPE_MESH);
+                if (!pMesh)
+                {
+                    pScene->insertError(
+                        entity.uuid,
+                        {
+                            EntityErrorType::COMPONENT_RENDERABLE3D_MESH_UNAVAILABLE,
+                            { {ComponentType::COMPONENT_TYPE_RENDERABLE3D, reinterpret_cast<void*>(pRenderable3D)} },
+                            { }
+                        }
+                    );
+                    return;
+                }
 
-            if (pMaterial->isTransparent())
-            {
-                // Create transparent batch (if required)
-                if (!_batcher.getBatch(RenderPassType::TRANSPARENT_PASS, batchID))
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_transparentPass);
-            }
-            else
-            {
-                // Create opaque batch (if required)
-                if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
-                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &_opaquePass);
-            }
+                const Material * const pMaterial = (Material*)pAssetManager->getAsset(materialID, AssetType::ASSET_TYPE_MATERIAL);
+                if (!pMaterial)
+                {
+                    pScene->insertError(
+                        entity.uuid,
+                        {
+                            EntityErrorType::COMPONENT_RENDERABLE3D_MATERIAL_UNAVAILABLE,
+                            { {ComponentType::COMPONENT_TYPE_RENDERABLE3D, reinterpret_cast<void*>(pRenderable3D)} },
+                            { }
+                        }
+                    );
+                    return;
+                }
 
-            // Create shadow batch (if required)
-            if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
-                _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
+                #ifdef PLATYPUS_DEBUG
+                if (!mesh_and_material_compatible(pMesh, pMaterial))
+                {
+                    Debug::log(
+                        "Not submitting Renderable3D for rendering due to incompatible Mesh and Material!",
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    pScene->insertError(
+                        entity.uuid,
+                        {
+                            EntityErrorType::COMPONENT_RENDERABLE3D_INCOMPATIBLE_MESH_MATERIAL,
+                            { {ComponentType::COMPONENT_TYPE_RENDERABLE3D, reinterpret_cast<void*>(pRenderable3D)} },
+                            { }
+                        }
+                    );
+                    return;
+                }
+                #endif
 
-            if (meshType == MeshType::MESH_TYPE_STATIC || meshType == MeshType::MESH_TYPE_STATIC_INSTANCED)
-            {
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)&(pTransform->globalMatrix),
-                    sizeof(Matrix4f),
-                    { sizeof(Matrix4f) },
-                    _currentFrame
-                );
-            }
-            else if (meshType == MeshType::MESH_TYPE_SKINNED)
-            {
-                const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
-                    entity.id,
-                    ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
-                );
-                _batcher.addToBatch(
-                    batchID,
-                    (void*)pAnimation->jointMatrices,
-                    sizeof(Matrix4f) * pMesh->getJointCount(),
-                    { sizeof(Matrix4f) * pMesh->getJointCount() },
-                    _currentFrame
-                );
+
+                const MeshPropertyFlagBits meshType = get_mesh_type(pMesh->getPropertyFlags());
+
+                // TODO: IMPORTANT! -> Stop using hashed UUIDs for batch IDs?
+                // UPDATE TO ABOVE: Why not? Batch UUIDs don't occupy actual
+                // UUID space for any pool
+                UUID_t batchID = UUID::hash(meshID, materialID);
+                if (pMaterial->isTransparent())
+                {
+                    // Create transparent batch (if required)
+                    if (!_batcher.getBatch(RenderPassType::TRANSPARENT_PASS, batchID))
+                        _batcher.createBatch(meshID, materialID, pDirectionalLight, &_transparentPass);
+                }
+                else
+                {
+                    // Create opaque batch (if required)
+                    if (!_batcher.getBatch(RenderPassType::OPAQUE_PASS, batchID))
+                        _batcher.createBatch(meshID, materialID, pDirectionalLight, &_opaquePass);
+                }
+
+                // Create shadow batch (if required)
+                if (pMaterial->castsShadows() && !_batcher.getBatch(RenderPassType::SHADOW_PASS, batchID))
+                    _batcher.createBatch(meshID, materialID, pDirectionalLight, &(_shadowPassInstance.getRenderPass()));
+
+                if (meshType == MeshPropertyFlagBits::TYPE_STATIC)
+                {
+                    _batcher.addToBatch(
+                        batchID,
+                        (void*)&(pTransform->globalMatrix),
+                        sizeof(Matrix4f),
+                        { sizeof(Matrix4f) },
+                        _currentFrame
+                    );
+                }
+                else if (meshType == MeshPropertyFlagBits::TYPE_SKINNED)
+                {
+                    const SkeletalAnimation* pAnimation = (const SkeletalAnimation*)pScene->getComponent(
+                        entity.id,
+                        ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
+                    );
+                    _batcher.addToBatch(
+                        batchID,
+                        (void*)pAnimation->jointMatrices,
+                        sizeof(Matrix4f) * pMesh->getJointCount(),
+                        { sizeof(Matrix4f) * pMesh->getJointCount() },
+                        _currentFrame
+                    );
+                }
             }
         }
 
@@ -302,9 +361,10 @@ namespace platypus
         {
             if (!skinned)
             {
+                // If NOT skinned, add only the vertex position attrib
                 outVertexBufferLayouts.push_back(
                     {
-                        {{ 0, ShaderDataType::Float3 }},
+                        {{ 0, ShaderDataType::Float3, VertexAttributeType::POSITION }},
                         VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
                         0,
                         meshVertexBufferLayout.getStride()
@@ -313,6 +373,7 @@ namespace platypus
             }
             else
             {
+                // If skinned, add vertex pos, weight and joint attribs
                 outVertexBufferLayouts.push_back(
                     VertexBufferLayout::get_common_skinned_shadow_layout(
                         meshVertexBufferLayout.getStride()
@@ -323,13 +384,14 @@ namespace platypus
 
         if (instanced)
         {
+            // If instanced, add the "instanced transformation matrix attrib"
             uint32_t meshVBLayoutElements = outVertexBufferLayouts.back().getElements().size();
             VertexBufferLayout instancedVBLayout = {
                 {
-                    { meshVBLayoutElements, ShaderDataType::Float4 },
-                    { meshVBLayoutElements + 1, ShaderDataType::Float4 },
-                    { meshVBLayoutElements + 2, ShaderDataType::Float4 },
-                    { meshVBLayoutElements + 3, ShaderDataType::Float4 }
+                    { meshVBLayoutElements, ShaderDataType::Float4, VertexAttributeType::CUSTOM },
+                    { meshVBLayoutElements + 1, ShaderDataType::Float4, VertexAttributeType::CUSTOM },
+                    { meshVBLayoutElements + 2, ShaderDataType::Float4, VertexAttributeType::CUSTOM },
+                    { meshVBLayoutElements + 3, ShaderDataType::Float4, VertexAttributeType::CUSTOM }
                 },
                 VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                 1
@@ -402,24 +464,31 @@ namespace platypus
 
     void MasterRenderer::createOffscreenPassResources()
     {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        size_t assetUUIDPool = pAssetManager->getUUIDPool();
         const Extent2D swapchainExtent = _swapchainRef.getExtent();
+
         _pColorAttachment = new Texture(
+            assetUUIDPool,
             TextureType::COLOR_TEXTURE,
-            _offscreenTextureSampler,
+            &_offscreenTextureSampler,
             _offscreenColorFormat,
             swapchainExtent.width,
             swapchainExtent.height
         );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
+        _pColorAttachment->setSerializable(false);
+        pAssetManager->addExternalDefaultAsset(_pColorAttachment);
 
         _pDepthAttachment = new Texture(
+            assetUUIDPool,
             TextureType::DEPTH_TEXTURE,
-            _offscreenTextureSampler,
+            &_offscreenTextureSampler,
             _offscreenDepthFormat,
             swapchainExtent.width,
             swapchainExtent.height
         );
-        Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+        _pDepthAttachment->setSerializable(false);
+        Application::get_instance()->getAssetManager()->addExternalDefaultAsset(_pDepthAttachment);
 
         _pOpaqueFramebuffer = new Framebuffer(
             _opaquePass,
@@ -445,7 +514,6 @@ namespace platypus
         // Update new "scene depth texture" for materials that are transparent
         // TODO: Some way to know if Material uses framebuffer attachment as texture?
         Texture* pDepthAttachment = _shadowPassInstance.getFramebuffer(0)->getDepthAttachment();
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
         {
             Material* pMaterial = (Material*)pAsset;
@@ -464,8 +532,8 @@ namespace platypus
         _pOpaqueFramebuffer = nullptr;
         _pTransparentFramebuffer = nullptr;
 
-        Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pColorAttachment);
-        Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pDepthAttachment);
+        Application::get_instance()->getAssetManager()->destroyAsset(_pColorAttachment->getID());
+        Application::get_instance()->getAssetManager()->destroyAsset(_pDepthAttachment->getID());
         _pColorAttachment = nullptr;
         _pDepthAttachment = nullptr;
 
@@ -514,7 +582,7 @@ namespace platypus
         // their pipelines according to the current situation
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->recreateExistingPipeline();
+            ((Material*)pAsset)->recreateExistingPipelines();
     }
 
     void MasterRenderer::destroyPipelines()
@@ -524,7 +592,7 @@ namespace platypus
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         for (Asset* pAsset : pAssetManager->getAssets(AssetType::ASSET_TYPE_MATERIAL))
-            ((Material*)pAsset)->destroyPipeline();
+            ((Material*)pAsset)->destroyPipelines();
     }
 
     void MasterRenderer::createShaderResources()
@@ -563,7 +631,7 @@ namespace platypus
             _scene3DDataUniformBuffers.push_back(pScene3DDataUniformBuffer);
 
             _scene3DDescriptorSets.push_back(
-                _descriptorPool.createDescriptorSet(
+                _descriptorPoolRef.createDescriptorSet(
                     _scene3DDataDescriptorSetLayout,
                     { { DescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER, pScene3DDataUniformBuffer } }
                 )
@@ -573,7 +641,7 @@ namespace platypus
 
     void MasterRenderer::destroyCommonShaderResources()
     {
-        _descriptorPool.freeDescriptorSets(_scene3DDescriptorSets);
+        _descriptorPoolRef.freeDescriptorSets(_scene3DDescriptorSets);
         _scene3DDescriptorSets.clear();
 
         for (Buffer* pBuffer : _scene3DDataUniformBuffers)
@@ -828,7 +896,10 @@ namespace platypus
 
         // NOTE: Need to reset batches for next frame's submits
         //      -> Otherwise adding endlessly
-        _batcher.resetForNextFrame();
+        // UPDATE: Currently doing this in SceneManager, before beginning new round of submits
+        // so that u can query Batcher's stuff in scene's update()
+        //  -> atm this seems fine BUT NOT SURE IF THIS EVENTUALLY FUCKS SHIT UP!
+        //_batcher.resetForNextFrame();
 
         _pRenderer3D->advanceFrame();
 
@@ -855,7 +926,6 @@ namespace platypus
 
     void MasterRenderer::handleWindowResize()
     {
-        Debug::log("___TEST___WINDOW RESIZE!");
         Application* pApp = Application::get_instance();
         Device::wait_for_operations();
 

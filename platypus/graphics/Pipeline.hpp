@@ -111,6 +111,7 @@ namespace platypus
 
         inline const std::vector<VertexBufferLayout>& getVertexBufferLayouts() const { return _vertexBufferLayouts; }
         inline const std::vector<DescriptorSetLayout>& getDescriptorSetLayouts() const { return _descriptorSetLayouts; }
+        inline void setDescriptorSetLayouts(const std::vector<DescriptorSetLayout>& descriptorSetLayouts) { _descriptorSetLayouts = descriptorSetLayouts; }
         inline const Shader* getVertexShader() const { return _pVertexShader; }
         inline const Shader* getFragmentShader() const { return _pFragmentShader; }
         inline CullMode getCullMode() const { return _cullMode; }

@@ -13,7 +13,7 @@ namespace platypus
         const RenderPass& _renderPassRef;
         uint32_t _framebufferWidth = 0;
         uint32_t _framebufferHeight = 0;
-        TextureSampler _textureSampler;
+        const TextureSampler* _pTextureSampler;
         bool _useWindowDimensions = false;
         Texture* _pColorAttachment = nullptr;
         Texture* _pDepthAttachment = nullptr;
@@ -24,7 +24,7 @@ namespace platypus
             const RenderPass& renderPass,
             uint32_t framebufferWidth,
             uint32_t framebufferHeight,
-            const TextureSampler& textureSampler,
+            const TextureSampler* pTextureSampler,
             bool useWindowDimensions
         );
         ~RenderPassInstance();

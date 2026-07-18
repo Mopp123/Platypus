@@ -264,12 +264,14 @@ namespace platypus
         // NOTE: ATM DISABLED ONLY FOR TESTING
         //const int windowHeight = Application::get_instance()->getWindow().getHeight();
 
-        int mx = mouseEvent->targetX;
-        int my = mouseEvent->targetY;
+        int mx = static_cast<int>(mouseEvent->targetX);
+        int my = static_cast<int>(mouseEvent->targetY);
+        float mdx = static_cast<float>(mx) - static_cast<float>(pInputManager->getMouseX());
+        float mdy = static_cast<float>(my) - static_cast<float>(pInputManager->getMouseY());
         //int my = windowHeight - mouseEvent->targetY;
         pInputManager->setMousePos(mx, my);
+        pInputManager->setMouseMove(mdx, mdy);
         pInputManager->processCursorPosEvents(mx, my);
-
         return 0;
     }
 
@@ -292,7 +294,6 @@ namespace platypus
     //  window.
     static EM_BOOL ui_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
     {
-        Debug::log("___TEST___WARNING UI CALLBACK!");
         InputManager* pInputManager = (InputManager*)userData;
         const Window& window = Application::get_instance()->getWindow();
         if (window.getMode() == WindowMode::WINDOWED_FIT_SCREEN && eventType == EMSCRIPTEN_EVENT_RESIZE)

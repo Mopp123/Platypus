@@ -2,6 +2,7 @@
 #include "MasterRenderer.hpp"
 #include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/RenderCommand.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 
 
@@ -128,26 +129,27 @@ namespace platypus
 
     void Renderer3D::advanceFrame()
     {
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        size_t maxFramesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
         _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
     }
 
     void Renderer3D::allocCommandBuffers()
     {
+        size_t maxFramesInFlight = Application::get_instance()->getSwapchain()->getMaxFramesInFlight();
         _commandBuffers[RenderPassType::SCREEN_PASS] = Device::get_command_pool()->allocCommandBuffers(
-            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            maxFramesInFlight,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
         _commandBuffers[RenderPassType::SHADOW_PASS] = Device::get_command_pool()->allocCommandBuffers(
-            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            maxFramesInFlight,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
         _commandBuffers[RenderPassType::OPAQUE_PASS] = Device::get_command_pool()->allocCommandBuffers(
-            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            maxFramesInFlight,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
         _commandBuffers[RenderPassType::TRANSPARENT_PASS] = Device::get_command_pool()->allocCommandBuffers(
-            _masterRendererRef.getSwapchain().getMaxFramesInFlight(),
+            maxFramesInFlight,
             CommandBufferLevel::SECONDARY_COMMAND_BUFFER
         );
     }

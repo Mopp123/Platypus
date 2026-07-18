@@ -60,6 +60,31 @@ namespace platypus { namespace util { namespace str {
         return (uint32_t)*it;
     }
 
+    std::string reverse(const std::string& str)
+    {
+        if (str.empty())
+            return "";
+
+        std::string result;
+        const size_t size = str.size();
+        char* pData = (char*)str.data();
+        utf8::iterator<char*> beginIt(pData, pData, pData + size);
+        utf8::iterator<char*> it(pData + size, pData, pData + size);
+        // decrement it immediately so at the beginning of the whole last char,
+        // even if it was more than 1 byte
+        --it;
+        while (true)
+        {
+            uint32_t codepoint = static_cast<uint32_t>(*it);
+            append_utf8(codepoint, result);
+            if (it == beginIt)
+                break;
+
+            --it;
+        }
+        return result;
+    }
+
     void iterate_utf8(
         const std::string& str,
         void* pUserData,

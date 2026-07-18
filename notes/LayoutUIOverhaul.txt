@@ -1,0 +1,13 @@
+You fucking idiot once again had the cancerous
+object oriented approach, way too strongly in ur
+head when started doing this... and now
+everything's fucked in the terms of how this
+current issue should be tackled!
+
+Layouts builds the tree
+    -> they shouldn't be objects themselves
+        -> they are build instructions for the objects
+            -> how can those blueprints be reused
+                -> definitely not by having each UIElement manage their own instance of UIElement
+                    -> WTF?!?!!??
+                        -> once again fucking dead end in quickly getting the site up...

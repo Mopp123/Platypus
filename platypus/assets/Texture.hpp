@@ -4,23 +4,26 @@
 #include "Image.hpp"
 #include "platypus/graphics/CommandBuffer.hpp"
 #include "platypus/graphics/Pipeline.hpp"
-#include <memory>
+#include <string>
 
 
 namespace platypus
 {
-    enum class TextureSamplerFilterMode
+    enum class TextureSamplerFilterMode : uint32_t
     {
         SAMPLER_FILTER_MODE_LINEAR,
         SAMPLER_FILTER_MODE_NEAR
     };
 
-    enum class TextureSamplerAddressMode
+    enum class TextureSamplerAddressMode : uint32_t
     {
         SAMPLER_ADDRESS_MODE_REPEAT,
         SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
         SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
     };
+
+    std::string texture_sampler_filter_mode_to_string(TextureSamplerFilterMode mode);
+    std::string texture_sampler_address_mode_to_string(TextureSamplerAddressMode mode);
 
     enum class TextureType
     {
@@ -35,12 +38,14 @@ namespace platypus
     class TextureSampler
     {
     private:
-        std::shared_ptr<TextureSamplerImpl> _pImpl = nullptr;
+        TextureSamplerImpl* _pImpl = nullptr;
         TextureSamplerFilterMode _filterMode;
         TextureSamplerAddressMode _addressMode;
         bool _mipmapping = false;
 
     public:
+        // NOTE: Had to add default constructor for editor -> THIS MIGHT FUCK SHIT UP!
+        TextureSampler() {}
         TextureSampler(
             TextureSamplerFilterMode filterMode,
             TextureSamplerAddressMode addressMode,
@@ -48,12 +53,24 @@ namespace platypus
             uint32_t anisotropicFiltering
         );
         ~TextureSampler();
-        TextureSampler(const TextureSampler& other);
+        TextureSampler(const TextureSampler& other) = delete;
 
         inline TextureSamplerFilterMode getFilterMode() const { return _filterMode; }
         inline TextureSamplerAddressMode getAddressMode() const { return _addressMode; }
-        inline const std::shared_ptr<TextureSamplerImpl>& getImpl() const { return _pImpl; }
+        inline const TextureSamplerImpl* getImpl() const { return _pImpl; }
         inline bool isMipmapped() const { return _mipmapping; }
+    };
+
+
+    struct TextureMetadata
+    {
+        UUID_t assetID = NULL_UUID;
+        UUID_t imageID = NULL_UUID;
+        TextureSamplerFilterMode filterMode;
+        TextureSamplerAddressMode addressMode;
+        uint8_t useMipmapping = 0;
+        uint8_t persistent = 0;
+        char name[asset_metadata_name_size];
     };
 
 
@@ -63,7 +80,8 @@ namespace platypus
     private:
         TextureImpl* _pImpl = nullptr;
         const Image* _pImage = nullptr;
-        std::shared_ptr<const TextureSamplerImpl> _pSamplerImpl = nullptr;
+        // TODO: Replace above completely with the sampler ptr and test that it works!
+        const TextureSampler* _pSampler = nullptr;
         uint32_t _atlasRowCount = 1;
         ImageFormat _imageFormat = ImageFormat::NONE;
 
@@ -71,29 +89,67 @@ namespace platypus
         // Needed for Vulkan swapchain's color and depth textures. ...fucking dumb
         // This should ONLY create the _pImpl and set _imageFormat!
         // *This kind of Texture can't be sampled in shader!
-        Texture(ImageFormat format);
+        Texture(size_t uuidPool, ImageFormat format);
         Texture(
+            size_t uuidPool,
             TextureType type,
-            const TextureSampler& sampler,
+            const TextureSampler* pSampler,
             ImageFormat format,
             uint32_t width,
             uint32_t height
         );
         Texture(
+            size_t uuidPool,
             const Image* pImage,
-            const TextureSampler& sampler,
-            uint32_t atlasRowCount = 1
+            const TextureSampler* pSampler,
+            const std::string& name = "",
+            UUID_t id = NULL_UUID,
+            bool persistent = false
         );
         Texture(const Texture&) = delete;
         ~Texture();
 
+        // TODO: IMPORTANT! Add web implementations for:
+        //  *destroy
+        //  *create
+        //  *recreate(1)
+        //  *recreate(2)
+
+        // TODO: Make destroy rather private and some public func to recreate with changed image?
+        void destroy();
+        void create(const Image* pImage);
+
+        // calls destroy(), create(..), searches all Materials using this texture
+        // and updates the Material's texture descriptors.
+        // NOTE: This doesn't need platform implementation!
+        void recreate(const Image* pImage, const TextureSampler* pSampler);
+        void recreate(const Image* pImage);
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        static Texture* create_from_metadata_buffer(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+
+        static size_t get_serialized_metadata_size();
+
         inline const TextureImpl* getImpl() const { return _pImpl; }
         inline TextureImpl* getImpl() { return _pImpl; }
-        inline const std::shared_ptr<const TextureSamplerImpl>& getSamplerImpl() const { return _pSamplerImpl; }
+        inline const TextureSampler* getTextureSampler() const { return _pSampler; }
         inline uint32_t getAtlasRowCount() const { return _atlasRowCount; }
         inline void setAtlasRowCount(uint32_t rowCount) { _atlasRowCount = rowCount; }
         inline const Image* getImage() const { return _pImage; }
         inline ImageFormat getImageFormat() const { return _imageFormat; }
+
+    private:
+        // NEEDS TO BE CALLED IN TEXTURE'S DESTRUCTOR (in all implementations)!
+        // If Materials are using this texture, set the Materials'
+        // texture slot to "error texture".
+        void fixMaterialsOnDestruction();
     };
 
 

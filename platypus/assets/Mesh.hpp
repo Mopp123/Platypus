@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Asset.hpp"
+#include "SkeletalAnimationData.hpp"
 #include "platypus/graphics/Buffers.hpp"
 #include "platypus/utils/Maths.hpp"
 #include "platypus/utils/AnimationDataUtils.hpp"
@@ -8,19 +9,23 @@
 
 namespace platypus
 {
-    enum MeshType
+
+    enum class MeshPropertyFlagBits : uint32_t
     {
-        MESH_TYPE_NONE = 0x0,
-        MESH_TYPE_STATIC = 0x1,
-        MESH_TYPE_STATIC_INSTANCED = 0x1 << 1,
-        MESH_TYPE_SKINNED = 0x1 << 2,
+        NONE = 0,
+        TYPE_STATIC = 0x1,
+        TYPE_SKINNED = 0x1 << 1,
+
+        HAS_TANGENTS = 0x1 << 2,
+        INSTANCED = 0x1 << 3
     };
-    std::string mesh_type_to_string(MeshType type);
+    MeshPropertyFlagBits get_mesh_type(uint32_t meshPropertyFlags);
+    std::string mesh_type_to_string(MeshPropertyFlagBits type);
 
     class Mesh : public Asset
     {
     private:
-        MeshType _type;
+        uint32_t _propertyFlags = 0;
         VertexBufferLayout _vertexBufferLayout;
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
@@ -31,27 +36,43 @@ namespace platypus
 
         Pose _bindPose;
 
+        // NOTE: Not sure if "assets inside assets" should rather be IDs to those instead of ptrs!
+        //  -> ptrs will become issue when serializing
+        std::vector<SkeletalAnimationData*> _animations;
+
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
         Mesh(
-            MeshType type,
+            size_t uuidPool,
+            uint32_t propertyFlags,
             VertexBufferLayout vertexBufferLayout,
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
             const Matrix4f& transformationMatrix,
-            Pose bindPose
+            Pose bindPose,
+            const std::vector<SkeletalAnimationData*>& animations,
+            const std::string& name = "",
+            UUID_t id = NULL_UUID,
+            bool persistent = false
         );
-
         ~Mesh();
 
+        bool hasTangents() const;
+
+        // returns -1 if not found
+        int32_t getAnimationIndex(const std::string& name) const;
+
         static Mesh* generate_terrain(
+            size_t uuidPool,
             float tileSize,
             const std::vector<float>& heightmapData,
             bool dynamic,
             bool generateTangents
         );
 
-        inline MeshType getType() const { return _type; }
+        inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
+
+        inline uint32_t getPropertyFlags() const { return _propertyFlags; }
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline Buffer* getVertexBuffer() { return _pVertexBuffer; }

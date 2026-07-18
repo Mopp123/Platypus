@@ -1,4 +1,6 @@
 #include "Image.hpp"
+#include "AssetManager.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include <cstring>
 
@@ -40,6 +42,36 @@ namespace platypus
             default: return "INVALID FORMAT";
         }
     }
+
+
+    ImageFormat string_to_image_format(const std::string& str)
+    {
+        if (str == "NONE") return ImageFormat::NONE;
+
+        if (str == "R8_SRGB") return ImageFormat::R8_SRGB;
+        if (str == "R8G8B8_SRGB") return ImageFormat::R8G8B8_SRGB;
+        if (str == "R8G8B8A8_SRGB") return ImageFormat::R8G8B8A8_SRGB;
+
+        if (str == "B8G8R8_SRGB") return ImageFormat::B8G8R8_SRGB;
+        if (str == "B8G8R8A8_SRGB") return ImageFormat::B8G8R8A8_SRGB;
+
+        if (str == "R8_UNORM") return ImageFormat::R8_UNORM;
+        if (str == "R8G8B8_UNORM") return ImageFormat::R8G8B8_UNORM;
+        if (str == "R8G8B8A8_UNORM") return ImageFormat::R8G8B8A8_UNORM;
+
+        if (str == "B8G8R8A8_UNORM") return ImageFormat::B8G8R8A8_UNORM;
+        if (str == "B8G8R8_UNORM") return ImageFormat::B8G8R8_UNORM;
+
+        // Depth formats
+        if (str == "D16_UNORM") return ImageFormat::D16_UNORM;
+        if (str == "D32_SFLOAT") return ImageFormat::D32_SFLOAT;
+        if (str == "D16_UNORM_S8_UINT") return ImageFormat::D16_UNORM_S8_UINT;
+        if (str == "D24_UNORM_S8_UINT") return ImageFormat::D24_UNORM_S8_UINT;
+        if (str == "D32_SFLOAT_S8_UINT") return ImageFormat::D32_SFLOAT_S8_UINT;
+
+        return ImageFormat::NONE;
+    }
+
 
     size_t get_image_format_channel_count(ImageFormat format)
     {
@@ -155,13 +187,17 @@ namespace platypus
 
 
     Image::Image(
+        size_t uuidPool,
         PE_ubyte* pData,
         int width,
         int height,
         int channels,
-        ImageFormat format
+        ImageFormat format,
+        const std::string& name,
+        UUID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_IMAGE),
+        Asset(uuidPool, AssetType::ASSET_TYPE_IMAGE, name, id, persistent),
         _width(width),
         _height(height),
         _channels(channels),
@@ -177,28 +213,33 @@ namespace platypus
 
     Image::~Image()
     {
+        // If textures are using this image, make all those textures use "error image" instead
+        //
+        // NOTE: Was unable to get this working properly when destroying "default assets".
+        // That doesn't matter atm since default assets should persist through lifetime of app.
+        // BUT: Wasn't really sure why that didn't work -> MIGHT CAUSE ISSUES LATER IF THIS IS
+        // WORKING JUST BY ACCIDENT ATM!
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Image* pErrorImage = pAssetManager->getErrorImage();
+        if (pErrorImage)
+        {
+            std::vector<Asset*> textures = pAssetManager->getAssets(
+                AssetType::ASSET_TYPE_TEXTURE,
+                true, // excludeInternalDefaults,
+                false // excludeNonSerializable
+            );
+
+            for (Asset* pTextureAsset : textures)
+            {
+                Texture* pTexture = dynamic_cast<Texture*>(pTextureAsset);
+                PLATYPUS_ASSERT(pTexture);
+                if (pTexture->getImage() == this)
+                    pTexture->recreate(pErrorImage);
+            }
+        }
+
         if (_pData)
             delete[] _pData;
-    }
-
-    Image* Image::load_image(const std::string& filepath, ImageFormat format)
-    {
-        int width = 0;
-        int height = 0;
-        int channels = 0;
-        // TODO: On OpenGL side we need to flip?
-        bool flipVertically = false;
-        stbi_set_flip_vertically_on_load(flipVertically);
-        unsigned char* pStbImageData = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
-
-        if (!pStbImageData)
-        {
-            stbi_image_free(pStbImageData);
-            return nullptr;
-        }
-        Image* pImage = new Image(pStbImageData, width, height, channels, format);
-        stbi_image_free(pStbImageData);
-        return pImage;
     }
 
     int Image::getColorChannelValue(
@@ -241,5 +282,282 @@ namespace platypus
             return 0;
         }
         return _pData[(x + y * _width) * _channels + channelIndex];
+    }
+
+    bool Image::reload(const std::string& newFilepath, ImageFormat format)
+    {
+        // TODO: On OpenGL side we need to flip?
+        bool flipVertically = false;
+        stbi_set_flip_vertically_on_load(flipVertically);
+        unsigned char* pStbImageData = stbi_load(
+            newFilepath.c_str(),
+            &_width,
+            &_height,
+            &_channels,
+            0
+        );
+        if (!pStbImageData)
+        {
+            stbi_image_free(pStbImageData);
+            return false;
+        }
+
+        const size_t size = getSize();
+        delete[] _pData;
+        _pData = new PE_ubyte[size];
+        memcpy(_pData, pStbImageData, size);
+        stbi_image_free(pStbImageData);
+        _filepath = newFilepath;
+        _format = format;
+
+        // Recreate all textures using this image
+        // NOTE:
+        //  *Not sure should this be done here, but will do for now...
+        //  *THIS IS VERY SLOW!
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        std::vector<Asset*> textureAssets = pAssetManager->getAssets(
+            AssetType::ASSET_TYPE_TEXTURE
+            //bool excludeInternalDefaults = false,
+            //bool excludeNonSerializable = true
+        );
+        for (Asset* pAsset : textureAssets)
+        {
+            Texture* pTexture = reinterpret_cast<Texture*>(pAsset);
+            if (pTexture->getImage() == this)
+            {
+                pTexture->destroy();
+                pTexture->create(this);
+            }
+        }
+        // Recreate every Material's shader resources if its using this reloaded image...
+        // JUST TESTING HERE ATM! THIS IS DUMB, SHIT AND SLOW AS FUCK!
+        std::vector<Asset*> materialAssets = pAssetManager->getAssets(
+            AssetType::ASSET_TYPE_MATERIAL
+            //bool excludeInternalDefaults = false,
+            //bool excludeNonSerializable = true
+        );
+        for (Asset* pAsset : materialAssets)
+        {
+            bool recreateMaterialShaderResources = false;
+            Material* pMaterial = reinterpret_cast<Material*>(pAsset);
+            const UUID_t* pDiffuseTexturesIDs = pMaterial->getDiffuseTextureIDs();
+            const UUID_t* pSpecularTexturesIDs = pMaterial->getSpecularTextureIDs();
+            const UUID_t* pNormalTexturesIDs = pMaterial->getNormalTextureIDs();
+            for (size_t slot = 0; slot < PE_MAX_MATERIAL_TEX_CHANNELS; ++slot)
+            {
+                UUID_t diffuseTextureID = pDiffuseTexturesIDs[slot];
+                UUID_t specularTextureID = pSpecularTexturesIDs[slot];
+                UUID_t normalTextureID = pNormalTexturesIDs[slot];
+                if (diffuseTextureID != NULL_UUID)
+                {
+                    Asset* pMaterialTextureAsset = pAssetManager->getAsset(
+                        diffuseTextureID,
+                        AssetType::ASSET_TYPE_TEXTURE
+                    );
+                    Texture* pMaterialTexture = reinterpret_cast<Texture*>(pMaterialTextureAsset);
+                    if (pMaterialTexture->getImage() == this)
+                        recreateMaterialShaderResources = true;
+                }
+                if (specularTextureID != NULL_UUID)
+                {
+                    Asset* pMaterialTextureAsset = pAssetManager->getAsset(
+                        specularTextureID,
+                        AssetType::ASSET_TYPE_TEXTURE
+                    );
+                    Texture* pMaterialTexture = reinterpret_cast<Texture*>(pMaterialTextureAsset);
+                    if (pMaterialTexture->getImage() == this)
+                        recreateMaterialShaderResources = true;
+                }
+                if (normalTextureID != NULL_UUID)
+                {
+                    Asset* pMaterialTextureAsset = pAssetManager->getAsset(
+                        normalTextureID,
+                        AssetType::ASSET_TYPE_TEXTURE
+                    );
+                    Texture* pMaterialTexture = reinterpret_cast<Texture*>(pMaterialTextureAsset);
+                    if (pMaterialTexture->getImage() == this)
+                        recreateMaterialShaderResources = true;
+                }
+            }
+            if (recreateMaterialShaderResources)
+            {
+                // NOTE: Currently freeing all batches here!
+                // TODO: Find and free only batches using this Material!!
+                //  -> ITS' SLOW AS FUCK TO RECREATE ALL BATCHES!
+                Debug::log(
+                    "Doing very dumb shit here atm! TODO: Make this better!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_WARNING
+                );
+                // Don't know why I earlier recreated the pipelines here
+                //  -> shouldn't be necessary!
+                //pMaterial->destroyPipeline();
+                //pMaterial->recreateExistingPipelines();
+                pMaterial->destroyShaderResources();
+                pMaterial->createShaderResources();
+
+                MasterRenderer* pMasterRenderer = Application::get_instance()->getMasterRenderer();
+                pMasterRenderer->getBatcher().freeBatches();
+            }
+        }
+
+        return true;
+    }
+
+    Image* Image::load_image(
+        size_t uuidPool,
+        const std::string& filepath,
+        ImageFormat format,
+        const std::string& name,
+        UUID_t id
+    )
+    {
+        int width = 0;
+        int height = 0;
+        int channels = 0;
+        // TODO: On OpenGL side we need to flip?
+        bool flipVertically = false;
+        stbi_set_flip_vertically_on_load(flipVertically);
+        unsigned char* pStbImageData = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
+
+        if (!pStbImageData)
+        {
+            stbi_image_free(pStbImageData);
+            return nullptr;
+        }
+        Image* pImage = new Image(uuidPool, pStbImageData, width, height, channels, format, name, id);
+        pImage->_filepath = filepath;
+        stbi_image_free(pStbImageData);
+        return pImage;
+    }
+
+    bool Image::read_image_pixels(
+        const std::string& filepath,
+        int* pOutWidth,
+        int* pOutHeight,
+        int* pOutChannels,
+        PE_ubyte** ppPixels
+    )
+    {
+        PLATYPUS_ASSERT(pOutWidth);
+        PLATYPUS_ASSERT(pOutHeight);
+        PLATYPUS_ASSERT(pOutChannels);
+        PLATYPUS_ASSERT(ppPixels);
+        // TODO: On OpenGL side we need to flip?
+        bool flipVertically = false;
+        stbi_set_flip_vertically_on_load(flipVertically);
+        unsigned char* pStbImageData = stbi_load(filepath.c_str(), pOutWidth, pOutHeight, pOutChannels, 0);
+        if (!pStbImageData)
+        {
+            stbi_image_free(pStbImageData);
+            return false;
+        }
+
+        const size_t pixelsSize = (*pOutWidth) * (*pOutHeight) * (*pOutChannels);
+        PE_ubyte* pPixels = new PE_ubyte[pixelsSize];
+        memcpy(pPixels, pStbImageData, pixelsSize);
+        *ppPixels = pPixels;
+
+        stbi_image_free(pStbImageData);
+        return true;
+    }
+
+    /*
+        Serialized format (in order):
+            ID_t assetID = NULL_ID;
+            ImageFormat format;
+            uint8_t persistent = 0;
+            char name[asset_metadata_name_size];
+            char filepath[asset_metadata_filepath_size];
+    */
+    void Image::writeToMetadataBuffer(
+        std::vector<char>& targetBuffer
+    ) const
+    {
+        PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
+        PLATYPUS_ASSERT(_filepath.size() <= asset_metadata_filepath_size);
+        const size_t prevSize = targetBuffer.size();
+        targetBuffer.resize(prevSize + get_serialized_metadata_size());
+        char* pBuf = targetBuffer.data() + prevSize;
+
+        UUID_t useID = _id;
+        if (this == Application::get_instance()->getAssetManager()->getErrorImage())
+            useID = NULL_UUID;
+
+        memcpy(pBuf, &useID, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
+        pos += sizeof(ImageFormat);
+
+        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
+        memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        // Clear the buf for the longest possible name
+        memset(pBuf + pos, 0, asset_metadata_name_size);
+        // Write the name
+        memcpy(pBuf + pos, _name.data(), _name.size());
+        pos += asset_metadata_name_size;
+
+        // Same as above for the filepath
+        memset(pBuf + pos, 0, asset_metadata_filepath_size);
+        memcpy(pBuf + pos, _filepath.data(), _filepath.size());
+
+        pos += asset_metadata_filepath_size;
+        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+    }
+
+    Image* Image::create_from_metadata_buffer(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    )
+    {
+        PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
+        UUID_t id = NULL_UUID;
+        ImageFormat format;
+        uint8_t persistent;
+        char name[asset_metadata_name_size];
+        char filepath[asset_metadata_filepath_size];
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+
+        memcpy(&id, pBuf, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(&format, pBuf + pos, sizeof(ImageFormat));
+        pos += sizeof(ImageFormat);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+
+        memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
+        pos += asset_metadata_filepath_size;
+
+        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+
+        Image* pImage = pAssetManager->loadImage(
+            std::string(filepath),
+            format,
+            std::string(name),
+            id
+        );
+        if (persistent)
+            pAssetManager->makePersistent(pImage);
+
+        return pImage;
+    }
+
+    size_t Image::get_serialized_metadata_size()
+    {
+        return sizeof(UUID_t) +
+            sizeof(ImageFormat) +
+            sizeof(uint8_t) +
+            asset_metadata_name_size +
+            asset_metadata_filepath_size;
     }
 }

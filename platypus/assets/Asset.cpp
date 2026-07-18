@@ -1,4 +1,7 @@
 #include "Asset.hpp"
+#include "platypus/core/Application.hpp"
+#include "AssetManager.hpp"
+
 
 namespace platypus
 {
@@ -17,14 +20,31 @@ namespace platypus
         }
     }
 
-    Asset::Asset(AssetType type) :
-        _type(type)
+    Asset::Asset(
+        size_t uuidPool,
+        AssetType type,
+        const std::string& name,
+        UUID_t id,
+        bool persistent
+    ) :
+        _uuidPool(uuidPool),
+        _type(type),
+        _name(name),
+        _persistent(persistent)
     {
-        _id = ID::generate();
+        if (id != NULL_UUID)
+        {
+            _id = id;
+            UUID::occupy(id, _uuidPool);
+        }
+        else
+        {
+            _id = UUID::generate(_uuidPool);
+        }
     }
 
     Asset::~Asset()
     {
-        ID::erase(_id);
+        UUID::erase(_id, _uuidPool);
     }
 }

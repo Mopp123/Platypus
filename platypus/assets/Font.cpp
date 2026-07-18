@@ -13,8 +13,8 @@
 
 namespace platypus
 {
-    Font::Font() :
-        Asset(AssetType::ASSET_TYPE_FONT)
+    Font::Font(size_t uuidPool) :
+        Asset(uuidPool, AssetType::ASSET_TYPE_FONT)
     {
     }
 
@@ -29,7 +29,7 @@ namespace platypus
         // TODO: Figure out a better way!
         return createFont(
             filepath,
-            " qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|ÖöÄä"
+            " qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.,:;?!&_'+-*^/()[]{}<>|#ÖöÄä"
         );
     }
 
@@ -209,18 +209,17 @@ namespace platypus
             1,
             ImageFormat::R8_UNORM
         );
+        pFontImgData->setSerializable(false);
         _imageID = pFontImgData->getID();
 
         Texture* pTexture = pAssetManager->createTexture(
             _imageID,
-            TextureSampler(
-                TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
-                TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-                1,
-                0
-            ),
-            textureAtlasRowCount
+            TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR,
+            TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            true // use mipmapping? -> NOTE: Why are we mipmapping this?
         );
+        pTexture->setAtlasRowCount(textureAtlasRowCount);
+        pTexture->setSerializable(false);
         _textureID = pTexture->getID();
 
         _textureAtlasRowCount = textureAtlasRowCount;

@@ -2,10 +2,16 @@
 
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
+#include "platypus/core/Scene.hpp"
 
 
 namespace platypus
 {
+    constexpr size_t serialized_camera_size =
+        sizeof(ComponentType) +
+        sizeof(Matrix4f) * 2 +
+        sizeof(float) * 4;
+
     struct Camera
     {
         Matrix4f perspectiveProjectionMatrix = Matrix4f(1.0f);
@@ -22,6 +28,17 @@ namespace platypus
         float fov,
         float zNear,
         float zFar,
-        const Matrix4f& orthographicProjectionMatrix // Used for 2D rendering stuff
+        const Matrix4f& orthographicProjectionMatrix, // Used for 2D rendering stuff
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
+    );
+
+    std::vector<char> serialize(const Camera* pCamera);
+    void deserialize(
+        Scene* pScene,
+        Camera** ppCamera,
+        entityID_t entityID,
+        size_t dataSize,
+        const void* pData
     );
 }

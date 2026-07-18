@@ -5,134 +5,46 @@
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/InputEvent.hpp"
 
-#include "platypus/ecs/Entity.hpp"
 #include "platypus/assets/Font.hpp"
-#include <vector>
 
-
-#define NULL_COLOR Vector4f(0, 0, 0, 0)
+#include "platypus/ecs/Entity.hpp"
+#include "platypus/ecs/components/Transform.hpp"
+#include "platypus/ecs/components/Renderable.hpp"
+#include <map>
 
 
 namespace platypus
 {
     namespace ui
     {
-        enum class ValueType
-        {
-            PIXEL,
-            PERCENT
-        };
-
-        enum class HorizontalAlignment
-        {
-            LEFT,
-            CENTER,
-            RIGHT
-        };
-
-        enum class VerticalAlignment
-        {
-            TOP,
-            CENTER,
-            BOTTOM
-        };
-
-        enum class ExpandElements
-        {
-            DOWN,
-            RIGHT
-        };
-
-        enum class HorizontalConstraint
-        {
-            LEFT,
-            CENTER,
-            RIGHT
-        };
-
-        enum class VerticalConstraint
-        {
-            TOP,
-            CENTER,
-            BOTTOM
-        };
-
-        enum class WordWrap
-        {
-            NONE,
-            NORMAL
-        };
-
-        struct Layout
-        {
-            Vector2f position;
-            Vector2f scale;
-            Vector4f color = NULL_COLOR;
-            Vector2f padding;
-
-            // NOTE: Parent's content alignment override child's own alignment
-            HorizontalAlignment horizontalAlignment = HorizontalAlignment::LEFT;
-            VerticalAlignment verticalAlignment = VerticalAlignment::TOP;
-
-            HorizontalAlignment horizontalContentAlignment = HorizontalAlignment::LEFT;
-            VerticalAlignment verticalContentAlignment = VerticalAlignment::TOP;
-
-            ExpandElements expandElements = ExpandElements::DOWN;
-            float elementGap;
-            ValueType elementGapType = ValueType::PIXEL;
-            uint32_t layer = 0;
-            std::vector<Layout> children;
-
-            WordWrap wordWrap = WordWrap::NONE;
-
-            Vector4f borderColor = Vector4f(0, 0, 0, 0);
-            uint32_t borderThickness = 0;
-
-            bool stretchToFitContent = false;
-        };
-
-        class LayoutUI;
+        class UIManager;
+        class Layout;
         class UIElement
         {
+        protected:
+            UIManager& _managerRef;
+
         public:
-            class MouseEnterEvent
-            {
-            public:
-                virtual ~MouseEnterEvent() {}
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class MouseOverEvent
-            {
-            public:
-                virtual ~MouseOverEvent() {}
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class MouseExitEvent
-            {
-            public:
-                virtual ~MouseExitEvent() {}
-                virtual void func(int mx, int my) = 0;
-            };
-
-            class OnClickEvent
-            {
-            public:
-                virtual ~OnClickEvent() {}
-                virtual void func(MouseButtonName button, InputAction action) = 0;
-            };
-
             Vector2f _previousItemPosition;
             Vector2f _previousItemScale;
 
-            MouseEnterEvent* _pMouseEnterEvent = nullptr;
-            MouseOverEvent* _pMouseOverEvent = nullptr;
-            MouseExitEvent* _pMouseExitEvent = nullptr;
-            OnClickEvent* _pOnClickEvent = nullptr;
+            void(*_pOnClick)(MouseButtonName, InputAction, void*) = nullptr;
+            void* _pOnClickUserData = nullptr;
 
-        private:
-            friend class LayoutUI;
+            void(*_pOnMouseEnter)(int, int, void*) = nullptr;
+            void* _pOnMouseEnterUserData = nullptr;
+
+            void(*_pOnMouseOver)(int, int, void*) = nullptr;
+            void* _pOnMouseOverUserData = nullptr;
+
+            void(*_pOnMouseExit)(int, int, void*) = nullptr;
+            void* _pOnMouseExitUserData = nullptr;
+
+            void(*_pOnDrag)(int, int, void*) = nullptr;
+            void* _pOnDragUserData = nullptr;
+
+        protected:
+            friend class UIManager;
 
             class ElementCursorPosEvent : public CursorPosEvent
             {
@@ -154,50 +66,150 @@ namespace platypus
             class ElementMouseButtonEvent : public MouseButtonEvent
             {
             public:
+                Scene* _pScene = nullptr;
                 UIElement* _pElement = nullptr;
-                ElementMouseButtonEvent(UIElement* pElement) : _pElement(pElement) {}
+                ElementMouseButtonEvent(
+                    Scene* pScene,
+                    UIElement* pElement
+                ) :
+                    _pScene(pScene),
+                    _pElement(pElement)
+                {}
                 ~ElementMouseButtonEvent() {}
                 virtual void func(MouseButtonName button, InputAction action, int mods);
             };
 
+            ElementCursorPosEvent* _pCursorPosEvent = nullptr;
+            ElementMouseButtonEvent* _pMouseButtonEvent = nullptr;
+
             entityID_t _entityID = NULL_ENTITY_ID;
-            Layout _layout;
+            int32_t _layoutID = -1;
             const Font* _pFont = nullptr;
+
+            bool _overrideScale = false;
+            Vector2f _overrideScaleValue;
+
+            // NOTE: Parent is currently set by UIManager when creating the UIElement if necessary
+            UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
 
-            bool _isMouseOver = false;
+            void(*_pOnAddChild)(void*) = nullptr;
+            void* _pOnAddChildUserData = nullptr;
+
+            bool _isCursorOver = false;
+            bool _dragged = false;
+            Vector2f _dragBeginPos;
+            bool _selected = false; // NOTE: this is atm only used by InputField
+            bool _groupRoot = false;
+
+            // *reset back to false at updatePosition(...)
+            // (since pos update has to be done after scale update)
+            bool _updatePending = false;
+
+            // *Gets updated @updatePosition(...)
+            uint32_t _absoluteLayer = 0;
+
+            UIElement(
+                UIManager& uiManager,
+                UIElement* pParent,
+                const Layout* pLayout,
+                bool createRenderable,
+                UUID_t textureID,
+                const Font* pFont,
+                void(*pOnClick)(MouseButtonName, InputAction, void*),
+                void* pOnClickUserData,
+                bool ignoreInput = false
+            );
 
         public:
-            UIElement(
-                entityID_t entityID,
-                Layout layout,
-                const Font* pFont
-            );
-            ~UIElement();
+            static std::map<uint32_t, std::set<entityID_t>> s_cursorOverLayers;
+            virtual ~UIElement();
 
-            void addChild(
-                UIElement* pChild,
-                const Vector2f& childPosition,
-                const Vector2f& childScale
-            );
+            inline void setGroupRoot_TEST(bool arg) { _groupRoot = arg; }
 
-            void setScale(const Vector2f& scale);
+            void configureOnAddChild(void(*pFunc)(void*), void* pUserData);
+            // *Also updates the whole tree so the scales and positions are
+            // correct immediately.
+            void addChild(UIElement* pChild);
+            void removeChild(UIElement* pChild);
+
+            // Destroys child tree recursively
+            // NOTE: Very shit and inefficient, just testing atm!
+            void destroyChildren();
+            void destroyChild(UIElement* pChild);
+
+            void setLayoutScale(Vector2f scale);
+            void setLayoutPosition(const Vector2f& position);
+            void setLayoutColor(const Vector4f& color);
+            void setLayoutHoverColor(const Vector4f& color);
+            void setLayoutSelectedColor(const Vector4f& color);
+            Vector2f getGlobalScale() const;
             Vector2f getGlobalPosition() const;
+            const GUITransform* getTransform() const;
+            GUIRenderable* getRenderable();
+            const GUIRenderable* getRenderable() const;
+            inline UIElement* getParent() const { return _pParent; }
+            UIElement* getRootParent();
+            virtual void setActive(bool arg);
+            bool isActive();
+
+            // returns set of all used layers in the tree
+            void fetchAbsoluteTreeLayers(std::set<uint32_t>& outLayers);
+            void fetchAbsoluteTreeLayers(std::map<uint32_t, size_t>& outLayers);
+            uint32_t getTopTreeLayer();
+
+            // Updates global scales for the whole element tree recursively
+            void updateScale();
+            // Updates width and/or height according to parent if layout demands it
+            // NOTE: This was a quick fix for one issue, this could be fucked...
+            void updateInheritedScale(
+                Vector2f parentScale,
+                Vector2f parentPadding,
+                float parentBorderThickness
+            );
+
+            // Updates global positions for the whole element tree recursively
+            // NOTE: Has to be called AFTER updating all element tree scales using above!
+            void updatePosition(Vector2f& cumulatedScale);
+            // Updates scales and positions for the whole tree
+            void updateTree();
+
+            void triggerFullTreeUpdate();
+
+            void fetchTreeElements(std::vector<UIElement*>& outElements);
+            // Returns true if cursor is over any element in the tree starting from
+            // the called element (obviously:D)
+            bool isCursorOverTree() const;
+
+            // Sets the tree selected and updates correct colors according to layout
+            void setSelected(bool arg);
+
+            void setRelativeLayer(uint32_t relativeLayer);
+            uint32_t getRelativeLayer() const;
+            uint32_t getAbsoluteLayer() const;
+
+            // NOTE: Not sure if this works properly!?
+            void setLayout(Layout* pLayout);
+            Layout* getLayout() const;
+
+            static uint32_t get_cursor_over_layer();
+            static size_t get_cursor_over_layer_count();
 
             inline const entityID_t getEntityID() const { return _entityID; }
-            inline const Layout& getLayout() const { return _layout; }
-            inline const Font* getFont() const { return _pFont; }
+            inline void overrideScale(const Vector2f& scale) { _overrideScale = true; _overrideScaleValue = scale; }
             inline const std::vector<UIElement*>& getChildren() const { return _children; }
+            inline bool isCursorOver() const { return _isCursorOver; }
+            inline bool isSelected() const { return _selected; }
+            inline bool isUpdatePending() const { return _updatePending; }
+            inline Vector2f getDragBeginPos() const { return _dragBeginPos; }
+            inline void setDragBeginPos(int mx, int my) { _dragBeginPos.x = static_cast<float>(mx); _dragBeginPos.y = static_cast<float>(my); }
+
+            static void add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
+            static void remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
+
+        protected:
+            void setRenderLayer(uint32_t renderLayer);
+            GUITransform* getTransform();
         };
-
-
-        UIElement* add_container(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const Layout& layout,
-            bool createRenderable,
-            ID_t textureID = NULL_ID,
-            const Font* pFont = nullptr
-        );
     }
 }

@@ -43,6 +43,7 @@ namespace platypus
         );
         ~Window();
 
+        void requestClosing();
         bool isCloseRequested();
 
         void getSurfaceExtent(int* pWidth, int* pHeight) const;

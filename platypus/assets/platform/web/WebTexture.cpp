@@ -97,29 +97,31 @@ namespace platypus
     {
     }
 
-    TextureSampler::TextureSampler(const TextureSampler& other) :
-        _filterMode(other._filterMode),
-        _addressMode(other._addressMode),
-        _mipmapping(other._mipmapping)
-    {
-    }
+    //TextureSampler::TextureSampler(const TextureSampler& other) :
+    //    _filterMode(other._filterMode),
+    //    _addressMode(other._addressMode),
+    //    _mipmapping(other._mipmapping)
+    //{
+    //}
 
 
-    Texture::Texture(ImageFormat format) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
+    Texture::Texture(size_t uuidPool, ImageFormat format) :
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
         _imageFormat(format)
     {
         _pImpl = new TextureImpl;
     }
 
     Texture::Texture(
+        size_t uuidPool,
         TextureType type,
-        const TextureSampler& sampler,
+        const TextureSampler* pSampler,
         ImageFormat format,
         uint32_t width,
         uint32_t height
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE)
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
+        _pSampler(pSampler)
     {
         GLint glInternalFormat = 0;
         GLenum glFormat = 0;
@@ -138,9 +140,9 @@ namespace platypus
             glType = GL_FLOAT;
         }
 
-        uint32_t id = 0;
-        GL_FUNC(glGenTextures(1, &id));
-        GL_FUNC(glBindTexture(GL_TEXTURE_2D, id));
+        uint32_t glTextureID = 0;
+        GL_FUNC(glGenTextures(1, &glTextureID));
+        GL_FUNC(glBindTexture(GL_TEXTURE_2D, glTextureID));
         GL_FUNC(glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -154,7 +156,7 @@ namespace platypus
         ));
 
         // Address mode
-        switch (sampler.getAddressMode())
+        switch (_pSampler->getAddressMode())
         {
             case TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT :
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
@@ -185,14 +187,14 @@ namespace platypus
         }
 
         // NOTE: Not sure if should allowing mipmapping with framebuffer attachment textures...
-        if (sampler.isMipmapped())
+        if (_pSampler->isMipmapped())
         {
-            if(sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if(_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -202,12 +204,12 @@ namespace platypus
         }
         else
         {
-            if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -217,30 +219,54 @@ namespace platypus
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
 
         _pImpl = new TextureImpl;
-        _pImpl->id = id;
+        _pImpl->id = glTextureID;
     }
 
     Texture::Texture(
+        size_t uuidPool,
         const Image* pImage,
-        const TextureSampler& sampler,
-        uint32_t atlasRowCount
+        const TextureSampler* pSampler,
+        const std::string& name,
+        UUID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_TEXTURE),
-        _pImage(pImage),
-        _atlasRowCount(atlasRowCount)
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, name, id, persistent),
+        _pSampler(pSampler)
     {
-        ImageFormat imageFormat = _pImage->getFormat();
-        if (!is_image_format_valid(imageFormat, pImage->getChannels()))
+        _pImpl = new TextureImpl;
+        create(pImage);
+    }
+
+    Texture::~Texture()
+    {
+        fixMaterialsOnDestruction();
+        if (_pImpl)
+        {
+            destroy();
+            delete _pImpl;
+        }
+    }
+
+    void Texture::destroy()
+    {
+        glDeleteTextures(1, &_pImpl->id);
+    }
+
+    void Texture::create(const Image* pImage)
+    {
+        _pImage = pImage;
+        _imageFormat = _pImage->getFormat();
+        if (!is_image_format_valid(_imageFormat, _pImage->getChannels()))
         {
             Debug::log(
                 "@Texture::Texture "
-                "Invalid target format: " + image_format_to_string(imageFormat) + " "
-                "for image with " + std::to_string(pImage->getChannels()) + " channels",
+                "Invalid target format: " + image_format_to_string(_imageFormat) + " "
+                "for image with " + std::to_string(_pImage->getChannels()) + " channels",
                 Debug::MessageType::PLATYPUS_ERROR
             );
         }
 
-        if (!pImage)
+        if (!_pImage)
         {
             Debug::log(
                 "@Texture::Texture "
@@ -250,7 +276,7 @@ namespace platypus
             );
             return;
         }
-        if (!pImage->getData())
+        if (!_pImage->getData())
         {
             Debug::log(
                 "@Texture::Texture "
@@ -265,15 +291,15 @@ namespace platypus
         // -> "desktop opengl" needs to convert this to single red channel
         // UPDATE: This was problem at some point, but might have been fixed by swithcing to
         // WebGL2 (GLES3)?
-        GLint glFormat = to_gl_format(imageFormat);
-        GLint glInternalFormat = to_gl_internal_format(imageFormat);
+        GLint glFormat = to_gl_format(_imageFormat);
+        GLint glInternalFormat = to_gl_internal_format(_imageFormat);
 
-        const int width = pImage->getWidth();
-        const int height = pImage->getHeight();
+        const int width = _pImage->getWidth();
+        const int height = _pImage->getHeight();
 
-        uint32_t id = 0;
-        GL_FUNC(glGenTextures(1, &id));
-        GL_FUNC(glBindTexture(GL_TEXTURE_2D, id));
+        uint32_t glTextureID = 0;
+        GL_FUNC(glGenTextures(1, &glTextureID));
+        GL_FUNC(glBindTexture(GL_TEXTURE_2D, glTextureID));
         GL_FUNC(glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -283,11 +309,11 @@ namespace platypus
             0,
             glFormat,
             GL_UNSIGNED_BYTE,
-            (const void*)pImage->getData()
+            reinterpret_cast<const void*>(_pImage->getData())
         ));
 
         // Address mode
-        switch (sampler.getAddressMode())
+        switch (_pSampler->getAddressMode())
         {
             case TextureSamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT :
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
@@ -317,14 +343,14 @@ namespace platypus
                 break;
         }
 
-        if (sampler.isMipmapped())
+        if (_pSampler->isMipmapped())
         {
-            if(sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if(_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -334,12 +360,12 @@ namespace platypus
         }
         else
         {
-            if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
+            if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_LINEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
             }
-            else if (sampler.getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
+            else if (_pSampler->getFilterMode() == TextureSamplerFilterMode::SAMPLER_FILTER_MODE_NEAR)
             {
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
                 GL_FUNC(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -348,18 +374,9 @@ namespace platypus
         // NOTE: Not sure why not previously unbinding the texture here??
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
 
-        _pImpl = new TextureImpl;
-        _pImpl->id = id;
+        _pImpl->id = glTextureID;
     }
 
-    Texture::~Texture()
-    {
-        if (_pImpl)
-        {
-            glDeleteTextures(1, &_pImpl->id);
-            delete _pImpl;
-        }
-    }
 
     void transition_image_layout(
         CommandBuffer& commandBuffer,

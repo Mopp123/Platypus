@@ -181,6 +181,7 @@ namespace platypus
                         "but the attrib isn't JOINTS_0! "
                         "Currently GLTF_ACCESSOR_COMPONENT_TYPE_UNSIGNED_BYTE are allowed only for "
                         "attributes of type: JOINTS_0",
+                        PLATYPUS_CURRENT_FUNC_NAME,
                         Debug::MessageType::PLATYPUS_ERROR
                     );
                     return false;
@@ -197,6 +198,7 @@ namespace platypus
                 attrib.first,
                 0,
                 shaderDataType,
+                gltf_attrib_type_to_engine(attrib.first),
                 accessor.bufferView,
                 accessor.byteOffset
             };
@@ -321,7 +323,13 @@ namespace platypus
 
         std::vector<VertexBufferElement> sortedVertexBufferElements;
         for (const GLTFVertexBufferAttrib& attrib : sortedVertexBufferAttributes)
-            sortedVertexBufferElements.push_back({ (uint32_t)attrib.location, attrib.dataType});
+        {
+            sortedVertexBufferElements.push_back({
+                (uint32_t)attrib.location,
+                attrib.dataType,
+                attrib.attribType
+            });
+        }
 
         outLayout = { sortedVertexBufferElements, VertexInputRate::VERTEX_INPUT_RATE_VERTEX, 0 };
         return true;

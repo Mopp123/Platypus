@@ -1,5 +1,6 @@
 #include "platypus/graphics/RenderCommand.hpp"
 #include "platypus/graphics/Context.hpp"
+#include "platypus/graphics/Device.hpp"
 #include "platypus/graphics/CommandBuffer.hpp"
 #include "WebCommandBuffer.hpp"
 #include "WebContext.hpp"
@@ -306,7 +307,7 @@ namespace platypus
                     //
                     int32_t location = element.getLocation();
 
-                    ShaderDataType shaderDataType = element.getType();
+                    ShaderDataType shaderDataType = element.getDataType();
                     if (shaderDataType != ShaderDataType::Mat4)
                     {
                         GL_FUNC(glEnableVertexAttribArray(location));
@@ -596,8 +597,8 @@ namespace platypus
             const std::vector<int32_t>& shaderUniformLocations = pShaderProgram->getUniformLocations();
 
             // TODO: Make safer!
-            DescriptorPool& descriptorPool = Application::get_instance()->getMasterRenderer()->getDescriptorPool();
-            DescriptorPoolImpl* pDescriptorPoolImpl = descriptorPool.getImpl();
+            DescriptorPool* pDescriptorPool = Device::get_descriptor_pool();
+            DescriptorPoolImpl* pDescriptorPoolImpl = pDescriptorPool->getImpl();
 
             int descriptorSetIndex = 0;
             // Need the actual uniform location index that can be greater than the descriptor set index
@@ -606,7 +607,7 @@ namespace platypus
             uint32_t uniformBlockBindingPoint = 0;
             for (const DescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
             {
-                const ID_t descriptorSetID = descriptorSets[descriptorSetIndex].getImpl()->id;
+                const UUID_t descriptorSetID = descriptorSets[descriptorSetIndex].getImpl()->id;
                 int bindingIndex = 0;
                 for (const DescriptorSetLayoutBinding& binding : descriptorSetLayout.getBindings())
                 {

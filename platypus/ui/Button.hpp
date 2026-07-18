@@ -1,64 +1,50 @@
 #pragma once
 
 #include "UIElement.hpp"
-#include "LayoutUI.hpp"
+#include "Text.hpp"
 
 
 namespace platypus
 {
     namespace ui
     {
-        struct Button
-        {
-            Vector4f originalColor;
-            Vector4f highlightColor;
-            Vector4f originalTextColor;
-            Vector4f textHighlightColor;
-
-            UIElement* pBox = nullptr;
-            UIElement* pText = nullptr;
-        };
-
-
-        class ButtonMouseEnterEvent : public UIElement::MouseEnterEvent
+        class UIManager;
+        class Button : public UIElement
         {
         private:
-            Button _button;
+            Text* _pText = nullptr;
+
+        protected:
+            friend class UIManager;
+
+            // Protected since some other UIElement may extend this
+            Button(
+                UIManager& uiManager,
+                UIElement* pParent,
+                const Layout* pLayout,
+                const Layout* pTextLayout,
+                const std::string& text,
+                const Font* pFont,
+                void(*pOnClick)(MouseButtonName, InputAction, void*),
+                void* pOnClickUserData,
+                void(*pOnMouseEnter)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseEnterUserData = nullptr,
+                void(*pOnMouseExit)(int mx, int my, void* pUserData) = nullptr,
+                void* pOnMouseExitUserData = nullptr
+            );
+            ~Button() { }
+
         public:
-            ButtonMouseEnterEvent(Button button) : _button(button) {}
-            virtual void func(int mx, int my);
-        };
+            // Currently almost the same as UIElement's setActive but this also resets
+            // the button's colors... dumb...
+            virtual void setActive(bool arg) override;
 
+            void reset();
+            inline Text* getText() { return _pText; }
 
-        class ButtonMouseExitEvent : public UIElement::MouseExitEvent
-        {
         private:
-            Button _button;
-        public:
-            ButtonMouseExitEvent(Button button) : _button(button) {}
-            virtual void func(int mx, int my);
+            friend void on_mouse_enter_button_default(int mx, int my, void* pUserData);
+            friend void on_mouse_exit_button_default(int mx, int my, void* pUserData);
         };
-
-
-        UIElement* add_button_element(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const std::string& text,
-            const Font* pFont
-        );
-
-        UIElement* add_button_element(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const Layout& layout,
-            const Vector4f& highlightColor,
-            const Vector4f& textColor,
-            const Vector4f& textHighlightColor,
-            const std::string& text,
-            const Font* pFont,
-            bool setWidthToTextWidth,
-            bool setHeightToTextHeight,
-            const Vector2f& padding
-        );
     }
 }

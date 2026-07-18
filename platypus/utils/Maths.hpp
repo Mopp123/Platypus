@@ -34,6 +34,7 @@ namespace platypus
         Vector2f normalize() const;
 
         Vector2f operator+(const Vector2f& other) const;
+        Vector2f operator-(const Vector2f& other) const;
         Vector2f operator*(const Vector2f& other) const;
         Vector2f operator*(float value) const;
         bool operator==(const Vector2f& other) const;
@@ -163,7 +164,9 @@ namespace platypus
         const Vector3f& scale
     );
 
+    Matrix4f create_translation_matrix(const Vector3f& position);
     Matrix4f create_rotation_matrix(float pitch, float yaw, float roll);
+    Matrix4f create_scale_matrix(const Vector3f& scale);
 
     Matrix4f create_view_matrix(const Vector3f& position, const Matrix4f& rotationMatrix);
     Matrix4f create_view_matrix(const Vector3f& position, const Quaternion& rotation);

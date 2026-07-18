@@ -9,13 +9,13 @@ namespace platypus
         const RenderPass& renderPass,
         uint32_t framebufferWidth,
         uint32_t framebufferHeight,
-        const TextureSampler& textureSampler,
+        const TextureSampler* pTextureSampler,
         bool useWindowDimensions
     ) :
         _renderPassRef(renderPass),
         _framebufferWidth(framebufferWidth),
         _framebufferHeight(framebufferHeight),
-        _textureSampler(textureSampler),
+        _pTextureSampler(pTextureSampler),
         _useWindowDimensions(useWindowDimensions)
     {
     }
@@ -30,31 +30,36 @@ namespace platypus
         if (_useWindowDimensions)
             matchWindowDimensions();
 
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
         // TODO: Allow having different dimensions for the framebuffer and attachment
         // (Atm attachment has same dimensions as the framebuffer)
         std::vector<Texture*> colorAttachments;
         if (_renderPassRef.getColorFormat() != ImageFormat::NONE)
         {
             _pColorAttachment = new Texture(
+                pAssetManager->getUUIDPool(),
                 TextureType::COLOR_TEXTURE,
-                _textureSampler,
+                _pTextureSampler,
                 _renderPassRef.getColorFormat(),
                 _framebufferWidth,
                 _framebufferHeight
             );
+            _pColorAttachment->setSerializable(false);
             colorAttachments.push_back(_pColorAttachment);
-            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pColorAttachment);
+            pAssetManager->addExternalDefaultAsset(_pColorAttachment);
         }
         if (_renderPassRef.getDepthFormat() != ImageFormat::NONE)
         {
             _pDepthAttachment = new Texture(
+                pAssetManager->getUUIDPool(),
                 TextureType::DEPTH_TEXTURE,
-                _textureSampler,
+                _pTextureSampler,
                 _renderPassRef.getDepthFormat(),
                 _framebufferWidth,
                 _framebufferHeight
             );
-            Application::get_instance()->getAssetManager()->addExternalPersistentAsset(_pDepthAttachment);
+            _pDepthAttachment->setSerializable(false);
+            pAssetManager->addExternalDefaultAsset(_pDepthAttachment);
         }
         // TODO: Allow creating multiple framebuffers for each frame in flight?
         _framebuffers.push_back(
@@ -73,9 +78,9 @@ namespace platypus
         // TODO: If dimensions don't change, etc don't destroy and recreate
         // unless RenderPassInstance gets destroyed!
         if (_pColorAttachment)
-            Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pColorAttachment);
+            Application::get_instance()->getAssetManager()->destroyAsset(_pColorAttachment->getID());
         if (_pDepthAttachment)
-            Application::get_instance()->getAssetManager()->destroyPersistentAsset(_pDepthAttachment);
+            Application::get_instance()->getAssetManager()->destroyAsset(_pDepthAttachment->getID());
 
         _pColorAttachment = nullptr;
         _pDepthAttachment = nullptr;

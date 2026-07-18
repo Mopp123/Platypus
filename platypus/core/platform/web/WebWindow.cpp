@@ -79,6 +79,10 @@ namespace platypus
             delete _pImpl;
     }
 
+    void Window::requestClosing()
+    {
+    }
+
     bool Window::isCloseRequested()
     {
         return false;
@@ -86,8 +90,10 @@ namespace platypus
 
     void Window::getSurfaceExtent(int* pWidth, int* pHeight) const
     {
-        *pWidth = get_canvas_width();
-        *pHeight = get_canvas_height();
+        if (pWidth)
+            *pWidth = get_canvas_width();
+        if (pHeight)
+            *pHeight = get_canvas_height();
     }
 
     WindowImpl* Window::getImpl()

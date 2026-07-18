@@ -13,6 +13,7 @@ namespace platypus
 
     public:
         SkeletalAnimationData(
+            size_t uuidPool,
             const KeyframeAnimationData& animationData
         );
         ~SkeletalAnimationData();

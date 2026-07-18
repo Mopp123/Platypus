@@ -1,6 +1,7 @@
 #include "GLTFFileUtils.hpp"
 #include <tiny_gltf.h>
 #include "platypus/core/Debug.hpp"
+#include <stdexcept>
 
 
 namespace platypus
@@ -134,6 +135,126 @@ namespace platypus
             case TINYGLTF_TYPE_MATRIX: return "TINYGLTF_TYPE_MATRIX";
             default: return "ERROR";
         }
+    }
+
+
+    // Returns the attrib's indices like: JOINTS_1, WEIGHTS_2, etc as integers
+    static int get_gltf_attrib_type_index(const std::string& gltfAttribType)
+    {
+        int index = 0;
+        size_t numPos = gltfAttribType.find("_");
+        if (numPos != std::string::npos)
+        {
+            if (numPos < gltfAttribType.size())
+            {
+                const size_t numLength = gltfAttribType.size() - numPos;
+                std::string numStr = gltfAttribType.substr(numPos + 1, numLength);
+                try
+                {
+                    index = std::stoi(numStr);
+                }
+                catch (const std::invalid_argument& e)
+                {
+                    Debug::log(
+                        "Invalid string: " + gltfAttribType,
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+                catch (const std::out_of_range& e)
+                {
+                    Debug::log(
+                        "String too long(for signed integer): " + gltfAttribType,
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+            }
+        }
+        return index;
+    }
+
+
+    VertexAttributeType gltf_attrib_type_to_engine(const std::string& gltfAttribType)
+    {
+        if (gltfAttribType == "POSITION")
+        {
+            return VertexAttributeType::POSITION;
+        }
+        else if (gltfAttribType == "NORMAL")
+        {
+            return VertexAttributeType::NORMAL;
+        }
+        else if (gltfAttribType == "TANGENT")
+        {
+            return VertexAttributeType::TANGENT;
+        }
+        else if (gltfAttribType.find("TEXCOORD_") != std::string::npos)
+        {
+            if (gltfAttribType != "TEXCOORD_0")
+            {
+                Debug::log(
+                    "Invalid tex coord attribute: " + gltfAttribType + ". "
+                    "Currently supporting only a single tex coord per vertex (TEXCOORD_0)",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return VertexAttributeType::CUSTOM;
+            }
+            return VertexAttributeType::TEX_COORD;
+        }
+        else if (gltfAttribType.find("COLOR_") != std::string::npos)
+        {
+            Debug::log(
+                "Vertex attrib was: " + gltfAttribType + ". "
+                "Currently not supporting vertex colors.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return VertexAttributeType::CUSTOM;
+        }
+        else if (gltfAttribType.find("JOINTS_") != std::string::npos)
+        {
+            if (gltfAttribType != "JOINTS_0")
+            {
+                Debug::log(
+                    "Currently supporting only 4 joint IDs per vertex, specified by JOINTS_0 attribute. "
+                    "Given attribute was: " + gltfAttribType,
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return VertexAttributeType::CUSTOM;
+            }
+            return VertexAttributeType::JOINT;
+        }
+        else if (gltfAttribType.find("WEIGHTS_") != std::string::npos)
+        {
+            if (gltfAttribType != "WEIGHTS_0")
+            {
+                Debug::log(
+                    "Currently supporting only 4 weights for 4 joint IDs per vertex, specified by WEIGHTS_0 attribute. "
+                    "Given attribute was: " + gltfAttribType,
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return VertexAttributeType::CUSTOM;
+            }
+            return VertexAttributeType::JOINT;
+        }
+
+        Debug::log(
+            "Invalid gltf vertex attribute type: " + gltfAttribType,
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return VertexAttributeType::CUSTOM;
     }
 
 

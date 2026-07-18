@@ -70,7 +70,7 @@ namespace platypus
         s_pInstance = this;
 
         Context::create(name.c_str(), &_window);
-        Device::create(&_window);
+        Device::create(&_window, PLATYPUS_MAX_DESCRIPTOR_SETS);
 
         // NOTE: Some fucking logic how core stuff is initialized and how their
         // lifetimes are controlled... This is fucking disgusting atm!
@@ -80,8 +80,17 @@ namespace platypus
         // window resize (on swapchain recreation)
 
         // NOTE: HUGE ISSUE:
+
+        // Idea:
+        // 1. alloc AssetManager
+        // 2. create Swapchain
+        // 3. create DescriptorPool
+        // 4. create default assets of AssetManager?
         _pAssetManager = new AssetManager;
-        _pSwapchain = new Swapchain(_window, false);
+        bool createSwapchainDepthAttachment = false;
+        _pSwapchain = new Swapchain(_window, createSwapchainDepthAttachment);
+
+        _pAssetManager->createDefaultAssets();
 
         // NOTE: Only temporarely figuring shadowmap depth format here!
         // +Not sure if this fallback is enough if D32_SFLOAT not available...
@@ -91,7 +100,11 @@ namespace platypus
         else
             shadowmapDepthFormat = Device::get_first_supported_depth_format();
 
-        _pMasterRenderer = new MasterRenderer(*_pSwapchain, shadowmapDepthFormat);
+        _pMasterRenderer = new MasterRenderer(
+            *Device::get_descriptor_pool(),
+            *_pSwapchain,
+            shadowmapDepthFormat
+        );
 
         #ifdef PLATYPUS_DEBUG
             Debug::log(
@@ -130,10 +143,16 @@ namespace platypus
 
         // NOTE: Why the fuck this shit isn't done in the destructor!?!?!?
         Device::wait_for_operations();
+
+        // Need to delete current scene before anything else...
+        //  ...this is getting out of hand.. had to do this because of the way
+        //  UIElements are freed atm...
+        _sceneManager.cleanUp();
+
         // NOTE: Need to destroy assets before destroying MasterRenderer because
         // some rely on descriptor pool that's living in the MasterRenderer atm!
         _pAssetManager->destroyAssets();
-        // NOTE: Why the fuck was this commented out earlier!?!?!
+
         _pMasterRenderer->cleanUp();
         _inputManager.destroyEvents();
 

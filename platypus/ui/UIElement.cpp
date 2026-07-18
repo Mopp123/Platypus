@@ -1,9 +1,10 @@
 #include "UIElement.hpp"
-#include "LayoutUI.hpp"
+#include "UIManager.hpp"
 #include "platypus/ecs/components/Transform.hpp"
 #include "platypus/ecs/components/Renderable.hpp"
 #include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
+#include <cmath>
 
 
 namespace platypus
@@ -12,206 +13,881 @@ namespace platypus
     {
         void UIElement::ElementCursorPosEvent::func(int x, int y)
         {
+            if (!_pScene->isEntityActive(_pElement->_entityID))
+                return;
+
             GUITransform* pTransform = (GUITransform*)_pScene->getComponent(
                 _pElement->_entityID,
                 ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
             );
+
             if (pTransform)
             {
                 float fx = (float)x;
                 float fy = (float)y;
+                uint32_t elementAbsoluteLayer = _pElement->getAbsoluteLayer();
                 if (fx >= pTransform->position.x && fx <= pTransform->position.x + pTransform->scale.x &&
                     fy >= pTransform->position.y && fy <= pTransform->position.y + pTransform->scale.y)
                 {
-                    if (!_pElement->_isMouseOver)
+                    uint32_t currentHighestLayer = get_cursor_over_layer();
+                    add_to_cursor_over_layers(elementAbsoluteLayer, _pElement->getEntityID());
+
+                    // *if it already was mouse over, but picked higher layer
+                    //  -> mouse exit
+                    if (elementAbsoluteLayer < currentHighestLayer)
                     {
-                        if (_pElement->_pMouseEnterEvent)
-                            _pElement->_pMouseEnterEvent->func(x, y);
+                        if (_pElement->_isCursorOver)
+                        {
+                            remove_from_cursor_over_layers(elementAbsoluteLayer, _pElement->getEntityID());
+                            if (_pElement->_pOnMouseExit)
+                                _pElement->_pOnMouseExit(x, y, _pElement->_pOnMouseExitUserData);
+                        }
+                        _pElement->_isCursorOver = false;
                     }
+                    else
+                    {
+                        if (!_pElement->_isCursorOver)
+                        {
+                            if (_pElement->_pOnMouseEnter)
+                                _pElement->_pOnMouseEnter(x, y, _pElement->_pOnMouseEnterUserData);
+                        }
 
-                    if (_pElement->_pMouseOverEvent)
-                        _pElement->_pMouseOverEvent->func(x, y);
+                        if (_pElement->_pOnMouseOver)
+                            _pElement->_pOnMouseOver(x, y, _pElement->_pOnMouseOverUserData);
 
-                    _pElement->_isMouseOver = true;
+                        _pElement->_isCursorOver = true;
+                    }
                 }
                 else
                 {
-                    if (_pElement->_isMouseOver)
+                    if (_pElement->_isCursorOver)
                     {
-                        if (_pElement->_pMouseExitEvent)
-                            _pElement->_pMouseExitEvent->func(x, y);
+                        if (_pElement->_pOnMouseExit)
+                            _pElement->_pOnMouseExit(x, y, _pElement->_pOnMouseExitUserData);
                     }
-                    _pElement->_isMouseOver = false;
+                    _pElement->_isCursorOver = false;
+                    remove_from_cursor_over_layers(elementAbsoluteLayer, _pElement->getEntityID());
                 }
             }
+
+            if (_pElement->_pOnDrag && _pElement->_dragged)
+                _pElement->_pOnDrag(x, y, _pElement->_pOnDragUserData);
         }
 
 
-        void UIElement::ElementMouseButtonEvent::func(MouseButtonName button, InputAction action, int mods)
+        void UIElement::ElementMouseButtonEvent::func(
+            MouseButtonName button,
+            InputAction action,
+            int mods
+        )
         {
-            if (_pElement->_isMouseOver)
+            if (!_pScene->isEntityActive(_pElement->_entityID))
+                return;
+
+            if (_pElement->_isCursorOver)
             {
-                UIElement::OnClickEvent* pOnClickEvent = _pElement->_pOnClickEvent;
-                if (pOnClickEvent)
-                    pOnClickEvent->func(button, action);
+                if (_pElement->_pOnClick)
+                    (*_pElement->_pOnClick)(button, action, _pElement->_pOnClickUserData);
+
+                UIElement* pParent = _pElement->_pParent;
+                if (pParent)
+                {
+                    if (pParent->_groupRoot)
+                    {
+                        for (UIElement* pGroupElement : pParent->_children)
+                            pGroupElement->setSelected(pGroupElement == _pElement);
+                    }
+                }
+
+                // If drag event -> get where the dragging begins..
+                if (_pElement->_pOnDrag && !_pElement->_dragged)
+                {
+                    InputManager& inputManager = Application::get_instance()->getInputManager();
+                    _pElement->_dragBeginPos = {
+                        static_cast<float>(inputManager.getMouseX()),
+                        static_cast<float>(inputManager.getMouseY())
+                    };
+                }
+                _pElement->_dragged = true;
             }
+
+            if (action == InputAction::RELEASE)
+                _pElement->_dragged = false;
         }
 
 
+        std::map<uint32_t, std::set<entityID_t>> UIElement::s_cursorOverLayers;
         UIElement::UIElement(
-            entityID_t entityID,
-            Layout layout,
-            const Font* pFont
+            UIManager& uiManager,
+            UIElement* pParent,
+            const Layout* pLayout,
+            bool createRenderable,
+            UUID_t textureID,
+            const Font* pFont,
+            void(*pOnClick)(MouseButtonName, InputAction, void*),
+            void* pOnClickUserData,
+            bool ignoreInput
         ) :
-            _entityID(entityID),
-            _layout(layout),
+            _managerRef(uiManager),
+            _pOnClick(pOnClick),
+            _pOnClickUserData(pOnClickUserData),
+            _layoutID(pLayout->id),
             _pFont(pFont)
         {
             Application* pApp = Application::get_instance();
             Scene* pScene = pApp->getSceneManager().accessCurrentScene();
-            InputManager& inputManager = pApp->getInputManager();
-            inputManager.addCursorPosEvent(
-                new ElementCursorPosEvent(
-                    pScene,
-                    this
-                )
+
+            // Currently not allowing any mouse input for Text elements.
+            // TODO: There should rather be a way to specify this explicitly.
+            //  -> for example we'll eventually want to highlight and copy text, etc with mouse...
+            if (!ignoreInput)
+            {
+                InputManager& inputManager = pApp->getInputManager();
+                _pCursorPosEvent = new ElementCursorPosEvent(pScene, this);
+                _pMouseButtonEvent = new ElementMouseButtonEvent(pScene, this);
+                inputManager.addCursorPosEvent(_pCursorPosEvent);
+                inputManager.addMouseButtonEvent(_pMouseButtonEvent);
+            }
+
+            if (pLayout->id == -1)
+            {
+                Debug::log(
+                    "Layout's id was invalid(-1). "
+                    "Make sure you have added the layout to the UIManager container before using it.",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            if (pLayout->wordWrap == WordWrap::NORMAL && pLayout->scale.x == 0.0f)
+            {
+                Debug::log(
+                    "Layout was using word wrapping but its' scale was 0. "
+                    "Can't wrap against width of 0...",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            _entityID = pScene->createEntity();
+            GUITransform* pTransform = create_gui_transform(
+                _entityID,
+                { 0, 0 }, // The actual position is eventually figured out by updatePosition()
+                pLayout->scale
             );
-            inputManager.addMouseButtonEvent(
-                new ElementMouseButtonEvent(this)
-            );
+            if (createRenderable)
+            {
+                GUIRenderable* pRenderable = create_gui_renderable(
+                    _entityID,
+                    pLayout->colors.base
+                );
+                pRenderable->textureID = textureID;
+                pRenderable->borderColor = pLayout->colors.border;
+                pRenderable->borderThickness = static_cast<float>(pLayout->borderThickness);
+                pRenderable->layer = pLayout->layer;
+            }
+
+            if (pParent)
+            {
+                pParent->addChild(this);
+            }
+
+            // *Need to update the "tree" even if contains only single element
+            // so that scale and pos is immediately correct..
+            // NOTE: Currently done by UIManager when creating UIElement...
+            // not sure if that works tho...
+            /*
+            if (pParent)
+            {
+                pParent->addChild(this);
+            }
+            else
+            {
+                updateTree();
+                _managerRef.addRootElement(this);
+            }
+            */
         }
 
         UIElement::~UIElement()
         {
-            if (_pMouseEnterEvent)
-                delete _pMouseEnterEvent;
-            if (_pMouseOverEvent)
-                delete _pMouseOverEvent;
-            if (_pMouseExitEvent)
-                delete _pMouseExitEvent;
-            if (_pOnClickEvent)
-                delete _pOnClickEvent;
+            remove_from_cursor_over_layers(_absoluteLayer, _entityID);
+
+            Application* pApp = Application::get_instance();
+            InputManager& inputManager = pApp->getInputManager();
+            if (_pMouseButtonEvent)
+                inputManager.destroyMouseButtonEvent(_pMouseButtonEvent);
+            if (_pCursorPosEvent)
+                inputManager.destroyCursorPosEvent(_pCursorPosEvent);
+
+            for (UIElement* pChild : _children)
+                delete pChild;
+
+            Scene* pScene = pApp->getSceneManager().accessCurrentScene();
+            pScene->destroyEntity(_entityID);
         }
 
-        void UIElement::addChild(
-            UIElement* pChild,
-            const Vector2f& childPosition,
-            const Vector2f& childScale
-        )
+        void UIElement::configureOnAddChild(void(*pFunc)(void*), void* pUserData)
         {
+            _pOnAddChild = pFunc;
+            _pOnAddChildUserData = pUserData;
+        }
+
+        // *Also updates the whole tree so the scales and positions are
+        // correct immediately.
+        void UIElement::addChild(UIElement* pChild)
+        {
+            // If child was previously root -> make not anymore
+            if (_managerRef.isRootElement(pChild))
+                _managerRef.removeRootElement(pChild);
+
+            if (pChild->_pParent)
+                pChild->_pParent->removeChild(pChild);
+
+            pChild->_pParent = this;
+
+            // Want to make the child inactive only in case this is inactive
+            //  -> might want to add child elements that are inactive but this being active
+            if (!isActive())
+                pChild->setActive(false);
+
+            // NOTE: DANGER! WARNING!
+            // All child elements will be put one layer above their parent so it is quaranteed
+            // that they are rendered above the parent!
+            //  -> This results in more draw calls!
+            //  -> This may result in more fuck ups in the future!
+            //  *This was to progress forward with the shitty editor thing...
+            pChild->setRelativeLayer(1);
+
             _children.push_back(pChild);
-            _previousItemPosition = childPosition;
-            _previousItemScale = childScale;
-            if (_layout.stretchToFitContent)
+            UIElement* pRootParent = getRootParent();
+            #ifdef PLATYPUS_DEBUG
+            if (!pRootParent)
             {
-                float childRight = childPosition.x + childScale.x;
-                float childBottom = childPosition.y + childScale.y;
-                Vector2f ownPosition = getGlobalPosition();
-                float ownRight = ownPosition.x + _layout.scale.x;
-                float ownBottom = ownPosition.y + _layout.scale.y;
-                Vector2f newScale = _layout.scale;
-                if (childRight >= ownRight)
+                Debug::log(
+                    "No root parent found for UIElement with entityID: " + std::to_string(getEntityID()),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            pRootParent->updateTree();
+
+            if (_pOnAddChild)
+                (*_pOnAddChild)(_pOnAddChildUserData);
+        }
+
+        void UIElement::removeChild(UIElement* pChild)
+        {
+            int32_t childIndex = -1;
+            for (size_t i = 0; i < _children.size(); ++i)
+            {
+                if (pChild == _children[i])
                 {
-                    float stretchX = childRight - ownRight;
-                    newScale.x = _layout.scale.x + stretchX + _layout.padding.x;
+                    childIndex = static_cast<int32_t>(i);
+                    break;
                 }
-                if (childBottom >= ownBottom)
+            }
+            if (childIndex == -1)
+            {
+                Debug::log(
+                    "Child element not found!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            pChild->_pParent = nullptr;
+            _children.erase(_children.begin() + childIndex);
+        }
+
+        void UIElement::destroyChildren()
+        {
+            for (UIElement* pChild : _children)
+                delete pChild;
+
+            _children.clear();
+        }
+
+        void UIElement::destroyChild(UIElement* pChild)
+        {
+            int32_t eraseIndex = -1;
+            for (size_t i = 0; i < _children.size(); ++i)
+            {
+                if (_children[i] == pChild)
                 {
-                    float stretchY = childBottom - ownBottom;
-                    Debug::log("STRETCHING Y by " + std::to_string(stretchY));
-                    newScale.y = _layout.scale.y + stretchY + _layout.padding.y;
+                    _children[i]->destroyChildren();
+                    delete _children[i];
+                    eraseIndex = static_cast<size_t>(i);
+                    break;
                 }
-                if (newScale != _layout.scale)
-                    setScale(newScale);
+            }
+            if (eraseIndex >= 0)
+            {
+                _children.erase(_children.begin() + static_cast<size_t>(eraseIndex));
+            }
+            else
+            {
+                Debug::log(
+                    "Child UIElement not found!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
             }
         }
 
-        void UIElement::setScale(const Vector2f& scale)
+        void UIElement::setLayoutScale(Vector2f scale)
         {
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-            );
-            if (pTransform)
-            {
-                pTransform->scale = scale;
-            }
-            _layout.scale = scale;
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            pLayout->scale = scale;
+            _managerRef.addToUpdatedElements(getRootParent());
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutPosition(const Vector2f& position)
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            pLayout->position = position;
+            _managerRef.addToUpdatedElements(getRootParent());
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutColor(const Vector4f& color)
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            pLayout->colors.base = color;
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutHoverColor(const Vector4f& color)
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            pLayout->colors.hover = color;
+            _updatePending = true;
+        }
+
+        void UIElement::setLayoutSelectedColor(const Vector4f& color)
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            pLayout->colors.selected = color;
+            _updatePending = true;
+        }
+
+        Vector2f UIElement::getGlobalScale() const
+        {
+            const GUITransform* pTransform = getTransform();
+            return pTransform->scale;
         }
 
         Vector2f UIElement::getGlobalPosition() const
         {
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUITransform* pTransform = (GUITransform*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
-            );
-            if (pTransform)
-            {
-                return pTransform->position;
-            }
-            return { };
+            const GUITransform* pTransform = getTransform();
+            return pTransform->position;
         }
 
-        UIElement* add_container(
-            LayoutUI& ui,
-            UIElement* pParent,
-            const Layout& layout,
-            bool createRenderable,
-            ID_t textureID,
-            const Font* pFont
-        )
+        GUITransform* UIElement::getTransform()
         {
-            Vector2f scale = layout.scale;
-
-            const Layout* pParentLayout = pParent != nullptr ? &pParent->getLayout() : nullptr;
-            entityID_t parentEntityID = pParent != nullptr ? pParent->getEntityID() : NULL_ENTITY_ID;
-            Vector2f previousItemPosition = pParent != nullptr ? pParent->_previousItemPosition : Vector2f(0, 0);
-            Vector2f previousItemScale = pParent != nullptr ? pParent->_previousItemScale : Vector2f(0, 0);
-            int childIndex = pParent != nullptr ? pParent->getChildren().size() : 0;
-
-            Vector2f position = ui.calcPosition(
-                layout,
-                pParentLayout,
-                parentEntityID,
-                scale,
-                previousItemPosition,
-                previousItemScale,
-                childIndex
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUITransform* pTransform = reinterpret_cast<GUITransform*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                )
             );
+            if (!pTransform)
+            {
+                Debug::log(
+                    "UIElement's(entityID: " + std::to_string(_entityID) + ") "
+                    "GUITransform component was nullptr! "
+                    "All UIElements are required to have GUITransform component!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            return pTransform;
+        }
+
+        // *Fucking dumb, need the const version of above...
+        const GUITransform* UIElement::getTransform() const
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const GUITransform* pTransform = reinterpret_cast<const GUITransform*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+                )
+            );
+            if (!pTransform)
+            {
+                Debug::log(
+                    "UIElement's(entityID: " + std::to_string(_entityID) + ") "
+                    "GUITransform component was nullptr! "
+                    "All UIElements are required to have GUITransform component!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            return pTransform;
+        }
+
+        GUIRenderable* UIElement::getRenderable()
+        {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                )
+            );
+            if (pRenderable)
+            {
+                return pRenderable;
+            }
+            return nullptr;
+        }
+
+        const GUIRenderable* UIElement::getRenderable() const
+        {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            const Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const GUIRenderable* pRenderable = reinterpret_cast<const GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
+                )
+            );
+            if (pRenderable)
+                return pRenderable;
+
+            return nullptr;
+        }
+
+        UIElement* UIElement::getRootParent()
+        {
+            if (!_pParent)
+                return this;
+            else
+                return _pParent->getRootParent();
+        }
+
+        void UIElement::setActive(bool arg)
+        {
+            if (!arg)
+                remove_from_cursor_over_layers(getAbsoluteLayer(), _entityID);
+
+            // *if setting inactive by OnClick func, reset mouseOver
+            // NOTE: This might be an issue if setting active and cursor immediately over?
+            _isCursorOver = false;
+            _dragged = false;
+            for (UIElement* pChild : _children)
+                pChild->setActive(arg);
 
             Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            entityID_t entity = pScene->createEntity();
-            GUITransform* pTransform = create_gui_transform(
-                entity,
-                position,
-                scale
-            );
+            pScene->setEntityActive(_entityID, arg);
+        }
 
-            if (createRenderable)
+        bool UIElement::isActive()
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            return pScene->isEntityActive(_entityID);
+        }
+
+        void UIElement::fetchAbsoluteTreeLayers(std::set<uint32_t>& outLayers)
+        {
+            outLayers.insert(getAbsoluteLayer());
+            for (UIElement* pChild : _children)
             {
-                GUIRenderable* pRenderable = create_gui_renderable(
-                    entity,
-                    layout.color
-                );
-                pRenderable->textureID = textureID;
-                pRenderable->borderColor = layout.borderColor;
-                pRenderable->borderThickness = static_cast<float>(layout.borderThickness);
+                pChild->fetchAbsoluteTreeLayers(outLayers);
+            }
+        }
+
+        void UIElement::fetchAbsoluteTreeLayers(std::map<uint32_t, size_t>& outLayers)
+        {
+            outLayers[getAbsoluteLayer()] += 1;
+            for (UIElement* pChild : _children)
+            {
+                pChild->fetchAbsoluteTreeLayers(outLayers);
+            }
+        }
+
+        uint32_t UIElement::getTopTreeLayer()
+        {
+            std::set<uint32_t> allLayers;
+            fetchAbsoluteTreeLayers(allLayers);
+            if (!allLayers.empty())
+                return *allLayers.rbegin();
+
+            return 0;
+        }
+
+        // NOTE: Newly incorporated borderThickness might not work properly
+        //  -> not fully tested!
+        void UIElement::updateScale()
+        {
+            GUITransform* pTransform = getTransform();
+            if (_overrideScale)
+            {
+                pTransform->scale = _overrideScaleValue;
+                return;
             }
 
-            UIElement* pElement = new UIElement(
-                entity,
-                layout,
-                pFont
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            if (_children.empty())
+            {
+                pTransform->scale = pLayout->scale;
+                return;
+            }
+
+            Vector2f scale;
+            size_t childIndex = 0;
+            for (UIElement* pChild : _children)
+            {
+                Layout* pChildLayout = _managerRef.getLayout(pChild->_layoutID);
+                // NOTE: Below actually fucks stuff up!
+                // Don't remember why was that added in the first place...
+                if (!pChild->isActive() && !(pChildLayout->effectOnParentFlags & EffectOnParentFlagBits::AFFECT_WHILE_INACTIVE))
+                    continue;
+
+                pChild->updateScale();
+                uint32_t childEffectOnParent = pChildLayout->effectOnParentFlags;
+                // If child has no scaling effect on parent at all,
+                // continue AND DON'T INCREMENT THE childIndex! -> otherwise fucks up slightly
+                // the next child that has effect on parent!
+                if (!(childEffectOnParent & (EffectOnParentFlagBits::STRETCH_HORIZONTALLY | EffectOnParentFlagBits::STRETCH_VERTICALLY)))
+                    continue;
+
+                Vector2f childScale = pChild->getGlobalScale();
+                if (pLayout->expandElements == ExpandElements::DOWN)
+                {
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
+                    {
+                        if (childScale.x > scale.x - pLayout->padding.x * 2.0f - pLayout->borderThickness * 2.0f)
+                            scale.x = childScale.x + pLayout->padding.x * 2.0f + pLayout->borderThickness * 2.0f;
+                    }
+
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
+                    {
+                        scale.y += childScale.y;
+                        if (childIndex == 0)
+                            scale.y += pLayout->padding.y * 2.0f + pLayout->borderThickness * 2.0f;
+
+                        if (childIndex < _children.size() - 1)
+                            scale.y += pLayout->elementGap;
+                    }
+                }
+                else if (pLayout->expandElements == ExpandElements::RIGHT)
+                {
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_VERTICALLY)
+                    {
+                        if (childScale.y > scale.y - pLayout->padding.y * 2.0f - pLayout->borderThickness * 2.0f)
+                            scale.y = childScale.y + pLayout->padding.y * 2.0f + pLayout->borderThickness * 2.0f;
+                    }
+
+                    if (childEffectOnParent & EffectOnParentFlagBits::STRETCH_HORIZONTALLY)
+                    {
+                        scale.x += childScale.x;
+                        if (childIndex == 0)
+                            scale.x += pLayout->padding.x * 2.0f + pLayout->borderThickness * 2.0f;
+
+                        if (childIndex < _children.size() - 1)
+                            scale.x += pLayout->elementGap;
+                    }
+                }
+                ++childIndex;
+            }
+
+
+            pTransform->scale = {
+                std::max(pLayout->scale.x, scale.x),
+                std::max(pLayout->scale.y, scale.y)
+            };
+        }
+
+        void UIElement::updateInheritedScale(
+            Vector2f parentScale,
+            Vector2f parentPadding,
+            float parentBorderThickness
+        )
+        {
+            Layout* pLayout = getLayout();
+
+            GUITransform* pTransform = getTransform();
+            if (pLayout->inheritParentFlags & InheritParentFlagBits::WIDTH)
+                pTransform->scale.x = parentScale.x - parentPadding.x * 2 - parentBorderThickness * 2;
+            if (pLayout->inheritParentFlags & InheritParentFlagBits::HEIGHT)
+                pTransform->scale.y = parentScale.y - parentPadding.y * 2 - parentBorderThickness * 2;
+
+            for (UIElement* pChild : _children)
+                pChild->updateInheritedScale(pTransform->scale, pLayout->padding, pLayout->borderThickness);
+        }
+
+        // NOTE: Newly incorporated borderThickness might not work properly
+        //  -> not fully tested!
+        void UIElement::updatePosition(Vector2f& cumulatedScale)
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            Vector2f padding;
+            float borderThickness = 0.0f;
+            HorizontalAlignment horizontalAlignment = pLayout->horizontalAlignment;
+            VerticalAlignment verticalAlignment = pLayout->verticalAlignment;
+            float elementGap = 0.0f;
+            ExpandElements expandElements = ExpandElements::DOWN;
+            Vector2f parentPosition;
+            Vector2f parentScale;
+            Vector2f scale = getGlobalScale();
+            Vector2f position;
+            Vector2f rootBorderTEST;
+            if (_pParent)
+            {
+                const Layout* pParentLayout = _managerRef.getLayout(_pParent->_layoutID);
+                padding = pParentLayout->padding;
+                horizontalAlignment = pParentLayout->horizontalContentAlignment;
+                verticalAlignment = pParentLayout->verticalContentAlignment;
+                elementGap = pParentLayout->elementGap;
+                expandElements = pParentLayout->expandElements;
+                GUITransform* pParentTransform = _pParent->getTransform();
+                parentPosition = pParentTransform->position;
+                parentScale = pParentTransform->scale;
+                borderThickness = pParentLayout->borderThickness;
+
+                _absoluteLayer = _pParent->getAbsoluteLayer() + pLayout->layer;
+            }
+            else
+            {
+                Application* pApp = Application::get_instance();
+                Window& window = pApp->getWindow();
+                parentScale.x = static_cast<float>(window.getWidth());
+                parentScale.y = static_cast<float>(window.getHeight());
+
+                _absoluteLayer = pLayout->layer;
+            }
+            setRenderLayer(_absoluteLayer);
+
+            // Get the "origin" pos in relation to parent
+            if (horizontalAlignment == HorizontalAlignment::LEFT)
+                position.x = parentPosition.x + padding.x + borderThickness + pLayout->position.x;
+
+            if (horizontalAlignment == HorizontalAlignment::RIGHT)
+                position.x = parentPosition.x + parentScale.x - padding.x - borderThickness - scale.x - pLayout->position.x;
+            if (horizontalAlignment == HorizontalAlignment::CENTER)
+                position.x = parentPosition.x + parentScale.x * 0.5f - scale.x * 0.5f + pLayout->position.x;
+
+            if (verticalAlignment == VerticalAlignment::TOP)
+                position.y = parentPosition.y + padding.y + borderThickness + pLayout->position.y;
+            if (verticalAlignment == VerticalAlignment::BOTTOM)
+                position.y = parentPosition.y + parentScale.y - padding.y - borderThickness - scale.y - pLayout->position.y;
+            if (verticalAlignment == VerticalAlignment::CENTER)
+                position.y = parentPosition.y + parentScale.y * 0.5f - scale.y * 0.5f + pLayout->position.y;
+
+            // Add the cumulated elements scale so it goes correctly after the previous element
+            // UPDATE TO BELOW: Even if the current elem doesn't affect pos, its own positioning
+            // should take the cumulated pos/scale into account!
+            // TODO: Remove below commented out section...
+            /*
+            if (pLayout->effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION)
+            {
+                if (expandElements == ExpandElements::DOWN)
+                {
+                    position.y += (cumulatedScale.y);
+                    cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
+                    if (scale.x > cumulatedScale.x)
+                        cumulatedScale.x = scale.x + padding.x + borderThickness;
+                }
+                else if (expandElements == ExpandElements::RIGHT)
+                {
+                    position.x += (cumulatedScale.x);
+                    cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
+                    if (scale.y > cumulatedScale.y)
+                        cumulatedScale.y = scale.y + padding.y + borderThickness;
+                }
+            }
+            */
+            bool incrementPos = pLayout->effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION;
+            if (expandElements == ExpandElements::DOWN)
+            {
+                position.y += (cumulatedScale.y);
+                if (incrementPos)
+                {
+                    cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
+                    if (scale.x > cumulatedScale.x)
+                        cumulatedScale.x = scale.x + padding.x + borderThickness;
+                }
+            }
+            else if (expandElements == ExpandElements::RIGHT)
+            {
+                position.x += (cumulatedScale.x);
+                if (incrementPos)
+                {
+                    cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
+                    if (scale.y > cumulatedScale.y)
+                        cumulatedScale.y = scale.y + padding.y + borderThickness;
+                }
+            }
+
+            // Round to integer so don't get weird looking lines...
+            GUITransform* pTransform = getTransform();
+            pTransform->position = { std::round(position.x), std::round(position.y) };
+
+            // *scale cumulation is always for the immediate children (not for any deeper level!)
+            Vector2f childrenCumulatedScale;
+            for (size_t i = 0; i < _children.size(); ++i)
+                _children[i]->updatePosition(childrenCumulatedScale);
+
+            _updatePending = false;
+        }
+
+        void UIElement::updateTree()
+        {
+            updateScale();
+            const Layout* pLayout = getLayout();
+            updateInheritedScale(getTransform()->scale, pLayout->padding, pLayout->borderThickness);
+            Vector2f cumulatedScale;
+            updatePosition(cumulatedScale);
+        }
+
+        void UIElement::triggerFullTreeUpdate()
+        {
+            _managerRef.addToUpdatedElements(getRootParent());
+            _updatePending = true;
+        }
+
+        void UIElement::fetchTreeElements(std::vector<UIElement*>& outElements)
+        {
+            outElements.push_back(this);
+            for (UIElement* pChild : _children)
+                pChild->fetchTreeElements(outElements);
+        }
+
+        bool UIElement::isCursorOverTree() const
+        {
+            if (_isCursorOver)
+                return true;
+
+            for (const UIElement* pChild : _children)
+            {
+                if (pChild->isCursorOverTree())
+                    return true;
+            }
+
+            return false;
+        }
+
+        void UIElement::setSelected(bool arg)
+        {
+            _selected = arg;
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+                    false,
+                    false
+                )
             );
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            if (pRenderable)
+            {
+                if (_selected)
+                    pRenderable->color = pLayout->colors.selected;
+                else
+                    pRenderable->color = pLayout->colors.base;
+            }
+            for (UIElement* pChild : _children)
+                pChild->setSelected(_selected);
+        }
 
-            if (pParent)
-                pParent->addChild(pElement, position, scale);
+        void UIElement::setRelativeLayer(uint32_t relativeLayer)
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            pLayout->layer = relativeLayer;
+            _updatePending = true;
+        }
 
-            ui.addElement(pElement, pParent == nullptr);
+        uint32_t UIElement::getRelativeLayer() const
+        {
+            Layout* pLayout = _managerRef.getLayout(_layoutID);
+            return pLayout->layer;
+        }
 
-            return pElement;
+        uint32_t UIElement::getAbsoluteLayer() const
+        {
+            return _absoluteLayer;
+        }
+
+        // NOTE: Not sure if this works properly!?
+        void UIElement::setLayout(Layout* pLayout)
+        {
+            _layoutID = pLayout->id;
+        }
+
+        Layout* UIElement::getLayout() const
+        {
+            return _managerRef.getLayout(_layoutID);
+        }
+
+        uint32_t UIElement::get_cursor_over_layer()
+        {
+            if (s_cursorOverLayers.empty())
+                return 0;
+
+            return s_cursorOverLayers.rbegin()->first;
+        }
+
+        size_t UIElement::get_cursor_over_layer_count()
+        {
+            return s_cursorOverLayers.size();
+        }
+
+
+        void UIElement::setRenderLayer(uint32_t renderLayer)
+        {
+            // TODO: Maybe have ptr to scene when creating the element so don't need to get
+            // every time again?
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            GUIRenderable* pRenderable = reinterpret_cast<GUIRenderable*>(
+                pScene->getComponent(
+                    _entityID,
+                    ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+                    false,
+                    false
+                )
+            );
+            if (pRenderable)
+                pRenderable->layer = renderLayer;
+        }
+
+        void UIElement::add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID)
+        {
+            // Not sure if it's slower to first search if found, since inserting doesn't
+            // insert if already exists...
+            s_cursorOverLayers[absoluteLayer].insert(entityID);
+        }
+
+        void UIElement::remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID)
+        {
+            std::map<uint32_t, std::set<entityID_t>>::iterator it = s_cursorOverLayers.find(absoluteLayer);
+            if (it != s_cursorOverLayers.end())
+            {
+                std::set<entityID_t>& layerEntities = it->second;
+                if (it->second.find(entityID) != layerEntities.end())
+                {
+                    layerEntities.erase(entityID);
+
+                    if (layerEntities.empty())
+                        s_cursorOverLayers.erase(absoluteLayer);
+                }
+            }
         }
     }
 }

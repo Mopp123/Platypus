@@ -313,12 +313,13 @@ namespace platypus
 
     DeviceImpl* Device::s_pImpl = nullptr;
     Window* Device::s_pWindow = nullptr;
+    DescriptorPool* Device::s_pDescriptorPool = nullptr;
     size_t Device::s_minUniformBufferOffsetAlignment = 0;
     CommandPool* Device::s_pCommandPool = nullptr;
     std::vector<ImageFormat> Device::s_supportedDepthFormats;
     std::vector<ImageFormat> Device::s_supportedColorFormats;
 
-    void Device::create(Window* pWindow)
+    void Device::create(Window* pWindow, size_t maxDescriptorSets)
     {
         s_pWindow = pWindow;
 
@@ -510,6 +511,8 @@ namespace platypus
         s_pImpl->vmaAllocator = vmaAllocator;
 
         s_pCommandPool = new CommandPool;
+
+        s_pDescriptorPool = new DescriptorPool(maxDescriptorSets);
     }
 
     void Device::destroy()
@@ -527,6 +530,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         delete s_pCommandPool;
+        delete s_pDescriptorPool;
         vmaDestroyAllocator(s_pImpl->vmaAllocator);
         vkDestroyDevice(s_pImpl->device, nullptr);
 
@@ -609,8 +613,15 @@ namespace platypus
         return s_minUniformBufferOffsetAlignment;
     }
 
+    DescriptorPool* Device::get_descriptor_pool()
+    {
+        PLATYPUS_ASSERT(s_pDescriptorPool);
+        return s_pDescriptorPool;
+    }
+
     CommandPool* Device::get_command_pool()
     {
+        PLATYPUS_ASSERT(s_pCommandPool);
         return s_pCommandPool;
     }
 

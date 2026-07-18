@@ -40,23 +40,23 @@ namespace platypus
         ),
 
         _imgPipeline(
-            masterRenderer.getSwapchain().getRenderPassPtr(),
+            Application::get_instance()->getSwapchain()->getRenderPassPtr(),
             // Vertex buffer layouts
             {
                 {
                     {
-                        { 0, ShaderDataType::Float2 }
+                        { 0, ShaderDataType::Float2, VertexAttributeType::POSITION }
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
                     0
                 },
                 {
                     {
-                        { 1, ShaderDataType::Float4 }, // translation
-                        { 2, ShaderDataType::Float2 }, // texture offset
-                        { 3, ShaderDataType::Float4 }, // color
-                        { 4, ShaderDataType::Float4 }, // border color
-                        { 5, ShaderDataType::Float }, // border thickness
+                        { 1, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // translation
+                        { 2, ShaderDataType::Float2, VertexAttributeType::CUSTOM }, // texture offset
+                        { 3, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // color
+                        { 4, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // border color
+                        { 5, ShaderDataType::Float, VertexAttributeType::CUSTOM }, // border thickness
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                     1
@@ -78,23 +78,23 @@ namespace platypus
         ),
 
         _fontPipeline(
-            masterRenderer.getSwapchain().getRenderPassPtr(),
+            Application::get_instance()->getSwapchain()->getRenderPassPtr(),
             // Vertex buffer layouts
             {
                 {
                     {
-                        { 0, ShaderDataType::Float2 }
+                        { 0, ShaderDataType::Float2, VertexAttributeType::POSITION }
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_VERTEX,
                     0
                 },
                 {
                     {
-                        { 1, ShaderDataType::Float4 }, // translation
-                        { 2, ShaderDataType::Float2 }, // texture offset
-                        { 3, ShaderDataType::Float4 }, // color
-                        { 4, ShaderDataType::Float4 }, // border color
-                        { 5, ShaderDataType::Float }, // border thickness
+                        { 1, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // translation
+                        { 2, ShaderDataType::Float2, VertexAttributeType::CUSTOM }, // texture offset
+                        { 3, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // color
+                        { 4, ShaderDataType::Float4, VertexAttributeType::CUSTOM }, // border color
+                        { 5, ShaderDataType::Float, VertexAttributeType::CUSTOM }, // border thickness
                     },
                     VertexInputRate::VERTEX_INPUT_RATE_INSTANCE,
                     1
@@ -212,14 +212,15 @@ namespace platypus
         {
             batch.type = BatchType::NONE;
             freeTextureDescriptorSets(batch.textureID);
-            batch.textureID = NULL_ID;
+            batch.textureID = NULL_UUID;
             batch.count = 0;
         }
+        _toRender.clear();
     }
 
     void GUIRenderer::freeDescriptorSets()
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it;
+        std::unordered_map<UUID_t, std::vector<DescriptorSet>>::iterator it;
         for (it = _textureDescriptorSets.begin(); it != _textureDescriptorSets.end(); ++it)
         {
             _descriptorPoolRef.freeDescriptorSets(it->second);
@@ -233,20 +234,27 @@ namespace platypus
         const GUIRenderable* pRenderable = (const GUIRenderable*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
         );
+
+        size_t requiredBatchElements = 1;
+        if (pRenderable->isText)
+        {
+            requiredBatchElements = util::str::length_utf8(pRenderable->text);
+            // TODO: Maybe set the text renderable inactive completely if its str == empty
+            //  -> doesn't need to come all the way here fuckin' around...
+            if (requiredBatchElements == 0)
+                return;
+        }
+
         const GUITransform* pTransform = (const GUITransform*)pScene->getComponent(
             entity, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
         );
 
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-        ID_t textureID = pRenderable->textureID;
-        if (textureID == NULL_ID)
+        UUID_t textureID = pRenderable->textureID;
+        if (textureID == NULL_UUID)
         {
             textureID = pAssetManager->getWhiteTexture()->getID();
         }
-
-        size_t requiredBatchElements = 1;
-        if (pRenderable->isText)
-            requiredBatchElements = util::str::length_utf8(pRenderable->text);
 
         int batchIndex = findExistingBatchIndex(
             pRenderable->layer,
@@ -268,7 +276,7 @@ namespace platypus
                 return;
             }
             if (!occupyBatch(
-                    pRenderable->fontID != NULL_ID ? BatchType::TEXT : BatchType::IMAGE,
+                    pRenderable->fontID != NULL_UUID ? BatchType::TEXT : BatchType::IMAGE,
                     batchIndex,
                     pRenderable->layer, textureID
                 ))
@@ -285,7 +293,7 @@ namespace platypus
         if (!hasDescriptorSets(textureID))
             createTextureDescriptorSets(textureID);
 
-        if (pRenderable->fontID != NULL_ID)
+        if (pRenderable->fontID != NULL_UUID)
         {
             addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
         }
@@ -316,13 +324,13 @@ namespace platypus
             }
         #endif
 
-        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        Application* pApp = Application::get_instance();
+        AssetManager* pAssetManager = pApp->getAssetManager();
 
         CommandBuffer& currentCommandBuffer = _commandBuffers[_currentFrame];
         currentCommandBuffer.begin(&renderPass);
 
-        //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>> unusedBatches;
-        std::vector<std::pair<uint32_t, ID_t>> unusedBatches;
+        std::vector<std::pair<uint32_t, UUID_t>> unusedBatches;
         std::map<uint32_t, std::set<size_t>>::iterator layerIt;
         for (layerIt = _toRender.begin(); layerIt != _toRender.end(); ++layerIt)
         {
@@ -334,7 +342,6 @@ namespace platypus
 
                 if (_batches[*layerBatchIt].count == 0)
                 {
-                    //unusedBatches[layerIt->first].push_back(layerBatchIt);
                     unusedBatches.push_back(std::make_pair(layerIt->first, batchData.textureID));
                     continue;
                 }
@@ -366,7 +373,7 @@ namespace platypus
                 }
 
                 // This should never actually happen?
-                if (batchData.textureID == NULL_ID)
+                if (batchData.textureID == NULL_UUID)
                     continue;
 
                 batchData.pInstancedBuffer->updateDevice(
@@ -419,36 +426,19 @@ namespace platypus
                 );
                 // "Clear" the batch for next round of submits
                 // NOTE: Might be issue here if shitload of gui stuff
-                //  -> occupied batches gets never really cleared!
-                //  TODO: Truly clear batches at least on scene switch?
+                //  -> occupied batches gets "truly" cleared only on scene switch
                 //      + maybe some clever way to deal with that within the same scene too...
                 batchData.count = 0;
             }
         }
 
         // Erase unused batches
-        //std::unordered_map<uint32_t, std::vector<std::set<size_t>::iterator>>::iterator eraseLayerIt;
-        //for (eraseLayerIt = unusedBatches.begin(); eraseLayerIt != unusedBatches.end(); ++eraseLayerIt)
-        //{
-        //    std::vector<std::set<size_t>::iterator>& layerBatches = eraseLayerIt->second;
-        //    std::vector<std::set<size_t>::iterator>::iterator eraseBatchIt;
-        //    for (eraseBatchIt = layerBatches.begin(); eraseBatchIt != layerBatches.end(); ++eraseBatchIt)
-        //    {
-        //        const BatchData& batchData = _batches[*eraseBatchIt];
-        //        freeBatch(eraseLayerIt->first, batchData.textureID);
-        //        _toRender[eraseLayerIt->first].erase(*eraseBatchIt);
-        //        Debug::log("___TEST___ERASED UNUSED BATCH!");
-        //    }
-        //}
-        for (std::pair<uint32_t, ID_t>& toErase : unusedBatches)
-        {
+        for (std::pair<uint32_t, UUID_t>& toErase : unusedBatches)
             freeBatch(toErase.first, toErase.second);
-            //Debug::log("___TEST___ERASED UNUSED BATCH!");
-        }
 
         currentCommandBuffer.end();
 
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        size_t maxFramesInFlight = pApp->getSwapchain()->getMaxFramesInFlight();
         _currentFrame = (_currentFrame + 1) % maxFramesInFlight;
 
         return currentCommandBuffer;
@@ -456,7 +446,7 @@ namespace platypus
 
     int GUIRenderer::findExistingBatchIndex(
         uint32_t layer,
-        ID_t textureID,
+        UUID_t textureID,
         size_t requiredBatchDataElements
     ) const
     {
@@ -482,7 +472,7 @@ namespace platypus
         {
             const BatchData& batchData = _batches[i];
             // TODO: Varying size batches?
-            if (batchData.textureID == NULL_ID && requiredBatchDataElements <= s_maxBatchLength)
+            if (batchData.textureID == NULL_UUID && requiredBatchDataElements <= s_maxBatchLength)
                 return i;
         }
         return -1;
@@ -548,7 +538,6 @@ namespace platypus
         {
             //uint32_t codepoint = (uint32_t)utf8::next(charIterator, tmpStr.end());
             uint32_t codepoint = static_cast<uint32_t>(*charIt);
-            //Debug::log("___TEST___codepoint = " + std::to_string(codepoint));
 
             // Check, do we want to change line? (0xA = '\n')
             if (codepoint == 0xA)
@@ -613,7 +602,7 @@ namespace platypus
         BatchType batchType,
         size_t batchIndex,
         uint32_t layer,
-        ID_t textureID
+        UUID_t textureID
     )
     {
         Application* pApp = Application::get_instance();
@@ -644,7 +633,7 @@ namespace platypus
 
     bool GUIRenderer::freeBatch(
         uint32_t layer,
-        ID_t textureID
+        UUID_t textureID
     )
     {
         int batchIndex = findExistingBatchIndex(layer, textureID, 0);
@@ -656,6 +645,7 @@ namespace platypus
                 "using textureID: " + std::to_string(textureID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
+            PLATYPUS_ASSERT(false);
             return false;
         }
         else if (batchIndex >= _batches.size())
@@ -667,12 +657,13 @@ namespace platypus
                 "using textureID: " + std::to_string(textureID),
                 Debug::MessageType::PLATYPUS_ERROR
             );
+            PLATYPUS_ASSERT(false);
             return false;
         }
 
         BatchData& batchData = _batches[batchIndex];
         batchData.type = BatchType::NONE;
-        batchData.textureID = NULL_ID;
+        batchData.textureID = NULL_UUID;
         batchData.textureAtlasRows = 0;
         batchData.count = 0;
 
@@ -685,22 +676,23 @@ namespace platypus
             //PLATYPUS_ASSERT(false);
         }
 
-        Debug::log(
-            "@GUIRenderer::freeBatch "
-            "Freed batch from layer: " + std::to_string(layer) +" "
-            "using textureID: " + std::to_string(textureID),
-            Debug::MessageType::PLATYPUS_WARNING
-        );
+        //Debug::log(
+        //    "@GUIRenderer::freeBatch "
+        //    "Freed batch from layer: " + std::to_string(layer) +" "
+        //    "using textureID: " + std::to_string(textureID) + " "
+        //    "remaining layer batches: " + std::to_string(_toRender[layer].size()),
+        //    Debug::MessageType::PLATYPUS_WARNING
+        //);
 
         return true;
     }
 
-    bool GUIRenderer::hasDescriptorSets(ID_t batchIdentifier) const
+    bool GUIRenderer::hasDescriptorSets(UUID_t batchIdentifier) const
     {
         return _textureDescriptorSets.find(batchIdentifier) != _textureDescriptorSets.end();
     }
 
-    void GUIRenderer::createTextureDescriptorSets(ID_t textureID)
+    void GUIRenderer::createTextureDescriptorSets(UUID_t textureID)
     {
         Application* pApp = Application::get_instance();
         AssetManager* pAssetManager = pApp->getAssetManager();
@@ -720,7 +712,7 @@ namespace platypus
             }
         #endif
 
-        size_t maxFramesInFlight = _masterRendererRef.getSwapchain().getMaxFramesInFlight();
+        size_t maxFramesInFlight = pApp->getSwapchain()->getMaxFramesInFlight();
         for (int i = 0; i < maxFramesInFlight; ++i)
         {
             _textureDescriptorSets[textureID].push_back(
@@ -733,9 +725,9 @@ namespace platypus
         Debug::log("@GUIRenderer::createDescriptorSets New texture descriptor sets created for batch with textureID: " + std::to_string(textureID));
     }
 
-    void GUIRenderer::freeTextureDescriptorSets(ID_t textureID)
+    void GUIRenderer::freeTextureDescriptorSets(UUID_t textureID)
     {
-        std::unordered_map<ID_t, std::vector<DescriptorSet>>::iterator it = _textureDescriptorSets.find(textureID);
+        std::unordered_map<UUID_t, std::vector<DescriptorSet>>::iterator it = _textureDescriptorSets.find(textureID);
         if (it != _textureDescriptorSets.end())
         {
             _descriptorPoolRef.freeDescriptorSets(it->second);

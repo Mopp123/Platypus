@@ -6,34 +6,50 @@
 
 namespace platypus
 {
-    std::string mesh_type_to_string(MeshType type)
+    MeshPropertyFlagBits get_mesh_type(uint32_t meshPropertyFlags)
+    {
+        if (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC))
+            return MeshPropertyFlagBits::TYPE_STATIC;
+        else if (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED))
+            return MeshPropertyFlagBits::TYPE_SKINNED;
+
+        return MeshPropertyFlagBits::NONE;
+    }
+
+    std::string mesh_type_to_string(MeshPropertyFlagBits type)
     {
         switch (type)
         {
-            case MeshType::MESH_TYPE_STATIC: return "MESH_TYPE_STATIC";
-            case MeshType::MESH_TYPE_STATIC_INSTANCED: return "MESH_TYPE_STATIC_INSTANCED";
-            case MeshType::MESH_TYPE_SKINNED: return "MESH_TYPE_SKINNED";
+            case platypus::MeshPropertyFlagBits::TYPE_STATIC: return "MESH_TYPE_STATIC";
+            case platypus::MeshPropertyFlagBits::TYPE_SKINNED: return "MESH_TYPE_SKINNED";
             default: return "<Invalid type>";
         }
     }
 
 
     Mesh::Mesh(
-        MeshType type,
+        size_t uuidPool,
+        uint32_t propertyFlags,
         VertexBufferLayout vertexBufferLayout,
         Buffer* pVertexBuffer,
         Buffer* pIndexBuffer,
         const Matrix4f& transformationMatrix,
-        Pose bindPose
+        Pose bindPose,
+        const std::vector<SkeletalAnimationData*>& animations,
+        const std::string& name,
+        UUID_t id,
+        bool persistent
     ) :
-        Asset(AssetType::ASSET_TYPE_MESH),
-        _type(type),
+        Asset(uuidPool,AssetType::ASSET_TYPE_MESH, name, id, persistent),
+        _propertyFlags(propertyFlags),
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),
         _pIndexBuffer(pIndexBuffer),
         _transformationMatrix(transformationMatrix)
     {
+        // Why are these here and not like the others?
         _bindPose = bindPose;
+        _animations = animations;
     }
 
     Mesh::~Mesh()
@@ -42,7 +58,28 @@ namespace platypus
         delete _pIndexBuffer;
     }
 
+    bool Mesh::hasTangents() const
+    {
+        for (const VertexBufferElement& elem : _vertexBufferLayout.getElements())
+        {
+            if (elem.getAttribType() == VertexAttributeType::TANGENT)
+                return true;
+        }
+        return false;
+    }
+
+    int32_t Mesh::getAnimationIndex(const std::string& name) const
+    {
+        for (size_t i = 0; i < _animations.size(); ++i)
+        {
+            if (_animations[i]->getName() == name)
+                return i;
+        }
+        return -1;
+    }
+
     Mesh* Mesh::generate_terrain(
+        size_t uuidPool,
         float tileSize,
         const std::vector<float>& heightmapData,
         bool dynamic,
@@ -204,13 +241,19 @@ namespace platypus
             false // store host side
         );
 
+        uint32_t propertyFlags = static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);
+        if (generateTangents)
+            propertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::HAS_TANGENTS);
+
         Mesh* pMesh = new Mesh(
-            MeshType::MESH_TYPE_STATIC,
+            uuidPool,
+            propertyFlags,
             generateTangents ? VertexBufferLayout::get_common_static_tangent_layout() : VertexBufferLayout::get_common_static_layout(),
             pVertexBuffer,
             pIndexBuffer,
             Matrix4f(1.0f),
-            { }
+            { }, // bind pose
+            { } // animations
         );
         return pMesh;
     }

@@ -1,4 +1,4 @@
-#include "UITestScene.hpp"
+#include "ShadowTestScene.hpp"
 #include <iostream>
 
 
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new UITestScene
+        new ShadowTestScene
     );
     app.run();
     return 0;
