@@ -203,7 +203,7 @@ namespace platypus
         return { };
     }
 
-    std::string Scene::getEntityName(entityID_t entity)
+    std::string Scene::getEntityName(entityID_t entity) const
     {
         if (entity == NULL_ENTITY_ID)
             return "";
@@ -726,6 +726,42 @@ namespace platypus
         _entityErrors.clear();
     }
 
+    void Scene::addToDeserializationParentIDQuery(
+        entityID_t target,
+        UUID_t parentEntityUUID
+    )
+    {
+        std::unordered_map<entityID_t, UUID_t>::iterator it = _parentComponentsToFinalize.find(target);
+        if (it != _parentComponentsToFinalize.end())
+        {
+            Debug::log(
+                "Target entity ID: " + std::to_string(target) + " was already added!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        _parentComponentsToFinalize[target] = parentEntityUUID;
+    }
+
+    void Scene::addToDeserializationChildrenIDQuery(
+        entityID_t target,
+        const std::vector<UUID_t>& childUUIDs
+    )
+    {
+        std::unordered_map<entityID_t, std::vector<UUID_t>>::iterator it = _childrenComponentsToFinalize.find(target);
+        if (it != _childrenComponentsToFinalize.end())
+        {
+            Debug::log(
+                "Target entity ID: " + std::to_string(target) + " was already added!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        _childrenComponentsToFinalize[target] = childUUIDs;
+    }
+
     std::vector<char> Scene::serialize(
         const std::vector<entityID_t>& toSerialize
     )
@@ -738,6 +774,7 @@ namespace platypus
         for (entityID_t entityID : toSerialize)
         {
             const Entity& entity = getEntity(entityID);
+            const std::string entityName = getEntityName(entity.id);
             std::vector<char> entityData = serialize_entity(entity, getEntityName(entityID));
             serializedData.resize(serializedData.size() + entityData.size());
             memcpy(serializedData.data() + pos, entityData.data(), entityData.size());
@@ -746,7 +783,7 @@ namespace platypus
             std::unordered_map<ComponentType, const void*> components = getComponents(entityID);
             Debug::log(
                 "___TEST___serializing " + std::to_string(components.size()) + " components "
-                "for entity " + std::to_string(entityID)
+                "for entity: '" + entityName + "'"
             );
             std::unordered_map<ComponentType, const void*>::const_iterator it;
             for (it = components.begin(); it != components.end(); ++it)
@@ -807,12 +844,13 @@ namespace platypus
         );
         bufferReadPos += serialized_entity_size;
 
+        const size_t componentCount = get_component_count(entity.componentMask);
         Debug::log(
-            "___TEST___Attempting to deserialize components for entity: " + getEntityName(entity.id)
+            "___TEST___Attempting to deserialize " + std::to_string(componentCount) + " components "
+            "for entity: " + getEntityName(entity.id)
         );
         PLATYPUS_ASSERT(!getEntityName(entity.id).empty());
 
-        size_t componentCount = get_component_count(entity.componentMask);
         for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
         {
             PLATYPUS_ASSERT(bufferReadPos < serializedData.size());
@@ -901,5 +939,65 @@ namespace platypus
             entities[i] = entity.id;
         }
         return entities;
+    }
+
+    void Scene::finalizeDeserialization()
+    {
+        Debug::log("___TEST___Finalizing Scene deserialization...");
+        std::unordered_map<entityID_t, UUID_t>::iterator parentIt;
+        for (parentIt = _parentComponentsToFinalize.begin(); parentIt != _parentComponentsToFinalize.end(); ++parentIt)
+        {
+            const entityID_t targetEntityID = parentIt->first;
+            const UUID_t parentEntityUUID = parentIt->second;
+
+            void* pParentComponent = getComponent(targetEntityID, ComponentType::COMPONENT_TYPE_PARENT);
+            PLATYPUS_ASSERT(pParentComponent);
+            Parent* pParent = reinterpret_cast<Parent*>(pParentComponent);
+            if (pParent->entityID != NULL_ENTITY_ID)
+            {
+                Debug::log(
+                    "While finalizing Parent component for entity: " + std::to_string(targetEntityID) + " "
+                    "the Parent component's entityID was already set!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            Entity parentEntity = getEntity(parentEntityUUID);
+            PLATYPUS_ASSERT(parentEntity.id != NULL_ENTITY_ID);
+            pParent->entityID = parentEntity.id;
+        }
+
+        std::unordered_map<entityID_t, std::vector<UUID_t>>::iterator childrenIt;
+        for (childrenIt = _childrenComponentsToFinalize.begin(); childrenIt != _childrenComponentsToFinalize.end(); ++childrenIt)
+        {
+            const entityID_t targetEntityID = childrenIt->first;
+            const std::vector<UUID_t>& childEntityUUIDs = childrenIt->second;
+
+            void* pChildrenComponent = getComponent(targetEntityID, ComponentType::COMPONENT_TYPE_CHILDREN);
+            PLATYPUS_ASSERT(pChildrenComponent);
+            Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
+            PLATYPUS_ASSERT(pChildren->count == childEntityUUIDs.size());
+
+            for (size_t i = 0; i < pChildren->count; ++i)
+            {
+                if (pChildren->entityIDs[i] != NULL_ENTITY_ID)
+                {
+                    Debug::log(
+                        "While finalizing Children component for entity: " + std::to_string(targetEntityID) + " "
+                        "the Children component's entityID at index " + std::to_string(i),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+
+                Entity childEntity = getEntity(childEntityUUIDs[i]);
+                PLATYPUS_ASSERT(childEntity.id != NULL_ENTITY_ID);
+                pChildren->entityIDs[i] = childEntity.id;
+            }
+        }
+        Debug::log("___TEST___Scene deserialization finalization finished!");
     }
 }

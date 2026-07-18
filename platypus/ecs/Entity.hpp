@@ -58,6 +58,7 @@ namespace platypus
         void clear(uint32_t UUIDPoolID);
     };
 
+    // NOTE: Doesn't work if the mask value's size changes!
     size_t get_component_count(uint64_t componentMask);
 
     // NOTE:

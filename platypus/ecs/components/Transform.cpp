@@ -831,8 +831,6 @@ namespace platypus
         if (parentEntityID == NULL_ENTITY_ID)
             pScene->addToDeserializationParentIDQuery(entityID, parentUUID);
 
-        // TODO: Allow to creating Parent components with initial parent entityID_t being
-        // NULL_ENTITY_ID, which gets resloved later in the deserialization process
         *ppParent = create_parent(entityID, parentEntityID, pScene, true);
     }
 
@@ -877,8 +875,6 @@ namespace platypus
 
         pScene->addToDeserializationChildrenIDQuery(entityID, requestedChildEntityUUIDs);
 
-        // TODO: Allow to creating Children components with initial child entityID_ts being
-        // NULL_ENTITY_IDs, which gets resloved later in the deserialization process
         std::vector<entityID_t> childEntityIDs(childCount);
         memset(childEntityIDs.data(), NULL_ENTITY_ID, sizeof(entityID_t) * childCount);
         Children* pChildren = create_children(entityID, childEntityIDs, pScene, true);

@@ -182,7 +182,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_CAMERA:
                 deserialize(
                     pScene,
-                    reinterpret_cast<Camera**>(*ppComponent),
+                    reinterpret_cast<Camera**>(ppComponent),
                     entityID,
                     dataSize,
                     pData
@@ -192,7 +192,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_LIGHT:
                 deserialize(
                     pScene,
-                    reinterpret_cast<Light**>(*ppComponent),
+                    reinterpret_cast<Light**>(ppComponent),
                     entityID,
                     dataSize,
                     pData
@@ -202,7 +202,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION:
                 deserialize(
                     pScene,
-                    reinterpret_cast<SkeletalAnimation**>(*ppComponent),
+                    reinterpret_cast<SkeletalAnimation**>(ppComponent),
                     entityID,
                     dataSize,
                     pData
@@ -212,7 +212,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_JOINT:
                 deserialize(
                     pScene,
-                    reinterpret_cast<SkeletonJoint**>(*ppComponent),
+                    reinterpret_cast<SkeletonJoint**>(ppComponent),
                     entityID,
                     dataSize,
                     pData
@@ -222,7 +222,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_PARENT:
                 deserialize(
                     pScene,
-                    reinterpret_cast<Parent**>(*ppComponent),
+                    reinterpret_cast<Parent**>(ppComponent),
                     entityID,
                     dataSize,
                     pData
@@ -232,7 +232,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_CHILDREN:
                 deserialize(
                     pScene,
-                    reinterpret_cast<Children**>(*ppComponent),
+                    reinterpret_cast<Children**>(ppComponent),
                     entityID,
                     dataSize,
                     pData

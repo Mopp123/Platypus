@@ -45,6 +45,10 @@ namespace platypus
 
         entityID_t _activeCameraEntity = NULL_ENTITY_ID;
 
+        // Needed for Parent and Children components' deserialization
+        std::unordered_map<entityID_t, UUID_t> _parentComponentsToFinalize;
+        std::unordered_map<entityID_t, std::vector<UUID_t>> _childrenComponentsToFinalize;
+
     public:
         EnvironmentProperties environmentProperties;
 
@@ -57,7 +61,7 @@ namespace platypus
         Entity getEntity(entityID_t entity) const;
         Entity getEntity(UUID_t entityUUID) const;
         Entity getEntity(const std::string& name) const;
-        std::string getEntityName(entityID_t entity);
+        std::string getEntityName(entityID_t entity) const;
         void setEntityName(const std::string& currentName, const std::string& newName);
         void setEntityActive(entityID_t entity, bool arg);
         bool isEntityActive(entityID_t entity) const;
@@ -106,8 +110,14 @@ namespace platypus
 
         // These both are supposed to resolve all Parent and Children components' actual entityID_ts
         // after all entities have been deserialized!
-        void addToDeserializationParentIDQuery(entityID_t target, UUID_t parentEntityUUID);
-        void addToDeserializationChildrenIDQuery(entityID_t target, const std::vector<UUID_t>& childUUIDs);
+        void addToDeserializationParentIDQuery(
+            entityID_t target,
+            UUID_t parentEntityUUID
+        );
+        void addToDeserializationChildrenIDQuery(
+            entityID_t target,
+            const std::vector<UUID_t>& childUUIDs
+        );
 
         // Puts all entities and their components into buffer that can be saved on disk
         std::vector<char> serialize(
@@ -135,6 +145,8 @@ namespace platypus
             const std::vector<char>& serializedData,
             size_t serializedDataPos
         );
+
+        void finalizeDeserialization();
 
         virtual void init() = 0;
         virtual void update() = 0;

@@ -8,13 +8,13 @@
 
 namespace platypus
 {
+    // NOTE: Doesn't work if the mask value's size changes!
     size_t get_component_count(uint64_t componentMask)
     {
         size_t count = 0;
-        for (size_t i = 0; i < sizeof(uint64_t); ++i)
+        for (size_t i = 0; i < 64; ++i)
         {
-
-            if (componentMask & 0x1 << i)
+            if (componentMask & (static_cast<uint64_t>(0x1) << i))
                 ++count;
         }
         return count;
