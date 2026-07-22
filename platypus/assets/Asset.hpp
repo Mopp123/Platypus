@@ -36,10 +36,11 @@ namespace platypus
         MEMORY_ACCESS_TRANSFER_WRITE_BIT = 0x00001000
     };
 
-
     constexpr size_t asset_metadata_name_size = 32; // NOTE: This is probably too short!
     constexpr size_t asset_metadata_filepath_size = 64;
+    constexpr size_t asset_metadata_custom_flags_size = 8;
     constexpr size_t asset_metadata_model_max_meshes = 8;
+    // The header contains image, texture, material and model counts as uint32_t
     constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 4;
 
 
@@ -50,6 +51,7 @@ namespace platypus
         size_t _uuidPool = 0;
         UUID_t _id = NULL_UUID;
         AssetType _type = AssetType::ASSET_TYPE_NONE;
+        uint64_t _customFlags = 0;
         std::string _name;
         bool _persistent = false;
         bool _serializable = true;
@@ -76,6 +78,8 @@ namespace platypus
 
         inline UUID_t getID() const { return _id; }
         inline AssetType getType() const { return _type; }
+        inline uint64_t getCustomFlags() const { return _customFlags; }
+        inline void setCustomFlags(uint64_t flags) { _customFlags = flags; }
         inline const std::string& getName() const { return _name; }
         inline void setName(const std::string& name) { _name = name; }
         inline bool isSerializable() const { return _serializable; }
