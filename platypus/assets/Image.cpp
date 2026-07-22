@@ -465,6 +465,7 @@ namespace platypus
     /*
         Serialized format (in order):
             ID_t assetID = NULL_ID;
+            uint64_t customFlags;
             ImageFormat format;
             uint8_t persistent = 0;
             char name[asset_metadata_name_size];
@@ -486,6 +487,9 @@ namespace platypus
 
         memcpy(pBuf, &useID, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
@@ -516,6 +520,7 @@ namespace platypus
     {
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
         UUID_t id = NULL_UUID;
+        uint64_t customFlags = 0;
         ImageFormat format;
         uint8_t persistent;
         char name[asset_metadata_name_size];
@@ -525,6 +530,9 @@ namespace platypus
 
         memcpy(&id, pBuf, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         memcpy(&format, pBuf + pos, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
@@ -546,6 +554,8 @@ namespace platypus
             std::string(name),
             id
         );
+        pImage->_customFlags = customFlags;
+
         if (persistent)
             pAssetManager->makePersistent(pImage);
 
@@ -555,6 +565,7 @@ namespace platypus
     size_t Image::get_serialized_metadata_size()
     {
         return sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
             sizeof(ImageFormat) +
             sizeof(uint8_t) +
             asset_metadata_name_size +

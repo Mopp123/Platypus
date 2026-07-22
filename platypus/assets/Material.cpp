@@ -733,6 +733,7 @@ namespace platypus
     /*
         Serialized format (in order):
             ID_t assetID = NULL_ID;
+            uint64_t customFlags;
             float specularStrength = 0.0f;
             float shininess = 0.0f;
             Vector2f textureOffset;
@@ -760,6 +761,9 @@ namespace platypus
 
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         const float specularStrength = getSpecularStrength();
         memcpy(pBuf + pos, &specularStrength, sizeof(float));
@@ -854,6 +858,7 @@ namespace platypus
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
         UUID_t id;
+        uint64_t customFlags;
         float specularStrength;
         float shininess;
         Vector2f textureOffset;
@@ -873,6 +878,9 @@ namespace platypus
 
         memcpy(&id, pBuf, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         memcpy(&specularStrength, pBuf + pos, sizeof(float));
         pos += sizeof(float);
@@ -948,6 +956,7 @@ namespace platypus
             std::string(name),
             id
         );
+        pMaterial->_customFlags = customFlags;
 
         if (persistent)
             pAssetManager->makePersistent(pMaterial);
@@ -958,6 +967,7 @@ namespace platypus
     size_t Material::get_serialized_metadata_size()
     {
         return sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
             sizeof(float) * 2 +
             sizeof(Vector2f) * 2 +
             sizeof(uint8_t) * 5 +

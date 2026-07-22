@@ -79,6 +79,7 @@ namespace platypus
     /*
         Serialized format (in order):
             ID_t assetID = NULL_ID;
+            uint64_t customFlags;
             ID_t imageID = NULL_ID;
             TextureSamplerFilterMode filterMode;
             TextureSamplerAddressMode addressMode;
@@ -100,6 +101,9 @@ namespace platypus
 
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         UUID_t imageID = _pImage->getID();
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -143,6 +147,7 @@ namespace platypus
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
         UUID_t id;
+        uint64_t customFlags;
         UUID_t imageID;
         TextureSamplerFilterMode samplerFilterMode;
         TextureSamplerAddressMode samplerAddressMode;
@@ -154,6 +159,9 @@ namespace platypus
 
         memcpy(&id, pBuf, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         memcpy(&imageID, pBuf + pos, sizeof(UUID_t));
         pos += sizeof(UUID_t);
@@ -190,6 +198,7 @@ namespace platypus
             std::string(name),
             id
         );
+        pTexture->_customFlags = customFlags;
 
         if (persistent)
             pAssetManager->makePersistent(pTexture);
@@ -200,6 +209,7 @@ namespace platypus
     size_t Texture::get_serialized_metadata_size()
     {
         return sizeof(UUID_t) * 2 +
+            asset_metadata_custom_flags_size +
             sizeof(TextureSamplerFilterMode) +
             sizeof(TextureSamplerAddressMode) +
             sizeof(uint8_t) * 2 +

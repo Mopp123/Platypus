@@ -29,6 +29,7 @@ namespace platypus
     /*
         Serialized format (in order):
             ID_t assetID = NULL_ID;
+            uint64_t customFlags;
             uint8_t instanced = 0;
             uint8_t persistent = 0;
             ID_t meshIDs[metadata_model_max_meshes];
@@ -48,6 +49,9 @@ namespace platypus
 
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         const uint8_t instanced = static_cast<uint8_t>(_instanced);
         memcpy(pBuf + pos, &instanced, sizeof(uint8_t));
@@ -84,6 +88,7 @@ namespace platypus
         PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
 
         UUID_t id;
+        uint64_t customFlags;
         uint8_t instanced;
         uint8_t persistent;
         UUID_t meshIDs[asset_metadata_model_max_meshes];
@@ -94,6 +99,9 @@ namespace platypus
 
         memcpy(&id, pBuf, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
 
         memcpy(&instanced, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
@@ -127,6 +135,7 @@ namespace platypus
             id,
             useMeshIDs
         );
+        pModel->_customFlags = customFlags;
 
         if (persistent)
         {
@@ -143,6 +152,7 @@ namespace platypus
     size_t Model::get_serialized_metadata_size()
     {
         return sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
             sizeof(uint8_t) * 2 +
             sizeof(UUID_t) * asset_metadata_model_max_meshes +
             asset_metadata_name_size +
