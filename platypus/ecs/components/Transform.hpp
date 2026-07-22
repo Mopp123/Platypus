@@ -29,7 +29,7 @@ namespace platypus
 
     constexpr size_t serialized_children_size =
         sizeof(ComponentType) +
-        sizeof(size_t) +
+        sizeof(uint32_t) +
         sizeof(UUID_t) * PLATYPUS_MAX_CHILD_ENTITIES;
 
     struct Transform
@@ -51,7 +51,7 @@ namespace platypus
 
     struct Children
     {
-        size_t count = 0;
+        uint32_t count = 0;
         entityID_t entityIDs[PLATYPUS_MAX_CHILD_ENTITIES];
     };
 
