@@ -426,7 +426,7 @@ namespace platypus
             pUseScene->addToComponentMask(target, componentType);
 
         Children* pChildren = reinterpret_cast<Children*>(pComponent);
-        pChildren->count = childIDs.size();
+        pChildren->count = static_cast<uint32_t>(childIDs.size());
         for (size_t i = 0; i < childIDs.size(); ++i)
             pChildren->entityIDs[i] = childIDs[i];
 
@@ -462,8 +462,8 @@ namespace platypus
             if (!pChildrenComponent)
             {
                 Debug::log(
-                    "@add_child "
                     "Failed to allocate Children component for entity: " + std::to_string(target),
+                    PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
                 PLATYPUS_ASSERT(false);
@@ -479,9 +479,9 @@ namespace platypus
         if (pChildren->count >= PLATYPUS_MAX_CHILD_ENTITIES)
         {
             Debug::log(
-                "@add_child "
                 "Child count exceeded for entity: " + std::to_string(target) + " "
                 "Max child count is: " + std::to_string(PLATYPUS_MAX_CHILD_ENTITIES),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -536,7 +536,7 @@ namespace platypus
             target,
             ComponentType::COMPONENT_TYPE_CHILDREN
         );
-        for (size_t i = 0; i < pChildren->count; ++i)
+        for (size_t i = 0; i < static_cast<size_t>(pChildren->count); ++i)
         {
             if (pChildren->entityIDs[i] == child)
             {
@@ -544,8 +544,9 @@ namespace platypus
                 pChildren->count -= 1;
                 if (pChildren->count == 0)
                     pUseScene->destroyComponent(target, ComponentType::COMPONENT_TYPE_CHILDREN);
+                else
+                    pack_children(pChildren, i);
 
-                pack_children(pChildren, i);
                 return;
             }
         }
@@ -561,6 +562,15 @@ namespace platypus
 
     void pack_children(Children* pChildren, size_t freedPosition)
     {
+        if (pChildren->count == 0)
+        {
+            Debug::log(
+                "Child count was 0",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
         // This should never happen since this gets called ONLY when children are removed
         //  -> I don't trust myself tho...
         if (pChildren->count >= PLATYPUS_MAX_CHILD_ENTITIES)
@@ -575,16 +585,17 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        std::vector<entityID_t> temp(pChildren->count);
+        const size_t childCount = static_cast<size_t>(pChildren->count);
+        std::vector<entityID_t> temp(childCount);
         // We're moving all IDs one slot back from freedPosition
         // count + 1 since the last removal already decreased it
-        for (size_t i = freedPosition + 1; i < pChildren->count + 1; ++i)
+        for (size_t i = freedPosition + 1; i < childCount + 1; ++i)
         {
             entityID_t childID = pChildren->entityIDs[i];
             pChildren->entityIDs[i - 1] = childID;
         }
         // Make last pos NULL_ENTITY since otherwise the last id gets duplicated
-        pChildren->entityIDs[pChildren->count] = NULL_ENTITY_ID;
+        pChildren->entityIDs[childCount] = NULL_ENTITY_ID;
     }
 
 
@@ -681,13 +692,13 @@ namespace platypus
         );
         size_t pos = sizeof(ComponentType);
 
-        const size_t childCount = pChildren->count;
+        const uint32_t childCount = pChildren->count;
         memcpy(
             serializedData.data() + pos,
             &(pChildren->count),
-            sizeof(size_t)
+            sizeof(uint32_t)
         );
-        pos += sizeof(size_t);
+        pos += sizeof(uint32_t);
 
         const Scene* pScene = Application::get_instance()->getSceneManager().getCurrentScene();
         UUID_t childUUIDs[PLATYPUS_MAX_CHILD_ENTITIES];
@@ -851,13 +862,13 @@ namespace platypus
         PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_CHILDREN);
         size_t pos = sizeof(ComponentType);
 
-        size_t childCount;
+        uint32_t childCount;
         memcpy(
             &childCount,
             reinterpret_cast<const char*>(pData) + pos,
-            sizeof(size_t)
+            sizeof(uint32_t)
         );
-        pos += sizeof(size_t);
+        pos += sizeof(uint32_t);
 
         std::vector<UUID_t> requestedChildEntityUUIDs;
         for (size_t i = 0; i < childCount; ++i)
