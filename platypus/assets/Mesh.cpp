@@ -1,4 +1,5 @@
 #include "Mesh.hpp"
+#include "AssetManager.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/Common.h"
 #include <cmath>
@@ -256,5 +257,256 @@ namespace platypus
             { } // animations
         );
         return pMesh;
+    }
+
+    /*
+        Serialized format (in order):
+            UUID_t assetID = NULL_UUID;
+            uint64_t customFlags;
+            MeshPropertyFlagBits meshPropertyFlags;
+            uint8_t persistent = 0;
+            char name[asset_metadata_name_size];
+            uint32_t vertexBufferDataSize
+            uint32_t indexBufferDataSize
+            IndexType indexType
+
+            VertexBufferLayout serialized vbLayout data
+
+            char vertexBufferData[vertexBufferSerializedSize]
+            char indexBufferData[indexBufferSerializedSize]
+
+        NOTE: Not everything are serialized currently for Meshes!
+        TODO: Serialize:
+            *_bindPose?
+            *_animations?
+            *_transformationMatrix?
+    */
+    void Mesh::writeToMetadataBuffer(
+        std::vector<char>& targetBuffer
+    ) const
+    {
+        if (!_pVertexBuffer->getData())
+        {
+            Debug::log(
+                "Mesh's vertex buffer's host side data was nullptr! "
+                "You'll need to store the vertex buffer's host side data "
+                "in order to serialize it!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        if (!_pIndexBuffer->getData())
+        {
+            Debug::log(
+                "Mesh's index buffer's host side data was nullptr! "
+                "You'll need to store the index buffer's host side data "
+                "in order to serialize it!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        std::vector<char> vertexBufferLayoutData = _vertexBufferLayout.serialize();
+        const size_t vertexBufferSize = _pVertexBuffer->getTotalSize();
+        const size_t indexBufferSize = _pIndexBuffer->getTotalSize();
+
+        const size_t totalSize = sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
+            sizeof(uint32_t) + // meshPropertyFlags
+            sizeof(uint8_t) + // persistent
+            asset_metadata_name_size +
+            sizeof(uint32_t) + // vertexBufferData size
+            sizeof(uint32_t) + // indexBufferData size
+            vertexBufferLayoutData.size() +
+            vertexBufferSize + // the actual vertexBuffer size
+            indexBufferSize + // the actual indexBuffer size
+            sizeof(IndexType);
+
+        size_t prevSize = targetBuffer.size();
+        targetBuffer.resize(prevSize + totalSize);
+
+        char* pBuf = targetBuffer.data() + prevSize;
+        memcpy(pBuf, &_id, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_customFlags, sizeof(uint64_t));
+        pos += sizeof(uint64_t);
+
+        memcpy(pBuf + pos, &_propertyFlags, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(pBuf + pos, &_persistent, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        // Clear the buf for the longest possible name
+        memset(pBuf + pos, 0, asset_metadata_name_size);
+        // Write the name
+        memcpy(pBuf + pos, _name.data(), _name.size());
+        pos += asset_metadata_name_size;
+
+        const uint32_t vertexBufferSizeU32 = static_cast<uint32_t>(vertexBufferSize);
+        memcpy(pBuf + pos, &vertexBufferSizeU32, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        const uint32_t indexBufferSizeU32 = static_cast<uint32_t>(indexBufferSize);
+        memcpy(pBuf + pos, &indexBufferSizeU32, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        IndexType indexType = IndexType::INDEX_TYPE_NONE;
+        if (_pIndexBuffer->getDataElemSize() == 2)
+        {
+            indexType = IndexType::INDEX_TYPE_UINT16;
+        }
+        else if (_pIndexBuffer->getDataElemSize() == 4)
+        {
+            indexType = IndexType::INDEX_TYPE_UINT32;
+        }
+        else
+        {
+            Debug::log(
+                "Failed to get valid index type for index buffer with element size " + std::to_string(_pIndexBuffer->getDataElemSize()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        memcpy(pBuf + pos, &indexType, sizeof(IndexType));
+        pos += sizeof(IndexType);
+
+        memcpy(pBuf + pos, vertexBufferLayoutData.data(), vertexBufferLayoutData.size());
+        pos += vertexBufferLayoutData.size();
+
+        memcpy(pBuf + pos, _pVertexBuffer->getData(), vertexBufferSize);
+        pos += vertexBufferSize;
+
+        memcpy(pBuf + pos, _pIndexBuffer->getData(), indexBufferSize);
+        pos += indexBufferSize;
+
+        PLATYPUS_ASSERT(pos == totalSize);
+    }
+
+    /*
+        Serialized format (in order):
+            UUID_t assetID = NULL_UUID;
+            uint64_t customFlags;
+            MeshPropertyFlagBits meshPropertyFlags;
+            uint8_t persistent = 0;
+            char name[asset_metadata_name_size];
+            uint32_t vertexBufferDataSize
+            uint32_t indexBufferDataSize
+            IndexType indexType
+
+            VertexBufferLayout serialized vbLayout data
+
+            char vertexBufferData[vertexBufferSerializedSize]
+            char indexBufferData[indexBufferSerializedSize]
+        */
+    Mesh* Mesh::create_from_metadata_buffer(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    )
+    {
+        UUID_t uuid = NULL_UUID;
+        uint64_t customFlags = 0;
+        uint32_t propertyFlags = 0;
+        uint8_t persistent = 0;
+        char name[asset_metadata_name_size];
+        uint32_t vertexBufferSize = 0;
+        uint32_t indexBufferSize = 0;
+        IndexType indexType;
+        const size_t baseSize = sizeof(UUID_t) +
+            sizeof(uint64_t) +
+            sizeof(uint32_t) +
+            sizeof(uint8_t) +
+            asset_metadata_name_size+
+            sizeof(uint32_t) +
+            sizeof(uint32_t) +
+            sizeof(IndexType);
+
+        PLATYPUS_ASSERT(bufferPos + baseSize < targetBuffer.size());
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+        memcpy(&uuid, pBuf, sizeof(UUID_t));
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(&customFlags, pBuf + pos, sizeof(uint64_t));
+        pos += sizeof(uint64_t);
+
+        memcpy(&propertyFlags, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+
+        memcpy(&vertexBufferSize, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(&indexBufferSize, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(&indexType, pBuf + pos, sizeof(IndexType));
+        pos += sizeof(IndexType);
+
+        VertexBufferLayout vertexBufferLayout = VertexBufferLayout::deserialize(
+            targetBuffer,
+            bufferPos + baseSize
+        );
+        pos += vertexBufferLayout.getSerializedSize();
+
+        std::vector<float> vertexBufferData(vertexBufferSize / sizeof(float));
+        memcpy(vertexBufferData.data(), pBuf + pos, vertexBufferSize);
+        pos += vertexBufferSize;
+
+        std::vector<char> indexBufferData(indexBufferSize);
+        memcpy(indexBufferData.data(), pBuf + pos, indexBufferSize);
+
+        size_t indicesElementSize = 0;
+        if (indexType == IndexType::INDEX_TYPE_UINT16)
+        {
+            indicesElementSize = sizeof(uint16_t);
+        }
+        else if (indexType == IndexType::INDEX_TYPE_UINT32)
+        {
+            indicesElementSize = sizeof(uint32_t);
+        }
+        else
+        {
+            Debug::log(
+                "Invalid index type(" + std::to_string(indexType) + ") for index buffer",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        size_t indicesLength = indexBufferSize / indicesElementSize;
+        return pAssetManager->createMesh(
+            vertexBufferLayout,
+            vertexBufferData,
+            indexBufferData.data(),
+            indicesElementSize,
+            indicesLength,
+            propertyFlags
+        );
+    }
+
+    size_t Mesh::getSerializedSize() const
+    {
+        return sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
+            sizeof(uint32_t) + // meshPropertyFlags
+            sizeof(uint8_t) + // persistent
+            asset_metadata_name_size +
+            sizeof(uint32_t) + // vertexBufferData size
+            sizeof(uint32_t) + // indexBufferData size
+            _vertexBufferLayout.getSerializedSize() +
+            _pVertexBuffer->getTotalSize() +
+            _pIndexBuffer->getTotalSize();
     }
 }

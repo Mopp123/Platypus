@@ -45,7 +45,7 @@ namespace platypus
         TANGENT
     };
 
-    enum VertexInputRate
+    enum VertexInputRate : uint32_t
     {
         VERTEX_INPUT_RATE_VERTEX = 0,
         VERTEX_INPUT_RATE_INSTANCE = 1
@@ -63,7 +63,7 @@ namespace platypus
     };
 
 
-    enum BufferUpdateFrequency
+    enum BufferUpdateFrequency : uint32_t
     {
         BUFFER_UPDATE_FREQUENCY_STATIC = 0,
         BUFFER_UPDATE_FREQUENCY_DYNAMIC,
@@ -76,7 +76,7 @@ namespace platypus
         std430
     };
 
-    enum IndexType
+    enum IndexType : uint8_t
     {
         INDEX_TYPE_NONE = 0,
         INDEX_TYPE_UINT16 = 1,
@@ -129,6 +129,14 @@ namespace platypus
         bool operator==(const VertexBufferElement& other) const;
         bool operator!=(const VertexBufferElement& other) const;
 
+        std::vector<char> serialize() const;
+        static VertexBufferElement deserialize(
+            const std::vector<char>& data,
+            size_t offset
+        );
+
+        static size_t get_serialized_size();
+
         inline uint32_t getLocation() const { return _location; }
         inline ShaderDataType getDataType() const { return _dataType; }
         inline VertexAttributeType getAttribType() const { return _attribType; }
@@ -143,6 +151,7 @@ namespace platypus
         VertexBufferLayoutImpl* _pImpl = nullptr;
         std::vector<VertexBufferElement> _elements;
         VertexInputRate _inputRate = VertexInputRate::VERTEX_INPUT_RATE_VERTEX;
+        uint32_t _binding = 0;
         int32_t _stride = 0;
 
     public:
@@ -162,6 +171,15 @@ namespace platypus
 
         bool operator==(const VertexBufferLayout& other) const;
         bool operator!=(const VertexBufferLayout& other) const;
+
+        std::string toString();
+
+        std::vector<char> serialize() const;
+        static VertexBufferLayout deserialize(
+            const std::vector<char>& data,
+            size_t offset
+        );
+        size_t getSerializedSize() const;
 
         static VertexBufferLayout get_common_static_layout();
         static VertexBufferLayout get_common_static_tangent_layout();
@@ -183,6 +201,8 @@ namespace platypus
     private:
         BufferImpl* _pImpl = nullptr;
         // NOTE: On OpenGL side, we need to save the _pData "on host side" to get "descriptor sets" working
+        // TODO: Above is an issue!!
+        //  -> figure out how to free the host side buffers on OpenGL side when those aren't needed anymore
         void* _pData = nullptr;
         size_t _dataElemSize = 0;
         size_t _dataLength = 0;

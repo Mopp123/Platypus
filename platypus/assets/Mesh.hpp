@@ -22,6 +22,7 @@ namespace platypus
     MeshPropertyFlagBits get_mesh_type(uint32_t meshPropertyFlags);
     std::string mesh_type_to_string(MeshPropertyFlagBits type);
 
+    class AssetManager;
     class Mesh : public Asset
     {
     private:
@@ -69,6 +70,18 @@ namespace platypus
             bool dynamic,
             bool generateTangents
         );
+
+        virtual void writeToMetadataBuffer(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        static Mesh* create_from_metadata_buffer(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+
+        size_t getSerializedSize() const;
 
         inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
 

@@ -111,7 +111,9 @@ namespace platypus
         Mesh* createMesh(
             const VertexBufferLayout& vertexBufferLayout,
             const std::vector<float>& vertexData,
-            const std::vector<uint32_t>& indexData,
+            const void* pIndicesData,
+            size_t indicesElementSize,
+            size_t indicesLength,
             uint32_t meshPropertyFlags
         );
         // TODO: Way to load "scenes" containing skinned and non skinned meshes
@@ -130,7 +132,8 @@ namespace platypus
             bool instanced,
             const std::string& name,
             UUID_t modelID = NULL_UUID,
-            std::vector<UUID_t> meshIDs = { }
+            std::vector<UUID_t> meshIDs = { },
+            bool storeBuffersHostSide = false
         );
         Mesh* createTerrainMesh(
             float tileSize,

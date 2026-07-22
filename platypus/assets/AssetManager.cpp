@@ -516,7 +516,9 @@ namespace platypus
     Mesh* AssetManager::createMesh(
         const VertexBufferLayout& vertexBufferLayout,
         const std::vector<float>& vertexData,
-        const std::vector<uint32_t>& indexData,
+        const void* pIndicesData,
+        size_t indicesElementSize,
+        size_t indicesLength,
         uint32_t meshPropertyFlags
     )
     {
@@ -529,9 +531,9 @@ namespace platypus
             false
         );
         Buffer* pIndexBuffer = new Buffer(
-            (void*)indexData.data(),
-            sizeof(uint32_t),
-            indexData.size(),
+            pIndicesData,
+            indicesElementSize,
+            indicesLength,
             BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
             false
@@ -691,7 +693,8 @@ namespace platypus
         bool instanced,
         const std::string& name,
         UUID_t modelID,
-        std::vector<UUID_t> meshIDs
+        std::vector<UUID_t> meshIDs,
+        bool storeBuffersHostSide
     )
     {
         if (!name.empty() && !nameAvailable(name))
@@ -735,7 +738,7 @@ namespace platypus
                 meshData.vertexBufferData.length,
                 BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
-                false
+                storeBuffersHostSide
             );
             MeshBufferData useIndexBuffer = meshData.indexBufferData[0];
             Buffer* pIndexBuffer = new Buffer(
@@ -744,7 +747,7 @@ namespace platypus
                 useIndexBuffer.length,
                 BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
                 BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
-                false
+                storeBuffersHostSide
             );
 
             uint32_t meshPropertyFlags = 0;

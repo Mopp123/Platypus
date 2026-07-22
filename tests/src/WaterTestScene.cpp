@@ -144,7 +144,9 @@ void WaterTestScene::init()
     Mesh* pPlaneMesh = pAssetManager->createMesh(
         planeVertexBufferLayout,
         planeVertexData,
-        planeIndices,
+        planeIndices.data(),
+        sizeof(uint32_t),
+        planeIndices.size(),
         static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)
     );
 
