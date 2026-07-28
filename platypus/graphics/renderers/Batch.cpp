@@ -520,6 +520,16 @@ namespace platypus
         {
             for (size_t descriptorSetIndex = 0; descriptorSetIndex < descriptorSetsToUse.size(); ++descriptorSetIndex)
             {
+                if (frame >= descriptorSetsToUse[descriptorSetIndex].size())
+                {
+                    Debug::log(
+                        "No descriptor set(index = " + std::to_string(descriptorSetIndex) + ") "
+                        "exists for frame " + std::to_string(frame),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
                 combinedDescriptorSets[frame].push_back(descriptorSetsToUse[descriptorSetIndex][frame]);
             }
         }

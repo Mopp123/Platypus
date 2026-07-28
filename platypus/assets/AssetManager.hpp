@@ -48,9 +48,9 @@ namespace platypus
 
         // key = model's UUID, value = mesh UUIDs
         std::unordered_map<UUID_t, std::vector<UUID_t>> _modelAssetsToFinalize;
-
         // key = texture's UUID, value = image UUIDs
         std::unordered_map<UUID_t, UUID_t> _textureAssetsToFinalize;
+        std::set<UUID_t> _materialAssetsToFinalize;
 
     public:
         AssetManager();
@@ -203,11 +203,8 @@ namespace platypus
             UUID_t modelUUID,
             const std::vector<UUID_t>& meshUUIDs
         );
-
-        void addToDeserializationTextureImageUUIDQuery(
-            UUID_t textureUUID,
-            UUID_t imageUUID
-        );
+        void addToDeserializationTextureImageUUIDQuery(UUID_t textureUUID, UUID_t imageUUID);
+        void addToDeserializationMaterialUUIDQuery(UUID_t materialUUID);
 
         std::vector<char> serialize(
             const std::vector<Asset*>& assets

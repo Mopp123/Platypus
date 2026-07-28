@@ -71,8 +71,9 @@ namespace platypus
 
         PLATYPUS_ASSERT(pos == serializedSize);
 
-        std::vector<UUID_t> useMeshIDs(meshCount);
         _meshes.resize(meshCount);
+        memset(_meshes.data(), 0, sizeof(Mesh*) * meshCount);
+        std::vector<UUID_t> useMeshIDs(meshCount);
         memcpy(useMeshIDs.data(), pBuf + pos, sizeof(UUID_t) * meshCount);
         pos += sizeof(UUID_t) * meshCount;
 
@@ -89,7 +90,7 @@ namespace platypus
 
     /*
         Serialized format:
-            ID_t assetID
+            UUID_t assetID
             AssetType type
             uint64_t customFlags
             uint8_t instanced
@@ -97,7 +98,7 @@ namespace platypus
             uint32_t meshCount
             char name[metadata_name_size]
             char filepath[metadata_filepath_size]
-            ID_t meshIDs[meshCount]
+            UUID_t meshIDs[meshCount]
     */
     void Model::serialize(
         std::vector<char>& targetBuffer
@@ -149,6 +150,7 @@ namespace platypus
 
     size_t Model::getSerializedSize() const
     {
+        // 122?
         return sizeof(UUID_t) +
             sizeof(AssetType) +
             asset_metadata_custom_flags_size +

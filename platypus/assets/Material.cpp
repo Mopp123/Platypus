@@ -69,22 +69,22 @@ namespace platypus
         // ...so u don't waste a fuckload of time figuring out why the normals are fucked again:D
         // NOTE: This probably should be checked in "no debug" too?
         #ifdef PLATYPUS_DEBUG
-            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-            for (size_t i = 0; i < _normalTextureCount; ++i)
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (size_t i = 0; i < _normalTextureCount; ++i)
+        {
+            Texture* pNormalTexture = (Texture*)pAssetManager->getAsset(_normalTextureIDs[i], AssetType::ASSET_TYPE_TEXTURE);
+            if ((pNormalTexture->getImage()->getFormat() == ImageFormat::R8G8B8A8_SRGB))
             {
-                Texture* pNormalTexture = (Texture*)pAssetManager->getAsset(_normalTextureIDs[i], AssetType::ASSET_TYPE_TEXTURE);
-                if ((pNormalTexture->getImage()->getFormat() == ImageFormat::R8G8B8A8_SRGB))
-                {
-                    Debug::log(
-                        "@Material::Material "
-                        "Normal texture at index: " + std::to_string(i) + " "
-                        "was sRGB! You probably don't want that if you're using this "
-                        "for normal mapping!",
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                }
+                Debug::log(
+                    "@Material::Material "
+                    "Normal texture at index: " + std::to_string(i) + " "
+                    "was sRGB! You probably don't want that if you're using this "
+                    "for normal mapping!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
             }
+        }
         #endif
 
         createDescriptorSetLayout();
@@ -151,23 +151,28 @@ namespace platypus
 
         memcpy(&castShadows, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
+        _castShadows = static_cast<bool>(castShadows);
 
         memcpy(&receiveShadows, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
+        _receiveShadows = static_cast<bool>(receiveShadows);
 
         memcpy(&transparent, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
+        _transparent = static_cast<bool>(transparent);
 
         memcpy(&shadeless, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
+        _shadeless = static_cast<bool>(shadeless);
 
         memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
+        _persistent = static_cast<bool>(persistent);
 
         memcpy(&_blendmapTextureID, pBuf + pos, sizeof(UUID_t));
         pos += sizeof(UUID_t);
 
-        const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
+        const size_t texturesPerChannel = PE_MATERIAL_TEX_CHANNEL_SLOTS;
         const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
         memcpy(&_diffuseTextureIDs, pBuf + pos, textureChannelSize);
         pos += textureChannelSize;
@@ -176,14 +181,36 @@ namespace platypus
         memcpy(&_normalTextureIDs, pBuf + pos, textureChannelSize);
         pos += textureChannelSize;
 
+        for (size_t i = 0; i < texturesPerChannel; ++i)
+        {
+            if (_diffuseTextureIDs[i] != NULL_UUID)
+                ++_diffuseTextureCount;
+            if (_specularTextureIDs[i] != NULL_UUID)
+                ++_specularTextureCount;
+            if (_normalTextureIDs[i] != NULL_UUID)
+                ++_normalTextureCount;
+        }
+
         memcpy(&name, pBuf + pos, asset_metadata_name_size);
         pos += asset_metadata_name_size;
         _name = std::string(name);
 
         PLATYPUS_ASSERT(pos == serializedSize);
 
+        _uniformBufferData.lightingProperties.x = specularStrength;
+        _uniformBufferData.lightingProperties.y = shininess;
+        _uniformBufferData.lightingProperties.z = _shadeless ? 1.0 : 0.0;
+        _uniformBufferData.lightingProperties.w = 0.0f;
+        _uniformBufferData.textureProperties.x = textureOffset.x;
+        _uniformBufferData.textureProperties.y = textureOffset.y;
+        _uniformBufferData.textureProperties.z = textureScale.x;
+        _uniformBufferData.textureProperties.w = textureScale.y;
+        createDescriptorSetLayout();
+        // NOTE: Materials' pipelines gets created on demand via Batcher atm!
+        pAssetManager->addToDeserializationMaterialUUIDQuery(_id);
+
         pAssetManager->addExternalAsset(this);
-        if (persistent)
+        if (_persistent)
             pAssetManager->makePersistent(this);
     }
 
@@ -1194,8 +1221,6 @@ namespace platypus
         };
     }
 
-    // NOTE: This updates all uniform buffers for all possible frames in flight,
-    // not sure should we be doing that here...
     void Material::updateUniformBuffers(size_t frame)
     {
         #ifdef PLATYPUS_DEBUG
