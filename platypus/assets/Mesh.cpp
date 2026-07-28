@@ -41,7 +41,7 @@ namespace platypus
         UUID_t id,
         bool persistent
     ) :
-        Asset(uuidPool,AssetType::ASSET_TYPE_MESH, name, id, persistent),
+        Asset(uuidPool, AssetType::ASSET_TYPE_MESH, name, id, persistent),
         _propertyFlags(propertyFlags),
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),
@@ -51,6 +51,134 @@ namespace platypus
         // Why are these here and not like the others?
         _bindPose = bindPose;
         _animations = animations;
+    }
+
+    /*
+        Serialized format (in order):
+            UUID_t assetID = NULL_UUID;
+            uint64_t customFlags;
+            MeshPropertyFlagBits meshPropertyFlags;
+            uint8_t persistent = 0;
+            char name[asset_metadata_name_size];
+            uint32_t vertexBufferDataSize
+            uint32_t indexBufferDataSize
+            IndexType indexType
+
+            VertexBufferLayout serialized vbLayout data
+
+            char vertexBufferData[vertexBufferSerializedSize]
+            char indexBufferData[indexBufferSerializedSize]
+    */
+    Mesh::Mesh(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    ) :
+        Asset(pAssetManager->getUUIDPool())
+    {
+        uint8_t persistent = 0;
+        char name[asset_metadata_name_size];
+        uint32_t vertexBufferSize = 0;
+        uint32_t indexBufferSize = 0;
+        IndexType indexType;
+        const size_t baseSize = sizeof(UUID_t) +
+            sizeof(AssetType) +
+            sizeof(uint64_t) +
+            sizeof(uint32_t) +
+            sizeof(uint8_t) +
+            asset_metadata_name_size+
+            sizeof(uint32_t) +
+            sizeof(uint32_t) +
+            sizeof(IndexType);
+
+        PLATYPUS_ASSERT(bufferPos + baseSize < targetBuffer.size());
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+        memcpy(&_id, pBuf, sizeof(UUID_t));
+        UUID::occupy(_id, _uuidPool);
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(&_type, pBuf + pos, sizeof(AssetType));
+        pos += sizeof(AssetType);
+
+        memcpy(&_customFlags, pBuf + pos, sizeof(uint64_t));
+        pos += sizeof(uint64_t);
+
+        memcpy(&_propertyFlags, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _persistent = static_cast<bool>(persistent);
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+        _name = std::string(name);
+
+        memcpy(&vertexBufferSize, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(&indexBufferSize, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(&indexType, pBuf + pos, sizeof(IndexType));
+        pos += sizeof(IndexType);
+
+        VertexBufferLayout vertexBufferLayout = VertexBufferLayout::deserialize(
+            targetBuffer,
+            bufferPos + baseSize
+        );
+        pos += vertexBufferLayout.getSerializedSize();
+
+        std::vector<float> vertexBufferData(vertexBufferSize / sizeof(float));
+        memcpy(vertexBufferData.data(), pBuf + pos, vertexBufferSize);
+        pos += vertexBufferSize;
+
+        std::vector<char> indexBufferData(indexBufferSize);
+        memcpy(indexBufferData.data(), pBuf + pos, indexBufferSize);
+
+        size_t indicesElementSize = 0;
+        if (indexType == IndexType::INDEX_TYPE_UINT16)
+        {
+            indicesElementSize = sizeof(uint16_t);
+        }
+        else if (indexType == IndexType::INDEX_TYPE_UINT32)
+        {
+            indicesElementSize = sizeof(uint32_t);
+        }
+        else
+        {
+            Debug::log(
+                "Invalid index type(" + std::to_string(indexType) + ") for index buffer",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        _vertexBufferLayout = vertexBufferLayout;
+        _pVertexBuffer = new Buffer(
+            vertexBufferData.data(),
+            sizeof(float),
+            vertexBufferData.size(),
+            BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
+        );
+
+        const size_t indicesLength = indexBufferSize / indicesElementSize;
+        _pIndexBuffer = new Buffer(
+            indexBufferData.data(),
+            indicesElementSize,
+            indicesLength,
+            BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
+        );
+
+        pAssetManager->addExternalAsset(this);
+        if (_persistent)
+            pAssetManager->makePersistent(this);
     }
 
     Mesh::~Mesh()
@@ -260,12 +388,13 @@ namespace platypus
     }
 
     /*
-        Serialized format (in order):
-            UUID_t assetID = NULL_UUID;
-            uint64_t customFlags;
-            MeshPropertyFlagBits meshPropertyFlags;
-            uint8_t persistent = 0;
-            char name[asset_metadata_name_size];
+        Serialized format:
+            UUID_t assetID
+            AssetType type
+            uint64_t customFlags
+            MeshPropertyFlagBits meshPropertyFlags
+            uint8_t persistent
+            char name[asset_metadata_name_size]
             uint32_t vertexBufferDataSize
             uint32_t indexBufferDataSize
             IndexType indexType
@@ -281,7 +410,7 @@ namespace platypus
             *_animations?
             *_transformationMatrix?
     */
-    void Mesh::writeToMetadataBuffer(
+    void Mesh::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
@@ -330,6 +459,9 @@ namespace platypus
         char* pBuf = targetBuffer.data() + prevSize;
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_type, sizeof(AssetType));
+        pos += sizeof(AssetType);
 
         memcpy(pBuf + pos, &_customFlags, sizeof(uint64_t));
         pos += sizeof(uint64_t);
@@ -387,118 +519,10 @@ namespace platypus
         PLATYPUS_ASSERT(pos == totalSize);
     }
 
-    /*
-        Serialized format (in order):
-            UUID_t assetID = NULL_UUID;
-            uint64_t customFlags;
-            MeshPropertyFlagBits meshPropertyFlags;
-            uint8_t persistent = 0;
-            char name[asset_metadata_name_size];
-            uint32_t vertexBufferDataSize
-            uint32_t indexBufferDataSize
-            IndexType indexType
-
-            VertexBufferLayout serialized vbLayout data
-
-            char vertexBufferData[vertexBufferSerializedSize]
-            char indexBufferData[indexBufferSerializedSize]
-        */
-    Mesh* Mesh::create_from_metadata_buffer(
-        AssetManager* pAssetManager,
-        const std::vector<char>& targetBuffer,
-        size_t bufferPos
-    )
-    {
-        UUID_t uuid = NULL_UUID;
-        uint64_t customFlags = 0;
-        uint32_t propertyFlags = 0;
-        uint8_t persistent = 0;
-        char name[asset_metadata_name_size];
-        uint32_t vertexBufferSize = 0;
-        uint32_t indexBufferSize = 0;
-        IndexType indexType;
-        const size_t baseSize = sizeof(UUID_t) +
-            sizeof(uint64_t) +
-            sizeof(uint32_t) +
-            sizeof(uint8_t) +
-            asset_metadata_name_size+
-            sizeof(uint32_t) +
-            sizeof(uint32_t) +
-            sizeof(IndexType);
-
-        PLATYPUS_ASSERT(bufferPos + baseSize < targetBuffer.size());
-
-        const char* pBuf = targetBuffer.data() + bufferPos;
-        memcpy(&uuid, pBuf, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&customFlags, pBuf + pos, sizeof(uint64_t));
-        pos += sizeof(uint64_t);
-
-        memcpy(&propertyFlags, pBuf + pos, sizeof(uint32_t));
-        pos += sizeof(uint32_t);
-
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-
-        memcpy(&vertexBufferSize, pBuf + pos, sizeof(uint32_t));
-        pos += sizeof(uint32_t);
-
-        memcpy(&indexBufferSize, pBuf + pos, sizeof(uint32_t));
-        pos += sizeof(uint32_t);
-
-        memcpy(&indexType, pBuf + pos, sizeof(IndexType));
-        pos += sizeof(IndexType);
-
-        VertexBufferLayout vertexBufferLayout = VertexBufferLayout::deserialize(
-            targetBuffer,
-            bufferPos + baseSize
-        );
-        pos += vertexBufferLayout.getSerializedSize();
-
-        std::vector<float> vertexBufferData(vertexBufferSize / sizeof(float));
-        memcpy(vertexBufferData.data(), pBuf + pos, vertexBufferSize);
-        pos += vertexBufferSize;
-
-        std::vector<char> indexBufferData(indexBufferSize);
-        memcpy(indexBufferData.data(), pBuf + pos, indexBufferSize);
-
-        size_t indicesElementSize = 0;
-        if (indexType == IndexType::INDEX_TYPE_UINT16)
-        {
-            indicesElementSize = sizeof(uint16_t);
-        }
-        else if (indexType == IndexType::INDEX_TYPE_UINT32)
-        {
-            indicesElementSize = sizeof(uint32_t);
-        }
-        else
-        {
-            Debug::log(
-                "Invalid index type(" + std::to_string(indexType) + ") for index buffer",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        size_t indicesLength = indexBufferSize / indicesElementSize;
-        return pAssetManager->createMesh(
-            vertexBufferLayout,
-            vertexBufferData,
-            indexBufferData.data(),
-            indicesElementSize,
-            indicesLength,
-            propertyFlags
-        );
-    }
-
     size_t Mesh::getSerializedSize() const
     {
         return sizeof(UUID_t) +
+            sizeof(AssetType) +
             asset_metadata_custom_flags_size +
             sizeof(uint32_t) + // meshPropertyFlags
             sizeof(uint8_t) + // persistent

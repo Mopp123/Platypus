@@ -998,6 +998,8 @@ namespace platypus
                 pChildren->entityIDs[i] = childEntity.id;
             }
         }
+        _parentComponentsToFinalize.clear();
+        _childrenComponentsToFinalize.clear();
         Debug::log("___TEST___Scene deserialization finalization finished!");
     }
 }

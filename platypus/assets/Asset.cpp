@@ -1,6 +1,5 @@
 #include "Asset.hpp"
-#include "platypus/core/Application.hpp"
-#include "AssetManager.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus
@@ -43,8 +42,22 @@ namespace platypus
         }
     }
 
+    Asset::Asset(size_t uuidPool) :
+        _uuidPool(uuidPool)
+    {
+    }
+
     Asset::~Asset()
     {
+        if (_id == NULL_UUID)
+        {
+            Debug::log(
+                "_id was NULL_UUID",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
         UUID::erase(_id, _uuidPool);
     }
 }

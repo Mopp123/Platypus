@@ -6,20 +6,12 @@
 
 namespace platypus
 {
-    struct ModelMetadata
-    {
-        UUID_t assetID = NULL_UUID;
-        uint8_t instanced = 0;
-        uint8_t persistent = 0;
-        UUID_t meshIDs[asset_metadata_model_max_meshes];
-        char name[asset_metadata_name_size];
-        char filepath[asset_metadata_filepath_size];
-    };
-
-
+    class AssetManager;
     class Model : public Asset
     {
     private:
+        friend class AssetManager;
+
         std::string _filepath;
         // NOTE: Not sure if "assets inside assets" should rather be IDs to those instead of ptrs!
         //  -> ptrs will become issue when serializing
@@ -42,19 +34,18 @@ namespace platypus
             UUID_t id = NULL_UUID,
             bool persistent = false
         );
-        ~Model();
-
-        virtual void writeToMetadataBuffer(
-            std::vector<char>& targetBuffer
-        ) const override;
-
-        static Model* create_from_metadata_buffer(
+        Model(
             AssetManager* pAssetManager,
             const std::vector<char>& targetBuffer,
             size_t bufferPos
         );
+        ~Model();
 
-        static size_t get_serialized_metadata_size();
+        virtual void serialize(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        virtual size_t getSerializedSize() const override;
 
         inline const std::string& getFilepath() const { return _filepath; }
         inline bool isInstanced() const { return _instanced; }

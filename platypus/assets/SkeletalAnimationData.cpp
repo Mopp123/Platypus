@@ -14,7 +14,7 @@ namespace platypus
         size_t uuidPool,
         const KeyframeAnimationData& animationData
     ) :
-        Asset(uuidPool, AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA),
+        Asset(uuidPool, AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA, "", NULL_UUID, false),
         _animationData(animationData)
     {}
 

@@ -211,6 +211,63 @@ namespace platypus
         }
     }
 
+    Image::Image(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    ) :
+        Asset(pAssetManager->getUUIDPool())
+    {
+
+        const size_t serializedSize = sizeof(UUID_t) +
+            sizeof(AssetType) +
+            asset_metadata_custom_flags_size +
+            sizeof(ImageFormat) +
+            sizeof(uint8_t) +
+            asset_metadata_name_size +
+            asset_metadata_filepath_size;
+
+        PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
+        uint8_t persistent;
+        char name[asset_metadata_name_size];
+        char filepath[asset_metadata_filepath_size];
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+
+        memcpy(&_id, pBuf, sizeof(UUID_t));
+        UUID::occupy(_id, _uuidPool);
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(&_type, pBuf + pos, sizeof(AssetType));
+        pos += sizeof(AssetType);
+
+        memcpy(&_customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
+
+        memcpy(&_format, pBuf + pos, sizeof(ImageFormat));
+        pos += sizeof(ImageFormat);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _persistent = static_cast<bool>(persistent);
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+        _name = std::string(name);
+
+        memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
+        pos += asset_metadata_filepath_size;
+        _filepath = std::string(filepath);
+
+        PLATYPUS_ASSERT(pos == serializedSize);
+
+        load(_filepath, _format);
+
+        pAssetManager->addExternalAsset(this);
+        if (_persistent)
+            pAssetManager->makePersistent(this);
+    }
+
     Image::~Image()
     {
         // If textures are using this image, make all those textures use "error image" instead
@@ -284,13 +341,13 @@ namespace platypus
         return _pData[(x + y * _width) * _channels + channelIndex];
     }
 
-    bool Image::reload(const std::string& newFilepath, ImageFormat format)
+    bool Image::load(const std::string& filepath, ImageFormat format)
     {
         // TODO: On OpenGL side we need to flip?
         bool flipVertically = false;
         stbi_set_flip_vertically_on_load(flipVertically);
         unsigned char* pStbImageData = stbi_load(
-            newFilepath.c_str(),
+            filepath.c_str(),
             &_width,
             &_height,
             &_channels,
@@ -307,8 +364,15 @@ namespace platypus
         _pData = new PE_ubyte[size];
         memcpy(_pData, pStbImageData, size);
         stbi_image_free(pStbImageData);
-        _filepath = newFilepath;
+        _filepath = filepath;
         _format = format;
+
+        return true;
+    }
+
+    bool Image::reload(const std::string& newFilepath, ImageFormat format)
+    {
+        load(newFilepath, format);
 
         // Recreate all textures using this image
         // NOTE:
@@ -463,22 +527,24 @@ namespace platypus
     }
 
     /*
-        Serialized format (in order):
-            ID_t assetID = NULL_ID;
+        Serialized format:
+            ID_t assetID;
+            AssetType type
             uint64_t customFlags;
             ImageFormat format;
-            uint8_t persistent = 0;
+            uint8_t persistent;
             char name[asset_metadata_name_size];
             char filepath[asset_metadata_filepath_size];
     */
-    void Image::writeToMetadataBuffer(
+    void Image::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
         PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
         PLATYPUS_ASSERT(_filepath.size() <= asset_metadata_filepath_size);
         const size_t prevSize = targetBuffer.size();
-        targetBuffer.resize(prevSize + get_serialized_metadata_size());
+        const size_t serializedSize = getSerializedSize();
+        targetBuffer.resize(prevSize + serializedSize);
         char* pBuf = targetBuffer.data() + prevSize;
 
         UUID_t useID = _id;
@@ -487,6 +553,9 @@ namespace platypus
 
         memcpy(pBuf, &useID, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_type, sizeof(AssetType));
+        pos += sizeof(AssetType);
 
         memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
         pos += asset_metadata_custom_flags_size;
@@ -509,62 +578,13 @@ namespace platypus
         memcpy(pBuf + pos, _filepath.data(), _filepath.size());
 
         pos += asset_metadata_filepath_size;
-        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+        PLATYPUS_ASSERT(pos == serializedSize);
     }
 
-    Image* Image::create_from_metadata_buffer(
-        AssetManager* pAssetManager,
-        const std::vector<char>& targetBuffer,
-        size_t bufferPos
-    )
-    {
-        PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
-        UUID_t id = NULL_UUID;
-        uint64_t customFlags = 0;
-        ImageFormat format;
-        uint8_t persistent;
-        char name[asset_metadata_name_size];
-        char filepath[asset_metadata_filepath_size];
-
-        const char* pBuf = targetBuffer.data() + bufferPos;
-
-        memcpy(&id, pBuf, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
-
-        memcpy(&format, pBuf + pos, sizeof(ImageFormat));
-        pos += sizeof(ImageFormat);
-
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-
-        memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
-        pos += asset_metadata_filepath_size;
-
-        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
-
-        Image* pImage = pAssetManager->loadImage(
-            std::string(filepath),
-            format,
-            std::string(name),
-            id
-        );
-        pImage->_customFlags = customFlags;
-
-        if (persistent)
-            pAssetManager->makePersistent(pImage);
-
-        return pImage;
-    }
-
-    size_t Image::get_serialized_metadata_size()
+    size_t Image::getSerializedSize() const
     {
         return sizeof(UUID_t) +
+            sizeof(AssetType) +
             asset_metadata_custom_flags_size +
             sizeof(ImageFormat) +
             sizeof(uint8_t) +

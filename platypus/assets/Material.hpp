@@ -18,26 +18,6 @@
 
 namespace platypus
 {
-
-    struct MaterialMetadata
-    {
-        UUID_t assetID = NULL_UUID;
-        float specularStrength = 0.0f;
-        float shininess = 0.0f;
-        Vector2f textureOffset;
-        Vector2f textureScale;
-        uint8_t castShadows = 1;
-        uint8_t receiveShadows = 1;
-        uint8_t transparent = 0;
-        uint8_t shadeless = 0;
-        uint8_t persistent = 0;
-        UUID_t blendmapTextureID = NULL_UUID;
-        UUID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        char name[asset_metadata_name_size];
-    };
-
     struct MaterialPipelineData
     {
         Shader* pVertexShader;
@@ -129,6 +109,11 @@ namespace platypus
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
         );
+        Material(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
         ~Material();
 
         void recreate(
@@ -175,17 +160,11 @@ namespace platypus
 
         Pipeline* getPipeline(uint32_t meshPropertyFlags);
 
-        virtual void writeToMetadataBuffer(
+        virtual void serialize(
             std::vector<char>& targetBuffer
         ) const override;
 
-        static Material* create_from_metadata_buffer(
-            AssetManager* pAssetManager,
-            const std::vector<char>& targetBuffer,
-            size_t bufferPos
-        );
-
-        static size_t get_serialized_metadata_size();
+        virtual size_t getSerializedSize() const override;
 
         void warnUnassigned(const std::string& beginStr);
 

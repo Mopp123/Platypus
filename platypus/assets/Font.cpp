@@ -14,7 +14,7 @@
 namespace platypus
 {
     Font::Font(size_t uuidPool) :
-        Asset(uuidPool, AssetType::ASSET_TYPE_FONT)
+        Asset(uuidPool, AssetType::ASSET_TYPE_FONT, "", NULL_UUID, false)
     {
     }
 

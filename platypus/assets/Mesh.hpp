@@ -56,6 +56,11 @@ namespace platypus
             UUID_t id = NULL_UUID,
             bool persistent = false
         );
+        Mesh(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
         ~Mesh();
 
         bool hasTangents() const;
@@ -71,17 +76,11 @@ namespace platypus
             bool generateTangents
         );
 
-        virtual void writeToMetadataBuffer(
+        virtual void serialize(
             std::vector<char>& targetBuffer
         ) const override;
 
-        static Mesh* create_from_metadata_buffer(
-            AssetManager* pAssetManager,
-            const std::vector<char>& targetBuffer,
-            size_t bufferPos
-        );
-
-        size_t getSerializedSize() const;
+        virtual size_t getSerializedSize() const override;
 
         inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
 

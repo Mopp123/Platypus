@@ -55,6 +55,7 @@ void MeshSerializationTestScene::init()
         { }
     );
 
+    /*
     Model* pModel = pAssetManager->loadModel(
         "assets/TestCube.glb",
         false,
@@ -65,7 +66,6 @@ void MeshSerializationTestScene::init()
     );
     Mesh* pMesh = pModel->getMeshes()[0];
 
-    /*
     Debug::log("___TEST___Attempting to serialize mesh");
     std::vector<char> serializedMeshData;
     pMesh->writeToMetadataBuffer(serializedMeshData);
@@ -77,11 +77,12 @@ void MeshSerializationTestScene::init()
     PLATYPUS_ASSERT(false);
     */
 
+    std::vector<char> serializedData = read_file("assets/serializationTest/TestCube.data");
+    Debug::log("___TEST___Attempting to deserialize Mesh");
 
-    //std::vector<char> serializedData = read_file("assets/serializationTest/TestCube.data");
-    //Debug::log("___TEST___Attempting to deserialize Mesh");
+    Mesh* pMesh = new Mesh(pAssetManager, serializedData, 0);
     //Mesh* pMesh = Mesh::create_from_metadata_buffer(pAssetManager, serializedData, 0);
-    //Debug::log("___TEST___SUCCESS!");
+    Debug::log("___TEST___SUCCESS!");
 
     entityID_t entity = createEntity("TestEntity");
     create_transform(entity, Matrix4f(1.0f));

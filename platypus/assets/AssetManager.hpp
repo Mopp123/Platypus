@@ -46,6 +46,12 @@ namespace platypus
 
         std::vector<std::string> _errors;
 
+        // key = model's UUID, value = mesh UUIDs
+        std::unordered_map<UUID_t, std::vector<UUID_t>> _modelAssetsToFinalize;
+
+        // key = texture's UUID, value = image UUIDs
+        std::unordered_map<UUID_t, UUID_t> _textureAssetsToFinalize;
+
     public:
         AssetManager();
         ~AssetManager();
@@ -189,20 +195,28 @@ namespace platypus
         // way of differentiating user created assets and "engine's defaults".
         // NOTE: All external defaults are also persistent!
         void addExternalDefaultAsset(Asset* pAsset);
+        void addExternalAsset(Asset* pAsset);
 
         bool isPersistent(UUID_t assetID) const;
+
+        void addToDeserializationModelMeshUUIDQuery(
+            UUID_t modelUUID,
+            const std::vector<UUID_t>& meshUUIDs
+        );
+
+        void addToDeserializationTextureImageUUIDQuery(
+            UUID_t textureUUID,
+            UUID_t imageUUID
+        );
 
         std::vector<char> serialize(
             const std::vector<Asset*>& assets
         );
 
-        // Returns the position after the header in serializedData (ie where the actual data begins)
+        // Returns the position after the header in serializedData (where the actual data begins)
         size_t deserializeHeader(
             const std::vector<char>& serializedData,
-            size_t* pImageCount,
-            size_t* pTextureCount,
-            size_t* pMaterialCount,
-            size_t* pModelCount
+            size_t* pAssetCount
         ) const;
 
         // This is to be able to load one asset per fram (in order to get some kind of loading
@@ -211,10 +225,6 @@ namespace platypus
         // *The last read pos is stored in the bufferReadEndPos to be able to start reading the
         // next asset in the serializedData
         Asset* deserialize(
-            size_t imageCount,
-            size_t textureCount,
-            size_t materialCount,
-            size_t modelCount,
             const std::vector<char>& serializedData,
             size_t bufferReadPos,
             size_t& bufferReadEndPos
@@ -224,6 +234,8 @@ namespace platypus
             const std::vector<char>& serializedData,
             size_t& lastReadPos
         );
+
+        void finalizeDeserialization();
 
         std::vector<std::string> popErrors();
 

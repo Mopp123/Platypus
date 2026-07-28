@@ -7,7 +7,7 @@
 
 namespace platypus
 {
-    enum class AssetType
+    enum class AssetType : uint32_t
     {
         ASSET_TYPE_NONE,
         ASSET_TYPE_MESH,
@@ -39,10 +39,6 @@ namespace platypus
     constexpr size_t asset_metadata_name_size = 32; // NOTE: This is probably too short!
     constexpr size_t asset_metadata_filepath_size = 64;
     constexpr size_t asset_metadata_custom_flags_size = 8;
-    constexpr size_t asset_metadata_model_max_meshes = 8;
-    // The header contains image, texture, material and model counts as uint32_t
-    constexpr size_t serialized_assets_header_size = sizeof(uint32_t) * 4;
-
 
     class AssetManager;
     class Asset
@@ -62,15 +58,20 @@ namespace platypus
         Asset(
             size_t uuidPool,
             AssetType type,
-            const std::string& name = "",
-            UUID_t id = NULL_UUID,
-            bool persistent = false
+            const std::string& name,
+            UUID_t id,
+            bool persistent
         );
+        // NOTE: This is used when deserializing asset
+        //  -> derived Asset class sets and occupies the _id, _type and everything else..
+        Asset(size_t uuidPool);
+
         virtual ~Asset();
 
-        virtual void writeToMetadataBuffer(
+        virtual void serialize(
             std::vector<char>& targetBuffer
         ) const { }
+        virtual size_t getSerializedSize() const { return 0; }
 
         // TODO: Maybe this should be member var of Asset..?
         inline bool isPersistent() const { return _persistent; }
