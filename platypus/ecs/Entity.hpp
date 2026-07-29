@@ -58,6 +58,7 @@ namespace platypus
         void clear(uint32_t UUIDPoolID);
     };
 
+
     // NOTE: Doesn't work if the mask value's size changes!
     size_t get_component_count(uint64_t componentMask);
 
@@ -71,4 +72,27 @@ namespace platypus
         size_t dataSize,
         const void* pData
     );
+
+
+    class Scene;
+    struct Children;
+    class EntityHierarchyManager
+    {
+    private:
+        Scene* _pScene = nullptr;
+        std::vector<entityID_t> _childrenContainer;
+        // key = offset, value = count
+        std::unordered_map<size_t, size_t> _freeRanges;
+
+    public:
+        EntityHierarchyManager(Scene* pScene);
+        // Returns the offset where child entities begin in _childrenContainer
+        size_t occupyRange(const std::vector<entityID_t>& childEntities);
+        void freeRange(Children* pChildren);
+        const entityID_t* getChildEntities(Children* pChildren) const;
+
+    private:
+        int32_t findFreeRange(size_t requiredCount);
+        bool validateFreeRange(size_t offset, size_t count) const;
+    };
 }

@@ -426,7 +426,7 @@ namespace platypus
             pUseScene->addToComponentMask(target, componentType);
 
         Children* pChildren = reinterpret_cast<Children*>(pComponent);
-        pChildren->count = static_cast<uint32_t>(childIDs.size());
+        pChildren->count = childIDs.size();
         for (size_t i = 0; i < childIDs.size(); ++i)
             pChildren->entityIDs[i] = childIDs[i];
 

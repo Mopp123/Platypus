@@ -51,8 +51,10 @@ namespace platypus
 
     struct Children
     {
-        uint32_t count = 0;
-        entityID_t entityIDs[PLATYPUS_MAX_CHILD_ENTITIES];
+        size_t offset = 0;
+        size_t count = 0;
+        //uint32_t count = 0;
+        //entityID_t entityIDs[PLATYPUS_MAX_CHILD_ENTITIES];
     };
 
 
