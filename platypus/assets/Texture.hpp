@@ -73,11 +73,12 @@ namespace platypus
         char name[asset_metadata_name_size];
     };
 
-
+    class AssetManager;
     struct TextureImpl;
     class Texture : public Asset
     {
     private:
+        friend class AssetManager;
         TextureImpl* _pImpl = nullptr;
         const Image* _pImage = nullptr;
         // TODO: Replace above completely with the sampler ptr and test that it works!
@@ -106,6 +107,11 @@ namespace platypus
             UUID_t id = NULL_UUID,
             bool persistent = false
         );
+        Texture(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
         Texture(const Texture&) = delete;
         ~Texture();
 
@@ -125,17 +131,11 @@ namespace platypus
         void recreate(const Image* pImage, const TextureSampler* pSampler);
         void recreate(const Image* pImage);
 
-        virtual void writeToMetadataBuffer(
+        virtual void serialize(
             std::vector<char>& targetBuffer
         ) const override;
 
-        static Texture* create_from_metadata_buffer(
-            AssetManager* pAssetManager,
-            const std::vector<char>& targetBuffer,
-            size_t bufferPos
-        );
-
-        static size_t get_serialized_metadata_size();
+        virtual size_t getSerializedSize() const override;
 
         inline const TextureImpl* getImpl() const { return _pImpl; }
         inline TextureImpl* getImpl() { return _pImpl; }

@@ -69,22 +69,22 @@ namespace platypus
         // ...so u don't waste a fuckload of time figuring out why the normals are fucked again:D
         // NOTE: This probably should be checked in "no debug" too?
         #ifdef PLATYPUS_DEBUG
-            AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
-            for (size_t i = 0; i < _normalTextureCount; ++i)
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        for (size_t i = 0; i < _normalTextureCount; ++i)
+        {
+            Texture* pNormalTexture = (Texture*)pAssetManager->getAsset(_normalTextureIDs[i], AssetType::ASSET_TYPE_TEXTURE);
+            if ((pNormalTexture->getImage()->getFormat() == ImageFormat::R8G8B8A8_SRGB))
             {
-                Texture* pNormalTexture = (Texture*)pAssetManager->getAsset(_normalTextureIDs[i], AssetType::ASSET_TYPE_TEXTURE);
-                if ((pNormalTexture->getImage()->getFormat() == ImageFormat::R8G8B8A8_SRGB))
-                {
-                    Debug::log(
-                        "@Material::Material "
-                        "Normal texture at index: " + std::to_string(i) + " "
-                        "was sRGB! You probably don't want that if you're using this "
-                        "for normal mapping!",
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                }
+                Debug::log(
+                    "@Material::Material "
+                    "Normal texture at index: " + std::to_string(i) + " "
+                    "was sRGB! You probably don't want that if you're using this "
+                    "for normal mapping!",
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
             }
+        }
         #endif
 
         createDescriptorSetLayout();
@@ -97,6 +97,123 @@ namespace platypus
         for (size_t i = 0; i < maxFramesInFlight; ++i)
             updateUniformBuffers(i);
     }
+
+    // NOTE: IMPORTANT!
+    //  *If used error textures in some channels' slots, there's no serialized info
+    //  which of those slots are unused and which are using error textures!
+    // TODO:
+    //  *Need some static predefined UUID_t for error assets!
+    //  *Allow specifying custom shader files
+    Material::Material(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    ) :
+        Asset(pAssetManager->getUUIDPool())
+    {
+        const size_t serializedSize = getSerializedSize();
+        PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
+
+        float specularStrength;
+        float shininess;
+        Vector2f textureOffset;
+        Vector2f textureScale;
+        uint8_t castShadows;
+        uint8_t receiveShadows;
+        uint8_t transparent;
+        uint8_t shadeless;
+        uint8_t persistent;
+        char name[asset_metadata_name_size];
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+
+        memcpy(&_id, pBuf, sizeof(UUID_t));
+        UUID::occupy(_id, _uuidPool);
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(&_type, pBuf + pos, sizeof(AssetType));
+        pos += sizeof(AssetType);
+
+        memcpy(&_customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
+
+        memcpy(&specularStrength, pBuf + pos, sizeof(float));
+        pos += sizeof(float);
+
+        memcpy(&shininess, pBuf + pos, sizeof(float));
+        pos += sizeof(float);
+
+        memcpy(&textureOffset, pBuf + pos, sizeof(Vector2f));
+        pos += sizeof(Vector2f);
+
+        memcpy(&textureScale, pBuf + pos, sizeof(Vector2f));
+        pos += sizeof(Vector2f);
+
+        memcpy(&castShadows, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _castShadows = static_cast<bool>(castShadows);
+
+        memcpy(&receiveShadows, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _receiveShadows = static_cast<bool>(receiveShadows);
+
+        memcpy(&transparent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _transparent = static_cast<bool>(transparent);
+
+        memcpy(&shadeless, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _shadeless = static_cast<bool>(shadeless);
+
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _persistent = static_cast<bool>(persistent);
+
+        memcpy(&_blendmapTextureID, pBuf + pos, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
+
+        const size_t texturesPerChannel = PE_MATERIAL_TEX_CHANNEL_SLOTS;
+        const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
+        memcpy(&_diffuseTextureIDs, pBuf + pos, textureChannelSize);
+        pos += textureChannelSize;
+        memcpy(&_specularTextureIDs, pBuf + pos, textureChannelSize);
+        pos += textureChannelSize;
+        memcpy(&_normalTextureIDs, pBuf + pos, textureChannelSize);
+        pos += textureChannelSize;
+
+        for (size_t i = 0; i < texturesPerChannel; ++i)
+        {
+            if (_diffuseTextureIDs[i] != NULL_UUID)
+                ++_diffuseTextureCount;
+            if (_specularTextureIDs[i] != NULL_UUID)
+                ++_specularTextureCount;
+            if (_normalTextureIDs[i] != NULL_UUID)
+                ++_normalTextureCount;
+        }
+
+        memcpy(&name, pBuf + pos, asset_metadata_name_size);
+        pos += asset_metadata_name_size;
+        _name = std::string(name);
+
+        PLATYPUS_ASSERT(pos == serializedSize);
+
+        _uniformBufferData.lightingProperties.x = specularStrength;
+        _uniformBufferData.lightingProperties.y = shininess;
+        _uniformBufferData.lightingProperties.z = _shadeless ? 1.0 : 0.0;
+        _uniformBufferData.lightingProperties.w = 0.0f;
+        _uniformBufferData.textureProperties.x = textureOffset.x;
+        _uniformBufferData.textureProperties.y = textureOffset.y;
+        _uniformBufferData.textureProperties.z = textureScale.x;
+        _uniformBufferData.textureProperties.w = textureScale.y;
+        createDescriptorSetLayout();
+        // NOTE: Materials' pipelines gets created on demand via Batcher atm!
+        pAssetManager->addToDeserializationMaterialUUIDQuery(_id);
+
+        pAssetManager->addExternalAsset(this);
+        if (_persistent)
+            pAssetManager->makePersistent(this);
+    }
+
 
     Material::~Material()
     {
@@ -731,36 +848,41 @@ namespace platypus
     }
 
     /*
-        Serialized format (in order):
-            ID_t assetID = NULL_ID;
-            uint64_t customFlags;
-            float specularStrength = 0.0f;
-            float shininess = 0.0f;
-            Vector2f textureOffset;
-            Vector2f textureScale;
-            uint8_t castShadows = 1;
-            uint8_t receiveShadows = 1;
-            uint8_t transparent = 0;
-            uint8_t shadeless = 0;
-            uint8_t persistent = 0;
-            ID_t blendmapTextureID = NULL_ID;
-            ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-            ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-            ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-            char name[metadata_name_size];
+        Serialized format:
+            ID_t assetID
+            AssetType type
+            uint64_t customFlags
+            float specularStrength
+            float shininess
+            Vector2f textureOffset
+            Vector2f textureScale
+            uint8_t castShadows
+            uint8_t receiveShadows
+            uint8_t transparent
+            uint8_t shadeless
+            uint8_t persistent
+            ID_t blendmapTextureID
+            ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
+            ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
+            ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
+            char name[metadata_name_size]
     */
-    void Material::writeToMetadataBuffer(
+    void Material::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
         PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
+        const size_t serializedSize = getSerializedSize();
 
         const size_t prevSize = targetBuffer.size();
-        targetBuffer.resize(prevSize + get_serialized_metadata_size());
+        targetBuffer.resize(prevSize + serializedSize);
         char* pBuf = targetBuffer.data() + prevSize;
 
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_type, sizeof(AssetType));
+        pos += sizeof(AssetType);
 
         memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
         pos += asset_metadata_custom_flags_size;
@@ -842,131 +964,13 @@ namespace platypus
         memcpy(pBuf + pos, _name.data(), _name.size());
         pos += asset_metadata_name_size;
 
-        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
+        PLATYPUS_ASSERT(pos == serializedSize);
     }
 
-    // NOTE: IMPORTANT!
-    //  *If used error textures in some channels' slots, there's no serialized info
-    //  which of those slots are unused and which are using error textures!
-    // TODO: Need some static predefined UUID_t for error assets!
-    Material* Material::create_from_metadata_buffer(
-        AssetManager* pAssetManager,
-        const std::vector<char>& targetBuffer,
-        size_t bufferPos
-    )
-    {
-        PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
-
-        UUID_t id;
-        uint64_t customFlags;
-        float specularStrength;
-        float shininess;
-        Vector2f textureOffset;
-        Vector2f textureScale;
-        uint8_t castShadows;
-        uint8_t receiveShadows;
-        uint8_t transparent;
-        uint8_t shadeless;
-        uint8_t persistent;
-        UUID_t blendmapTextureID;
-        UUID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        char name[asset_metadata_name_size];
-
-        const char* pBuf = targetBuffer.data() + bufferPos;
-
-        memcpy(&id, pBuf, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
-
-        memcpy(&specularStrength, pBuf + pos, sizeof(float));
-        pos += sizeof(float);
-
-        memcpy(&shininess, pBuf + pos, sizeof(float));
-        pos += sizeof(float);
-
-        memcpy(&textureOffset, pBuf + pos, sizeof(Vector2f));
-        pos += sizeof(Vector2f);
-
-        memcpy(&textureScale, pBuf + pos, sizeof(Vector2f));
-        pos += sizeof(Vector2f);
-
-        memcpy(&castShadows, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&receiveShadows, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&transparent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&shadeless, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&blendmapTextureID, pBuf + pos, sizeof(UUID_t));
-        pos += sizeof(UUID_t);
-
-        const size_t texturesPerChannel = PE_MAX_MATERIAL_TEX_CHANNELS;
-        const size_t textureChannelSize = sizeof(UUID_t) * texturesPerChannel;
-        memcpy(&diffuseTextureIDs, pBuf + pos, textureChannelSize);
-        pos += textureChannelSize;
-        memcpy(&specularTextureIDs, pBuf + pos, textureChannelSize);
-        pos += textureChannelSize;
-        memcpy(&normalTextureIDs, pBuf + pos, textureChannelSize);
-        pos += textureChannelSize;
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-
-        PLATYPUS_ASSERT(pos == get_serialized_metadata_size());
-
-        std::vector<UUID_t> diffuseTextures;
-        std::vector<UUID_t> specularTextures;
-        std::vector<UUID_t> normalTextures;
-        for (size_t i = 0; i < texturesPerChannel; ++i)
-        {
-            if (diffuseTextureIDs[i] != NULL_UUID)
-                diffuseTextures.push_back(diffuseTextureIDs[i]);
-            if (specularTextureIDs[i] != NULL_UUID)
-                specularTextures.push_back(specularTextureIDs[i]);
-            if (normalTextureIDs[i] != NULL_UUID)
-                normalTextures.push_back(normalTextureIDs[i]);
-        }
-
-        // TODO: Allow specifying custom shader files
-        Material* pMaterial = pAssetManager->createMaterial(
-            blendmapTextureID,
-            diffuseTextures,
-            specularTextures,
-            normalTextures,
-            specularStrength,
-            shininess,
-            textureOffset,
-            textureScale,
-            static_cast<bool>(castShadows),
-            static_cast<bool>(receiveShadows),
-            static_cast<bool>(transparent),
-            static_cast<bool>(shadeless),
-            std::string(name),
-            id
-        );
-        pMaterial->_customFlags = customFlags;
-
-        if (persistent)
-            pAssetManager->makePersistent(pMaterial);
-
-        return pMaterial;
-    }
-
-    size_t Material::get_serialized_metadata_size()
+    size_t Material::getSerializedSize() const
     {
         return sizeof(UUID_t) +
+            sizeof(AssetType) +
             asset_metadata_custom_flags_size +
             sizeof(float) * 2 +
             sizeof(Vector2f) * 2 +
@@ -1217,8 +1221,6 @@ namespace platypus
         };
     }
 
-    // NOTE: This updates all uniform buffers for all possible frames in flight,
-    // not sure should we be doing that here...
     void Material::updateUniformBuffers(size_t frame)
     {
         #ifdef PLATYPUS_DEBUG

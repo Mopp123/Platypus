@@ -22,6 +22,7 @@ namespace platypus
     MeshPropertyFlagBits get_mesh_type(uint32_t meshPropertyFlags);
     std::string mesh_type_to_string(MeshPropertyFlagBits type);
 
+    class AssetManager;
     class Mesh : public Asset
     {
     private:
@@ -29,6 +30,7 @@ namespace platypus
         VertexBufferLayout _vertexBufferLayout;
         Buffer* _pVertexBuffer = nullptr;
         Buffer* _pIndexBuffer = nullptr;
+        bool _storeHostsideBuffersOnDeserialization = false;
 
         // Transformation from the file this was loaded from, if there was any.
         // Not sure yet how I want to deal with this.
@@ -55,6 +57,11 @@ namespace platypus
             UUID_t id = NULL_UUID,
             bool persistent = false
         );
+        Mesh(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
         ~Mesh();
 
         bool hasTangents() const;
@@ -70,6 +77,12 @@ namespace platypus
             bool generateTangents
         );
 
+        virtual void serialize(
+            std::vector<char>& targetBuffer
+        ) const override;
+
+        virtual size_t getSerializedSize() const override;
+
         inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
 
         inline uint32_t getPropertyFlags() const { return _propertyFlags; }
@@ -77,6 +90,8 @@ namespace platypus
         inline const Buffer* getVertexBuffer() const { return _pVertexBuffer; }
         inline Buffer* getVertexBuffer() { return _pVertexBuffer; }
         inline const Buffer* getIndexBuffer() const { return _pIndexBuffer; }
+        inline bool isStoringHostsideBuffersOnDeserialization() const { return _storeHostsideBuffersOnDeserialization; }
+        inline void storeHostsideBuffersOnDeserialization(bool arg) { _storeHostsideBuffersOnDeserialization = arg; }
         inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }
         inline bool hasBindPose() const { return !_bindPose.joints.empty(); }
         inline size_t getJointCount() const { return _bindPose.joints.size(); }

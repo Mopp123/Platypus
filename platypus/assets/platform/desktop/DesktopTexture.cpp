@@ -455,7 +455,7 @@ namespace platypus
 
 
     Texture::Texture(size_t uuidPool, ImageFormat format) :
-        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, "", NULL_UUID, false),
         _imageFormat(format)
     {
         _pImpl = new TextureImpl;
@@ -469,7 +469,7 @@ namespace platypus
         uint32_t width,
         uint32_t height
     ):
-        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE),
+        Asset(uuidPool, AssetType::ASSET_TYPE_TEXTURE, "", NULL_UUID, false),
         _pSampler(pSampler),
         _imageFormat(format)
     {
@@ -575,6 +575,9 @@ namespace platypus
 
     void Texture::create(const Image* pImage)
     {
+        if (!_pImpl)
+            _pImpl = new TextureImpl;
+
         _pImage = pImage;
         _imageFormat = _pImage->getFormat();
         if (!is_image_format_valid(_imageFormat, pImage->getChannels()))

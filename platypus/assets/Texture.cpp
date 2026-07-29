@@ -1,5 +1,6 @@
 #include "Texture.hpp"
 #include "platypus/core/Application.hpp"
+#include "platypus/assets/AssetManager.hpp"
 #include "platypus/core/Debug.hpp"
 #include "AssetManager.hpp"
 
@@ -25,6 +26,65 @@ namespace platypus
         }
     }
 
+
+    Texture::Texture(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    ) :
+        Asset(pAssetManager->getUUIDPool())
+    {
+        const size_t serializedSize = getSerializedSize();
+        PLATYPUS_ASSERT((bufferPos + serializedSize) <= targetBuffer.size());
+
+        const char* pBuf = targetBuffer.data() + bufferPos;
+        memcpy(&_id, pBuf, sizeof(UUID_t));
+        UUID::occupy(_id, _uuidPool);
+        size_t pos = sizeof(UUID_t);
+
+        memcpy(&_type, pBuf + pos, sizeof(AssetType));
+        pos += sizeof(AssetType);
+
+        memcpy(&_customFlags, pBuf + pos, asset_metadata_custom_flags_size);
+        pos += asset_metadata_custom_flags_size;
+
+        UUID_t imageUUID;
+        memcpy(&imageUUID, pBuf + pos, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
+        pAssetManager->addToDeserializationTextureImageUUIDQuery(_id, imageUUID);
+
+        TextureSamplerFilterMode filterMode;
+        memcpy(&filterMode, pBuf + pos, sizeof(TextureSamplerFilterMode));
+        pos += sizeof(TextureSamplerFilterMode);
+
+        TextureSamplerAddressMode addressMode;
+        memcpy(&addressMode, pBuf + pos, sizeof(TextureSamplerAddressMode));
+        pos += sizeof(TextureSamplerAddressMode);
+
+        uint8_t useMipmapping;
+        memcpy(&useMipmapping, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+
+        _pSampler = pAssetManager->getOrCreateTextureSampler(
+            filterMode,
+            addressMode,
+            static_cast<bool>(useMipmapping)
+        );
+
+        // TODO: Put all "pure Asset" related stuff in the beginning instead!
+        uint8_t persistent;
+        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
+        pos += sizeof(uint8_t);
+        _persistent = static_cast<bool>(persistent);
+
+        char name[asset_metadata_name_size];
+        memcpy(name, pBuf + pos, asset_metadata_name_size);
+        _name = std::string(name);
+
+        pAssetManager->addExternalAsset(this);
+        if (_persistent)
+            pAssetManager->makePersistent(this);
+    }
 
     void Texture::recreate(const Image* pImage, const TextureSampler* pSampler)
     {
@@ -77,17 +137,18 @@ namespace platypus
     }
 
     /*
-        Serialized format (in order):
-            ID_t assetID = NULL_ID;
-            uint64_t customFlags;
-            ID_t imageID = NULL_ID;
-            TextureSamplerFilterMode filterMode;
-            TextureSamplerAddressMode addressMode;
-            uint8_t useMipmapping = 0;
-            uint8_t persistent = 0;
-            char name[metadata_name_size];
+        Serialized format:
+            ID_t assetID
+            AssetType type
+            uint64_t customFlags
+            ID_t imageID
+            TextureSamplerFilterMode filterMode
+            TextureSamplerAddressMode addressMode
+            uint8_t useMipmapping
+            uint8_t persistent
+            char name[metadata_name_size]
     */
-    void Texture::writeToMetadataBuffer(
+    void Texture::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
@@ -95,12 +156,16 @@ namespace platypus
         PLATYPUS_ASSERT(_pImage);
         PLATYPUS_ASSERT(_pImage->getID() != NULL_UUID);
 
+        const size_t serializedSize = getSerializedSize();
         const size_t prevSize = targetBuffer.size();
-        targetBuffer.resize(prevSize + get_serialized_metadata_size());
+        targetBuffer.resize(prevSize + serializedSize);
         char* pBuf = targetBuffer.data() + prevSize;
 
         memcpy(pBuf, &_id, sizeof(UUID_t));
         size_t pos = sizeof(UUID_t);
+
+        memcpy(pBuf + pos, &_type, sizeof(AssetType));
+        pos += sizeof(AssetType);
 
         memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
         pos += asset_metadata_custom_flags_size;
@@ -135,81 +200,15 @@ namespace platypus
         memcpy(pBuf + pos, _name.data(), _name.size());
         pos += asset_metadata_name_size;
 
-        PLATYPUS_ASSERT(get_serialized_metadata_size());
+        PLATYPUS_ASSERT(pos == serializedSize);
     }
 
-    Texture* Texture::create_from_metadata_buffer(
-        AssetManager* pAssetManager,
-        const std::vector<char>& targetBuffer,
-        size_t bufferPos
-    )
+    size_t Texture::getSerializedSize() const
     {
-        PLATYPUS_ASSERT((bufferPos  + get_serialized_metadata_size()) <= targetBuffer.size());
-
-        UUID_t id;
-        uint64_t customFlags;
-        UUID_t imageID;
-        TextureSamplerFilterMode samplerFilterMode;
-        TextureSamplerAddressMode samplerAddressMode;
-        uint8_t useMipmapping;
-        uint8_t persistent;
-        char name[asset_metadata_name_size];
-
-        const char* pBuf = targetBuffer.data() + bufferPos;
-
-        memcpy(&id, pBuf, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&customFlags, pBuf + pos, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
-
-        memcpy(&imageID, pBuf + pos, sizeof(UUID_t));
-        pos += sizeof(UUID_t);
-
-        memcpy(&samplerFilterMode, pBuf + pos, sizeof(TextureSamplerFilterMode));
-        pos += sizeof(TextureSamplerFilterMode);
-
-        memcpy(&samplerAddressMode, pBuf + pos, sizeof(TextureSamplerAddressMode));
-        pos += sizeof(TextureSamplerAddressMode);
-
-        memcpy(&useMipmapping, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-
-        PLATYPUS_ASSERT(get_serialized_metadata_size());
-
-        if (imageID == NULL_UUID)
-        {
-            Image* pErrorImage = pAssetManager->getErrorImage();
-            PLATYPUS_ASSERT(pErrorImage);
-            imageID = pErrorImage->getID();
-        }
-
-        Texture* pTexture = pAssetManager->createTexture(
-            imageID,
-            samplerFilterMode,
-            samplerAddressMode,
-            static_cast<bool>(useMipmapping),
-            std::string(name),
-            id
-        );
-        pTexture->_customFlags = customFlags;
-
-        if (persistent)
-            pAssetManager->makePersistent(pTexture);
-
-        return pTexture;
-    }
-
-    size_t Texture::get_serialized_metadata_size()
-    {
-        return sizeof(UUID_t) * 2 +
+        return sizeof(UUID_t) +
+            sizeof(AssetType) +
             asset_metadata_custom_flags_size +
+            sizeof(UUID_t) +
             sizeof(TextureSamplerFilterMode) +
             sizeof(TextureSamplerAddressMode) +
             sizeof(uint8_t) * 2 +

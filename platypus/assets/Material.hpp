@@ -18,26 +18,6 @@
 
 namespace platypus
 {
-
-    struct MaterialMetadata
-    {
-        UUID_t assetID = NULL_UUID;
-        float specularStrength = 0.0f;
-        float shininess = 0.0f;
-        Vector2f textureOffset;
-        Vector2f textureScale;
-        uint8_t castShadows = 1;
-        uint8_t receiveShadows = 1;
-        uint8_t transparent = 0;
-        uint8_t shadeless = 0;
-        uint8_t persistent = 0;
-        UUID_t blendmapTextureID = NULL_UUID;
-        UUID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        char name[asset_metadata_name_size];
-    };
-
     struct MaterialPipelineData
     {
         Shader* pVertexShader;
@@ -70,9 +50,9 @@ namespace platypus
     private:
         // NOTE: Do these really need to be like this?
         UUID_t _blendmapTextureID = NULL_UUID;
-        UUID_t _diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t _specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
-        UUID_t _normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS];
+        UUID_t _diffuseTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS];
+        UUID_t _specularTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS];
+        UUID_t _normalTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS];
         size_t _diffuseTextureCount = 0;
         size_t _specularTextureCount = 0;
         size_t _normalTextureCount = 0;
@@ -84,9 +64,9 @@ namespace platypus
 
         // NOTE: If blendmap is used its' descriptor index should always be 0!
         uint32_t _blendmapTextureDescriptorIndex = 0;
-        uint32_t _diffuseTextureDescriptorIndices[PE_MAX_MATERIAL_TEX_CHANNELS];
-        uint32_t _specularTextureDescriptorIndices[PE_MAX_MATERIAL_TEX_CHANNELS];
-        uint32_t _normalTextureDescriptorIndices[PE_MAX_MATERIAL_TEX_CHANNELS];
+        uint32_t _diffuseTextureDescriptorIndices[PE_MATERIAL_TEX_CHANNEL_SLOTS];
+        uint32_t _specularTextureDescriptorIndices[PE_MATERIAL_TEX_CHANNEL_SLOTS];
+        uint32_t _normalTextureDescriptorIndices[PE_MATERIAL_TEX_CHANNEL_SLOTS];
         // TODO: oh my god please PLEASE MAKE THIS SHIT LESS DUMB!
         uint32_t _shadowmapDescriptorIndex = 0;
         uint32_t _sceneDepthDescriptorIndex = 0;
@@ -128,6 +108,11 @@ namespace platypus
             bool persistent = false,
             const std::string& customVertexShaderFilename = "",
             const std::string& customFragmentShaderFilename = ""
+        );
+        Material(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
         );
         ~Material();
 
@@ -175,17 +160,11 @@ namespace platypus
 
         Pipeline* getPipeline(uint32_t meshPropertyFlags);
 
-        virtual void writeToMetadataBuffer(
+        virtual void serialize(
             std::vector<char>& targetBuffer
         ) const override;
 
-        static Material* create_from_metadata_buffer(
-            AssetManager* pAssetManager,
-            const std::vector<char>& targetBuffer,
-            size_t bufferPos
-        );
-
-        static size_t get_serialized_metadata_size();
+        virtual size_t getSerializedSize() const override;
 
         void warnUnassigned(const std::string& beginStr);
 
@@ -237,8 +216,6 @@ namespace platypus
         void updateDescriptorSetTexture(Texture* pTexture, uint32_t descriptorIndex);
         void validateTextureCounts();
         void createDescriptorSetLayout();
-        // NOTE: This updates all uniform buffers for all possible frames in flight,
-        // not sure should we be doing that here...
         void updateUniformBuffers(size_t frame);
 
         // Returns compiled shader filename depending on given properties

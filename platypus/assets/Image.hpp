@@ -64,16 +64,6 @@ namespace platypus
     ImageFormat srgb_format_to_unorm(ImageFormat srgb);
 
 
-    struct ImageMetadata
-    {
-        UUID_t assetID = NULL_UUID;
-        ImageFormat format;
-        uint8_t persistent = 0;
-        char name[asset_metadata_name_size];
-        char filepath[asset_metadata_filepath_size];
-    };
-
-
     struct ImageImpl;
     class Image : public Asset
     {
@@ -99,6 +89,11 @@ namespace platypus
             UUID_t id = NULL_UUID,
             bool persistent = false
         );
+        Image(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
         ~Image();
 
         int getColorChannelValue(
@@ -107,6 +102,7 @@ namespace platypus
             uint32_t channelIndex
         ) const;
 
+        bool load(const std::string& filepath, ImageFormat format);
         bool reload(const std::string& newFilepath, ImageFormat format);
 
         static Image* load_image(
@@ -126,17 +122,11 @@ namespace platypus
             PE_ubyte** ppPixels
         );
 
-        virtual void writeToMetadataBuffer(
+        virtual void serialize(
             std::vector<char>& targetBuffer
         ) const override;
 
-        static Image* create_from_metadata_buffer(
-            AssetManager* pAssetManager,
-            const std::vector<char>& targetBuffer,
-            size_t bufferPos
-        );
-
-        static size_t get_serialized_metadata_size();
+        virtual size_t getSerializedSize() const override;
 
         inline const std::string& getFilepath() const { return _filepath; }
         inline void setFilepath(const std::string& filepath) { _filepath = filepath; }
