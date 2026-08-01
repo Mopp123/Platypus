@@ -2,6 +2,7 @@
 #include "platypus/utils/UUID.hpp"
 #include "platypus/assets/Asset.hpp"
 #include <vector>
+#include <map>
 #include <cstdint>
 
 #define NULL_ENTITY_ID -1
@@ -80,19 +81,39 @@ namespace platypus
     {
     private:
         Scene* _pScene = nullptr;
+        // This contains every Children component's used child entityID_ts
         std::vector<entityID_t> _childrenContainer;
         // key = offset, value = count
-        std::unordered_map<size_t, size_t> _freeRanges;
+        std::map<size_t, size_t> _freeRanges;
 
     public:
         EntityHierarchyManager(Scene* pScene);
-        // Returns the offset where child entities begin in _childrenContainer
-        size_t occupyRange(const std::vector<entityID_t>& childEntities);
-        void freeRange(Children* pChildren);
-        const entityID_t* getChildEntities(Children* pChildren) const;
+
+        // Returns the offset where child entities begin in _childrenContainer or
+        // -1 if fails to occupy
+        int32_t occupyRange(const std::vector<entityID_t>& childEntities);
+
+        void freeRange(int32_t offset, size_t count);
+
+        // Changes the previously used offset and returns it
+        int32_t addChild(
+            const Children * const pChildren,
+            entityID_t childEntityID
+        );
+
+        void removeChild(
+            const Children * const pChildren,
+            entityID_t childEntityID
+        );
+
+        const entityID_t* getChildEntities(const Children * const pChildren) const;
 
     private:
         int32_t findFreeRange(size_t requiredCount);
         bool validateFreeRange(size_t offset, size_t count) const;
+
+        // NOTE: this is too complicated, inefficient and dumb
+        // TODO: Improve, optimize ..or something...
+        void packFreeRanges();
     };
 }

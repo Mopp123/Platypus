@@ -27,7 +27,6 @@ namespace platypus
 
     std::string component_type_to_string(ComponentType type);
     size_t get_component_size(ComponentType type);
-    size_t get_component_serialized_size(ComponentType type);
 
     std::vector<char> serialize_component(
         ComponentType componentType,
@@ -42,5 +41,15 @@ namespace platypus
         entityID_t entityID,
         size_t dataSize,
         const void* pData
+    );
+
+    size_t get_serialized_component_size(const void * const pComponent, ComponentType type);
+
+    // NOTE: pSerializedData must contain enough mem for component type when calling this!
+    // TODO: Make less dangerous?
+    size_t get_serialized_component_size(
+        const char* pSerializedData,
+        size_t dataSize,
+        ComponentType type
     );
 }

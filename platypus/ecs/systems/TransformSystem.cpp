@@ -157,9 +157,11 @@ namespace platypus
         if (!pChildren)
             return;
 
+        // TODO: Make this less dangerous!
+        const entityID_t* pChildrenBuf = pScene->getEntityHierarchyManager().getChildEntities(pChildren);
         for (size_t childIndex = 0; childIndex < pChildren->count; ++childIndex)
         {
-            entityID_t childEntity = pChildren->entityIDs[childIndex];
+            entityID_t childEntity = *(pChildrenBuf + childIndex);
             apply_transform_hierarchy(
                 pScene,
                 pAssetManager,

@@ -25,6 +25,7 @@ namespace platypus
     {
     private:
         friend class SceneManager;
+        EntityHierarchyManager _entityHierarchyManager;
 
         uint32_t _entityUUIDPool = 0;
 
@@ -152,5 +153,7 @@ namespace platypus
         virtual void update() = 0;
 
         inline entityID_t getActiveCameraEntity() const { return _activeCameraEntity; }
+        inline EntityHierarchyManager& getEntityHierarchyManager() { return _entityHierarchyManager; }
+        inline const EntityHierarchyManager& getEntityHierarchyManager() const { return _entityHierarchyManager; }
     };
 }

@@ -47,33 +47,6 @@ namespace platypus
         }
     }
 
-    size_t get_component_serialized_size(ComponentType type)
-    {
-        switch (type)
-        {
-            case ComponentType::COMPONENT_TYPE_TRANSFORM: return serialized_transform_size;
-            case ComponentType::COMPONENT_TYPE_GUI_TRANSFORM: return serialized_gui_transform_size;
-            case ComponentType::COMPONENT_TYPE_RENDERABLE3D: return serialized_renderable3D_size;
-
-            case ComponentType::COMPONENT_TYPE_GUI_RENDERABLE: {
-                Debug::log(
-                    "GUIRenderable Serialization not yet handled! (the string issue)",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-                return 0;
-            }
-
-            case ComponentType::COMPONENT_TYPE_CAMERA: return serialized_camera_size;
-            case ComponentType::COMPONENT_TYPE_LIGHT: return serialized_light_size;
-            case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
-            case ComponentType::COMPONENT_TYPE_JOINT: return serialized_skeleton_joint_size;
-            case ComponentType::COMPONENT_TYPE_PARENT: return serialized_parent_size;
-            case ComponentType::COMPONENT_TYPE_CHILDREN: return serialized_children_size;
-            default: return 0;
-        }
-    }
 
     std::vector<char> serialize_component(
         ComponentType componentType,
@@ -134,8 +107,6 @@ namespace platypus
         const void* pData
     )
     {
-        PLATYPUS_ASSERT(dataSize == get_component_serialized_size(componentType));
-
         // TODO: UNFUCK BELOW!
         switch (componentType)
         {
@@ -249,6 +220,61 @@ namespace platypus
                 );
                 PLATYPUS_ASSERT(false);
                 break;
+            }
+        }
+    }
+
+    size_t get_serialized_component_size(const void * const pComponent, ComponentType type)
+    {
+        switch (type)
+        {
+            case ComponentType::COMPONENT_TYPE_TRANSFORM: return serialized_transform_size;
+            case ComponentType::COMPONENT_TYPE_GUI_TRANSFORM: return serialized_gui_transform_size;
+            case ComponentType::COMPONENT_TYPE_RENDERABLE3D: return serialized_renderable3D_size;
+            case ComponentType::COMPONENT_TYPE_PARENT: return serialized_parent_size;
+
+            case ComponentType::COMPONENT_TYPE_CHILDREN: {
+                const Children * const pChildren = reinterpret_cast<const Children * const>(pComponent);
+                return get_serialized_children_size(pChildren);
+            }
+
+            default: {
+                Debug::log(
+                    "No serialized size defined for component type: " + component_type_to_string(type),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return 0;
+            }
+        }
+    }
+
+    size_t get_serialized_component_size(
+        const char* pSerializedData,
+        size_t dataSize,
+        ComponentType type
+    )
+    {
+        switch (type)
+        {
+            case ComponentType::COMPONENT_TYPE_TRANSFORM: return serialized_transform_size;
+            case ComponentType::COMPONENT_TYPE_GUI_TRANSFORM: return serialized_gui_transform_size;
+            case ComponentType::COMPONENT_TYPE_RENDERABLE3D: return serialized_renderable3D_size;
+            case ComponentType::COMPONENT_TYPE_PARENT: return serialized_parent_size;
+
+            case ComponentType::COMPONENT_TYPE_CHILDREN: {
+                return get_serialized_children_size(pSerializedData, dataSize);
+            }
+
+            default: {
+                Debug::log(
+                    "No serialized size defined for component type: " + component_type_to_string(type),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return 0;
             }
         }
     }
