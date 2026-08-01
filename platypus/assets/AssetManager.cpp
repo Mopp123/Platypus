@@ -1229,9 +1229,9 @@ namespace platypus
 
         const char* pBuf = serializedData.data() + bufferReadPos;
 
-        // TODO: Put Asset's _type before _id in its' serialized data to make this less awful here!
         AssetType type;
-        memcpy(&type, pBuf + sizeof(UUID_t), sizeof(AssetType));
+        memcpy(&type, pBuf, sizeof(AssetType));
+        Debug::log("___TEST___attempting to read asset type: " + asset_type_to_string(type));
 
         Asset* pAsset = nullptr;
         switch (type)

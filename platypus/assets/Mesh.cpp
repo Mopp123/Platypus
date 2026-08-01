@@ -53,75 +53,33 @@ namespace platypus
         _animations = animations;
     }
 
-    /*
-        Serialized format (in order):
-            UUID_t assetID
-            AssetType type
-            uint64_t customFlags
-            uint32_t meshPropertyFlags
-            uint8_t persistent
-            uint8_t store hostside buffers on deserialization
-            char name[asset_metadata_name_size]
-            uint32_t vertexBufferDataSize
-            uint32_t indexBufferDataSize
-            IndexType indexType
-
-            VertexBufferLayout serialized vbLayout data
-
-            char vertexBufferData[vertexBufferSerializedSize]
-            char indexBufferData[indexBufferSerializedSize]
-    */
     Mesh::Mesh(
         AssetManager* pAssetManager,
         const std::vector<char>& targetBuffer,
         size_t bufferPos
     ) :
-        Asset(pAssetManager->getUUIDPool())
+        Asset(pAssetManager, targetBuffer, bufferPos)
     {
-        uint8_t persistent = 0;
         uint8_t storeHostsideBuffersOnDeserialization = 0;
-        char name[asset_metadata_name_size];
         uint32_t vertexBufferSize = 0;
         uint32_t indexBufferSize = 0;
         IndexType indexType;
-        const size_t baseSize = sizeof(UUID_t) +
-            sizeof(AssetType) +
-            sizeof(uint64_t) +
-            sizeof(uint32_t) +
+        const size_t baseMeshSize = sizeof(uint32_t) +
             sizeof(uint8_t) +
-            sizeof(uint8_t) +
-            asset_metadata_name_size+
-            sizeof(uint32_t) +
-            sizeof(uint32_t) +
+            sizeof(uint32_t) * 2 +
             sizeof(IndexType);
 
-        PLATYPUS_ASSERT(bufferPos + baseSize < targetBuffer.size());
+        PLATYPUS_ASSERT(bufferPos + asset_base_serialized_size + baseMeshSize < targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        memcpy(&_id, pBuf, sizeof(UUID_t));
-        UUID::occupy(_id, _uuidPool);
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&_type, pBuf + pos, sizeof(AssetType));
-        pos += sizeof(AssetType);
-
-        memcpy(&_customFlags, pBuf + pos, sizeof(uint64_t));
-        pos += sizeof(uint64_t);
+        size_t pos = asset_base_serialized_size;
 
         memcpy(&_propertyFlags, pBuf + pos, sizeof(uint32_t));
         pos += sizeof(uint32_t);
 
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-        _persistent = static_cast<bool>(persistent);
-
         memcpy(&storeHostsideBuffersOnDeserialization, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
         _storeHostsideBuffersOnDeserialization = static_cast<bool>(storeHostsideBuffersOnDeserialization);
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-        _name = std::string(name);
 
         memcpy(&vertexBufferSize, pBuf + pos, sizeof(uint32_t));
         pos += sizeof(uint32_t);
@@ -134,7 +92,7 @@ namespace platypus
 
         VertexBufferLayout vertexBufferLayout = VertexBufferLayout::deserialize(
             targetBuffer,
-            bufferPos + baseSize
+            bufferPos + asset_base_serialized_size + baseMeshSize
         );
         pos += vertexBufferLayout.getSerializedSize();
 
@@ -397,13 +355,10 @@ namespace platypus
 
     /*
         Serialized format:
-            UUID_t assetID
-            AssetType type
-            uint64_t customFlags
+            Asset serialized base data
+
             uint32_t meshPropertyFlags
-            uint8_t persistent
             uint8_t store hostside buffers on deserialization
-            char name[asset_metadata_name_size]
             uint32_t vertexBufferDataSize
             uint32_t indexBufferDataSize
             IndexType indexType
@@ -453,31 +408,16 @@ namespace platypus
         targetBuffer.resize(prevSize + serializedSize);
 
         char* pBuf = targetBuffer.data() + prevSize;
-        memcpy(pBuf, &_id, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
 
-        memcpy(pBuf + pos, &_type, sizeof(AssetType));
-        pos += sizeof(AssetType);
-
-        memcpy(pBuf + pos, &_customFlags, sizeof(uint64_t));
-        pos += sizeof(uint64_t);
+        serializeBase(pBuf);
+        size_t pos = asset_base_serialized_size;
 
         memcpy(pBuf + pos, &_propertyFlags, sizeof(uint32_t));
         pos += sizeof(uint32_t);
 
-        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
-        memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
         const uint8_t storeHostsideBuffersOnDeserialization = static_cast<const uint8_t>(_storeHostsideBuffersOnDeserialization);
         memcpy(pBuf + pos, &storeHostsideBuffersOnDeserialization, sizeof(uint8_t));
         pos += sizeof(uint8_t);
-
-        // Clear the buf for the longest possible name
-        memset(pBuf + pos, 0, asset_metadata_name_size);
-        // Write the name
-        memcpy(pBuf + pos, _name.data(), _name.size());
-        pos += asset_metadata_name_size;
 
         const size_t vertexBufferSize = _pVertexBuffer->getTotalSize();
         const uint32_t vertexBufferSizeU32 = static_cast<uint32_t>(vertexBufferSize);
@@ -524,16 +464,12 @@ namespace platypus
 
     size_t Mesh::getSerializedSize() const
     {
-        return sizeof(UUID_t) +
-            sizeof(AssetType) +
-            asset_metadata_custom_flags_size +
+        return asset_base_serialized_size +
             sizeof(uint32_t) + // meshPropertyFlags
-            sizeof(uint8_t) + // persistent
             sizeof(uint8_t) + // store hostside buffers on deserialization
-            asset_metadata_name_size +
-            sizeof(uint32_t) + // vertexBufferData size
-            sizeof(uint32_t) + // indexBufferData size
-            sizeof(IndexType) + // index type
+            sizeof(uint32_t) + // vertexBufferDataSize
+            sizeof(uint32_t) + // indexBufferDataSize
+            sizeof(IndexType) + // indexType
             _vertexBufferLayout.getSerializedSize() +
             _pVertexBuffer->getTotalSize() +
             _pIndexBuffer->getTotalSize();

@@ -109,10 +109,10 @@ namespace platypus
         const std::vector<char>& targetBuffer,
         size_t bufferPos
     ) :
-        Asset(pAssetManager->getUUIDPool())
+        Asset(pAssetManager, targetBuffer, bufferPos)
     {
         const size_t serializedSize = getSerializedSize();
-        PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
+        PLATYPUS_ASSERT((bufferPos + serializedSize) <= targetBuffer.size());
 
         float specularStrength;
         float shininess;
@@ -122,20 +122,9 @@ namespace platypus
         uint8_t receiveShadows;
         uint8_t transparent;
         uint8_t shadeless;
-        uint8_t persistent;
-        char name[asset_metadata_name_size];
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-
-        memcpy(&_id, pBuf, sizeof(UUID_t));
-        UUID::occupy(_id, _uuidPool);
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&_type, pBuf + pos, sizeof(AssetType));
-        pos += sizeof(AssetType);
-
-        memcpy(&_customFlags, pBuf + pos, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
+        size_t pos = asset_base_serialized_size;
 
         memcpy(&specularStrength, pBuf + pos, sizeof(float));
         pos += sizeof(float);
@@ -165,10 +154,6 @@ namespace platypus
         pos += sizeof(uint8_t);
         _shadeless = static_cast<bool>(shadeless);
 
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-        _persistent = static_cast<bool>(persistent);
-
         memcpy(&_blendmapTextureID, pBuf + pos, sizeof(UUID_t));
         pos += sizeof(UUID_t);
 
@@ -190,10 +175,6 @@ namespace platypus
             if (_normalTextureIDs[i] != NULL_UUID)
                 ++_normalTextureCount;
         }
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-        _name = std::string(name);
 
         PLATYPUS_ASSERT(pos == serializedSize);
 
@@ -849,9 +830,8 @@ namespace platypus
 
     /*
         Serialized format:
-            ID_t assetID
-            AssetType type
-            uint64_t customFlags
+            Asset serialized base data
+
             float specularStrength
             float shininess
             Vector2f textureOffset
@@ -860,12 +840,10 @@ namespace platypus
             uint8_t receiveShadows
             uint8_t transparent
             uint8_t shadeless
-            uint8_t persistent
-            ID_t blendmapTextureID
-            ID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
-            ID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
-            ID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
-            char name[metadata_name_size]
+            UUID_t blendmapTextureID
+            UUID_t diffuseTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
+            UUID_t specularTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
+            UUID_t normalTextureIDs[PE_MAX_MATERIAL_TEX_CHANNELS]
     */
     void Material::serialize(
         std::vector<char>& targetBuffer
@@ -878,14 +856,8 @@ namespace platypus
         targetBuffer.resize(prevSize + serializedSize);
         char* pBuf = targetBuffer.data() + prevSize;
 
-        memcpy(pBuf, &_id, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(pBuf + pos, &_type, sizeof(AssetType));
-        pos += sizeof(AssetType);
-
-        memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
+        serializeBase(pBuf);
+        size_t pos = asset_base_serialized_size;
 
         const float specularStrength = getSpecularStrength();
         memcpy(pBuf + pos, &specularStrength, sizeof(float));
@@ -917,10 +889,6 @@ namespace platypus
 
         const uint8_t shadeless = static_cast<uint8_t>(_shadeless);
         memcpy(pBuf + pos, &shadeless, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
-        memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
         UUID_t useBlendmapID = _blendmapTextureID;
@@ -960,24 +928,34 @@ namespace platypus
         memcpy(pBuf + pos, &useNormalTextureIDs, textureChannelSize);
         pos += textureChannelSize;
 
-        memset(pBuf + pos, 0, asset_metadata_name_size);
-        memcpy(pBuf + pos, _name.data(), _name.size());
-        pos += asset_metadata_name_size;
-
         PLATYPUS_ASSERT(pos == serializedSize);
     }
 
     size_t Material::getSerializedSize() const
     {
-        return sizeof(UUID_t) +
-            sizeof(AssetType) +
-            asset_metadata_custom_flags_size +
-            sizeof(float) * 2 +
-            sizeof(Vector2f) * 2 +
-            sizeof(uint8_t) * 5 +
-            sizeof(UUID_t) +
-            sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
-            asset_metadata_name_size;
+        return asset_base_serialized_size +
+            sizeof(float) + // specularStrength
+            sizeof(float) + // shininess
+            sizeof(Vector2f) + // textureOffset
+            sizeof(Vector2f) + // textureScale
+            sizeof(uint8_t) + // castShadows
+            sizeof(uint8_t) + // receiveShadows
+            sizeof(uint8_t) + // transparent
+            sizeof(uint8_t) + // shadeless
+            sizeof(UUID_t) +  // blendmapTextureID
+            sizeof(UUID_t) * PE_MATERIAL_TEX_CHANNEL_SLOTS + // diffuseTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS]
+            sizeof(UUID_t) * PE_MATERIAL_TEX_CHANNEL_SLOTS + // specularTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS]
+            sizeof(UUID_t) * PE_MATERIAL_TEX_CHANNEL_SLOTS;  // normalTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS]
+
+        //return sizeof(UUID_t) +
+        //    sizeof(AssetType) +
+        //    asset_metadata_custom_flags_size +
+        //    sizeof(float) * 2 +
+        //    sizeof(Vector2f) * 2 +
+        //    sizeof(uint8_t) * 5 +
+        //    sizeof(UUID_t) +
+        //    sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
+        //    asset_metadata_name_size;
     }
 
     void Material::warnUnassigned(const std::string& beginStr)
