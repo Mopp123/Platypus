@@ -14,7 +14,8 @@
 
 namespace platypus
 {
-    Scene::Scene()
+    Scene::Scene() :
+        _entityHierarchyManager(this)
     {
         _entityUUIDPool = UUID::occupy_pool();
         size_t maxPoolLength = 10000;
@@ -383,8 +384,14 @@ namespace platypus
             // goes to 0
             //  -> Probably fuck stuff up in the future because u forget this:D
             Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
-            while (pChildren->count != 0)
-                destroyEntity(pChildren->entityIDs[0]);
+            const entityID_t* pChildEntityIDs = _entityHierarchyManager.getChildEntities(pChildren);
+            PLATYPUS_ASSERT(pChildEntityIDs);
+            for (size_t i = 0; i < pChildren->count; ++i)
+            {
+                const entityID_t childEntityID = *(pChildEntityIDs + i);
+                PLATYPUS_ASSERT(childEntityID != NULL_ENTITY_ID);
+                destroyEntity(childEntityID);
+            }
         }
 
         // Destroy/free all this entity's components
@@ -788,16 +795,21 @@ namespace platypus
             std::unordered_map<ComponentType, const void*>::const_iterator it;
             for (it = components.begin(); it != components.end(); ++it)
             {
+                const ComponentType componentType = it->first;
+                const void * const pComponent = it->second;
                 Debug::log(
-                    "___TEST___serializing component: " + component_type_to_string(it->first)
+                    "___TEST___serializing component: " + component_type_to_string(componentType)
                 );
-                const size_t serializedComponentSize = get_component_serialized_size(it->first);
+                const size_t serializedComponentSize = get_serialized_component_size(
+                    pComponent,
+                    componentType
+                );
                 serializedData.resize(serializedData.size() + serializedComponentSize);
                 // TODO: UNFUCK THIS SHIT!
                 std::vector<char> componentData = serialize_component(
-                    it->first,
-                    get_component_size(it->first),
-                    it->second
+                    componentType,
+                    get_component_size(componentType),
+                    pComponent
                 );
                 PLATYPUS_ASSERT(componentData.size() == serializedComponentSize);
                 memcpy(serializedData.data() + pos, componentData.data(), componentData.size());
@@ -832,8 +844,9 @@ namespace platypus
         size_t& bufferReadEndPos
     )
     {
+        const size_t serializedDataSize = serializedData.size();
         size_t beginReadPos = bufferReadPos;
-        PLATYPUS_ASSERT((bufferReadPos + serialized_entity_size) <= serializedData.size());
+        PLATYPUS_ASSERT((bufferReadPos + serialized_entity_size) <= serializedDataSize);
         const char* pData = serializedData.data();
         Entity entity;
         deserialize_entity(
@@ -853,14 +866,18 @@ namespace platypus
 
         for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
         {
-            PLATYPUS_ASSERT(bufferReadPos < serializedData.size());
+            PLATYPUS_ASSERT(bufferReadPos < serializedDataSize);
             ComponentType componentType;
             memcpy(
                 &componentType,
                 pData + bufferReadPos,
                 sizeof(ComponentType)
             );
-            size_t serializedComponentSize = get_component_serialized_size(componentType);
+            const size_t serializedComponentSize = get_serialized_component_size(
+                pData + bufferReadPos,
+                serializedDataSize,
+                componentType
+            );
 
             void* pComponent = nullptr;
             deserialize_component(
@@ -892,7 +909,8 @@ namespace platypus
         size_t serializedDataPos
     )
     {
-        PLATYPUS_ASSERT((serializedDataPos + sizeof(uint32_t)) <= serializedData.size());
+        const size_t serializedDataSize = serializedData.size();
+        PLATYPUS_ASSERT((serializedDataPos + sizeof(uint32_t)) <= serializedDataSize);
         const char* pData = serializedData.data() + serializedDataPos;
         uint32_t entityCount = 0;
         memcpy(
@@ -910,7 +928,7 @@ namespace platypus
                 this,
                 entity,
                 serialized_entity_size,
-                reinterpret_cast<const char*>(pData) + pos
+                pData + pos
             );
             pos += serialized_entity_size;
 
@@ -920,10 +938,14 @@ namespace platypus
                 ComponentType componentType;
                 memcpy(
                     &componentType,
-                    reinterpret_cast<const char*>(pData) + pos,
+                    pData + pos,
                     sizeof(ComponentType)
                 );
-                size_t serializedComponentSize = get_component_serialized_size(componentType);
+                const size_t serializedComponentSize = get_serialized_component_size(
+                    pData + pos,
+                    serializedDataSize,
+                    componentType
+                );
 
                 void* pComponent = nullptr;
                 deserialize_component(
@@ -978,25 +1000,45 @@ namespace platypus
             void* pChildrenComponent = getComponent(targetEntityID, ComponentType::COMPONENT_TYPE_CHILDREN);
             PLATYPUS_ASSERT(pChildrenComponent);
             Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
-            PLATYPUS_ASSERT(pChildren->count == childEntityUUIDs.size());
-
-            for (size_t i = 0; i < pChildren->count; ++i)
+            const size_t childCount = pChildren->count;
+            PLATYPUS_ASSERT(childCount == childEntityUUIDs.size());
+            if (pChildren->offset != -1)
             {
-                if (pChildren->entityIDs[i] != NULL_ENTITY_ID)
+                Debug::log(
+                    "While finalizing Children component for entity: " + std::to_string(targetEntityID) + " "
+                    "the hierarchy container's offset was already assigned!",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+
+            std::vector<entityID_t> childEntityIDs(childCount);
+            for (size_t i = 0; i < childCount; ++i)
+            {
+                const Entity childEntity = getEntity(childEntityUUIDs[i]);
+                if (childEntity.id == NULL_ENTITY_ID)
                 {
                     Debug::log(
-                        "While finalizing Children component for entity: " + std::to_string(targetEntityID) + " "
-                        "the Children component's entityID at index " + std::to_string(i),
+                        "No entity found with UUID: " + std::to_string(childEntityUUIDs[i]),
                         PLATYPUS_CURRENT_FUNC_NAME,
                         Debug::MessageType::PLATYPUS_ERROR
                     );
                     PLATYPUS_ASSERT(false);
                 }
-
-                Entity childEntity = getEntity(childEntityUUIDs[i]);
-                PLATYPUS_ASSERT(childEntity.id != NULL_ENTITY_ID);
-                pChildren->entityIDs[i] = childEntity.id;
+                childEntityIDs[i] = childEntity.id;
             }
+            int32_t offset = _entityHierarchyManager.occupyRange(childEntityIDs);
+            if (offset == -1)
+            {
+                Debug::log(
+                    "Failed to occupy valid range in _entityHierarchyManager",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            pChildren->offset = offset;
         }
         _parentComponentsToFinalize.clear();
         _childrenComponentsToFinalize.clear();
