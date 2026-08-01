@@ -216,45 +216,18 @@ namespace platypus
         const std::vector<char>& targetBuffer,
         size_t bufferPos
     ) :
-        Asset(pAssetManager->getUUIDPool())
+        Asset(pAssetManager, targetBuffer, bufferPos)
     {
-
-        const size_t serializedSize = sizeof(UUID_t) +
-            sizeof(AssetType) +
-            asset_metadata_custom_flags_size +
-            sizeof(ImageFormat) +
-            sizeof(uint8_t) +
-            asset_metadata_name_size +
-            asset_metadata_filepath_size;
-
+        const size_t serializedSize = getSerializedSize();
         PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
-        uint8_t persistent;
-        char name[asset_metadata_name_size];
-        char filepath[asset_metadata_filepath_size];
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-
-        memcpy(&_id, pBuf, sizeof(UUID_t));
-        UUID::occupy(_id, _uuidPool);
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(&_type, pBuf + pos, sizeof(AssetType));
-        pos += sizeof(AssetType);
-
-        memcpy(&_customFlags, pBuf + pos, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
+        size_t pos = asset_base_serialized_size;
 
         memcpy(&_format, pBuf + pos, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
 
-        memcpy(&persistent, pBuf + pos, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-        _persistent = static_cast<bool>(persistent);
-
-        memcpy(&name, pBuf + pos, asset_metadata_name_size);
-        pos += asset_metadata_name_size;
-        _name = std::string(name);
-
+        char filepath[asset_metadata_filepath_size];
         memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
         pos += asset_metadata_filepath_size;
         _filepath = std::string(filepath);
@@ -528,50 +501,25 @@ namespace platypus
 
     /*
         Serialized format:
-            ID_t assetID;
-            AssetType type
-            uint64_t customFlags;
+            Asset serialized base data
             ImageFormat format;
-            uint8_t persistent;
-            char name[asset_metadata_name_size];
             char filepath[asset_metadata_filepath_size];
     */
     void Image::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
-        PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
         PLATYPUS_ASSERT(_filepath.size() <= asset_metadata_filepath_size);
         const size_t prevSize = targetBuffer.size();
         const size_t serializedSize = getSerializedSize();
         targetBuffer.resize(prevSize + serializedSize);
+
         char* pBuf = targetBuffer.data() + prevSize;
-
-        UUID_t useID = _id;
-        if (this == Application::get_instance()->getAssetManager()->getErrorImage())
-            useID = NULL_UUID;
-
-        memcpy(pBuf, &useID, sizeof(UUID_t));
-        size_t pos = sizeof(UUID_t);
-
-        memcpy(pBuf + pos, &_type, sizeof(AssetType));
-        pos += sizeof(AssetType);
-
-        memcpy(pBuf + pos, &_customFlags, asset_metadata_custom_flags_size);
-        pos += asset_metadata_custom_flags_size;
+        serializeBase(pBuf);
+        size_t pos = asset_base_serialized_size;
 
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
-
-        const uint8_t persistent = static_cast<const uint8_t>(_persistent);
-        memcpy(pBuf + pos, &persistent, sizeof(uint8_t));
-        pos += sizeof(uint8_t);
-
-        // Clear the buf for the longest possible name
-        memset(pBuf + pos, 0, asset_metadata_name_size);
-        // Write the name
-        memcpy(pBuf + pos, _name.data(), _name.size());
-        pos += asset_metadata_name_size;
 
         // Same as above for the filepath
         memset(pBuf + pos, 0, asset_metadata_filepath_size);
@@ -583,12 +531,8 @@ namespace platypus
 
     size_t Image::getSerializedSize() const
     {
-        return sizeof(UUID_t) +
-            sizeof(AssetType) +
-            asset_metadata_custom_flags_size +
+        return asset_base_serialized_size +
             sizeof(ImageFormat) +
-            sizeof(uint8_t) +
-            asset_metadata_name_size +
             asset_metadata_filepath_size;
     }
 }

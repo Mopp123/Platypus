@@ -40,6 +40,12 @@ namespace platypus
     constexpr size_t asset_metadata_filepath_size = 64;
     constexpr size_t asset_metadata_custom_flags_size = 8;
 
+    constexpr size_t asset_base_serialized_size = sizeof(AssetType) +
+        sizeof(UUID_t) +
+        asset_metadata_custom_flags_size +
+        sizeof(uint8_t) +
+        asset_metadata_name_size;
+
     class AssetManager;
     class Asset
     {
@@ -62,9 +68,11 @@ namespace platypus
             UUID_t id,
             bool persistent
         );
-        // NOTE: This is used when deserializing asset
-        //  -> derived Asset class sets and occupies the _id, _type and everything else..
-        Asset(size_t uuidPool);
+        Asset(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
 
         virtual ~Asset();
 
@@ -85,5 +93,10 @@ namespace platypus
         inline void setName(const std::string& name) { _name = name; }
         inline bool isSerializable() const { return _serializable; }
         inline void setSerializable(bool arg) { _serializable = arg; }
+
+    protected:
+        // NOTE: pData must be at least asset_base_serialized_size
+        // TODO: Make safer?
+        void serializeBase(char* pData) const;
     };
 }
