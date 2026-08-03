@@ -37,7 +37,6 @@ namespace platypus
     };
 
     constexpr size_t asset_metadata_custom_flags_size = 8;
-    constexpr size_t asset_metadata_filepath_size = 64;
 
     class AssetManager;
     class Asset

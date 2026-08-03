@@ -38,7 +38,7 @@ namespace platypus
 
         uint8_t instanced;
         uint32_t meshCount;
-        char filepath[asset_metadata_filepath_size];
+        uint32_t filepathSizeU32;
 
         const char* pBuf = targetBuffer.data() + bufferPos;
         size_t pos = baseAssetSerializedSize;
@@ -50,9 +50,15 @@ namespace platypus
         memcpy(&meshCount, pBuf + pos, sizeof(uint32_t));
         pos += sizeof(uint32_t);
 
-        memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
-        pos += asset_metadata_filepath_size;
-        _filepath = std::string(filepath);
+        memcpy(&filepathSizeU32, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+        const size_t filepathSize = static_cast<const size_t>(filepathSizeU32);
+
+        char* pFilepathData = new char[filepathSize];
+        memcpy(pFilepathData, pBuf + pos, filepathSize);
+        pos += filepathSize;
+        _filepath = std::string(pFilepathData);
+        delete[] pFilepathData;
 
         _meshes.resize(meshCount);
         memset(_meshes.data(), 0, sizeof(Mesh*) * meshCount);
@@ -77,14 +83,14 @@ namespace platypus
 
             uint8_t instanced
             uint32_t meshCount
-            char filepath[asset_metadata_filepath_size]
+            uint32_t filepathSize
+            char filepath[filepathSize]
             UUID_t meshIDs[meshCount]
     */
     void Model::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
-        PLATYPUS_ASSERT(_filepath.size() <= asset_metadata_filepath_size);
         const size_t serializedSize = getSerializedSize();
         const size_t prevSize = targetBuffer.size();
         targetBuffer.resize(prevSize + serializedSize);
@@ -101,8 +107,12 @@ namespace platypus
         memcpy(pBuf + pos, &meshCount, sizeof(uint32_t));
         pos += sizeof(uint32_t);
 
+        const uint32_t filepathSize = static_cast<const uint32_t>(_filepath.size());
+        memcpy(pBuf + pos, &filepathSize, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
         memcpy(pBuf + pos, _filepath.data(), _filepath.size());
-        pos += asset_metadata_filepath_size;
+        pos += _filepath.size();
 
         std::vector<UUID_t> meshIDs(_meshes.size());
         for (size_t i = 0; i < _meshes.size(); ++i)
@@ -119,7 +129,8 @@ namespace platypus
         return getSerializedBaseSize() +
             sizeof(uint8_t) + // instanced
             sizeof(uint32_t) + // meshCount
-            sizeof(char) * asset_metadata_filepath_size + // filepath[metadata_filepath_size]
+            sizeof(uint32_t) + // filepathSize
+            _filepath.size() +
             sizeof(UUID_t) * _meshes.size(); //  meshIDs[meshCount]
     }
 }

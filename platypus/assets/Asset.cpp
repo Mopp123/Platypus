@@ -83,6 +83,7 @@ namespace platypus
         char* pNameData = new char[nameSize];
         memcpy(pNameData, pBuf + pos, nameSize);
         _name = std::string(pNameData);
+        delete[] pNameData;
     }
 
     Asset::~Asset()
