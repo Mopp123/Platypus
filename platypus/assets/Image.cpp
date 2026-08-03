@@ -222,7 +222,7 @@ namespace platypus
         PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(&_format, pBuf + pos, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
@@ -516,7 +516,7 @@ namespace platypus
 
         char* pBuf = targetBuffer.data() + prevSize;
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
@@ -531,7 +531,7 @@ namespace platypus
 
     size_t Image::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(ImageFormat) +
             asset_metadata_filepath_size;
     }

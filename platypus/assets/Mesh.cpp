@@ -64,15 +64,16 @@ namespace platypus
         uint32_t vertexBufferSize = 0;
         uint32_t indexBufferSize = 0;
         IndexType indexType;
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
         const size_t baseMeshSize = sizeof(uint32_t) +
             sizeof(uint8_t) +
             sizeof(uint32_t) * 2 +
             sizeof(IndexType);
 
-        PLATYPUS_ASSERT(bufferPos + asset_base_serialized_size + baseMeshSize < targetBuffer.size());
+        PLATYPUS_ASSERT(bufferPos + baseAssetSerializedSize + baseMeshSize < targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = baseAssetSerializedSize;
 
         memcpy(&_propertyFlags, pBuf + pos, sizeof(uint32_t));
         pos += sizeof(uint32_t);
@@ -92,7 +93,7 @@ namespace platypus
 
         VertexBufferLayout vertexBufferLayout = VertexBufferLayout::deserialize(
             targetBuffer,
-            bufferPos + asset_base_serialized_size + baseMeshSize
+            bufferPos + baseAssetSerializedSize + baseMeshSize
         );
         pos += vertexBufferLayout.getSerializedSize();
 
@@ -410,7 +411,7 @@ namespace platypus
         char* pBuf = targetBuffer.data() + prevSize;
 
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(pBuf + pos, &_propertyFlags, sizeof(uint32_t));
         pos += sizeof(uint32_t);
@@ -464,7 +465,7 @@ namespace platypus
 
     size_t Mesh::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(uint32_t) + // meshPropertyFlags
             sizeof(uint8_t) + // store hostside buffers on deserialization
             sizeof(uint32_t) + // vertexBufferDataSize

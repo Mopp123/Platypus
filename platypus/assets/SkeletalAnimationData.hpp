@@ -24,6 +24,9 @@ namespace platypus
         // TODO: Optimize!
         Matrix4f getBoneMatrix(float time, int boneIndex) const;
 
+        virtual void serialize(std::vector<char>& targetBuffer) const override;
+        virtual size_t getSerializedSize() const override;
+
         inline const std::string& getName() const { return _animationData.name; }
         inline float getLength() const { return _animationData.length; }
     };

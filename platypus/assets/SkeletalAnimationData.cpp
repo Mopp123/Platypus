@@ -1,4 +1,5 @@
 #include "SkeletalAnimationData.hpp"
+#include "platypus/core/Debug.hpp"
 
 
 namespace platypus
@@ -83,5 +84,22 @@ namespace platypus
         translationMatrix[1 + 3 * 4] = interpolatedTranslation.y;
         translationMatrix[2 + 3 * 4] = interpolatedTranslation.z;
         return translationMatrix * interpolatedRotation.toRotationMatrix();
+    }
+
+    /*
+        Serialized format: (NOTE: this follows AnimationDataUtils.hpp's KeyframeAnimationData struct!)
+            Asset serialized base data
+            float animLength
+            uint32_t animNameSize
+            char animName[animNameSize]
+    */
+    void SkeletalAnimationData::serialize(std::vector<char>& targetBuffer) const
+    {
+        PLATYPUS_ASSERT(false);
+    }
+
+    size_t SkeletalAnimationData::getSerializedSize() const
+    {
+        PLATYPUS_ASSERT(false);
     }
 }

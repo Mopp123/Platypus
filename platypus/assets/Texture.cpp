@@ -34,11 +34,12 @@ namespace platypus
     ) :
         Asset(pAssetManager, targetBuffer, bufferPos)
     {
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
         const size_t serializedSize = getSerializedSize();
-        PLATYPUS_ASSERT((bufferPos + asset_base_serialized_size + serializedSize) <= targetBuffer.size());
+        PLATYPUS_ASSERT((bufferPos + serializedSize) <= targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = baseAssetSerializedSize;
 
         UUID_t imageUUID;
         memcpy(&imageUUID, pBuf + pos, sizeof(UUID_t));
@@ -142,7 +143,7 @@ namespace platypus
         char* pBuf = targetBuffer.data() + prevSize;
 
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         UUID_t imageID = _pImage->getID();
         AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
@@ -169,7 +170,7 @@ namespace platypus
 
     size_t Texture::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(UUID_t) + // imageID
             sizeof(TextureSamplerFilterMode) + //  filterMode
             sizeof(TextureSamplerAddressMode) + //  addressMode

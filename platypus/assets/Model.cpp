@@ -29,7 +29,8 @@ namespace platypus
     ) :
         Asset(pAssetManager, targetBuffer, bufferPos)
     {
-        const size_t serializedModelBaseSize = asset_base_serialized_size +
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
+        const size_t serializedModelBaseSize = baseAssetSerializedSize +
             sizeof(uint8_t) +
             sizeof(uint32_t);
 
@@ -40,7 +41,7 @@ namespace platypus
         char filepath[asset_metadata_filepath_size];
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = baseAssetSerializedSize;
 
         memcpy(&instanced, pBuf + pos, sizeof(uint8_t));
         pos += sizeof(uint8_t);
@@ -90,7 +91,7 @@ namespace platypus
         char* pBuf = targetBuffer.data() + prevSize;
 
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         const uint8_t instanced = static_cast<uint8_t>(_instanced);
         memcpy(pBuf + pos, &instanced, sizeof(uint8_t));
@@ -115,7 +116,7 @@ namespace platypus
 
     size_t Model::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(uint8_t) + // instanced
             sizeof(uint32_t) + // meshCount
             sizeof(char) * asset_metadata_filepath_size + // filepath[metadata_filepath_size]

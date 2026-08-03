@@ -36,6 +36,7 @@ namespace platypus
         Quaternion rotation;
     };
 
+    // TODO: Add scale keys
     struct JointAnimationData
     {
         std::vector<TranslationKey> translations;

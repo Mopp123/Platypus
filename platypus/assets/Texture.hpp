@@ -62,17 +62,6 @@ namespace platypus
     };
 
 
-    struct TextureMetadata
-    {
-        UUID_t assetID = NULL_UUID;
-        UUID_t imageID = NULL_UUID;
-        TextureSamplerFilterMode filterMode;
-        TextureSamplerAddressMode addressMode;
-        uint8_t useMipmapping = 0;
-        uint8_t persistent = 0;
-        char name[asset_metadata_name_size];
-    };
-
     class AssetManager;
     struct TextureImpl;
     class Texture : public Asset
