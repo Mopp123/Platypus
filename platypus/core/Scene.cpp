@@ -258,6 +258,40 @@ namespace platypus
         _nameEntityMapping.erase(currentName);
     }
 
+    void Scene::addEntityName(entityID_t entity, const std::string& name)
+    {
+        if (_nameEntityMapping.find(name) != _nameEntityMapping.end())
+        {
+            Debug::log(
+                "Entity name " + name + " already exists!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        int64_t entityIndex = -1;
+        for (size_t i = 0; i < _entities.size(); ++i)
+        {
+            if (_entities[i].id == entity)
+            {
+                entityIndex = static_cast<int64_t>(i);
+                break;
+            }
+        }
+        if (entityIndex == -1)
+        {
+            Debug::log(
+                "Failed to find entity with entityID_t: " + std::to_string(entity),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        _nameEntityMapping[name] = static_cast<size_t>(entityIndex);
+    }
+
     void Scene::setEntityActive(entityID_t entity, bool arg)
     {
         if (entity < _entities.size())
@@ -509,8 +543,8 @@ namespace platypus
         if (_componentPools.find(type) == _componentPools.end())
         {
             Debug::log(
-                "@Scene::getComponent (1) "
                 "No component pool exists for component type: " + component_type_to_string(type),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
@@ -524,10 +558,14 @@ namespace platypus
         }
         if (!nestedSearch && enableWarning)
         {
+            std::string identifier = getEntityName(entityID);
+            if (identifier.empty())
+                identifier = "ID: " + std::to_string(entityID);
+
             Debug::log(
-                "@Scene::getComponent (1) "
                 "Couldn't find component of type: " + component_type_to_string(type) + " "
-                "from entity: " + std::to_string(entityID),
+                "from entity: " + identifier,
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_WARNING
             );
         }

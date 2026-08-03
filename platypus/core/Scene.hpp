@@ -64,6 +64,8 @@ namespace platypus
         Entity getEntity(const std::string& name) const;
         std::string getEntityName(entityID_t entity) const;
         void setEntityName(const std::string& currentName, const std::string& newName);
+        // Used to add new name for entity, if doesn't have one yet
+        void addEntityName(entityID_t entity, const std::string& name);
         void setEntityActive(entityID_t entity, bool arg);
         bool isEntityActive(entityID_t entity) const;
         bool entityExists(entityID_t entity) const;

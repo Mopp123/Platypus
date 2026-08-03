@@ -303,14 +303,19 @@ namespace platypus
         Scene* pScene
     )
     {
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
         std::vector<entityID_t> jointEntities;
+
         create_transform_entity_hierarchy(
             joints,
             jointChildMapping,
             Matrix4f(1.0f),
             0,
             jointEntities,
-            pScene
+            pUseScene
         );
         return jointEntities;
     }
