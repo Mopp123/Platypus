@@ -35,7 +35,7 @@ namespace platypus
         Buffer* pVertexBuffer,
         Buffer* pIndexBuffer,
         const Matrix4f& transformationMatrix,
-        Pose bindPose,
+        Skeleton* pSkeleton,
         const std::vector<SkeletalAnimationData*>& animations,
         const std::string& name,
         UUID_t id,
@@ -46,11 +46,10 @@ namespace platypus
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),
         _pIndexBuffer(pIndexBuffer),
-        _transformationMatrix(transformationMatrix)
+        _transformationMatrix(transformationMatrix),
+        _pSkeleton(pSkeleton),
+        _animations(animations)
     {
-        // Why are these here and not like the others?
-        _bindPose = bindPose;
-        _animations = animations;
     }
 
     Mesh::Mesh(

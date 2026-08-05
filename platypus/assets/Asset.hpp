@@ -16,6 +16,7 @@ namespace platypus
         ASSET_TYPE_TEXTURE,
         ASSET_TYPE_MATERIAL,
         ASSET_TYPE_FONT,
+        ASSET_TYPE_SKELETON,
         ASSET_TYPE_SKELETAL_ANIMATION_DATA
     };
 

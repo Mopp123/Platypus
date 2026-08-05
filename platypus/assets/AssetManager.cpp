@@ -568,8 +568,10 @@ namespace platypus
         }
 
         std::vector<MeshData> loadedMeshes;
+        std::vector<std::pair<std::string, Pose>> skeletonData;
         std::vector<KeyframeAnimationData> animationData;
-        if (!load_gltf_model(filepath, loadedMeshes, animationData))
+        // NOTE: This is pretty fragile with animations and skinned meshes atm!
+        if (!load_gltf_model(filepath, loadedMeshes, skeletonData, animationData))
         {
             Debug::log(
                 "Failed to load model using filepath: " + filepath,
@@ -648,6 +650,18 @@ namespace platypus
             if (i < meshIDs.size())
                 meshID = meshIDs[i];
 
+            Skeleton* pSkeleton = nullptr;
+            if (i < skeletonData.size())
+            {
+                const std::string& skeletonName = skeletonData[i].first;
+                const Pose& skeletonPose = skeletonData[i].second;
+                pSkeleton = createSkeleton(
+                    skeletonPose.joints,
+                    skeletonPose.jointChildMapping,
+                    skeletonName
+                );
+            }
+
             std::vector<SkeletalAnimationData*> animationAssets(animationData.size());
             for (size_t i = 0; i < animationData.size(); ++i)
                 animationAssets[i] = createSkeletalAnimation(animationData[i]);
@@ -659,7 +673,7 @@ namespace platypus
                 pVertexBuffer,
                 pIndexBuffer,
                 meshData.transformationMatrix,
-                meshData.bindPose,
+                pSkeleton,
                 animationAssets,
                 meshName,
                 meshID
@@ -689,6 +703,22 @@ namespace platypus
         );
         _assets[pTerrainMesh->getID()] = pTerrainMesh;
         return pTerrainMesh;
+    }
+
+    Skeleton* AssetManager::createSkeleton(
+        const std::vector<Joint>& joints,
+        const std::vector<std::vector<uint32_t>>& jointChildMapping,
+        const std::string& name
+    )
+    {
+        Skeleton* pSkeleton = new Skeleton(
+            _uuidPool,
+            joints,
+            jointChildMapping,
+            name
+        );
+        _assets[pSkeleton->getID()] = pSkeleton;
+        return pSkeleton;
     }
 
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(
@@ -1117,6 +1147,7 @@ namespace platypus
             case AssetType::ASSET_TYPE_IMAGE:    pAsset = new Image(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_TEXTURE:  pAsset = new Texture(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_MATERIAL: pAsset = new Material(this, serializedData, bufferReadPos); break;
+            case AssetType::ASSET_TYPE_SKELETON: pAsset = new Skeleton(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA: pAsset = new SkeletalAnimationData(this, serializedData, bufferReadPos); break;
             default: {
                 Debug::log(

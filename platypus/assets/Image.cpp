@@ -235,7 +235,7 @@ namespace platypus
         char* pFilepathData = new char[filepathSize];
         memcpy(pFilepathData, pBuf + pos, filepathSize);
         pos += filepathSize;
-        _filepath = std::string(pFilepathData);
+        _filepath = std::string(pFilepathData, filepathSize);
         delete[] pFilepathData;
 
         PLATYPUS_ASSERT(pos == serializedSize);

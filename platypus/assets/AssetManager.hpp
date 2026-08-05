@@ -148,6 +148,12 @@ namespace platypus
             bool generateTangents
         );
 
+        Skeleton* createSkeleton(
+            const std::vector<Joint>& joints,
+            const std::vector<std::vector<uint32_t>>& jointChildMapping,
+            const std::string& name
+        );
+
         SkeletalAnimationData* createSkeletalAnimation(
             const KeyframeAnimationData& animationData
         );

@@ -292,6 +292,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
         const tinygltf::Skin& skin = gltfModel.skins[gltfSkinIndex];
+        Debug::log("___TEST___SKIN NAME = " + skin.name);
         // NOTE: DANGER! NOT HANDLING THE CASE IF ENCOUNTERING NODE THAT ISN'T JOINT IN THE SKIN!
         int rootJointNodeIndex = skin.joints[0];
         Pose bindPose;

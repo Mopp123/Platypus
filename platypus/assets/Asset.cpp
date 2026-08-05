@@ -10,12 +10,13 @@ namespace platypus
     {
         switch (type)
         {
-            case AssetType::ASSET_TYPE_MESH: return "ASSET_TYPE_MESH";
-            case AssetType::ASSET_TYPE_MODEL: return "ASSET_TYPE_MODEL";
-            case AssetType::ASSET_TYPE_IMAGE: return "ASSET_TYPE_IMAGE";
-            case AssetType::ASSET_TYPE_TEXTURE: return "ASSET_TYPE_TEXTURE";
-            case AssetType::ASSET_TYPE_MATERIAL: return "ASSET_TYPE_MATERIAL";
-            case AssetType::ASSET_TYPE_FONT: return "ASSET_TYPE_FONT";
+            case AssetType::ASSET_TYPE_MESH:        return "ASSET_TYPE_MESH";
+            case AssetType::ASSET_TYPE_MODEL:       return "ASSET_TYPE_MODEL";
+            case AssetType::ASSET_TYPE_IMAGE:       return "ASSET_TYPE_IMAGE";
+            case AssetType::ASSET_TYPE_TEXTURE:     return "ASSET_TYPE_TEXTURE";
+            case AssetType::ASSET_TYPE_MATERIAL:    return "ASSET_TYPE_MATERIAL";
+            case AssetType::ASSET_TYPE_FONT:        return "ASSET_TYPE_FONT";
+            case AssetType::ASSET_TYPE_SKELETON:    return "ASSET_TYPE_SKELETON";
             case AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA: return "ASSET_TYPE_SKELETAL_ANIMATION_DATA";
             default: return "ASSET_TYPE_NONE";
         }
@@ -82,7 +83,7 @@ namespace platypus
 
         char* pNameData = new char[nameSize];
         memcpy(pNameData, pBuf + pos, nameSize);
-        _name = std::string(pNameData);
+        _name = std::string(pNameData, nameSize);
         delete[] pNameData;
     }
 

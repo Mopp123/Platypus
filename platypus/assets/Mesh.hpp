@@ -36,7 +36,8 @@ namespace platypus
         // Not sure yet how I want to deal with this.
         Matrix4f _transformationMatrix = Matrix4f(1.0f);
 
-        Pose _bindPose;
+        // NOTE: This was previously Pose _bindPose!
+        Skeleton* _pSkeleton = nullptr;
 
         // NOTE: Not sure if "assets inside assets" should rather be IDs to those instead of ptrs!
         //  -> ptrs will become issue when serializing
@@ -51,7 +52,7 @@ namespace platypus
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
             const Matrix4f& transformationMatrix,
-            Pose bindPose,
+            Skeleton* pSkeleton,
             const std::vector<SkeletalAnimationData*>& animations,
             const std::string& name = "",
             UUID_t id = NULL_UUID,
@@ -93,9 +94,12 @@ namespace platypus
         inline bool isStoringHostsideBuffersOnDeserialization() const { return _storeHostsideBuffersOnDeserialization; }
         inline void storeHostsideBuffersOnDeserialization(bool arg) { _storeHostsideBuffersOnDeserialization = arg; }
         inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }
-        inline bool hasBindPose() const { return !_bindPose.joints.empty(); }
-        inline size_t getJointCount() const { return _bindPose.joints.size(); }
-        inline const Pose& getBindPose() const { return _bindPose; }
-        inline const Pose* getBindPosePtr() const { return &_bindPose; }
+
+        inline const Skeleton* getSkeleton() const { return _pSkeleton; }
+
+        //inline bool hasBindPose() const { return !_bindPose.joints.empty(); }
+        //inline size_t getJointCount() const { return _bindPose.joints.size(); }
+        //inline const Pose& getBindPose() const { return _bindPose; }
+        //inline const Pose* getBindPosePtr() const { return &_bindPose; }
     };
 }

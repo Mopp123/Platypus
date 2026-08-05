@@ -26,9 +26,10 @@ static entityID_t create_animated_entity(
         scale
     );
 
+    const Skeleton* pSkeleton = pMesh->getSkeleton();
     outJointEntities = create_skeleton(
-        pMesh->getBindPose().joints,
-        pMesh->getBindPose().jointChildMapping
+        pSkeleton->getJoints(),
+        pSkeleton->getJointChildMapping()
     );
     entityID_t rootJointEntity = outJointEntities[0];
     create_renderable3D(
@@ -50,16 +51,17 @@ static entityID_t create_animated_entity(
 static void glue_to_joint(
     entityID_t entity,
     std::vector<entityID_t>& jointEntities,
-    const Pose& bindPose,
+    const Skeleton* pSkeleton,
     std::string jointName
 )
 {
     // Find correct joint index
     int jointIndex = 0;
     bool found = false;
-    for (int i = 0; i < bindPose.joints.size(); ++i)
+    const std::vector<Joint>& joints = pSkeleton->getJoints();
+    for (int i = 0; i < joints.size(); ++i)
     {
-        if (bindPose.joints[i].name == jointName)
+        if (joints[i].name == jointName)
         {
             jointIndex = i;
             found = true;
@@ -198,7 +200,7 @@ void SkinnedMeshTestScene::init()
             glue_to_joint(
                 boxEntity,
                 jointEntities,
-                pAnimatedMesh->getBindPose(),
+                pAnimatedMesh->getSkeleton(),
                 "hand0"
             );
         }

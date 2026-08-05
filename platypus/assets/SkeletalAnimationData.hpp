@@ -6,6 +6,40 @@
 
 namespace platypus
 {
+    class Skeleton : public Asset
+    {
+    private:
+        std::vector<Joint> _joints;
+        std::vector<std::vector<uint32_t>> _jointChildMapping;
+
+    public:
+        Skeleton(
+            size_t uuidPool,
+            const std::vector<Joint>& joints,
+            const std::vector<std::vector<uint32_t>>& jointChildMapping,
+            const std::string& name = "",
+            UUID_t id = NULL_UUID,
+            bool persistent = false
+        );
+        Skeleton(
+            AssetManager* pAssetManager,
+            const std::vector<char>& targetBuffer,
+            size_t bufferPos
+        );
+        ~Skeleton();
+
+        virtual void serialize(std::vector<char>& targetBuffer) const override;
+        virtual size_t getSerializedSize() const override;
+
+        inline const std::vector<Joint>& getJoints() const { return _joints; }
+        inline const std::vector<std::vector<uint32_t>>& getJointChildMapping() const { return _jointChildMapping; }
+        inline const Joint& getJoint(size_t index) const { return _joints[index]; }
+        inline const size_t getJointCount() const { return _joints.size(); }
+
+    private:
+        size_t getSerializedJointSize(size_t jointIndex) const;
+    };
+
     class SkeletalAnimationData : public Asset
     {
     private:

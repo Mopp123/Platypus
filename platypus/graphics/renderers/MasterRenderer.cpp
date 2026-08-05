@@ -297,11 +297,12 @@ namespace platypus
                         entity.id,
                         ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
                     );
+                    const size_t jointCount = pMesh->getSkeleton()->getJointCount();
                     _batcher.addToBatch(
                         batchID,
                         (void*)pAnimation->jointMatrices,
-                        sizeof(Matrix4f) * pMesh->getJointCount(),
-                        { sizeof(Matrix4f) * pMesh->getJointCount() },
+                        sizeof(Matrix4f) * jointCount,
+                        { sizeof(Matrix4f) * jointCount },
                         _currentFrame
                     );
                 }

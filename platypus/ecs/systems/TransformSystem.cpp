@@ -25,7 +25,7 @@ namespace platypus
         entityID_t parent,
         SkeletalAnimationData* pAnimationAsset,
         SkeletalAnimation* pUseAnimation,
-        const Pose* pBindPose,
+        const Skeleton* pSkeleton,
         Pose* pCurrentPose,
         Pose* pNextPose
     )
@@ -51,7 +51,7 @@ namespace platypus
             if (pMesh)
             {
                 if (pMesh->getPropertyFlags() & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED))
-                    pBindPose = pMesh->getBindPosePtr();
+                    pSkeleton = pMesh->getSkeleton();
             }
         }
 
@@ -143,8 +143,8 @@ namespace platypus
             pTransform->globalMatrix = parentMatrix * localMatrix;
         }
 
-        if (pJoint && pUseAnimation && pBindPose)
-            pUseAnimation->jointMatrices[pJoint->jointIndex] = pTransform->globalMatrix * pBindPose->joints[pJoint->jointIndex].inverseMatrix;
+        if (pJoint && pUseAnimation && pSkeleton)
+            pUseAnimation->jointMatrices[pJoint->jointIndex] = pTransform->globalMatrix * pSkeleton->getJoint(pJoint->jointIndex).inverseMatrix;
 
         Children* pChildren = reinterpret_cast<Children*>(
             pScene->getComponent(
@@ -169,7 +169,7 @@ namespace platypus
                 entity,
                 pAnimationAsset,
                 pUseAnimation,
-                pBindPose,
+                pSkeleton,
                 pCurrentPose,
                 pNextPose
             );

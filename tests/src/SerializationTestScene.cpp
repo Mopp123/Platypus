@@ -55,7 +55,6 @@ void SerializationTestScene::init()
         { }
     );
 
-    /*
     Model* pModel = pAssetManager->loadModel(
         "assets/models/MultiAnimSkeletonTest.glb",
         false,
@@ -79,8 +78,8 @@ void SerializationTestScene::init()
 
     Debug::log("___TEST___Attempting to write");
     write_file("assets/serializationTest/Test.data", serializedData);
-    */
 
+    /*
     std::vector<char> serializedData = read_file("assets/serializationTest/Test.data");
     Debug::log("___TEST___Attempting to deserialize mesh");
     Mesh* pMesh = new Mesh(pAssetManager, serializedData, 0);
@@ -101,11 +100,9 @@ void SerializationTestScene::init()
 
     Debug::log("    " + pAnimData2->getName());
     Debug::log("        length: " + std::to_string(pAnimData2->getLength()));
+    */
 
     Debug::log("___TEST___SUCCESS!");
-
-    entityID_t animatedEntity = createEntity();
-    create_transform(animatedEntity, Matrix4f(1.0f));
 
 }
 
