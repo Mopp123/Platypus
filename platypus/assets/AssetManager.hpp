@@ -149,7 +149,7 @@ namespace platypus
         );
 
         SkeletalAnimationData* createSkeletalAnimation(
-            const KeyframeAnimationData& keyframes
+            const KeyframeAnimationData& animationData
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 

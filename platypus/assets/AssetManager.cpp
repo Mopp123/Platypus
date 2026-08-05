@@ -692,12 +692,24 @@ namespace platypus
     }
 
     SkeletalAnimationData* AssetManager::createSkeletalAnimation(
-        const KeyframeAnimationData& keyframes
+        const KeyframeAnimationData& animationData
     )
     {
+        if (assetExists(animationData.name))
+        {
+            const std::string errStr = "Animation asset with name: '" + animationData.name + "' already exists!";
+            _errors.push_back(errStr);
+            Debug::log(
+                errStr,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return nullptr;
+        }
+
         SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(
             _uuidPool,
-            keyframes
+            animationData
         );
         _assets[pAnimationData->getID()] = pAnimationData;
         return pAnimationData;
@@ -986,7 +998,7 @@ namespace platypus
         if (it != _assets.end())
         {
             Debug::log(
-                "Asset with UUID: " + std::to_string(assetID) + " and name: " + pAsset->getName() +
+                "Asset with UUID: " + std::to_string(assetID) + " and name: " + pAsset->getName() + " "
                 "already exists in AssetManager",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
@@ -1105,6 +1117,7 @@ namespace platypus
             case AssetType::ASSET_TYPE_IMAGE:    pAsset = new Image(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_TEXTURE:  pAsset = new Texture(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_MATERIAL: pAsset = new Material(this, serializedData, bufferReadPos); break;
+            case AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA: pAsset = new SkeletalAnimationData(this, serializedData, bufferReadPos); break;
             default: {
                 Debug::log(
                     "Invalid asset type: " + asset_type_to_string(type) + " for deserialization",
