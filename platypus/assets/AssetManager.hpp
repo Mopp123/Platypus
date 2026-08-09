@@ -151,6 +151,7 @@ namespace platypus
         Skeleton* createSkeleton(
             const std::vector<Joint>& joints,
             const std::vector<std::vector<uint32_t>>& jointChildMapping,
+            const std::vector<UUID_t>& animationIDs,
             const std::string& name
         );
 

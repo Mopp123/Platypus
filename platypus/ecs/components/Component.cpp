@@ -238,6 +238,9 @@ namespace platypus
                 return get_serialized_children_size(pChildren);
             }
 
+            case ComponentType::COMPONENT_TYPE_JOINT: return serialized_skeleton_joint_size;
+            case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
+
             default: {
                 Debug::log(
                     "No serialized size defined for component type: " + component_type_to_string(type),
@@ -266,6 +269,9 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_CHILDREN: {
                 return get_serialized_children_size(pSerializedData, dataSize);
             }
+
+            case ComponentType::COMPONENT_TYPE_JOINT: return serialized_skeleton_joint_size;
+            case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
 
             default: {
                 Debug::log(

@@ -51,4 +51,11 @@ namespace platypus
         // which this animation is ment for.
         std::vector<JointAnimationData> keyframes;
     };
+
+    struct SkeletonData
+    {
+        std::string name;
+        Pose bindPose;
+        std::vector<KeyframeAnimationData> animations;
+    };
 }

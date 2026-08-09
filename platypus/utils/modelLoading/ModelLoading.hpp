@@ -17,7 +17,6 @@ namespace platypus
     bool load_gltf_model(
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
-        std::vector<std::pair<std::string, Pose>>& outSkeletons,
-        std::vector<KeyframeAnimationData>& outAnimations
+        std::vector<SkeletonData>& outSkeletons
     );
 }

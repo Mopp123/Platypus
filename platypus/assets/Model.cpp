@@ -131,6 +131,6 @@ namespace platypus
             sizeof(uint32_t) + // meshCount
             sizeof(uint32_t) + // filepathSize
             _filepath.size() +
-            sizeof(UUID_t) * _meshes.size(); //  meshIDs[meshCount]
+            sizeof(UUID_t) * _meshes.size();
     }
 }

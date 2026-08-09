@@ -218,8 +218,8 @@ namespace platypus
     ) :
         Asset(pAssetManager, targetBuffer, bufferPos)
     {
-        const size_t serializedSize = getSerializedSize();
-        PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
+        PLATYPUS_ASSERT((bufferPos  + baseAssetSerializedSize) <= targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
         size_t pos = getSerializedBaseSize();
@@ -238,7 +238,8 @@ namespace platypus
         _filepath = std::string(pFilepathData, filepathSize);
         delete[] pFilepathData;
 
-        PLATYPUS_ASSERT(pos == serializedSize);
+        const size_t requiredSerializedSize = getSerializedSize();
+        PLATYPUS_ASSERT(pos == requiredSerializedSize);
 
         load(_filepath, _format);
 
@@ -541,6 +542,7 @@ namespace platypus
     {
         return getSerializedBaseSize() +
             sizeof(ImageFormat) +
-            sizeof(uint32_t);
+            sizeof(uint32_t) +
+            _filepath.size();
     }
 }

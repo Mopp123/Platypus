@@ -1,5 +1,6 @@
 #include "SkeletalAnimationData.hpp"
 #include "AssetManager.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 
 
@@ -10,180 +11,6 @@ namespace platypus
         float midWayLength = currentTime - prevTime;
         float framesDiff = nextTime - prevTime;
         return midWayLength / framesDiff;
-    }
-
-
-    Skeleton::Skeleton(
-        size_t uuidPool,
-        const std::vector<Joint>& joints,
-        const std::vector<std::vector<uint32_t>>& jointChildMapping,
-        const std::string& name,
-        UUID_t id,
-        bool persistent
-    ) :
-        Asset(uuidPool, AssetType::ASSET_TYPE_SKELETON, name, id, persistent),
-        _joints(joints),
-        _jointChildMapping(jointChildMapping)
-    {
-    }
-
-    Skeleton::Skeleton(
-        AssetManager* pAssetManager,
-        const std::vector<char>& targetBuffer,
-        size_t bufferPos
-    ) :
-        Asset(pAssetManager, targetBuffer, bufferPos)
-    {
-        const size_t baseAssetSerializedSize = getSerializedBaseSize();
-        PLATYPUS_ASSERT(bufferPos + baseAssetSerializedSize < targetBuffer.size());
-
-        const char* pBuf = targetBuffer.data() + bufferPos + baseAssetSerializedSize;
-
-        uint32_t jointCountU32 = 0;
-        memcpy(&jointCountU32, pBuf, sizeof(uint32_t));
-        size_t pos = sizeof(uint32_t);
-        const size_t jointCount = static_cast<const uint32_t>(jointCountU32);
-
-        _joints.resize(jointCount);
-        _jointChildMapping.resize(jointCount);
-
-        for (size_t i = 0; i < jointCount; ++i)
-        {
-            Joint& joint = _joints[i];
-            memcpy(&joint.translation, pBuf + pos, sizeof(Vector3f));
-            pos += sizeof(Vector3f);
-
-            memcpy(&joint.rotation, pBuf + pos, sizeof(Quaternion));
-            pos += sizeof(Quaternion);
-
-            memcpy(&joint.scale, pBuf + pos, sizeof(Vector3f));
-            pos += sizeof(Vector3f);
-
-            memcpy(&joint.matrix, pBuf + pos, sizeof(Matrix4f));
-            pos += sizeof(Matrix4f);
-
-            memcpy(&joint.inverseMatrix, pBuf + pos, sizeof(Matrix4f));
-            pos += sizeof(Matrix4f);
-
-            uint32_t jointNameSizeU32 = 0;
-            memcpy(&jointNameSizeU32, pBuf + pos, sizeof(uint32_t));
-            pos += sizeof(uint32_t);
-            const size_t jointNameSize = static_cast<const size_t>(jointNameSizeU32);
-
-            uint32_t childJointCountU32 = 0;
-            memcpy(&childJointCountU32, pBuf + pos, sizeof(uint32_t));
-            pos += sizeof(uint32_t);
-            const size_t childJointCount = static_cast<const size_t>(childJointCountU32);
-
-            char* pJointNameData = new char[jointNameSize];
-            memcpy(pJointNameData, pBuf + pos, jointNameSize);
-            pos += jointNameSize;
-            joint.name = std::string(pJointNameData, jointNameSize);
-            delete[] pJointNameData;
-
-            std::vector<uint32_t> childIndices(childJointCount);
-            if (childJointCount > 0)
-            {
-                memcpy(childIndices.data(), pBuf + pos, sizeof(uint32_t) * childJointCount);
-                pos += sizeof(uint32_t) * childJointCount;
-            }
-            _jointChildMapping[i] = childIndices;
-        }
-    }
-
-    Skeleton::~Skeleton()
-    {
-    }
-
-    /*
-        Serialized format:
-            Asset serialized base data
-            uint32_t jointCount
-            Joint jointData[jointCount]
-    */
-    void Skeleton::serialize(std::vector<char>& targetBuffer) const
-    {
-        const size_t prevSize = targetBuffer.size();
-        const size_t serializedSize = getSerializedSize();
-        targetBuffer.resize(serializedSize);
-
-        char* pBuf = targetBuffer.data() + prevSize;
-        serializeBase(pBuf);
-
-        size_t pos = getSerializedBaseSize();
-
-        const size_t jointCount = _joints.size();
-        const uint32_t jointCountU32 = static_cast<const uint32_t>(jointCount);
-        memcpy(pBuf + pos, &jointCountU32, sizeof(uint32_t));
-        pos += sizeof(uint32_t);
-
-        for (size_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
-        {
-            const Joint& joint = _joints[jointIndex];
-            memcpy(pBuf + pos, &joint.translation, sizeof(Vector3f));
-            pos += sizeof(Vector3f);
-
-            memcpy(pBuf + pos, &joint.rotation, sizeof(Quaternion));
-            pos += sizeof(Quaternion);
-
-            memcpy(pBuf + pos, &joint.scale, sizeof(Vector3f));
-            pos += sizeof(Vector3f);
-
-            memcpy(pBuf + pos, &joint.matrix, sizeof(Matrix4f));
-            pos += sizeof(Matrix4f);
-
-            memcpy(pBuf + pos, &joint.inverseMatrix, sizeof(Matrix4f));
-            pos += sizeof(Matrix4f);
-
-            const uint32_t nameSizeU32 = static_cast<const uint32_t>(joint.name.size());
-            memcpy(pBuf + pos, &nameSizeU32, sizeof(uint32_t));
-            pos += sizeof(uint32_t);
-
-            PLATYPUS_ASSERT(jointIndex < _jointChildMapping.size());
-            const std::vector<uint32_t>& childJointIndices = _jointChildMapping[jointIndex];
-            const size_t childJointCount = childJointIndices.size();
-            const uint32_t childJointCountU32 = static_cast<const uint32_t>(childJointCount);
-            memcpy(pBuf + pos, &childJointCountU32, sizeof(uint32_t));
-            pos += sizeof(uint32_t);
-
-            memcpy(pBuf + pos, joint.name.data(), joint.name.size());
-            pos += joint.name.size();
-
-            if (childJointCount > 0)
-            {
-                memcpy(pBuf + pos, childJointIndices.data(), sizeof(uint32_t) * childJointCount);
-                pos += sizeof(uint32_t) * childJointCount;
-            }
-        }
-    }
-
-    size_t Skeleton::getSerializedSize() const
-    {
-        size_t serializedJointsSize = 0;
-        for (size_t i = 0; i < _joints.size(); ++i)
-            serializedJointsSize += getSerializedJointSize(i);
-
-        return getSerializedBaseSize() +
-            sizeof(uint32_t) + // joint count
-            serializedJointsSize;
-    }
-
-    size_t Skeleton::getSerializedJointSize(size_t jointIndex) const
-    {
-        PLATYPUS_ASSERT(jointIndex < _joints.size());
-        size_t childIndicesSize = 0;
-        if (jointIndex < _jointChildMapping.size())
-            childIndicesSize = _jointChildMapping[jointIndex].size();
-
-        return sizeof(Vector3f) + // translation
-            sizeof(Quaternion) + // rotation
-            sizeof(Vector3f) + // scale
-            sizeof(Matrix4f) + // joint matrix
-            sizeof(Matrix4f) + // inverse matrix
-            sizeof(uint32_t) + // joint name size
-            sizeof(uint32_t) + // child indices count
-            _joints[jointIndex].name.size() +
-            childIndicesSize;
     }
 
 
@@ -395,6 +222,7 @@ namespace platypus
                 pos += sizeof(Quaternion);
             }
         }
+        PLATYPUS_ASSERT(pos == serializedSize);
     }
 
     size_t SkeletalAnimationData::getSerializedSize() const
@@ -430,4 +258,235 @@ namespace platypus
             getSerializedTranslationKeySize() * _keyframeData[jointIndex].translations.size() +
             getSerializedRotationKeySize() * _keyframeData[jointIndex].rotations.size();
     }
+
+
+    Skeleton::Skeleton(
+        size_t uuidPool,
+        const std::vector<Joint>& joints,
+        const std::vector<std::vector<uint32_t>>& jointChildMapping,
+        const std::vector<UUID_t>& animationIDs,
+        const std::string& name,
+        UUID_t id,
+        bool persistent
+    ) :
+        Asset(uuidPool, AssetType::ASSET_TYPE_SKELETON, name, id, persistent),
+        _joints(joints),
+        _jointChildMapping(jointChildMapping),
+        _animationIDs(animationIDs)
+    {
+    }
+
+    Skeleton::Skeleton(
+        AssetManager* pAssetManager,
+        const std::vector<char>& targetBuffer,
+        size_t bufferPos
+    ) :
+        Asset(pAssetManager, targetBuffer, bufferPos)
+    {
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
+        PLATYPUS_ASSERT(bufferPos + baseAssetSerializedSize < targetBuffer.size());
+
+        const char* pBuf = targetBuffer.data() + bufferPos + baseAssetSerializedSize;
+
+        uint32_t jointCountU32 = 0;
+        memcpy(&jointCountU32, pBuf, sizeof(uint32_t));
+        size_t pos = sizeof(uint32_t);
+        const size_t jointCount = static_cast<const uint32_t>(jointCountU32);
+
+        _joints.resize(jointCount);
+        _jointChildMapping.resize(jointCount);
+
+        uint32_t animationCountU32 = 0;
+        memcpy(&animationCountU32, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+        const size_t animationCount = static_cast<const uint32_t>(animationCountU32);
+        _animationIDs.resize(animationCount);
+
+        for (size_t i = 0; i < jointCount; ++i)
+        {
+            Joint& joint = _joints[i];
+            memcpy(&joint.translation, pBuf + pos, sizeof(Vector3f));
+            pos += sizeof(Vector3f);
+
+            memcpy(&joint.rotation, pBuf + pos, sizeof(Quaternion));
+            pos += sizeof(Quaternion);
+
+            memcpy(&joint.scale, pBuf + pos, sizeof(Vector3f));
+            pos += sizeof(Vector3f);
+
+            memcpy(&joint.matrix, pBuf + pos, sizeof(Matrix4f));
+            pos += sizeof(Matrix4f);
+
+            memcpy(&joint.inverseMatrix, pBuf + pos, sizeof(Matrix4f));
+            pos += sizeof(Matrix4f);
+
+            uint32_t jointNameSizeU32 = 0;
+            memcpy(&jointNameSizeU32, pBuf + pos, sizeof(uint32_t));
+            pos += sizeof(uint32_t);
+            const size_t jointNameSize = static_cast<const size_t>(jointNameSizeU32);
+
+            uint32_t childJointCountU32 = 0;
+            memcpy(&childJointCountU32, pBuf + pos, sizeof(uint32_t));
+            pos += sizeof(uint32_t);
+            const size_t childJointCount = static_cast<const size_t>(childJointCountU32);
+
+            char* pJointNameData = new char[jointNameSize];
+            memcpy(pJointNameData, pBuf + pos, jointNameSize);
+            pos += jointNameSize;
+            joint.name = std::string(pJointNameData, jointNameSize);
+            delete[] pJointNameData;
+
+            std::vector<uint32_t> childIndices(childJointCount);
+            if (childJointCount > 0)
+            {
+                memcpy(childIndices.data(), pBuf + pos, sizeof(uint32_t) * childJointCount);
+                pos += sizeof(uint32_t) * childJointCount;
+            }
+            _jointChildMapping[i] = childIndices;
+        }
+
+        memcpy(_animationIDs.data(), pBuf + pos, sizeof(UUID_t) * animationCount);
+    }
+
+    Skeleton::~Skeleton()
+    {
+    }
+
+    int32_t Skeleton::getAnimationIndex(const std::string& name) const
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        PLATYPUS_ASSERT(pAssetManager);
+
+        std::vector<SkeletalAnimationData*> animations(_animationIDs.size());
+        for (size_t i = 0; i < animations.size(); ++i)
+        {
+            Asset* pAnimationAsset = pAssetManager->getAsset(
+                _animationIDs[i],
+                AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA
+            );
+            PLATYPUS_ASSERT(pAnimationAsset);
+            if (pAnimationAsset->getName() == name)
+                return i;
+        }
+        return -1;
+    }
+
+    /*
+        Serialized format:
+            Asset serialized base data
+            uint32_t jointCount
+            uint32_t animationIDCount
+            Joint jointData[jointCount]
+                NOTE: serialized Joint format:
+                    Vector3f translation
+                    Quaternion rotation
+                    Vector3f scale
+                    Matrix4f matrix
+                    Matrix4f inverseBindPoseMatrix
+                    uint32_t jointNameSize
+                    uint32_t childJointCount
+                    char jointNameData[jointNameSize]
+                    uint32_t childJointIndices[childJointCount]
+            UUID_t animationIDs[animationIDCount]
+    */
+    void Skeleton::serialize(std::vector<char>& targetBuffer) const
+    {
+        const size_t prevSize = targetBuffer.size();
+        const size_t serializedSize = getSerializedSize();
+        targetBuffer.resize(prevSize + serializedSize);
+
+        char* pBuf = targetBuffer.data() + prevSize;
+        serializeBase(pBuf);
+
+        size_t pos = getSerializedBaseSize();
+
+        const size_t jointCount = _joints.size();
+        const uint32_t jointCountU32 = static_cast<const uint32_t>(jointCount);
+        memcpy(pBuf + pos, &jointCountU32, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        const size_t animationCount = _animationIDs.size();
+        const uint32_t animationCountU32 = static_cast<const uint32_t>(animationCount);
+        memcpy(pBuf + pos, &animationCountU32, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        for (size_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+        {
+            const Joint& joint = _joints[jointIndex];
+            memcpy(pBuf + pos, &joint.translation, sizeof(Vector3f));
+            pos += sizeof(Vector3f);
+
+            memcpy(pBuf + pos, &joint.rotation, sizeof(Quaternion));
+            pos += sizeof(Quaternion);
+
+            memcpy(pBuf + pos, &joint.scale, sizeof(Vector3f));
+            pos += sizeof(Vector3f);
+
+            memcpy(pBuf + pos, &joint.matrix, sizeof(Matrix4f));
+            pos += sizeof(Matrix4f);
+
+            memcpy(pBuf + pos, &joint.inverseMatrix, sizeof(Matrix4f));
+            pos += sizeof(Matrix4f);
+
+            const uint32_t nameSizeU32 = static_cast<const uint32_t>(joint.name.size());
+            memcpy(pBuf + pos, &nameSizeU32, sizeof(uint32_t));
+            pos += sizeof(uint32_t);
+
+            PLATYPUS_ASSERT(jointIndex < _jointChildMapping.size());
+            const std::vector<uint32_t>& childJointIndices = _jointChildMapping[jointIndex];
+            const size_t childJointCount = childJointIndices.size();
+            const uint32_t childJointCountU32 = static_cast<const uint32_t>(childJointCount);
+            memcpy(pBuf + pos, &childJointCountU32, sizeof(uint32_t));
+            pos += sizeof(uint32_t);
+
+            memcpy(pBuf + pos, joint.name.data(), joint.name.size());
+            pos += joint.name.size();
+
+            if (childJointCount > 0)
+            {
+                memcpy(pBuf + pos, childJointIndices.data(), sizeof(uint32_t) * childJointCount);
+                pos += sizeof(uint32_t) * childJointCount;
+            }
+        }
+
+        for (size_t i = 0; i < animationCount; ++i)
+        {
+            memcpy(pBuf + pos, &_animationIDs[i], sizeof(UUID_t));
+            pos += sizeof(UUID_t);
+        }
+        PLATYPUS_ASSERT(pos == serializedSize);
+    }
+
+    size_t Skeleton::getSerializedSize() const
+    {
+        size_t serializedJointsSize = 0;
+        for (size_t i = 0; i < _joints.size(); ++i)
+            serializedJointsSize += getSerializedJointSize(i);
+
+        return getSerializedBaseSize() +
+            sizeof(uint32_t) + // joint count
+            sizeof(uint32_t) + // anim UUID count
+            serializedJointsSize +
+            sizeof(UUID_t) * _animationIDs.size();
+    }
+
+    size_t Skeleton::getSerializedJointSize(size_t jointIndex) const
+    {
+        PLATYPUS_ASSERT(jointIndex < _joints.size());
+        size_t childIndicesSize = 0;
+        if (jointIndex < _jointChildMapping.size())
+            childIndicesSize = sizeof(uint32_t) * _jointChildMapping[jointIndex].size();
+
+        return sizeof(Vector3f) + // translation
+            sizeof(Quaternion) + // rotation
+            sizeof(Vector3f) + // scale
+            sizeof(Matrix4f) + // joint matrix
+            sizeof(Matrix4f) + // inverse bind pose matrix
+            sizeof(uint32_t) + // joint name size
+            sizeof(uint32_t) + // child indices count
+            _joints[jointIndex].name.size() +
+            childIndicesSize;
+    }
+
+
 }

@@ -31,8 +31,7 @@ namespace platypus
     bool load_gltf_model(
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
-        std::vector<std::pair<std::string, Pose>>& outSkeletons,
-        std::vector<KeyframeAnimationData>& outAnimations
+        std::vector<SkeletonData>& outSkeletons
     )
     {
         tinygltf::Model gltfModel;
@@ -175,14 +174,14 @@ namespace platypus
                 i,
                 nodeJointMapping
             );
-            const std::string& armatureName = gltfModel.skins[i].name;
-            outSkeletons.push_back(std::make_pair(armatureName, bindPose));
-
             // Load animations
-            outAnimations = load_gltf_animations(
+            std::vector<KeyframeAnimationData> animations = load_gltf_animations(
                 gltfModel,
                 nodeJointMapping
             );
+
+            const std::string& armatureName = gltfModel.skins[i].name;
+            outSkeletons.push_back({ armatureName, bindPose, animations });
         }
 
         return true;

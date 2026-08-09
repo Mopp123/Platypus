@@ -13,9 +13,6 @@ namespace platypus
     protected:
         uint64_t _requiredComponentMask = 0;
 
-        #ifdef PLATYPUS_DEBUG
-        #endif
-
     public:
         System() = default;
         System(const System& other) = delete;
