@@ -332,34 +332,41 @@ namespace platypus
         PLATYPUS_ASSERT(currentOffset >= 0);
 
         const size_t unsignedCurrentOffset = static_cast<const size_t>(currentOffset);
-        int32_t eraseOffset = -1;
-        for (size_t i = unsignedCurrentOffset; i < unsignedCurrentOffset + currentCount; ++i)
+        const size_t end = unsignedCurrentOffset + currentCount;
+        PLATYPUS_ASSERT(end <= _childrenContainer.size());
+        for (size_t i = unsignedCurrentOffset; i < end; ++i)
         {
             const entityID_t entityID = _childrenContainer[i];
             if (entityID == childEntityID)
             {
-                eraseOffset = static_cast<int32_t>(i);
                 _childrenContainer[i] = NULL_ENTITY_ID;
-                _freeRanges[i] = 1;
-                break;
+                if (i == _childrenContainer.size() - 1)
+                {
+                    _childrenContainer.pop_back();
+                    return;
+                }
+
+                // Make all the rest of the child entities IDs be contiguous
+                for (size_t j = i; j < end; ++j)
+                {
+                    if (j + 1 >= end)
+                        break;
+
+                    _childrenContainer[j] = _childrenContainer[j + 1];
+                }
+                _freeRanges[end - 1] = 1;
+                packFreeRanges();
+                return;
             }
         }
 
-        if (eraseOffset == -1)
-        {
-            Debug::log(
-                "Failed to find entityID " + std::to_string(childEntityID) + " "
-                "from range: " + std::to_string(currentOffset) + " to " + std::to_string(currentOffset + currentCount),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        if (eraseOffset == _childrenContainer.size() - 1)
-            _childrenContainer.pop_back();
-
-        packFreeRanges();
+        Debug::log(
+            "Failed to find entityID " + std::to_string(childEntityID) + " "
+            "from range: " + std::to_string(currentOffset) + " to " + std::to_string(currentOffset + currentCount),
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
     }
 
     const entityID_t* EntityHierarchyManager::getChildEntities(const Children * const pChildren) const
@@ -402,6 +409,15 @@ namespace platypus
                 return false;
         }
         return true;
+    }
+
+    void EntityHierarchyManager::packChildren(size_t beginOffset, size_t freeOffset, size_t count)
+    {
+        const size_t endOffset = beginOffset + count;
+        for (size_t i = freeOffset; i <= endOffset; ++i)
+        {
+            _childrenContainer[i] = _childrenContainer[i + 1];
+        }
     }
 
     void EntityHierarchyManager::packFreeRanges()
