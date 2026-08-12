@@ -577,7 +577,8 @@ namespace platypus
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
+            //PLATYPUS_ASSERT(false);
+            _errors.push_back("Failed to load model with filepath: " + filepath);
             return nullptr;
         }
 
@@ -691,6 +692,30 @@ namespace platypus
             pMesh->storeHostsideBuffersOnDeserialization(storeBuffersHostSide);
         }
         Model* pModel = new Model(_uuidPool, filepath, instanced, createdMeshes, name, modelID);
+        _assets[pModel->getID()] = pModel;
+        return pModel;
+    }
+
+    Model* AssetManager::createModel(
+        const std::string& filepath,
+        const std::vector<Mesh*>& meshes,
+        bool instanced,
+        const std::string& name
+    )
+    {
+        if (!name.empty() && !nameAvailable(name))
+        {
+            _errors.push_back("Name " + name + " not available");
+            return nullptr;
+        }
+
+        Model* pModel = new Model(
+            _uuidPool,
+            filepath,
+            instanced,
+            meshes,
+            name
+        );
         _assets[pModel->getID()] = pModel;
         return pModel;
     }
@@ -1252,6 +1277,16 @@ namespace platypus
         std::vector<std::string> errors = _errors;
         _errors.clear();
         return errors;
+    }
+
+    std::string AssetManager::popError()
+    {
+        if (_errors.empty())
+            return "";
+
+        std::string error = _errors.back();
+        _errors.pop_back();
+        return error;
     }
 
     // TODO: Figure out better way to deal with asset names!

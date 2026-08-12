@@ -236,6 +236,25 @@ namespace platypus
             return _pButton->getText()->getFullStr();
         }
 
+        bool InputField::getContentInt(int& outValue) const
+        {
+            const std::string content = getContent();
+            try
+            {
+                outValue = std::stoi(content);
+                return true;
+            }
+            catch (const std::invalid_argument& e)
+            {
+                Debug::log(
+                    "Failed to convert " + content + " to int",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+            return false;
+        }
+
         bool InputField::getContentFloat(float& outValue) const
         {
             const std::string content = getContent();

@@ -141,6 +141,14 @@ namespace platypus
             std::vector<UUID_t> meshIDs = { },
             bool storeBuffersHostSide = false
         );
+
+        Model* createModel(
+            const std::string& filepath,
+            const std::vector<Mesh*>& meshes,
+            bool instanced,
+            const std::string& name
+        );
+
         Mesh* createTerrainMesh(
             float tileSize,
             const std::vector<float>& heightmapData,
@@ -242,6 +250,7 @@ namespace platypus
         void finalizeDeserialization();
 
         std::vector<std::string> popErrors();
+        std::string popError();
 
         // TODO: Figure out better way to deal with asset names!
         // Checking is name available is horribly slow atm!
