@@ -301,10 +301,13 @@ namespace platypus
                 // Update the free offsets
                 // If theres more space after the old free offset, "push the cursor forward"
                 // with the new free count
-                const size_t newFreeOffset = nextOffset + 1;
                 const size_t newFreeCount = freeIt->second - 1;
-                if (newFreeCount > 0 && newFreeOffset < _childrenContainer.size())
-                    _freeRanges[nextOffset] = newFreeCount;
+                if (newFreeCount > 0)
+                {
+                    const size_t newFreeOffset = nextOffset + 1;
+                    if (newFreeOffset < _childrenContainer.size())
+                        _freeRanges[nextOffset] = newFreeCount;
+                }
 
                 return currentOffset;
             }
@@ -312,7 +315,8 @@ namespace platypus
 
         PLATYPUS_ASSERT(currentOffset >= 0);
 
-        std::vector<entityID_t> currentChildren(currentCount + 1);
+        const size_t newCount = currentCount + 1;
+        std::vector<entityID_t> currentChildren(newCount);
         const entityID_t* pCurrentChildren = getChildEntities(pChildren);
         memcpy(currentChildren.data(), pCurrentChildren, sizeof(entityID_t) * currentCount);
 
