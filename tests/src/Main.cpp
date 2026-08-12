@@ -1,4 +1,4 @@
-#include "ShadowTestScene.hpp"
+#include "SerializationTestScene.hpp"
 #include <iostream>
 
 
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new ShadowTestScene
+        new SerializationTestScene
     );
     app.run();
     return 0;

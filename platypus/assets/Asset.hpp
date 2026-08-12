@@ -16,6 +16,7 @@ namespace platypus
         ASSET_TYPE_TEXTURE,
         ASSET_TYPE_MATERIAL,
         ASSET_TYPE_FONT,
+        ASSET_TYPE_SKELETON,
         ASSET_TYPE_SKELETAL_ANIMATION_DATA
     };
 
@@ -36,15 +37,7 @@ namespace platypus
         MEMORY_ACCESS_TRANSFER_WRITE_BIT = 0x00001000
     };
 
-    constexpr size_t asset_metadata_name_size = 32; // NOTE: This is probably too short!
-    constexpr size_t asset_metadata_filepath_size = 64;
     constexpr size_t asset_metadata_custom_flags_size = 8;
-
-    constexpr size_t asset_base_serialized_size = sizeof(AssetType) +
-        sizeof(UUID_t) +
-        asset_metadata_custom_flags_size +
-        sizeof(uint8_t) +
-        asset_metadata_name_size;
 
     class AssetManager;
     class Asset
@@ -76,9 +69,7 @@ namespace platypus
 
         virtual ~Asset();
 
-        virtual void serialize(
-            std::vector<char>& targetBuffer
-        ) const { }
+        virtual void serialize(std::vector<char>& targetBuffer) const { }
         virtual size_t getSerializedSize() const { return 0; }
 
         // TODO: Maybe this should be member var of Asset..?
@@ -98,5 +89,6 @@ namespace platypus
         // NOTE: pData must be at least asset_base_serialized_size
         // TODO: Make safer?
         void serializeBase(char* pData) const;
+        size_t getSerializedBaseSize() const;
     };
 }

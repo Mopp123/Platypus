@@ -124,7 +124,7 @@ namespace platypus
         uint8_t shadeless;
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(&specularStrength, pBuf + pos, sizeof(float));
         pos += sizeof(float);
@@ -849,7 +849,6 @@ namespace platypus
         std::vector<char>& targetBuffer
     ) const
     {
-        PLATYPUS_ASSERT(_name.size() <= asset_metadata_name_size);
         const size_t serializedSize = getSerializedSize();
 
         const size_t prevSize = targetBuffer.size();
@@ -857,7 +856,7 @@ namespace platypus
         char* pBuf = targetBuffer.data() + prevSize;
 
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         const float specularStrength = getSpecularStrength();
         memcpy(pBuf + pos, &specularStrength, sizeof(float));
@@ -933,7 +932,7 @@ namespace platypus
 
     size_t Material::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(float) + // specularStrength
             sizeof(float) + // shininess
             sizeof(Vector2f) + // textureOffset
@@ -946,16 +945,6 @@ namespace platypus
             sizeof(UUID_t) * PE_MATERIAL_TEX_CHANNEL_SLOTS + // diffuseTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS]
             sizeof(UUID_t) * PE_MATERIAL_TEX_CHANNEL_SLOTS + // specularTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS]
             sizeof(UUID_t) * PE_MATERIAL_TEX_CHANNEL_SLOTS;  // normalTextureIDs[PE_MATERIAL_TEX_CHANNEL_SLOTS]
-
-        //return sizeof(UUID_t) +
-        //    sizeof(AssetType) +
-        //    asset_metadata_custom_flags_size +
-        //    sizeof(float) * 2 +
-        //    sizeof(Vector2f) * 2 +
-        //    sizeof(uint8_t) * 5 +
-        //    sizeof(UUID_t) +
-        //    sizeof(UUID_t) * PE_MAX_MATERIAL_TEX_CHANNELS * 3 +
-        //    asset_metadata_name_size;
     }
 
     void Material::warnUnassigned(const std::string& beginStr)

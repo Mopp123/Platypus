@@ -398,7 +398,7 @@ namespace platypus
             false,
             false
         );
-        // If this entity has parent, first remove this from being child of the parent
+        // If this entity has parent, remove this from being child of the parent
         if (pParent)
             remove_child(pParent->entityID, entityID);
 
@@ -420,9 +420,10 @@ namespace platypus
             Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
             const entityID_t* pChildEntityIDs = _entityHierarchyManager.getChildEntities(pChildren);
             PLATYPUS_ASSERT(pChildEntityIDs);
-            for (size_t i = 0; i < pChildren->count; ++i)
+            std::vector<entityID_t> childEntityIDs(pChildren->count);
+            memcpy(childEntityIDs.data(), pChildEntityIDs, sizeof(entityID_t) * pChildren->count);
+            for (entityID_t childEntityID : childEntityIDs)
             {
-                const entityID_t childEntityID = *(pChildEntityIDs + i);
                 PLATYPUS_ASSERT(childEntityID != NULL_ENTITY_ID);
                 destroyEntity(childEntityID);
             }
@@ -452,7 +453,27 @@ namespace platypus
             }
         }
         if (!foundName.empty())
+        {
+            Debug::log("___TEST___ERASING ENTITY: '" + foundName + "'");
             _nameEntityMapping.erase(foundName);
+        }
+    }
+
+    void Scene::destroyEntityHierarchy(entityID_t entityID)
+    {
+        void* pChildrenComponent = getComponent(
+            entityID,
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            false,
+            false
+        );
+        if (pChildrenComponent)
+        {
+            Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
+            const entityID_t* pChildIDs = _entityHierarchyManager.getChildEntities(pChildren);
+            for (size_t i = 0; i < pChildren->count; ++i)
+                destroyEntityHierarchy(*(pChildIDs + i));
+        }
     }
 
     void Scene::destroyComponent(entityID_t entityID, ComponentType componentType)
@@ -1025,7 +1046,12 @@ namespace platypus
             }
 
             Entity parentEntity = getEntity(parentEntityUUID);
-            PLATYPUS_ASSERT(parentEntity.id != NULL_ENTITY_ID);
+            if (parentEntity.id == NULL_ENTITY_ID)
+            {
+                Debug::log("WTF!?!?!");
+                PLATYPUS_ASSERT(parentEntity.id != NULL_ENTITY_ID);
+            }
+
             pParent->entityID = parentEntity.id;
         }
 

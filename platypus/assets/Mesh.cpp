@@ -1,5 +1,6 @@
 #include "Mesh.hpp"
 #include "AssetManager.hpp"
+#include "platypus/core/Application.hpp"
 #include "platypus/core/Debug.hpp"
 #include "platypus/Common.h"
 #include <cmath>
@@ -35,8 +36,7 @@ namespace platypus
         Buffer* pVertexBuffer,
         Buffer* pIndexBuffer,
         const Matrix4f& transformationMatrix,
-        Pose bindPose,
-        const std::vector<SkeletalAnimationData*>& animations,
+        UUID_t skeletonID,
         const std::string& name,
         UUID_t id,
         bool persistent
@@ -46,11 +46,9 @@ namespace platypus
         _vertexBufferLayout(vertexBufferLayout),
         _pVertexBuffer(pVertexBuffer),
         _pIndexBuffer(pIndexBuffer),
-        _transformationMatrix(transformationMatrix)
+        _transformationMatrix(transformationMatrix),
+        _skeletonID(skeletonID)
     {
-        // Why are these here and not like the others?
-        _bindPose = bindPose;
-        _animations = animations;
     }
 
     Mesh::Mesh(
@@ -64,15 +62,17 @@ namespace platypus
         uint32_t vertexBufferSize = 0;
         uint32_t indexBufferSize = 0;
         IndexType indexType;
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
         const size_t baseMeshSize = sizeof(uint32_t) +
             sizeof(uint8_t) +
             sizeof(uint32_t) * 2 +
-            sizeof(IndexType);
+            sizeof(IndexType) +
+            sizeof(UUID_t);
 
-        PLATYPUS_ASSERT(bufferPos + asset_base_serialized_size + baseMeshSize < targetBuffer.size());
+        PLATYPUS_ASSERT(bufferPos + baseAssetSerializedSize + baseMeshSize < targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = baseAssetSerializedSize;
 
         memcpy(&_propertyFlags, pBuf + pos, sizeof(uint32_t));
         pos += sizeof(uint32_t);
@@ -90,9 +90,12 @@ namespace platypus
         memcpy(&indexType, pBuf + pos, sizeof(IndexType));
         pos += sizeof(IndexType);
 
+        memcpy(&_skeletonID, pBuf + pos, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
+
         VertexBufferLayout vertexBufferLayout = VertexBufferLayout::deserialize(
             targetBuffer,
-            bufferPos + asset_base_serialized_size + baseMeshSize
+            bufferPos + baseAssetSerializedSize + baseMeshSize
         );
         pos += vertexBufferLayout.getSerializedSize();
 
@@ -161,16 +164,6 @@ namespace platypus
                 return true;
         }
         return false;
-    }
-
-    int32_t Mesh::getAnimationIndex(const std::string& name) const
-    {
-        for (size_t i = 0; i < _animations.size(); ++i)
-        {
-            if (_animations[i]->getName() == name)
-                return i;
-        }
-        return -1;
     }
 
     Mesh* Mesh::generate_terrain(
@@ -362,6 +355,7 @@ namespace platypus
             uint32_t vertexBufferDataSize
             uint32_t indexBufferDataSize
             IndexType indexType
+            UUID_t skeletonAssetID
 
             VertexBufferLayout serialized vbLayout data
 
@@ -370,8 +364,6 @@ namespace platypus
 
         NOTE: Not everything are serialized currently for Meshes!
         TODO: Serialize:
-            *_bindPose?
-            *_animations?
             *_transformationMatrix?
     */
     void Mesh::serialize(
@@ -410,7 +402,7 @@ namespace platypus
         char* pBuf = targetBuffer.data() + prevSize;
 
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(pBuf + pos, &_propertyFlags, sizeof(uint32_t));
         pos += sizeof(uint32_t);
@@ -425,7 +417,7 @@ namespace platypus
         pos += sizeof(uint32_t);
 
         const size_t indexBufferSize = _pIndexBuffer->getTotalSize();
-        const uint32_t indexBufferSizeU32 = static_cast<uint32_t>(indexBufferSize);
+        const uint32_t indexBufferSizeU32 = static_cast<const uint32_t>(indexBufferSize);
         memcpy(pBuf + pos, &indexBufferSizeU32, sizeof(uint32_t));
         pos += sizeof(uint32_t);
 
@@ -450,6 +442,9 @@ namespace platypus
         memcpy(pBuf + pos, &indexType, sizeof(IndexType));
         pos += sizeof(IndexType);
 
+        memcpy(pBuf + pos, &_skeletonID, sizeof(UUID_t));
+        pos += sizeof(UUID_t);
+
         memcpy(pBuf + pos, vertexBufferLayoutData.data(), vertexBufferLayoutData.size());
         pos += vertexBufferLayoutData.size();
 
@@ -459,19 +454,32 @@ namespace platypus
         memcpy(pBuf + pos, _pIndexBuffer->getData(), indexBufferSize);
         pos += indexBufferSize;
 
+        PLATYPUS_ASSERT((pos + prevSize) == targetBuffer.size());
         PLATYPUS_ASSERT(pos == serializedSize);
     }
 
     size_t Mesh::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(uint32_t) + // meshPropertyFlags
             sizeof(uint8_t) + // store hostside buffers on deserialization
             sizeof(uint32_t) + // vertexBufferDataSize
             sizeof(uint32_t) + // indexBufferDataSize
             sizeof(IndexType) + // indexType
+            sizeof(UUID_t) + // skeletonAssetID
             _vertexBufferLayout.getSerializedSize() +
             _pVertexBuffer->getTotalSize() +
             _pIndexBuffer->getTotalSize();
+    }
+
+    Skeleton* Mesh::getSkeleton() const
+    {
+        AssetManager* pAssetManager = Application::get_instance()->getAssetManager();
+        PLATYPUS_ASSERT(pAssetManager);
+        Asset* pSkeletonAsset = pAssetManager->getAsset(_skeletonID, AssetType::ASSET_TYPE_SKELETON);
+        if (pSkeletonAsset)
+            return reinterpret_cast<Skeleton*>(pSkeletonAsset);
+
+        return nullptr;
     }
 }

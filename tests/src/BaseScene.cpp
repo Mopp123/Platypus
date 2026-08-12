@@ -222,9 +222,10 @@ entityID_t BaseScene::createSkinnedMeshEntity(
         scale
     );
 
+    const Skeleton* pSkeleton = pMesh->getSkeleton();
     outJointEntities = create_skeleton(
-        pMesh->getBindPose().joints,
-        pMesh->getBindPose().jointChildMapping
+        pSkeleton->getJoints(),
+        pSkeleton->getJointChildMapping()
     );
     entityID_t rootJointEntity = outJointEntities[0];
     create_renderable3D(

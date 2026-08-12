@@ -10,12 +10,13 @@ namespace platypus
     {
         switch (type)
         {
-            case AssetType::ASSET_TYPE_MESH: return "ASSET_TYPE_MESH";
-            case AssetType::ASSET_TYPE_MODEL: return "ASSET_TYPE_MODEL";
-            case AssetType::ASSET_TYPE_IMAGE: return "ASSET_TYPE_IMAGE";
-            case AssetType::ASSET_TYPE_TEXTURE: return "ASSET_TYPE_TEXTURE";
-            case AssetType::ASSET_TYPE_MATERIAL: return "ASSET_TYPE_MATERIAL";
-            case AssetType::ASSET_TYPE_FONT: return "ASSET_TYPE_FONT";
+            case AssetType::ASSET_TYPE_MESH:        return "ASSET_TYPE_MESH";
+            case AssetType::ASSET_TYPE_MODEL:       return "ASSET_TYPE_MODEL";
+            case AssetType::ASSET_TYPE_IMAGE:       return "ASSET_TYPE_IMAGE";
+            case AssetType::ASSET_TYPE_TEXTURE:     return "ASSET_TYPE_TEXTURE";
+            case AssetType::ASSET_TYPE_MATERIAL:    return "ASSET_TYPE_MATERIAL";
+            case AssetType::ASSET_TYPE_FONT:        return "ASSET_TYPE_FONT";
+            case AssetType::ASSET_TYPE_SKELETON:    return "ASSET_TYPE_SKELETON";
             case AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA: return "ASSET_TYPE_SKELETAL_ANIMATION_DATA";
             default: return "ASSET_TYPE_NONE";
         }
@@ -51,10 +52,15 @@ namespace platypus
     ) :
         _uuidPool(pAssetManager->getUUIDPool())
     {
-        PLATYPUS_ASSERT((bufferPos  + asset_base_serialized_size) <= targetBuffer.size());
+        const size_t minRequiredSize = sizeof(AssetType) +
+            sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
+            sizeof(uint8_t) +
+            sizeof(uint32_t);
+
+        PLATYPUS_ASSERT((bufferPos  + minRequiredSize) <= targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-
         memcpy(&_type, pBuf, sizeof(AssetType));
         size_t pos = sizeof(AssetType);
 
@@ -70,13 +76,15 @@ namespace platypus
         pos += sizeof(uint8_t);
         _persistent = static_cast<bool>(persistent);
 
-        char name[asset_metadata_name_size];
-        // *the serialized name data is empty at indices that aren't used so no need to set name bytes to 0 here
-        memcpy(name, pBuf + pos, asset_metadata_name_size);
-        _name = std::string(name);
-        pos += asset_metadata_name_size;
+        uint32_t nameSizeU32 = 0;
+        memcpy(&nameSizeU32, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+        const size_t nameSize = static_cast<const size_t>(nameSizeU32);
 
-        PLATYPUS_ASSERT(pos == asset_base_serialized_size);
+        char* pNameData = new char[nameSize];
+        memcpy(pNameData, pBuf + pos, nameSize);
+        _name = std::string(pNameData, nameSize);
+        delete[] pNameData;
     }
 
     Asset::~Asset()
@@ -95,26 +103,15 @@ namespace platypus
 
     /*
         Serialized format:
-            AssetType _type
-            UUID_t _id
-            uint64_t _customFlags
-            uint8_t _persistent
-            char _name[asset_metadata_name_size];
+            AssetType type
+            UUID_t id
+            uint64_t customFlags
+            uint8_t persistent
+            uint32_t nameSize
+            char name[nameSize];
     */
     void Asset::serializeBase(char* pData) const
     {
-        if (_name.size() >= asset_metadata_name_size)
-        {
-            Debug::log(
-                "Asset name: " + _name + " is too long for serialization! "
-                "Max serialized asset name size is " + std::to_string(asset_metadata_name_size),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
         memcpy(pData, &_type, sizeof(AssetType));
         size_t pos = sizeof(AssetType);
 
@@ -128,9 +125,20 @@ namespace platypus
         memcpy(pData + pos, &persistent, sizeof(uint8_t));
         pos += sizeof(uint8_t);
 
-        char nameData[asset_metadata_name_size];
-        memset(nameData, 0, asset_metadata_name_size);
-        memcpy(nameData, _name.data(), _name.size());
-        memcpy(pData + pos, nameData, asset_metadata_name_size);
+        const uint32_t nameSize = static_cast<const uint32_t>(_name.size());
+        memcpy(pData + pos, &nameSize, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        memcpy(pData + pos, _name.data(), _name.size());
+    }
+
+    size_t Asset::getSerializedBaseSize() const
+    {
+        return sizeof(AssetType) +
+            sizeof(UUID_t) +
+            asset_metadata_custom_flags_size +
+            sizeof(uint8_t) +
+            sizeof(uint32_t) +
+            _name.size();
     }
 }

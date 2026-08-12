@@ -218,21 +218,28 @@ namespace platypus
     ) :
         Asset(pAssetManager, targetBuffer, bufferPos)
     {
-        const size_t serializedSize = getSerializedSize();
-        PLATYPUS_ASSERT((bufferPos  + serializedSize) <= targetBuffer.size());
+        const size_t baseAssetSerializedSize = getSerializedBaseSize();
+        PLATYPUS_ASSERT((bufferPos  + baseAssetSerializedSize) <= targetBuffer.size());
 
         const char* pBuf = targetBuffer.data() + bufferPos;
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(&_format, pBuf + pos, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
 
-        char filepath[asset_metadata_filepath_size];
-        memcpy(&filepath, pBuf + pos, asset_metadata_filepath_size);
-        pos += asset_metadata_filepath_size;
-        _filepath = std::string(filepath);
+        uint32_t filepathSizeU32 = 0;
+        memcpy(&filepathSizeU32, pBuf + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+        const size_t filepathSize = static_cast<const size_t>(filepathSizeU32);
 
-        PLATYPUS_ASSERT(pos == serializedSize);
+        char* pFilepathData = new char[filepathSize];
+        memcpy(pFilepathData, pBuf + pos, filepathSize);
+        pos += filepathSize;
+        _filepath = std::string(pFilepathData, filepathSize);
+        delete[] pFilepathData;
+
+        const size_t requiredSerializedSize = getSerializedSize();
+        PLATYPUS_ASSERT(pos == requiredSerializedSize);
 
         load(_filepath, _format);
 
@@ -503,36 +510,39 @@ namespace platypus
         Serialized format:
             Asset serialized base data
             ImageFormat format;
-            char filepath[asset_metadata_filepath_size];
+            uint32_t filepathSize
+            char filepath[filepathSize];
     */
     void Image::serialize(
         std::vector<char>& targetBuffer
     ) const
     {
-        PLATYPUS_ASSERT(_filepath.size() <= asset_metadata_filepath_size);
         const size_t prevSize = targetBuffer.size();
         const size_t serializedSize = getSerializedSize();
         targetBuffer.resize(prevSize + serializedSize);
 
         char* pBuf = targetBuffer.data() + prevSize;
         serializeBase(pBuf);
-        size_t pos = asset_base_serialized_size;
+        size_t pos = getSerializedBaseSize();
 
         memcpy(pBuf + pos, &_format, sizeof(ImageFormat));
         pos += sizeof(ImageFormat);
 
-        // Same as above for the filepath
-        memset(pBuf + pos, 0, asset_metadata_filepath_size);
-        memcpy(pBuf + pos, _filepath.data(), _filepath.size());
+        const uint32_t filepathSize = static_cast<uint32_t>(_filepath.size());
+        memcpy(pBuf + pos, &filepathSize, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
 
-        pos += asset_metadata_filepath_size;
+        memcpy(pBuf + pos, _filepath.data(), _filepath.size());
+        pos += _filepath.size();
+
         PLATYPUS_ASSERT(pos == serializedSize);
     }
 
     size_t Image::getSerializedSize() const
     {
-        return asset_base_serialized_size +
+        return getSerializedBaseSize() +
             sizeof(ImageFormat) +
-            asset_metadata_filepath_size;
+            sizeof(uint32_t) +
+            _filepath.size();
     }
 }

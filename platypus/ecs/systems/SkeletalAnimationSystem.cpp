@@ -2,6 +2,7 @@
 #include "platypus/ecs/components/Component.hpp"
 #include "platypus/ecs/components/SkeletalAnimation.hpp"
 #include "platypus/core/Scene.hpp"
+#include "platypus/core/Debug.hpp"
 #include "platypus/core/Timing.hpp"
 
 
@@ -22,15 +23,17 @@ namespace platypus
             if (!shouldUpdate(entity))
                 continue;
 
-            SkeletalAnimation* pAnimationComponent = (SkeletalAnimation*)pScene->getComponent(
+            void* pAnimationComponent = pScene->getComponent(
                 entity.id,
                 ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION
             );
+            PLATYPUS_ASSERT(pAnimationComponent);
+            SkeletalAnimation* pAnimation = reinterpret_cast<SkeletalAnimation*>(pAnimationComponent);
 
-            float& animationTime = pAnimationComponent->time;
-            if (animationTime < pAnimationComponent->length)
+            float& animationTime = pAnimation->time;
+            if (animationTime < pAnimation->length)
                 animationTime += 1.0f * Timing::get_delta_time();
-            else if(pAnimationComponent->mode == AnimationMode::ANIMATION_MODE_LOOP)
+            else if(pAnimation->mode == AnimationMode::ANIMATION_MODE_LOOP)
                 animationTime = 0.0f;
         }
     }

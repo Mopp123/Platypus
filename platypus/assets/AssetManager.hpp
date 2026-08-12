@@ -148,8 +148,15 @@ namespace platypus
             bool generateTangents
         );
 
+        Skeleton* createSkeleton(
+            const std::vector<Joint>& joints,
+            const std::vector<std::vector<uint32_t>>& jointChildMapping,
+            const std::vector<UUID_t>& animationIDs,
+            const std::string& name
+        );
+
         SkeletalAnimationData* createSkeletalAnimation(
-            const KeyframeAnimationData& keyframes
+            const KeyframeAnimationData& animationData
         );
         Font* loadFont(const std::string& filepath, unsigned int pixelSize);
 

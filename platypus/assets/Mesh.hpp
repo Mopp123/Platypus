@@ -36,11 +36,10 @@ namespace platypus
         // Not sure yet how I want to deal with this.
         Matrix4f _transformationMatrix = Matrix4f(1.0f);
 
-        Pose _bindPose;
-
-        // NOTE: Not sure if "assets inside assets" should rather be IDs to those instead of ptrs!
-        //  -> ptrs will become issue when serializing
-        std::vector<SkeletalAnimationData*> _animations;
+        // NOTE:
+        // *This was previously Pose _bindPose!
+        // *Then this was Skeleton* _pSkeleton...
+        UUID_t _skeletonID = NULL_UUID;
 
     public:
         // NOTE: Ownership of vertex and index buffer gets transferred to this Mesh
@@ -51,8 +50,7 @@ namespace platypus
             Buffer* pVertexBuffer,
             Buffer* pIndexBuffer,
             const Matrix4f& transformationMatrix,
-            Pose bindPose,
-            const std::vector<SkeletalAnimationData*>& animations,
+            UUID_t skeletonID,
             const std::string& name = "",
             UUID_t id = NULL_UUID,
             bool persistent = false
@@ -65,9 +63,6 @@ namespace platypus
         ~Mesh();
 
         bool hasTangents() const;
-
-        // returns -1 if not found
-        int32_t getAnimationIndex(const std::string& name) const;
 
         static Mesh* generate_terrain(
             size_t uuidPool,
@@ -83,7 +78,7 @@ namespace platypus
 
         virtual size_t getSerializedSize() const override;
 
-        inline const std::vector<SkeletalAnimationData*>& getAnimations() const { return _animations; }
+        Skeleton* getSkeleton() const;
 
         inline uint32_t getPropertyFlags() const { return _propertyFlags; }
         inline const VertexBufferLayout& getVertexBufferLayout() const { return _vertexBufferLayout; }
@@ -93,9 +88,6 @@ namespace platypus
         inline bool isStoringHostsideBuffersOnDeserialization() const { return _storeHostsideBuffersOnDeserialization; }
         inline void storeHostsideBuffersOnDeserialization(bool arg) { _storeHostsideBuffersOnDeserialization = arg; }
         inline const Matrix4f getTransformationMatrix() const { return _transformationMatrix; }
-        inline bool hasBindPose() const { return !_bindPose.joints.empty(); }
-        inline size_t getJointCount() const { return _bindPose.joints.size(); }
-        inline const Pose& getBindPose() const { return _bindPose; }
-        inline const Pose* getBindPosePtr() const { return &_bindPose; }
+        inline UUID_t getSkeletonID() const { return _skeletonID; }
     };
 }

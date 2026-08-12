@@ -568,8 +568,9 @@ namespace platypus
         }
 
         std::vector<MeshData> loadedMeshes;
-        std::vector<KeyframeAnimationData> animationData;
-        if (!load_gltf_model(filepath, loadedMeshes, animationData))
+        std::vector<SkeletonData> loadedSkeletons;
+        // NOTE: This is pretty fragile with animations and skinned meshes atm!
+        if (!load_gltf_model(filepath, loadedMeshes, loadedSkeletons))
         {
             Debug::log(
                 "Failed to load model using filepath: " + filepath,
@@ -580,10 +581,10 @@ namespace platypus
             return nullptr;
         }
 
-        if (!animationData.empty() && instanced)
+        if (!loadedSkeletons.empty() && instanced)
         {
             Debug::log(
-                "Instancing not supported for skinned meshes",
+                "Instancing not supported for skinned/animated meshes",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
@@ -615,7 +616,7 @@ namespace platypus
             );
 
             uint32_t meshPropertyFlags = 0;
-            if (!animationData.empty())
+            if (!loadedSkeletons.empty())
                 meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_SKINNED);
             else
                 meshPropertyFlags |= static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);
@@ -648,9 +649,31 @@ namespace platypus
             if (i < meshIDs.size())
                 meshID = meshIDs[i];
 
-            std::vector<SkeletalAnimationData*> animationAssets(animationData.size());
-            for (size_t i = 0; i < animationData.size(); ++i)
-                animationAssets[i] = createSkeletalAnimation(animationData[i]);
+            UUID_t skeletonAssetID = NULL_UUID;
+            if (i < loadedSkeletons.size())
+            {
+                const SkeletonData& skeletonData = loadedSkeletons[i];
+
+                const std::string& skeletonName = skeletonData.name;
+                const size_t animationCount = skeletonData.animations.size();
+                std::vector<UUID_t> animationIDs(animationCount);
+                for (size_t animationIndex = 0; animationIndex < animationCount; ++animationIndex)
+                {
+                    SkeletalAnimationData* pSkeletalAnimationAsset = createSkeletalAnimation(
+                        skeletonData.animations[animationIndex]
+                    );
+                    animationIDs[animationIndex] = pSkeletalAnimationAsset->getID();
+                }
+
+                const Pose& skeletonPose = skeletonData.bindPose;
+                Skeleton* pSkeleton = createSkeleton(
+                    skeletonPose.joints,
+                    skeletonPose.jointChildMapping,
+                    animationIDs,
+                    skeletonName
+                );
+                skeletonAssetID = pSkeleton->getID();
+            }
 
             Mesh* pMesh = new Mesh(
                 _uuidPool,
@@ -659,8 +682,7 @@ namespace platypus
                 pVertexBuffer,
                 pIndexBuffer,
                 meshData.transformationMatrix,
-                meshData.bindPose,
-                animationAssets,
+                skeletonAssetID,
                 meshName,
                 meshID
             );
@@ -691,13 +713,43 @@ namespace platypus
         return pTerrainMesh;
     }
 
-    SkeletalAnimationData* AssetManager::createSkeletalAnimation(
-        const KeyframeAnimationData& keyframes
+    Skeleton* AssetManager::createSkeleton(
+        const std::vector<Joint>& joints,
+        const std::vector<std::vector<uint32_t>>& jointChildMapping,
+        const std::vector<UUID_t>& animationIDs,
+        const std::string& name
     )
     {
+        Skeleton* pSkeleton = new Skeleton(
+            _uuidPool,
+            joints,
+            jointChildMapping,
+            animationIDs,
+            name
+        );
+        _assets[pSkeleton->getID()] = pSkeleton;
+        return pSkeleton;
+    }
+
+    SkeletalAnimationData* AssetManager::createSkeletalAnimation(
+        const KeyframeAnimationData& animationData
+    )
+    {
+        if (assetExists(animationData.name))
+        {
+            const std::string errStr = "Animation asset with name: '" + animationData.name + "' already exists!";
+            _errors.push_back(errStr);
+            Debug::log(
+                errStr,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            return nullptr;
+        }
+
         SkeletalAnimationData* pAnimationData = new SkeletalAnimationData(
             _uuidPool,
-            keyframes
+            animationData
         );
         _assets[pAnimationData->getID()] = pAnimationData;
         return pAnimationData;
@@ -986,7 +1038,7 @@ namespace platypus
         if (it != _assets.end())
         {
             Debug::log(
-                "Asset with UUID: " + std::to_string(assetID) + " and name: " + pAsset->getName() +
+                "Asset with UUID: " + std::to_string(assetID) + " and name: " + pAsset->getName() + " "
                 "already exists in AssetManager",
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
@@ -1105,6 +1157,8 @@ namespace platypus
             case AssetType::ASSET_TYPE_IMAGE:    pAsset = new Image(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_TEXTURE:  pAsset = new Texture(this, serializedData, bufferReadPos); break;
             case AssetType::ASSET_TYPE_MATERIAL: pAsset = new Material(this, serializedData, bufferReadPos); break;
+            case AssetType::ASSET_TYPE_SKELETON: pAsset = new Skeleton(this, serializedData, bufferReadPos); break;
+            case AssetType::ASSET_TYPE_SKELETAL_ANIMATION_DATA: pAsset = new SkeletalAnimationData(this, serializedData, bufferReadPos); break;
             default: {
                 Debug::log(
                     "Invalid asset type: " + asset_type_to_string(type) + " for deserialization",

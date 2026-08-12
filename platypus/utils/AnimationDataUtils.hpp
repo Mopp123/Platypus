@@ -36,6 +36,7 @@ namespace platypus
         Quaternion rotation;
     };
 
+    // TODO: Add scale keys
     struct JointAnimationData
     {
         std::vector<TranslationKey> translations;
@@ -49,5 +50,12 @@ namespace platypus
         // Indexing of these follows the bind pose's joints' indexing
         // which this animation is ment for.
         std::vector<JointAnimationData> keyframes;
+    };
+
+    struct SkeletonData
+    {
+        std::string name;
+        Pose bindPose;
+        std::vector<KeyframeAnimationData> animations;
     };
 }

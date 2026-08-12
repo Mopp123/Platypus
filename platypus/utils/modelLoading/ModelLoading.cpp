@@ -31,7 +31,7 @@ namespace platypus
     bool load_gltf_model(
         const std::string& filepath,
         std::vector<MeshData>& outMeshes,
-        std::vector<KeyframeAnimationData>& outAnimations
+        std::vector<SkeletonData>& outSkeletons
     )
     {
         tinygltf::Model gltfModel;
@@ -98,6 +98,7 @@ namespace platypus
         for (size_t i = 0; i < modelNodes.size(); ++i)
         {
             const tinygltf::Node& node = modelNodes[i];
+            Debug::log("___TEST___GLTF NODE NAME = " + node.name);
             // NOTE: Could also loop just the gltfModel.meshes
             // BUT atm I want to get also the meshes' transform from their node
             if (node.mesh == -1)
@@ -168,17 +169,19 @@ namespace platypus
         {
             // Load skeleton (bind pose)
             std::unordered_map<int, int> nodeJointMapping;
-            outMeshes[i].bindPose = load_gltf_joints(
+            Pose bindPose = load_gltf_joints(
                 gltfModel,
                 i,
                 nodeJointMapping
             );
-
             // Load animations
-            outAnimations = load_gltf_animations(
+            std::vector<KeyframeAnimationData> animations = load_gltf_animations(
                 gltfModel,
                 nodeJointMapping
             );
+
+            const std::string& armatureName = gltfModel.skins[i].name;
+            outSkeletons.push_back({ armatureName, bindPose, animations });
         }
 
         return true;

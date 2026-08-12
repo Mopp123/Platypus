@@ -818,7 +818,6 @@ namespace platypus
             sizeof(UUID_t)
         );
         entityID_t parentEntityID = pScene->getEntity(parentUUID).id;
-        // TODO: Make below actually possible!
         if (parentEntityID == NULL_ENTITY_ID)
             pScene->addToDeserializationParentIDQuery(entityID, parentUUID);
 

@@ -78,6 +78,7 @@ namespace platypus
         // NOTE: getEntityNames() is slow as fuck! DO NOT RELY ON THIS AT "SCENE RUNTIME"
         std::vector<std::string> getEntityNames() const;
         void destroyEntity(entityID_t entityID);
+        void destroyEntityHierarchy(entityID_t entityID);
         void destroyComponent(entityID_t entityID, ComponentType componentType);
 
         // TODO: All getComponent things could be optimized?

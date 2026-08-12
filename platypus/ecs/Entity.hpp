@@ -112,6 +112,8 @@ namespace platypus
         int32_t findFreeRange(size_t requiredCount);
         bool validateFreeRange(size_t offset, size_t count) const;
 
+        // Makes all children to be contiguous
+        void packChildren(size_t beginOffset, size_t freeOffset, size_t count);
         // NOTE: this is too complicated, inefficient and dumb
         // TODO: Improve, optimize ..or something...
         void packFreeRanges();

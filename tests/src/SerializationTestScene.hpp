@@ -4,14 +4,14 @@
 #include "BaseScene.hpp"
 
 
-class MeshSerializationTestScene : public BaseScene
+class SerializationTestScene : public BaseScene
 {
 private:
     platypus::CameraController _camController;
 
 public:
-    MeshSerializationTestScene();
-    ~MeshSerializationTestScene();
+    SerializationTestScene();
+    ~SerializationTestScene();
 
     virtual void init();
     virtual void update();
