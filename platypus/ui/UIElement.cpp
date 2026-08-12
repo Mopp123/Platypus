@@ -637,6 +637,9 @@ namespace platypus
         void UIElement::updatePosition(Vector2f& cumulatedScale)
         {
             Layout* pLayout = _managerRef.getLayout(_layoutID);
+            if (!isActive() && !(pLayout->effectOnParentFlags & EffectOnParentFlagBits::AFFECT_WHILE_INACTIVE))
+                return;
+
             Vector2f padding;
             float borderThickness = 0.0f;
             HorizontalAlignment horizontalAlignment = pLayout->horizontalAlignment;
@@ -693,26 +696,6 @@ namespace platypus
             // Add the cumulated elements scale so it goes correctly after the previous element
             // UPDATE TO BELOW: Even if the current elem doesn't affect pos, its own positioning
             // should take the cumulated pos/scale into account!
-            // TODO: Remove below commented out section...
-            /*
-            if (pLayout->effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION)
-            {
-                if (expandElements == ExpandElements::DOWN)
-                {
-                    position.y += (cumulatedScale.y);
-                    cumulatedScale.y = cumulatedScale.y + scale.y + elementGap;
-                    if (scale.x > cumulatedScale.x)
-                        cumulatedScale.x = scale.x + padding.x + borderThickness;
-                }
-                else if (expandElements == ExpandElements::RIGHT)
-                {
-                    position.x += (cumulatedScale.x);
-                    cumulatedScale.x = cumulatedScale.x + scale.x + elementGap;
-                    if (scale.y > cumulatedScale.y)
-                        cumulatedScale.y = scale.y + padding.y + borderThickness;
-                }
-            }
-            */
             bool incrementPos = pLayout->effectOnParentFlags & EffectOnParentFlagBits::INCREMENT_POSITION;
             if (expandElements == ExpandElements::DOWN)
             {
