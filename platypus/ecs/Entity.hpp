@@ -13,12 +13,11 @@ namespace platypus
 {
     class Scene;
 
-    constexpr size_t serialized_entity_name_size = 64;
-    constexpr size_t serialized_entity_size =
+    constexpr size_t serialized_entity_base_size =
         sizeof(UUID_t) +
-        sizeof(uint64_t) +
-        sizeof(uint8_t) +
-        serialized_entity_name_size;
+        sizeof(uint64_t) + // component mask
+        sizeof(uint8_t) + // active
+        sizeof(uint32_t); // name size
 
     constexpr size_t serialized_entities_header_size = sizeof(uint32_t);
 
@@ -63,14 +62,16 @@ namespace platypus
     // NOTE: Doesn't work if the mask value's size changes!
     size_t get_component_count(uint64_t componentMask);
 
+    size_t get_serialized_entity_size(const Scene* pScene, const Entity& entity);
     // NOTE:
     // *entityID_t not included in serialized format, ONLY THE UUID!
-    // *Should we rather return the UUID instead of the entityID_t here?
-    std::vector<char> serialize_entity(const Entity& entity, const std::string& entityName);
+    std::vector<char> serialize_entity(
+        const Scene* pScene,
+        const Entity& entity
+    );
     void deserialize_entity(
         Scene* pScene,
         Entity& outEntity,
-        size_t dataSize,
         const void* pData
     );
 

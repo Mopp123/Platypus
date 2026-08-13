@@ -840,8 +840,7 @@ namespace platypus
         for (entityID_t entityID : toSerialize)
         {
             const Entity& entity = getEntity(entityID);
-            const std::string entityName = getEntityName(entity.id);
-            std::vector<char> entityData = serialize_entity(entity, getEntityName(entityID));
+            std::vector<char> entityData = serialize_entity(this, entity);
             serializedData.resize(serializedData.size() + entityData.size());
             memcpy(serializedData.data() + pos, entityData.data(), entityData.size());
             pos += entityData.size();
@@ -849,7 +848,7 @@ namespace platypus
             std::unordered_map<ComponentType, const void*> components = getComponents(entityID);
             Debug::log(
                 "___TEST___serializing " + std::to_string(components.size()) + " components "
-                "for entity: '" + entityName + "'"
+                "for entity: '" + getEntityName(entity.id) + "'"
             );
             std::unordered_map<ComponentType, const void*>::const_iterator it;
             for (it = components.begin(); it != components.end(); ++it)
@@ -903,18 +902,19 @@ namespace platypus
         size_t& bufferReadEndPos
     )
     {
+        const char* pData = serializedData.data();
+
         const size_t serializedDataSize = serializedData.size();
         size_t beginReadPos = bufferReadPos;
-        PLATYPUS_ASSERT((bufferReadPos + serialized_entity_size) <= serializedDataSize);
-        const char* pData = serializedData.data();
+
         Entity entity;
         deserialize_entity(
             this,
             entity,
-            serialized_entity_size,
             pData + bufferReadPos
         );
-        bufferReadPos += serialized_entity_size;
+        bufferReadPos += get_serialized_entity_size(this, entity);
+        PLATYPUS_ASSERT(bufferReadPos <= serializedData.size());
 
         const size_t componentCount = get_component_count(entity.componentMask);
         Debug::log(
@@ -969,7 +969,6 @@ namespace platypus
     )
     {
         const size_t serializedDataSize = serializedData.size();
-        PLATYPUS_ASSERT((serializedDataPos + sizeof(uint32_t)) <= serializedDataSize);
         const char* pData = serializedData.data() + serializedDataPos;
         uint32_t entityCount = 0;
         memcpy(
@@ -986,10 +985,9 @@ namespace platypus
             deserialize_entity(
                 this,
                 entity,
-                serialized_entity_size,
                 pData + pos
             );
-            pos += serialized_entity_size;
+            pos += get_serialized_entity_size(this, entity);
 
             size_t componentCount = get_component_count(entity.componentMask);
             for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)

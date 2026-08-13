@@ -103,40 +103,57 @@ namespace platypus
         return count;
     }
 
-
-    std::vector<char> serialize_entity(const Entity& entity, const std::string& entityName)
+    size_t get_serialized_entity_size(const Scene* pScene, const Entity& entity)
     {
-        size_t nameSize = entityName.size();
-        PLATYPUS_ASSERT(nameSize <= serialized_entity_name_size);
+        const std::string name = pScene->getEntityName(entity.id);
+        return serialized_entity_base_size + name.size();
+    }
 
-        std::vector<char> serializedData(serialized_entity_size);
-        memset(serializedData.data(), 0, serialized_entity_size);
+    std::vector<char> serialize_entity(
+        const Scene* pScene,
+        const Entity& entity
+    )
+    {
+        const size_t serializedSize = get_serialized_entity_size(pScene, entity);
+        std::vector<char> serializedData(serializedSize);
+        char* pBuf = serializedData.data();
         memcpy(
-            serializedData.data(),
+            pBuf,
             &entity.uuid,
             sizeof(UUID_t)
         );
         size_t pos = sizeof(UUID_t);
 
         memcpy(
-            serializedData.data() + pos,
+            pBuf + pos,
             &entity.componentMask,
             sizeof(uint64_t)
         );
         pos += sizeof(uint64_t);
 
         memcpy(
-            serializedData.data() + pos,
+            pBuf + pos,
             &entity.active,
             sizeof(uint8_t)
         );
         pos += sizeof(uint8_t);
 
+        const std::string name = pScene->getEntityName(entity.id);
+        const uint32_t nameSizeU32 = static_cast<const uint32_t>(name.size());
         memcpy(
-            serializedData.data() + pos,
-            entityName.data(),
-            nameSize
+            pBuf + pos,
+            &nameSizeU32,
+            sizeof(uint32_t)
         );
+        pos += sizeof(uint32_t);
+
+        memcpy(
+            pBuf + pos,
+            name.data(),
+            name.size()
+        );
+        pos += name.size();
+        PLATYPUS_ASSERT(pos == serializedSize);
 
         return serializedData;
     }
@@ -145,17 +162,11 @@ namespace platypus
     void deserialize_entity(
         Scene* pScene,
         Entity& outEntity,
-        size_t dataSize,
         const void* pData
     )
     {
-        PLATYPUS_ASSERT(dataSize == serialized_entity_size);
-
+        const char* pBuf = reinterpret_cast<const char*>(pData);
         UUID_t uuid;
-        uint64_t componentMask;
-        uint8_t active;
-        char name[serialized_entity_name_size];
-
         memcpy(
             &uuid,
             pData,
@@ -163,34 +174,53 @@ namespace platypus
         );
         size_t pos = sizeof(UUID_t);
 
+        uint64_t componentMask;
         memcpy(
             &componentMask,
-            reinterpret_cast<const char*>(pData) + pos,
+            pBuf + pos,
             sizeof(uint64_t)
         );
         pos += sizeof(uint64_t);
 
+        uint8_t active;
         memcpy(
             &active,
-            reinterpret_cast<const char*>(pData) + pos,
+            pBuf + pos,
             sizeof(uint8_t)
         );
         pos += sizeof(uint8_t);
 
+        uint32_t nameSizeU32 = 0;
         memcpy(
-            name,
-            reinterpret_cast<const char*>(pData) + pos,
-            serialized_entity_name_size
+            &nameSizeU32,
+            pBuf + pos,
+            sizeof(uint32_t)
         );
-        std::string nameStr(name);
+        pos += sizeof(uint32_t);
+
+        const size_t nameSize = static_cast<const size_t>(nameSizeU32);
+        std::string name;
+        if (nameSize > 0)
+        {
+            char* pNameData = new char[nameSize];
+            memcpy(
+                pNameData,
+                pBuf + pos,
+                nameSize
+            );
+            pos += nameSize;
+            name = std::string(pNameData, nameSize);
+            delete[] pNameData;
+        }
 
         // NOTE: atm assuming that all written entities are in correct order
         //  -> scene assigns the id
         //  TODO: Add names for serialized entities!
-        entityID_t entityID = pScene->createEntity(nameStr, uuid);
+        entityID_t entityID = pScene->createEntity(name, uuid);
         pScene->setComponentMask(entityID, componentMask);
         pScene->setEntityActive(entityID, static_cast<bool>(active));
         outEntity = pScene->getEntity(uuid);
+        PLATYPUS_ASSERT(pos == get_serialized_entity_size(pScene, outEntity));
     }
 
 
