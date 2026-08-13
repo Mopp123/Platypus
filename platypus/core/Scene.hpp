@@ -31,7 +31,8 @@ namespace platypus
 
         std::vector<System*> _systems;
         std::vector<Entity> _entities;
-        std::unordered_map<std::string, size_t> _nameEntityMapping;
+
+        std::unordered_map<entityID_t, std::string> _entityNameMapping;
 
         std::queue<entityID_t> _freeEntityIDs;
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
@@ -61,22 +62,13 @@ namespace platypus
         entityID_t createEntity(const std::string& name = "", UUID_t explicitUUID = NULL_UUID);
         Entity getEntity(entityID_t entity) const;
         Entity getEntity(UUID_t entityUUID) const;
-        Entity getEntity(const std::string& name) const;
         std::string getEntityName(entityID_t entity) const;
-        void setEntityName(const std::string& currentName, const std::string& newName);
-        // Used to add new name for entity, if doesn't have one yet
-        void addEntityName(entityID_t entity, const std::string& name);
+        void setEntityName(entityID_t entity, const std::string& name);
         void setEntityActive(entityID_t entity, bool arg);
         bool isEntityActive(entityID_t entity) const;
         bool entityExists(entityID_t entity) const;
-        bool entityExists(const std::string& name) const;
         inline const std::vector<Entity>& getEntities() const { return _entities; }
-        // TODO:
-        // *Make getEntityNames() safer!
-        // *Get rid of getEntityNames() when figuring out some more coherent system with
-        // entity names!
-        // NOTE: getEntityNames() is slow as fuck! DO NOT RELY ON THIS AT "SCENE RUNTIME"
-        std::vector<std::string> getEntityNames() const;
+
         void destroyEntity(entityID_t entityID);
         void destroyEntityHierarchy(entityID_t entityID);
         void destroyComponent(entityID_t entityID, ComponentType componentType);
