@@ -57,7 +57,7 @@ void ShadowTestScene::init()
     {
         heightmap[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
     }
-    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, heightmap, true, true);
+    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, heightmap, true, true, false);
 
     entityID_t terrainEntity = createEntity();
     create_transform(
@@ -173,9 +173,16 @@ void ShadowTestScene::init()
         "AnimatedModel"
     );
     Mesh* pSkinnedMesh = pAnimatedModel->getMeshes()[0];
-    const std::vector<SkeletalAnimationData*>& animations = pSkinnedMesh->getAnimations();
-    SkeletalAnimationData* pAnimationAsset1 = animations[0];
-    SkeletalAnimationData* pAnimationAsset2 = animations[1];
+
+    Skeleton* pSkeleton = pSkinnedMesh->getSkeleton();
+    std::vector<UUID_t> skeletalAnimationAssetIDs = pSkeleton->getAnimationIDs();
+
+    SkeletalAnimationData* pAnimationAsset1 = dynamic_cast<SkeletalAnimationData*>(
+        pAssetManager->getAsset(skeletalAnimationAssetIDs[0])
+    );
+    SkeletalAnimationData* pAnimationAsset2 = dynamic_cast<SkeletalAnimationData*>(
+        pAssetManager->getAsset(skeletalAnimationAssetIDs[1])
+    );
 
     int area = 2;
     float spacing = 3.0f;

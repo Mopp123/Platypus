@@ -7,5 +7,4 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/TerrainTestScene.cpp
     #${CMAKE_CURRENT_LIST_DIR}/UITestScene.cpp
     ${CMAKE_CURRENT_LIST_DIR}/WaterTestScene.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/SerializationTestScene.cpp
 )

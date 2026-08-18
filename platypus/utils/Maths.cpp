@@ -57,6 +57,11 @@ namespace platypus
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
     }
 
+    std::string Vector2f::toStrippedString() const
+    {
+        return to_string(x) + "," + to_string(y);
+    }
+
 
     float Vector3f::dotp(const Vector3f& other) const
     {
@@ -668,5 +673,14 @@ namespace platypus
         matrix[2 + 3 * 4] = -((2.0f * zFar * zNear) / (zFar - zNear));
         matrix[3 + 3 * 4] = 0.0f;
         return matrix;
+    }
+
+
+    std::string to_string(float value)
+    {
+        std::string result = std::to_string(value);
+        result.erase(result.find_last_not_of('0') + 1, std::string::npos);
+        result.erase(result.find_last_not_of('.') + 1, std::string::npos);
+        return result;
     }
 }

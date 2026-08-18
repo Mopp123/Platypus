@@ -519,7 +519,8 @@ namespace platypus
         const void* pIndicesData,
         size_t indicesElementSize,
         size_t indicesLength,
-        uint32_t meshPropertyFlags
+        uint32_t meshPropertyFlags,
+        bool storeHostsideBuffersOnDeserialization
     )
     {
         Buffer* pVertexBuffer = new Buffer(
@@ -548,8 +549,30 @@ namespace platypus
             { }, // bind pose
             { } // animations
         );
+        pMesh->storeHostsideBuffersOnDeserialization(storeHostsideBuffersOnDeserialization);
         _assets[pMesh->getID()] = pMesh;
         return pMesh;
+    }
+
+    Mesh* AssetManager::createTerrainMesh(
+        float tileSize,
+        const std::vector<float>& heightmapData,
+        bool dynamic,
+        bool generateTangents,
+        bool storeHostSideBuffers
+    )
+    {
+        Mesh* pTerrainMesh = Mesh::generate_terrain(
+            _uuidPool,
+            tileSize,
+            heightmapData,
+            dynamic,
+            generateTangents,
+            storeHostSideBuffers
+        );
+        pTerrainMesh->storeHostsideBuffersOnDeserialization(storeHostSideBuffers);
+        _assets[pTerrainMesh->getID()] = pTerrainMesh;
+        return pTerrainMesh;
     }
 
     Model* AssetManager::loadModel(
@@ -718,24 +741,6 @@ namespace platypus
         );
         _assets[pModel->getID()] = pModel;
         return pModel;
-    }
-
-    Mesh* AssetManager::createTerrainMesh(
-        float tileSize,
-        const std::vector<float>& heightmapData,
-        bool dynamic,
-        bool generateTangents
-    )
-    {
-        Mesh* pTerrainMesh = Mesh::generate_terrain(
-            _uuidPool,
-            tileSize,
-            heightmapData,
-            dynamic,
-            generateTangents
-        );
-        _assets[pTerrainMesh->getID()] = pTerrainMesh;
-        return pTerrainMesh;
     }
 
     Skeleton* AssetManager::createSkeleton(

@@ -74,7 +74,7 @@ void TerrainTestScene::init()
         _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
         _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
     }
-    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, true, true);
+    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, true, true, false);
 
     entityID_t terrainEntity = createEntity();
     create_transform(

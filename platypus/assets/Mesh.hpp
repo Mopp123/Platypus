@@ -69,7 +69,8 @@ namespace platypus
             float tileSize,
             const std::vector<float>& heightmapData,
             bool dynamic,
-            bool generateTangents
+            bool generateTangents,
+            bool storeHostSideBuffers
         );
 
         virtual void serialize(

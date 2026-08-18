@@ -171,7 +171,8 @@ namespace platypus
         float tileSize,
         const std::vector<float>& heightmapData,
         bool dynamic,
-        bool generateTangents
+        bool generateTangents,
+        bool storeHostSideBuffers
     )
     {
         const float minTileSize = 0.05f;
@@ -303,7 +304,6 @@ namespace platypus
 
         uint32_t bufferUsageFlags = BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT;
         BufferUpdateFrequency updateFrequency = BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC;
-        bool storeHostSide = false;
         if (dynamic)
         {
             // NOTE: Too inefficient, not having mem device local in case of dynamic terrain?
@@ -318,7 +318,7 @@ namespace platypus
             vertexCount,
             bufferUsageFlags,
             updateFrequency,
-            storeHostSide
+            storeHostSideBuffers
         );
         Buffer* pIndexBuffer = new Buffer(
             indices.data(),
@@ -326,7 +326,7 @@ namespace platypus
             indices.size(),
             BufferUsageFlagBits::BUFFER_USAGE_INDEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT,
             BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
-            false // store host side
+            storeHostSideBuffers
         );
 
         uint32_t propertyFlags = static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC);

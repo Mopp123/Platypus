@@ -39,7 +39,7 @@ void WaterTestScene::init()
     float terrainTileScale = 2.0f;
     std::vector<float> heightmap = generateHeightmap(pAssetManager, "assets/textures/Heightmap.png", 10.0f);
     int terrainTilesPerRow = sqrt(heightmap.size());
-    Mesh* pTerrainMesh = pAssetManager->createTerrainMesh(terrainTileScale, heightmap, true, true);
+    Mesh* pTerrainMesh = pAssetManager->createTerrainMesh(terrainTileScale, heightmap, true, true, false);
 
     entityID_t terrainEntity = createEntity();
     create_transform(

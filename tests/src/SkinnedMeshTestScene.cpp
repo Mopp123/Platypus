@@ -122,9 +122,16 @@ void SkinnedMeshTestScene::init()
     );
 
     Mesh* pAnimatedMesh = pAnimatedModel->getMeshes()[0];
-    //_pIdleAnimationAsset = pAssetManager->createSkeletalAnimation(animations[0]);
-    //_pRunAnimationAsset = pAssetManager->createSkeletalAnimation(animations[1]);
-    const std::vector<SkeletalAnimationData*>& animations = pAnimatedMesh->getAnimations();
+    Skeleton* pSkeleton = pAnimatedMesh->getSkeleton();
+    std::vector<UUID_t> skeletalAnimationAssetIDs = pSkeleton->getAnimationIDs();
+    std::vector<SkeletalAnimationData*> animations(skeletalAnimationAssetIDs.size());
+    for (size_t i = 0; i < skeletalAnimationAssetIDs.size(); ++i)
+    {
+        animations[i] = dynamic_cast<SkeletalAnimationData*>(
+            pAssetManager->getAsset(skeletalAnimationAssetIDs[i])
+        );
+    }
+
     _pIdleAnimationAsset = animations[0];
     _pRunAnimationAsset = animations[1];
 

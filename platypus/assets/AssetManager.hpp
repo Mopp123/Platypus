@@ -120,7 +120,15 @@ namespace platypus
             const void* pIndicesData,
             size_t indicesElementSize,
             size_t indicesLength,
-            uint32_t meshPropertyFlags
+            uint32_t meshPropertyFlags,
+            bool storeHostsideBuffersOnDeserialization
+        );
+        Mesh* createTerrainMesh(
+            float tileSize,
+            const std::vector<float>& heightmapData,
+            bool dynamic,
+            bool generateTangents,
+            bool storeHostSideBuffers
         );
         // TODO: Way to load "scenes" containing skinned and non skinned meshes
         // TODO: Remove below commented out funcs -> should rather use the loadModel instead!
@@ -147,13 +155,6 @@ namespace platypus
             const std::vector<Mesh*>& meshes,
             bool instanced,
             const std::string& name
-        );
-
-        Mesh* createTerrainMesh(
-            float tileSize,
-            const std::vector<float>& heightmapData,
-            bool dynamic,
-            bool generateTangents
         );
 
         Skeleton* createSkeleton(

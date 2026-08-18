@@ -41,6 +41,7 @@ namespace platypus
         bool operator!=(const Vector2f& other) const;
 
         std::string toString() const;
+        std::string toStrippedString() const;
     };
 
 
@@ -187,4 +188,6 @@ namespace platypus
         float fov,
         float zNear, float zFar
     );
+
+    std::string to_string(float value);
 }
