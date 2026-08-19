@@ -147,7 +147,8 @@ void WaterTestScene::init()
         planeIndices.data(),
         sizeof(uint32_t),
         planeIndices.size(),
-        static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)
+        static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC),
+        false
     );
 
     Texture* pWaterTexture = pAssetManager->loadTexture(

@@ -88,22 +88,23 @@ namespace platypus
             UIManager& uiManager,
             Font* pDefaultFont,
             ExpandElements fieldDirection, // is the field to the left or below the info txt
+            float width,
             Layout** ppRootLayout,
             Layout** ppFieldLayout
         )
         {
             Layout* pRootLayout = uiManager.createLayout();
             pRootLayout->expandElements = fieldDirection;
+            pRootLayout->elementGap = 2.0f;
 
             float charHeight = static_cast<float>(pDefaultFont->getFittingHeight());
 
             Layout* pFieldLayout = uiManager.createLayout();
             pFieldLayout->expandElements = ExpandElements::RIGHT;
 
-            // NOTE: Atm usign 300px
-            // *Should scale be overridden in order to use same layout for differently scaled
+            // NOTE: Should scale be overridden in order to use same layout for differently scaled
             // InputFields?
-            pFieldLayout->scale = { 300, charHeight };
+            pFieldLayout->scale = { width, charHeight };
             pFieldLayout->colors.base = { 0.1f, 0.1f, 0.1f, 1.0f };
             pFieldLayout->colors.hover = { 0.3f, 0.3f, 0.3f, 1.0f };
             pFieldLayout->colors.selected = { 0.125f, 0.125f, 0.125f, 1.0f };

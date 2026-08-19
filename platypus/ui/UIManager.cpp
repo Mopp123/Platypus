@@ -51,16 +51,36 @@ namespace platypus
                 *this,
                 pDefaultFont,
                 ExpandElements::DOWN,
-                &_pDefaultInputFieldRootLayout,
-                &_pDefaultInputFieldLayout
+                _defaultInputFieldWidth,
+                &_defaultInputFieldRootLayouts[DefaultInputFieldType::MEDIUM_VERTICAL],
+                &_defaultInputFieldLayouts[DefaultInputFieldType::MEDIUM_VERTICAL]
             );
             create_default_input_field_layout(
                 *this,
                 pDefaultFont,
                 ExpandElements::RIGHT,
-                &_pDefaultHorizontalInputFieldRootLayout,
-                &_pDefaultHorizontalInputFieldLayout
+                _defaultInputFieldWidth,
+                &_defaultInputFieldRootLayouts[DefaultInputFieldType::MEDIUM_HORIZONTAL],
+                &_defaultInputFieldLayouts[DefaultInputFieldType::MEDIUM_HORIZONTAL]
             );
+
+            create_default_input_field_layout(
+                *this,
+                pDefaultFont,
+                ExpandElements::DOWN,
+                _defaultSmallInputFieldWidth,
+                &_defaultInputFieldRootLayouts[DefaultInputFieldType::SMALL_VERTICAL],
+                &_defaultInputFieldLayouts[DefaultInputFieldType::SMALL_VERTICAL]
+            );
+            create_default_input_field_layout(
+                *this,
+                pDefaultFont,
+                ExpandElements::RIGHT,
+                _defaultSmallInputFieldWidth,
+                &_defaultInputFieldRootLayouts[DefaultInputFieldType::SMALL_HORIZONTAL],
+                &_defaultInputFieldLayouts[DefaultInputFieldType::SMALL_HORIZONTAL]
+            );
+
             create_default_input_field_cursor_layout(
                 *this,
                 pDefaultFont,
@@ -389,19 +409,19 @@ namespace platypus
             return pInputField;
         }
 
-        InputField* UIManager::createInputField(
+        InputField* UIManager::createDefaultInputField(
             UIElement* pParent,
             const std::string& infoText,
             const Font* pFont,
-            ExpandElements fieldDirection, // is the field to the left or below the info txt
+            DefaultInputFieldType type,
             void(*pOnFinishInput)(const std::string&, void*),
             void* pOnFinishInputUserData,
             void(*pOnInputCharFunc)(const std::string&, void*),
             void* pOnInputCharUserData
         )
         {
-            Layout* pRootLayout = fieldDirection == ExpandElements::DOWN ? _pDefaultInputFieldRootLayout : _pDefaultHorizontalInputFieldRootLayout;
-            Layout* pFieldLayout = fieldDirection == ExpandElements::DOWN ? _pDefaultInputFieldLayout : _pDefaultHorizontalInputFieldLayout;
+            const Layout* pRootLayout = getDefaultInputFieldRootLayout(type);
+            const Layout* pFieldLayout = getDefaultInputFieldLayout(type);
 
             return createInputField(
                 pParent,
@@ -417,6 +437,38 @@ namespace platypus
                 pOnInputCharFunc,
                 pOnInputCharUserData
             );
+        }
+
+        const Layout* UIManager::getDefaultInputFieldRootLayout(DefaultInputFieldType type) const
+        {
+            std::unordered_map<DefaultInputFieldType, Layout*>::const_iterator it = _defaultInputFieldRootLayouts.find(type);
+            if (it == _defaultInputFieldRootLayouts.end())
+            {
+                Debug::log(
+                    "Invalid DefaulInputFieldType: " + std::to_string(static_cast<uint32_t>(type)),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return nullptr;
+            }
+            return it->second;
+        }
+
+        const Layout* UIManager::getDefaultInputFieldLayout(DefaultInputFieldType type) const
+        {
+            std::unordered_map<DefaultInputFieldType, Layout*>::const_iterator it = _defaultInputFieldLayouts.find(type);
+            if (it == _defaultInputFieldLayouts.end())
+            {
+                Debug::log(
+                    "Invalid DefaulInputFieldType: " + std::to_string(static_cast<uint32_t>(type)),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return nullptr;
+            }
+            return it->second;
         }
 
         float UIManager::toPercentage(float v1, float v2)

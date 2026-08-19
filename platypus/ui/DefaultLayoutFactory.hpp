@@ -31,6 +31,7 @@ namespace platypus
             UIManager& uiManager,
             Font* pDefaultFont,
             ExpandElements fieldDirection, // is the field to the left or below the info txt
+            float width,
             Layout** ppRootLayout,
             Layout** ppFieldLayout
         );

@@ -35,6 +35,14 @@ namespace platypus
 {
     namespace ui
     {
+        enum class DefaultInputFieldType : uint32_t
+        {
+            MEDIUM_HORIZONTAL,
+            MEDIUM_VERTICAL,
+            SMALL_HORIZONTAL,
+            SMALL_VERTICAL
+        };
+
         class UIManager
         {
         private:
@@ -60,10 +68,10 @@ namespace platypus
             Layout* _pDefaultCheckboxLayout = nullptr;
             Layout* _pDefaultCheckboxBoxLayout = nullptr;
 
-            Layout* _pDefaultInputFieldRootLayout = nullptr;
-            Layout* _pDefaultInputFieldLayout = nullptr;
-            Layout* _pDefaultHorizontalInputFieldRootLayout = nullptr;
-            Layout* _pDefaultHorizontalInputFieldLayout = nullptr;
+            const float _defaultInputFieldWidth = 300.0f;
+            const float _defaultSmallInputFieldWidth = 100.0f;
+            std::unordered_map<DefaultInputFieldType, Layout*> _defaultInputFieldRootLayouts;
+            std::unordered_map<DefaultInputFieldType, Layout*> _defaultInputFieldLayouts;
 
             Layout* _pDefaultInputFieldCursorLayout = nullptr;
 
@@ -168,24 +176,26 @@ namespace platypus
                 void* pOnInputCharUserData = nullptr
             );
 
-            InputField* createInputField(
+            InputField* createDefaultInputField(
                 UIElement* pParent,
                 const std::string& infoText,
                 const Font* pFont,
-                ExpandElements fieldDirection, // is the field to the left or below the info txt
+                DefaultInputFieldType type,
                 void(*pOnFinishInput)(const std::string&, void*) = nullptr,
                 void* pOnFinishInputUserData = nullptr,
                 void(*pOnInputCharFunc)(const std::string&, void*) = nullptr,
                 void* pOnInputCharUserData = nullptr
             );
 
+            const Layout* getDefaultInputFieldRootLayout(DefaultInputFieldType type) const;
+            const Layout* getDefaultInputFieldLayout(DefaultInputFieldType type) const;
+
             inline const Layout* getDefaultTextLayout() const { return _pDefaultTextLayout; }
             inline const Layout* getDefaultNonStretchTextLayout() const { return _pDefaultNonStretchTextLayout; }
             inline const Layout* getDefaultButtonLayout() const { return _pDefaultButtonLayout; }
             inline Layout* getDefaultButtonLayout() { return _pDefaultButtonLayout; }
             inline const Layout* getDefaultButtonTextLayout() const { return _pDefaultButtonTextLayout; }
-            inline const Layout* getDefaultInputFieldLayout() const { return _pDefaultInputFieldLayout; }
-            inline const Layout* getDefaultInputFieldRootLayout() const { return _pDefaultInputFieldRootLayout; }
+
             inline const Layout* getDefaultInputFieldCursorLayout() const { return _pDefaultInputFieldCursorLayout; }
 
         private:
