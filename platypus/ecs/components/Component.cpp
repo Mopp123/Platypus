@@ -4,12 +4,30 @@
 #include "Renderable.hpp"
 #include "SkeletalAnimation.hpp"
 #include "Transform.hpp"
+#include "Terrain.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 
 
 namespace platypus
 {
+    std::vector<ComponentType> get_all_component_types()
+    {
+        return {
+            ComponentType::COMPONENT_TYPE_TRANSFORM,
+            ComponentType::COMPONENT_TYPE_GUI_TRANSFORM,
+            ComponentType::COMPONENT_TYPE_RENDERABLE3D,
+            ComponentType::COMPONENT_TYPE_GUI_RENDERABLE,
+            ComponentType::COMPONENT_TYPE_CAMERA,
+            ComponentType::COMPONENT_TYPE_LIGHT,
+            ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION,
+            ComponentType::COMPONENT_TYPE_PARENT,
+            ComponentType::COMPONENT_TYPE_CHILDREN,
+            ComponentType::COMPONENT_TYPE_JOINT,
+            ComponentType::COMPONENT_TYPE_TERRAIN
+        };
+    }
+
     std::string component_type_to_string(ComponentType type)
     {
         switch(type)
@@ -25,6 +43,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_PARENT: return "Parent";
             case ComponentType::COMPONENT_TYPE_CHILDREN: return "Children";
             case ComponentType::COMPONENT_TYPE_JOINT: return "Joint";
+            case ComponentType::COMPONENT_TYPE_TERRAIN: return "Terrain";
             default: return "Invalid Type";
         }
     }
@@ -43,6 +62,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_PARENT: return sizeof(Parent);
             case ComponentType::COMPONENT_TYPE_CHILDREN: return sizeof(Children);
             case ComponentType::COMPONENT_TYPE_JOINT: return sizeof(Joint);
+            case ComponentType::COMPONENT_TYPE_TERRAIN: return sizeof(Terrain);
             default: return 0;
         }
     }
@@ -93,6 +113,9 @@ namespace platypus
 
             case ComponentType::COMPONENT_TYPE_CHILDREN:
                 return serialize(reinterpret_cast<const Children*>(pData));
+
+            case ComponentType::COMPONENT_TYPE_TERRAIN:
+                return serialize(reinterpret_cast<const Terrain*>(pData));
 
             default: return { };
         }
@@ -210,6 +233,16 @@ namespace platypus
                 );
                 break;
 
+            case ComponentType::COMPONENT_TYPE_TERRAIN:
+                deserialize(
+                    pScene,
+                    reinterpret_cast<Terrain**>(ppComponent),
+                    entityID,
+                    dataSize,
+                    pData
+                );
+                break;
+
             default:
             {
                 Debug::log(
@@ -240,6 +273,8 @@ namespace platypus
 
             case ComponentType::COMPONENT_TYPE_JOINT: return serialized_skeleton_joint_size;
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
+
+            case ComponentType::COMPONENT_TYPE_TERRAIN: return serialized_terrain_size;
 
             default: {
                 Debug::log(
@@ -272,6 +307,8 @@ namespace platypus
 
             case ComponentType::COMPONENT_TYPE_JOINT: return serialized_skeleton_joint_size;
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
+
+            case ComponentType::COMPONENT_TYPE_TERRAIN: return serialized_terrain_size;
 
             default: {
                 Debug::log(

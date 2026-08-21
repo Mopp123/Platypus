@@ -7,6 +7,7 @@
 #include "platypus/ecs/components/SkeletalAnimation.hpp"
 #include "platypus/ecs/components/Camera.hpp"
 #include "platypus/ecs/components/Lights.hpp"
+#include "platypus/ecs/components/Terrain.hpp"
 #include "platypus/ecs/systems/SkeletalAnimationSystem.hpp"
 #include "platypus/ecs/systems/TransformSystem.hpp"
 #include "platypus/ecs/systems/LightSystem.hpp"
@@ -67,6 +68,11 @@ namespace platypus
         _componentPools[ComponentType::COMPONENT_TYPE_JOINT] = new ComponentPool<SkeletonJoint>(
             sizeof(SkeletonJoint),
             maxPoolLength,
+            true
+        );
+        _componentPools[ComponentType::COMPONENT_TYPE_TERRAIN] = new ComponentPool<Terrain>(
+            sizeof(Terrain),
+            1,
             true
         );
 
@@ -518,38 +524,14 @@ namespace platypus
     std::unordered_map<ComponentType, const void*> Scene::getComponents(entityID_t entityID) const
     {
         const Entity entity = getEntity(entityID);
-        const uint64_t componentMask = entity.componentMask;
+        PLATYPUS_ASSERT(entity.id != NULL_ENTITY_ID);
         std::unordered_map<ComponentType, const void*> components;
-        if (componentMask & ComponentType::COMPONENT_TYPE_CAMERA)
-            components[ComponentType::COMPONENT_TYPE_CAMERA] = getComponent(entityID, ComponentType::COMPONENT_TYPE_CAMERA);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_RENDERABLE3D)
-            components[ComponentType::COMPONENT_TYPE_RENDERABLE3D] = getComponent(entityID, ComponentType::COMPONENT_TYPE_RENDERABLE3D);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_GUI_RENDERABLE)
-            components[ComponentType::COMPONENT_TYPE_GUI_RENDERABLE] = getComponent(entityID, ComponentType::COMPONENT_TYPE_GUI_RENDERABLE);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_TRANSFORM)
-            components[ComponentType::COMPONENT_TYPE_TRANSFORM] = getComponent(entityID, ComponentType::COMPONENT_TYPE_TRANSFORM);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_GUI_TRANSFORM)
-            components[ComponentType::COMPONENT_TYPE_GUI_TRANSFORM] = getComponent(entityID, ComponentType::COMPONENT_TYPE_GUI_TRANSFORM);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_PARENT)
-            components[ComponentType::COMPONENT_TYPE_PARENT] = getComponent(entityID, ComponentType::COMPONENT_TYPE_PARENT);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_CHILDREN)
-            components[ComponentType::COMPONENT_TYPE_CHILDREN] = getComponent(entityID, ComponentType::COMPONENT_TYPE_CHILDREN);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_LIGHT)
-            components[ComponentType::COMPONENT_TYPE_LIGHT] = getComponent(entityID, ComponentType::COMPONENT_TYPE_LIGHT);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION)
-            components[ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION] = getComponent(entityID, ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION);
-
-        if (componentMask & ComponentType::COMPONENT_TYPE_JOINT)
-            components[ComponentType::COMPONENT_TYPE_JOINT] = getComponent(entityID, ComponentType::COMPONENT_TYPE_JOINT);
-
+        for (ComponentType componentType : get_all_component_types())
+        {
+            const void* pComponent = getComponent(entityID, componentType, false, false);
+            if (pComponent)
+                components[componentType] = pComponent;
+        }
         return components;
     }
 
@@ -806,7 +788,16 @@ namespace platypus
 
         for (size_t componentIndex = 0; componentIndex < componentCount; ++componentIndex)
         {
+            if (bufferReadPos >= serializedDataSize)
+            {
+                Debug::log(
+                    "bufferReadPos(" + std::to_string(bufferReadPos) + ") >= serializedDataSize(" + std::to_string(serializedDataSize) + ")",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
             PLATYPUS_ASSERT(bufferReadPos < serializedDataSize);
+
             ComponentType componentType;
             memcpy(
                 &componentType,

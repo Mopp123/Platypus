@@ -21,8 +21,10 @@ namespace platypus
         COMPONENT_TYPE_SKELETAL_ANIMATION = 0x1 << 7,
         COMPONENT_TYPE_PARENT           = 0x1 << 8,
         COMPONENT_TYPE_CHILDREN         = 0x1 << 9,
-        COMPONENT_TYPE_JOINT            = 0x1 << 10
+        COMPONENT_TYPE_JOINT            = 0x1 << 10,
+        COMPONENT_TYPE_TERRAIN          = 0x1 << 11
     };
+    std::vector<ComponentType> get_all_component_types();
 
     std::string component_type_to_string(ComponentType type);
     size_t get_component_size(ComponentType type);

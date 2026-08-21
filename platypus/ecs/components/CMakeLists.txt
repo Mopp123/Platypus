@@ -6,4 +6,5 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/Renderable.cpp
     ${CMAKE_CURRENT_LIST_DIR}/SkeletalAnimation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Transform.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Terrain.cpp
 )
