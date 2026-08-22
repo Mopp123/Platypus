@@ -377,6 +377,58 @@ namespace platypus
             _updatePending = true;
         }
 
+        void UIElement::setRenderableColor(const Vector4f& color, const Vector4f& borderColor)
+        {
+            GUIRenderable* pRenderable = getRenderable();
+            if (pRenderable)
+            {
+                pRenderable->color = color;
+                pRenderable->borderColor = borderColor;
+            }
+        }
+
+        void UIElement::setRenderableColorToBase()
+        {
+            Layout* pLayout = getLayout();
+            Vector4f useColor = pLayout->colors.base;
+            Vector4f useBorderColor = pLayout->colors.border;
+            if (_overrideColors)
+            {
+                useColor = _overrideColorsValue.base;
+                useBorderColor = _overrideColorsValue.border;
+            }
+
+            setRenderableColor(useColor, useBorderColor);
+        }
+
+        void UIElement::setRenderableColorToHover()
+        {
+            Layout* pLayout = getLayout();
+            Vector4f useColor = pLayout->colors.hover;
+            Vector4f useBorderColor = pLayout->colors.border;
+            if (_overrideColors)
+            {
+                useColor = _overrideColorsValue.hover;
+                useBorderColor = _overrideColorsValue.border;
+            }
+
+            setRenderableColor(useColor, useBorderColor);
+        }
+
+        void UIElement::setRenderableColorToSelected()
+        {
+            Layout* pLayout = getLayout();
+            Vector4f useColor = pLayout->colors.selected;
+            Vector4f useBorderColor = pLayout->colors.border;
+            if (_overrideColors)
+            {
+                useColor = _overrideColorsValue.selected;
+                useBorderColor = _overrideColorsValue.border;
+            }
+
+            setRenderableColor(useColor, useBorderColor);
+        }
+
         Vector2f UIElement::getGlobalScale() const
         {
             const GUITransform* pTransform = getTransform();
@@ -778,13 +830,12 @@ namespace platypus
                     false
                 )
             );
-            Layout* pLayout = _managerRef.getLayout(_layoutID);
             if (pRenderable)
             {
                 if (_selected)
-                    pRenderable->color = pLayout->colors.selected;
+                    setRenderableColorToSelected();
                 else
-                    pRenderable->color = pLayout->colors.base;
+                    setRenderableColorToBase();
             }
             for (UIElement* pChild : _children)
                 pChild->setSelected(_selected);
@@ -817,6 +868,12 @@ namespace platypus
         Layout* UIElement::getLayout() const
         {
             return _managerRef.getLayout(_layoutID);
+        }
+
+        void UIElement::overrideColors(bool arg, Layout::Colors colors)
+        {
+            _overrideColors = arg;
+            _overrideColorsValue = colors;
         }
 
         uint32_t UIElement::get_cursor_over_layer()

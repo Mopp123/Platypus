@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Layout.hpp"
 #include "platypus/utils/Maths.hpp"
 
 #include "platypus/core/Scene.hpp"
@@ -18,7 +19,6 @@ namespace platypus
     namespace ui
     {
         class UIManager;
-        class Layout;
         class UIElement
         {
         protected:
@@ -89,6 +89,9 @@ namespace platypus
             bool _overrideScale = false;
             Vector2f _overrideScaleValue;
 
+            bool _overrideColors = false;
+            Layout::Colors _overrideColorsValue;
+
             // NOTE: Parent is currently set by UIManager when creating the UIElement if necessary
             UIElement* _pParent = nullptr;
             std::vector<UIElement*> _children;
@@ -143,6 +146,13 @@ namespace platypus
             void setLayoutColor(const Vector4f& color);
             void setLayoutHoverColor(const Vector4f& color);
             void setLayoutSelectedColor(const Vector4f& color);
+
+            void setRenderableColor(const Vector4f& color, const Vector4f& borderColor);
+
+            void setRenderableColorToBase();
+            void setRenderableColorToHover();
+            void setRenderableColorToSelected();
+
             Vector2f getGlobalScale() const;
             Vector2f getGlobalPosition() const;
             const GUITransform* getTransform() const;
@@ -192,6 +202,8 @@ namespace platypus
             void setLayout(Layout* pLayout);
             Layout* getLayout() const;
 
+            void overrideColors(bool arg, Layout::Colors colors = { });
+
             static uint32_t get_cursor_over_layer();
             static size_t get_cursor_over_layer_count();
 
@@ -203,6 +215,8 @@ namespace platypus
             inline bool isUpdatePending() const { return _updatePending; }
             inline Vector2f getDragBeginPos() const { return _dragBeginPos; }
             inline void setDragBeginPos(int mx, int my) { _dragBeginPos.x = static_cast<float>(mx); _dragBeginPos.y = static_cast<float>(my); }
+            inline bool overridesColors() const { return _overrideColors; }
+            inline Layout::Colors getOverrideColors() const { return _overrideColorsValue; }
 
             static void add_to_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);
             static void remove_from_cursor_over_layers(uint32_t absoluteLayer, entityID_t entityID);

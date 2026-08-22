@@ -24,33 +24,23 @@ namespace platypus
             );
 
             if (pBoxRenderable)
-                pBoxRenderable->color = pButton->getLayout()->colors.hover;
+                pButton->setRenderableColorToHover();
             if (pTextRenderable)
-                pTextRenderable->color = pButton->_pText->getLayout()->colors.hover;
+                pButton->getText()->setRenderableColorToHover();
         }
 
         void on_mouse_exit_button_default(int mx, int my, void* pUserData)
         {
             Button* pButton = reinterpret_cast<Button*>(pUserData);
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            GUIRenderable* pBoxRenderable = (GUIRenderable*)pScene->getComponent(
-                pButton->getEntityID(),
-                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-            );
-            GUIRenderable* pTextRenderable = (GUIRenderable*)pScene->getComponent(
-                pButton->_pText->getEntityID(),
-                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-            );
-
             if (pButton->isSelected())
             {
-                pBoxRenderable->color = pButton->getLayout()->colors.selected;
-                pTextRenderable->color = pButton->_pText->getLayout()->colors.selected;
+                pButton->setRenderableColorToSelected();
+                pButton->getText()->setRenderableColorToSelected();
             }
             else
             {
-                pBoxRenderable->color = pButton->getLayout()->colors.base;
-                pTextRenderable->color = pButton->_pText->getLayout()->colors.base;
+                pButton->setRenderableColorToBase();
+                pButton->getText()->setRenderableColorToBase();
             }
         }
 
