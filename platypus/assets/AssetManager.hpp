@@ -204,6 +204,9 @@ namespace platypus
             bool excludeNonSerializable = true
         ) const;
 
+        // WARNING! SLOW AF IF MANY ASSETS!
+        UUID_t getMeshModel(UUID_t meshID) const;
+
         void makePersistent(Asset* pAsset);
         // For adding asset that wasn't created using the AssetManager.
         // This piece of shit requires all textures, including framebuffer attachments,

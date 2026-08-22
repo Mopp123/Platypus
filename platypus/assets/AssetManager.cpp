@@ -1023,6 +1023,25 @@ namespace platypus
         return foundAssets;
     }
 
+    UUID_t AssetManager::getMeshModel(UUID_t meshID) const
+    {
+        std::unordered_map<UUID_t, Asset*>::const_iterator it;
+        for (it = _assets.begin(); it != _assets.end(); ++it)
+        {
+            const Asset* pAsset = it->second;
+            if (pAsset->getType() == AssetType::ASSET_TYPE_MODEL)
+            {
+                const Model* pModel = dynamic_cast<const Model*>(pAsset);
+                for (const Mesh* pMesh : pModel->getMeshes())
+                {
+                    if (pMesh->getID() == meshID)
+                        return pModel->getID();
+                }
+            }
+        }
+        return NULL_UUID;
+    }
+
     void AssetManager::makePersistent(Asset* pAsset)
     {
         pAsset->setPersistent(true);
