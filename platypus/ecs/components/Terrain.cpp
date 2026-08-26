@@ -38,6 +38,90 @@ namespace platypus
         return pTerrain;
     }
 
+    float get_triangle_height_barycentric(
+        const platypus::Vector3f& p1,
+        const platypus::Vector3f& p2,
+        const platypus::Vector3f& p3,
+        const platypus::Vector2f& pos
+    )
+    {
+        float det = (p2.z - p3.z) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.z - p3.z);
+        float l1 = ((p2.z - p3.z) * (pos.x - p3.x) + (p3.x - p2.x) * (pos.y - p3.z)) / det;
+        float l2 = ((p3.z - p1.z) * (pos.x - p3.x) + (p1.x - p3.x) * (pos.y - p3.z)) / det;
+        float l3 = 1.0f - l1 - l2;
+        return l1 * p1.y + l2 * p2.y + l3 * p3.y;
+    }
+
+    float get_terrain_height(
+        Mesh* pTerrainMesh,
+        Terrain* pTerrainComponent,
+        Transform* pTerrainTransform,
+        float worldX,
+        float worldZ
+    )
+    {
+        const float tileSize = pTerrainComponent->tileSize;
+        const size_t verticesPerRow = pTerrainComponent->verticesPerRow;
+
+        // Pos relative to terrain
+        const Matrix4f& transformationMatrix = pTerrainTransform->globalMatrix;
+
+        const float terrainWorldX = transformationMatrix[0 + 3 * 4];
+        const float terrainWorldZ = transformationMatrix[2 + 3 * 4];
+
+        float terrainX = worldX - terrainWorldX;
+        float terrainZ = worldZ - terrainWorldZ;
+
+        int gridX = static_cast<int>(std::floor(terrainX / tileSize));
+        int gridZ = static_cast<int>(std::floor(terrainZ / tileSize));
+
+        if (gridX < 0 || gridX + 1 >= verticesPerRow || gridZ < 0 || gridZ + 1 >= verticesPerRow)
+        {
+            return 0.0f;
+        }
+
+        // Coordinates in relation to the current tile, in range 0 to 1
+        float tileSpaceX = std::fmod(terrainX, tileSize) / tileSize;
+        float tileSpaceZ = std::fmod(terrainZ, tileSize) / tileSize;
+
+        // NOTE: WARNING! This atm only works because all vertex buffers used for
+        // rendering has vertex positions first in the buffer!
+        const Buffer* pVertexBuffer = pTerrainMesh->getVertexBuffer();
+        const VertexBufferLayout& vertexBufferLayout = pTerrainMesh->getVertexBufferLayout();
+        const size_t bufferElementCount = vertexBufferLayout.getElements().size();
+
+        const float* pBufferData = reinterpret_cast<const float*>(pVertexBuffer->getData());
+        float currentHeight = pBufferData[((gridX + gridZ * verticesPerRow) + 1) * bufferElementCount];
+        float rightHeight = pBufferData[(((gridX + 1) + gridZ * verticesPerRow) + 1) * bufferElementCount];
+        float bottomHeight = pBufferData[((gridX + (gridZ + 1) * verticesPerRow) + 1) * bufferElementCount];
+        float bottomRightHeight = pBufferData[(((gridX + 1) + (gridZ + 1) * verticesPerRow) + 1) * bufferElementCount];
+
+        // Check which triangle of the tile we are standing on..
+        if (tileSpaceX <= tileSpaceZ) {
+            return get_triangle_height_barycentric(
+                //Vector3f(0, _heightmap[gridX + gridZ * _terrainVerticesPerRow], 0),
+                //Vector3f(0, _heightmap[gridX + (gridZ + 1) * _terrainVerticesPerRow], 1),
+                //Vector3f(1, _heightmap[(gridX + 1) + (gridZ + 1) * _terrainVerticesPerRow], 1),
+
+                Vector3f(0, currentHeight, 0),
+                Vector3f(0, bottomHeight, 1),
+                Vector3f(1, bottomRightHeight, 1),
+                Vector2f(tileSpaceX, tileSpaceZ));
+        }
+        else {
+            return get_triangle_height_barycentric(
+                //Vector3f(0, _heightmap[gridX + gridZ * _terrainVerticesPerRow], 0),
+                //Vector3f(1, _heightmap[(gridX + 1) + (gridZ + 1) * _terrainVerticesPerRow], 1),
+                //Vector3f(1, _heightmap[(gridX + 1) + gridZ * _terrainVerticesPerRow], 0),
+
+                Vector3f(0, currentHeight, 0),
+                Vector3f(1, bottomRightHeight, 1),
+                Vector3f(1, rightHeight, 0),
+
+                Vector2f(tileSpaceX, tileSpaceZ));
+        }
+    }
+
     std::vector<char> serialize(const Terrain* pTerrain)
     {
         std::vector<char> serializedData(serialized_terrain_size);
