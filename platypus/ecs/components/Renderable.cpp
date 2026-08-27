@@ -60,6 +60,40 @@ namespace platypus
         return true;
     }
 
+    bool mesh_and_material_compatible_verbose(
+        uint32_t meshPropertyFlags,
+        const Material* pMaterial,
+        std::string& outError
+    )
+    {
+        if ((meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::TYPE_STATIC)) &&
+            (meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::INSTANCED)) &&
+            pMaterial->isTransparent())
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Mesh was static and instanced while Material was transparent. "
+                "Instanced transparent renderables aren't currently supported!";
+
+            return false;
+        }
+
+        bool meshHasTangents = meshPropertyFlags & static_cast<uint32_t>(MeshPropertyFlagBits::HAS_TANGENTS);
+        if (pMaterial->hasNormalMap() && !meshHasTangents)
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Material is using normal map but the Mesh doesn't have tangents!";
+            return false;
+        }
+        else if (!pMaterial->hasNormalMap() && meshHasTangents)
+        {
+            outError = "Mesh and Material are incompatible! "
+                "Mesh has tangents but Material doesn't use normal map!";
+            return false;
+        }
+
+        return true;
+    }
+
 
     std::unordered_map<UUID_t, EntityError> query_renderable3D_compatibility_errors(
         Scene* pScene,

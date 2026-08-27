@@ -14,8 +14,7 @@ private:
 
     platypus::Material* _pMeshMaterial = nullptr;
 
-    std::vector<float> _heightmap1;
-    std::vector<float> _heightmap2;
+    std::vector<float> _heightmap;
 
 public:
     TerrainTestScene();

@@ -63,21 +63,17 @@ void TerrainTestScene::init()
         true
     );
 
-    size_t heightmapWidth = 32;
-    size_t tilesPerRow = heightmapWidth - 1;
-    size_t heightmapArea = heightmapWidth * heightmapWidth;
-    _heightmap1.resize(heightmapArea);
-    _heightmap2.resize(heightmapArea);
-    float heightModifier = 0.003f;
-    for (size_t i = 0; i < heightmapArea; ++i)
-    {
-        _heightmap1[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-        _heightmap2[i] = (float)(((int)std::rand() % 256) - 127) * heightModifier;
-    }
-    _pTerrainMesh = pAssetManager->createTerrainMesh(2.0f, _heightmap1, true, true, false);
+    const float tileSize = 2.0f;
+    const size_t heightmapWidth = 32;
+    const size_t tilesPerRow = heightmapWidth - 1;
+    const size_t heightmapArea = heightmapWidth * heightmapWidth;
+    _heightmap.resize(heightmapArea);
+    memset(_heightmap.data(), 0, sizeof(float) * _heightmap.size());
+    _heightmap[31 + 31 * heightmapWidth] = 1.0f;
+    _pTerrainMesh = pAssetManager->createTerrainMesh(tileSize, _heightmap, true, true, true);
 
     entityID_t terrainEntity = createEntity();
-    create_transform(
+    Transform* pTerrainTransform = create_transform(
         terrainEntity,
         { 0, 0, 0 },
         { { 0, 1, 0}, 0 },
@@ -148,6 +144,21 @@ void TerrainTestScene::init()
     );
 
     create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
+    Terrain* pTerrainComponent = create_terrain(terrainEntity, tileSize, heightmapWidth);
+
+    float testWorldX = 2.0f * 31.0f - 0.25f;
+    float testWorldZ = 2.0f * 31.0f - 0.25f;
+    float testHeight = get_terrain_height(
+        _pTerrainMesh,
+        pTerrainComponent,
+        pTerrainTransform,
+        testWorldX,
+        testWorldZ
+    );
+    Debug::log(
+        "___TEST___testPoint = (" + std::to_string(testWorldX) + ", " + std::to_string(testWorldZ) + ") height = " + std::to_string(testHeight)
+    );
+    PLATYPUS_ASSERT(false);
 
     _pMeshMaterial = createMeshMaterial(
         pAssetManager,

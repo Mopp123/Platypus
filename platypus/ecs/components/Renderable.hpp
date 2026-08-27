@@ -33,6 +33,12 @@ namespace platypus
         std::string& outError
     );
 
+    bool mesh_and_material_compatible_verbose(
+        uint32_t meshPropertyFlags,
+        const Material* pMaterial,
+        std::string& outError
+    );
+
     std::unordered_map<UUID_t, EntityError> query_renderable3D_compatibility_errors(
         Scene* pScene,
         const Material* pMaterial

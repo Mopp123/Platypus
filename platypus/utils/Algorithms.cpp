@@ -1,5 +1,6 @@
 #include "Algorithms.hpp"
 #include "platypus/core/Application.hpp"
+#include "platypus/core/Debug.hpp"
 #include <cmath>
 
 
@@ -29,10 +30,14 @@ namespace platypus
         float windowHeight = static_cast<float>(window.getHeight());
 
         float screenXf = static_cast<float>(screenX);
-        float screenYf = static_cast<float>(screenY);
+
+        // NOTE: When originally wrote this, the cursor coords y component
+        // was the other way around, so need to flip here...
+        float screenYf = windowHeight - static_cast<float>(screenY);
 
         // NOTE: ISSUE!? Not sure, should flip depending on platform!?
         float ndcX = (screenXf / windowWidth) * 2.0f - 1.0f;
+        //float ndcY = (screenYf / windowHeight) * 2.0f - 1.0f;
         float ndcY = (screenYf / windowHeight) * 2.0f - 1.0f;
 
         Vector4f clipCoords(ndcX, ndcY, -1.0f, 1.0f);

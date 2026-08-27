@@ -131,6 +131,7 @@ namespace platypus
             false,
             true // shadeless
         );
+        _pErrorMaterial->setSerializable(false);
         makePersistent(_pErrorMaterial);
         _defaultAssets.insert(_pErrorMaterial->getID());
 
@@ -142,6 +143,10 @@ namespace platypus
         PLATYPUS_ASSERT(_pErrorModel);
         if (_pErrorModel)
         {
+            _pErrorModel->setSerializable(false);
+            for (Mesh* pMesh : _pErrorModel->getMeshes())
+                pMesh->setSerializable(false);
+
             makePersistent(_pErrorModel);
             _defaultAssets.insert(_pErrorModel->getID());
             PLATYPUS_ASSERT(!_pErrorModel->getMeshes().empty());
@@ -1162,7 +1167,9 @@ namespace platypus
         memcpy(buffer.data(), &assetCount, sizeof(uint32_t));
 
         for (const Asset* pAsset : assets)
+        {
             pAsset->serialize(buffer);
+        }
 
         return buffer;
     }

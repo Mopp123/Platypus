@@ -89,12 +89,50 @@ namespace platypus
         const Buffer* pVertexBuffer = pTerrainMesh->getVertexBuffer();
         const VertexBufferLayout& vertexBufferLayout = pTerrainMesh->getVertexBufferLayout();
         const size_t bufferElementCount = vertexBufferLayout.getElements().size();
+        const size_t stride = vertexBufferLayout.getStride();
 
-        const float* pBufferData = reinterpret_cast<const float*>(pVertexBuffer->getData());
-        float currentHeight = pBufferData[((gridX + gridZ * verticesPerRow) + 1) * bufferElementCount];
-        float rightHeight = pBufferData[(((gridX + 1) + gridZ * verticesPerRow) + 1) * bufferElementCount];
-        float bottomHeight = pBufferData[((gridX + (gridZ + 1) * verticesPerRow) + 1) * bufferElementCount];
-        float bottomRightHeight = pBufferData[(((gridX + 1) + (gridZ + 1) * verticesPerRow) + 1) * bufferElementCount];
+        const char* pBufferData = reinterpret_cast<const char*>(pVertexBuffer->getData());
+        size_t currentIndex = (gridX + gridZ * verticesPerRow) * stride + sizeof(float);
+        size_t rightIndex = ((gridX + 1) + gridZ * verticesPerRow) * stride + sizeof(float);
+        size_t bottomIndex = (gridX + (gridZ + 1) * verticesPerRow) * stride + sizeof(float);
+        size_t bottomRightIndex = ((gridX + 1) + (gridZ + 1) * verticesPerRow) * stride + sizeof(float);
+
+        //Debug::log("___TEST___currentIndex = " + std::to_string(currentIndex));
+        //Debug::log("___TEST___rightIndex = " + std::to_string(rightIndex));
+        //Debug::log("___TEST___bottomIndex = " + std::to_string(bottomIndex));
+        //Debug::log("___TEST___bottomRightIndex = " + std::to_string(bottomRightIndex));
+
+        float currentHeight = 0.0f;
+        memcpy(
+            &currentHeight,
+            pBufferData + currentIndex,
+            sizeof(float)
+        );
+
+        float rightHeight = 0.0f;
+        memcpy(
+            &rightHeight,
+            pBufferData + rightIndex,
+            sizeof(float)
+        );
+
+        float bottomHeight = 0.0f;
+        memcpy(
+            &bottomHeight,
+            pBufferData + bottomIndex,
+            sizeof(float)
+        );
+        float bottomRightHeight = 0.0f;
+        memcpy(
+            &bottomRightHeight,
+            pBufferData + bottomRightIndex,
+            sizeof(float)
+        );
+
+        //float currentHeight = pBufferData[((gridX + gridZ * verticesPerRow) + 1) * bufferElementCount];
+        //float rightHeight = pBufferData[(((gridX + 1) + gridZ * verticesPerRow) + 1) * bufferElementCount];
+        //float bottomHeight = pBufferData[((gridX + (gridZ + 1) * verticesPerRow) + 1) * bufferElementCount];
+        //float bottomRightHeight = pBufferData[(((gridX + 1) + (gridZ + 1) * verticesPerRow) + 1) * bufferElementCount];
 
         // Check which triangle of the tile we are standing on..
         if (tileSpaceX <= tileSpaceZ) {

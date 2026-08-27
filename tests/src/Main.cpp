@@ -1,4 +1,4 @@
-#include "ShadowTestScene.hpp"
+#include "TerrainTestScene.hpp"
 #include <iostream>
 
 
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new ShadowTestScene
+        new TerrainTestScene
     );
     app.run();
     return 0;
