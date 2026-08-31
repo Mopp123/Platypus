@@ -172,6 +172,8 @@ namespace platypus
         bool operator==(const VertexBufferLayout& other) const;
         bool operator!=(const VertexBufferLayout& other) const;
 
+        bool hasAttributeType(VertexAttributeType type) const;
+
         std::string toString();
 
         std::vector<char> serialize() const;

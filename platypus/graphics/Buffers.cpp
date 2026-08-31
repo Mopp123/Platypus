@@ -95,6 +95,15 @@ namespace platypus
         return _elements != other._elements || _inputRate != other._inputRate || _stride != other._stride;
     }
 
+    bool VertexBufferLayout::hasAttributeType(VertexAttributeType type) const
+    {
+        for (const VertexBufferElement& elem : _elements)
+        {
+            if (elem.getAttribType() == type)
+                return true;
+        }
+        return false;
+    }
 
     std::string VertexBufferLayout::toString()
     {

@@ -8,6 +8,28 @@
 
 namespace platypus
 {
+    class Vector2i
+    {
+    public:
+        union
+        {
+            struct
+            {
+                int32_t x = 0.0f;
+                int32_t y = 0.0f;
+            };
+            struct
+            {
+                int32_t r;
+                int32_t g;
+            };
+        };
+
+        Vector2i() {}
+        Vector2i(int32_t x, int32_t y) : x(x), y(y) {}
+        Vector2i(const Vector2i& other) : x(other.x), y(other.y) {}
+    };
+
     class Vector2f
     {
     public:

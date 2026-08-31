@@ -27,6 +27,13 @@ namespace platypus
         bool useExplicitComponentMask = false
     );
 
+    Vector2i to_terrain_mesh_coords(
+        float terrainSpaceX,
+        float terrainSpaceZ,
+        float tileSize,
+        size_t verticesPerRow
+    );
+
     // NOTE: This can ofc be used for many other kinds of things than just
     // getting terrain height..
     // TODO: Maybe change name and put in Algorithms?
@@ -43,6 +50,20 @@ namespace platypus
         Transform* pTerrainTransform,
         float worldX,
         float worldZ
+    );
+
+    void set_terrain_height(
+        Mesh* pTerrainMesh,
+        Vector2i meshSpacePosition,
+        float height,
+        float tileSize,
+        size_t verticesPerRow
+    );
+
+    void update_terrain_normals(
+        Mesh* pTerrainMesh,
+        float tileSize,
+        size_t verticesPerRow
     );
 
     std::vector<char> serialize(const Terrain* pTerrain);

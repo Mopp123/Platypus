@@ -196,7 +196,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-		size_t verticesPerRow = sqrt(heightmapData.size());
+        size_t verticesPerRow = sqrt(heightmapData.size());
         size_t tilesPerRow = verticesPerRow - 1;
 
         const size_t vertexCount = verticesPerRow * verticesPerRow;
@@ -222,24 +222,24 @@ namespace platypus
                     position.z / (float)tileSize / (float)tilesPerRow
                 );
 
-				float left = 0;
-				float right = 0;
-				float down = 0;
-				float up = 0;
+                float left = 0;
+                float right = 0;
+                float down = 0;
+                float up = 0;
 
-				if (x - 1 >= 0)
-					left = heightmapData[(x - 1) + z * verticesPerRow];
+                if (x - 1 >= 0)
+                    left = heightmapData[(x - 1) + z * verticesPerRow];
 
-				if (x + 1 < (int)verticesPerRow)
-					right = heightmapData[(x + 1) + z * verticesPerRow];
+                if (x + 1 < (int)verticesPerRow)
+                    right = heightmapData[(x + 1) + z * verticesPerRow];
 
-				if (z + 1 < (int)verticesPerRow)
-					up = heightmapData[x + (z + 1) * verticesPerRow];
+                if (z + 1 < (int)verticesPerRow)
+                    up = heightmapData[x + (z + 1) * verticesPerRow];
 
-				if (z - 1 >= 0)
-					down = heightmapData[x + (z - 1) * verticesPerRow];
+                if (z - 1 >= 0)
+                    down = heightmapData[x + (z - 1) * verticesPerRow];
 
-				Vector3f normal((left - right), 1.0f, (down - up)); // this is pretty dumb...
+                Vector3f normal((left - right), 1.0f, (down - up)); // this is pretty dumb...
 
                 PE_byte* pTarget = vertexData.data();
                 memcpy((void*)(pTarget + dataOffset), &position, sizeof(Vector3f));
@@ -268,18 +268,18 @@ namespace platypus
         }
 
         std::vector<uint32_t> indices;
-		for (uint32_t x = 0; x < verticesPerRow; x++)
-		{
-			for (uint32_t z = 0; z < verticesPerRow; z++)
-			{
-				if (x >= verticesPerRow - 1 || z >= verticesPerRow - 1)
-					continue;
+        for (uint32_t x = 0; x < verticesPerRow; x++)
+        {
+            for (uint32_t z = 0; z < verticesPerRow; z++)
+            {
+                if (x >= verticesPerRow - 1 || z >= verticesPerRow - 1)
+                    continue;
 
-				uint32_t topLeft = x + z * verticesPerRow;
-				uint32_t bottomLeft = x + (z + 1) * verticesPerRow;
+                uint32_t topLeft = x + z * verticesPerRow;
+                uint32_t bottomLeft = x + (z + 1) * verticesPerRow;
 
-				uint32_t topRight = (x + 1) + z * verticesPerRow;
-				uint32_t bottomRight = (x + 1) + (z + 1) * verticesPerRow;
+                uint32_t topRight = (x + 1) + z * verticesPerRow;
+                uint32_t bottomRight = (x + 1) + (z + 1) * verticesPerRow;
 
                 indices.insert(
                     indices.end(),
@@ -291,16 +291,16 @@ namespace platypus
 
                 // Below original order...
                 /*
-				indices.push_back(bottomLeft);
-				indices.push_back(topLeft);
-				indices.push_back(topRight);
+                indices.push_back(bottomLeft);
+                indices.push_back(topLeft);
+                indices.push_back(topRight);
 
-				indices.push_back(topRight);
-				indices.push_back(bottomRight);
-				indices.push_back(bottomLeft);
+                indices.push_back(topRight);
+                indices.push_back(bottomRight);
+                indices.push_back(bottomLeft);
                 */
-			}
-		}
+            }
+        }
 
         uint32_t bufferUsageFlags = BufferUsageFlagBits::BUFFER_USAGE_VERTEX_BUFFER_BIT | BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_DST_BIT;
         BufferUpdateFrequency updateFrequency = BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC;
