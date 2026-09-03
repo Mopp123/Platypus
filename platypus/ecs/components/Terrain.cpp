@@ -219,15 +219,13 @@ namespace platypus
 
         const int32_t signedVerticesPerRow = static_cast<int32_t>(verticesPerRow);
         const int32_t signedStride = static_cast<int32_t>(stride);
+        const int32_t signedTotalBufferSize = static_cast<size_t>(pVertexBuffer->getTotalSize());
         for (int32_t z = 0; z < signedVerticesPerRow; ++z)
         {
             for (int32_t x = 0; x < signedVerticesPerRow; ++x)
             {
-                int32_t offset = (x + z * signedVerticesPerRow) * signedStride + sizeof(float);
-
                 // NOTE: SOMETHING's FUCKED HERE!
-                // TODO: FIX!
-                CONTINUE HERE!
+                //  -> ignoring offsets that should be inside the bounds
                 float leftVertexHeight = 0;
                 float rightVertexHeight = 0;
                 float downVertexHeight = 0;
@@ -245,7 +243,7 @@ namespace platypus
                         sizeof(float)
                     );
                 }
-                if (rightVertexBufferOffset < verticesPerRow)
+                if (rightVertexBufferOffset < signedTotalBufferSize)
                 {
                     memcpy(
                         &rightVertexHeight,
@@ -262,7 +260,7 @@ namespace platypus
                         sizeof(float)
                     );
                 }
-                if (downVertexBufferOffset < verticesPerRow)
+                if (downVertexBufferOffset < signedTotalBufferSize)
                 {
                     memcpy(
                         &downVertexHeight,
