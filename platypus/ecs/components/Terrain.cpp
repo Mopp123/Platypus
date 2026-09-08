@@ -224,16 +224,14 @@ namespace platypus
         {
             for (int32_t x = 0; x < signedVerticesPerRow; ++x)
             {
-                // NOTE: SOMETHING's FUCKED HERE!
-                //  -> ignoring offsets that should be inside the bounds
                 float leftVertexHeight = 0;
                 float rightVertexHeight = 0;
                 float downVertexHeight = 0;
                 float upVertexHeight = 0;
-                int32_t leftVertexBufferOffset = ((x - 1) + z * signedVerticesPerRow) * signedStride + sizeof(float);
-                int32_t rightVertexBufferOffset = ((x + 1) + z * signedVerticesPerRow) * signedStride + sizeof(float);
-                int32_t upVertexBufferOffset = (x + (z - 1) * signedVerticesPerRow) * signedStride + sizeof(float);
-                int32_t downVertexBufferOffset = (x + (z + 1) * signedVerticesPerRow) * signedStride + sizeof(float);
+                const int32_t leftVertexBufferOffset = ((x - 1) + z * signedVerticesPerRow) * signedStride + sizeof(float);
+                const int32_t rightVertexBufferOffset = ((x + 1) + z * signedVerticesPerRow) * signedStride + sizeof(float);
+                const int32_t upVertexBufferOffset = (x + (z - 1) * signedVerticesPerRow) * signedStride + sizeof(float);
+                const int32_t downVertexBufferOffset = (x + (z + 1) * signedVerticesPerRow) * signedStride + sizeof(float);
 
                 if (leftVertexBufferOffset >= 0)
                 {

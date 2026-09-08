@@ -147,8 +147,8 @@ namespace platypus
             void setLayoutHoverColor(const Vector4f& color);
             void setLayoutSelectedColor(const Vector4f& color);
 
+            void setRenderableTexture(UUID_t textureUUID);
             void setRenderableColor(const Vector4f& color, const Vector4f& borderColor);
-
             void setRenderableColorToBase();
             void setRenderableColorToHover();
             void setRenderableColorToSelected();

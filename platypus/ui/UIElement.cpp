@@ -377,6 +377,13 @@ namespace platypus
             _updatePending = true;
         }
 
+        void UIElement::setRenderableTexture(UUID_t textureUUID)
+        {
+            GUIRenderable* pRenderable = getRenderable();
+            if (pRenderable)
+                pRenderable->textureID = textureUUID;
+        }
+
         void UIElement::setRenderableColor(const Vector4f& color, const Vector4f& borderColor)
         {
             GUIRenderable* pRenderable = getRenderable();
