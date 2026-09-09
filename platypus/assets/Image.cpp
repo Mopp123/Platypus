@@ -321,6 +321,51 @@ namespace platypus
         return _pData[(x + y * _width) * _channels + channelIndex];
     }
 
+    int Image::getBrightnessAt(
+        uint32_t x,
+        uint32_t y
+    ) const
+    {
+        if (!_pData)
+        {
+            Debug::log(
+                "Image data was nullptr!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        if (x >= _width || y >= _height)
+        {
+            Debug::log(
+                "@Image::getColorChannelValue "
+                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
+                "out of bounds of the image! "
+                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
+        unsigned char red = 0;
+        unsigned char green = 0;
+        unsigned char blue = 0;
+
+        if (_channels >= 1)
+            red = _pData[(x + y * _width) * _channels + 0];
+        if (_channels >= 2)
+            green = _pData[(x + y * _width) * _channels + 1];
+        if (_channels >= 3)
+            blue = _pData[(x + y * _width) * _channels + 2];
+
+        const float fR = static_cast<float>(red);
+        const float fG = static_cast<float>(green);
+        const float fB = static_cast<float>(blue);
+
+        return static_cast<int>((fR + fG + fB) / 3.0f);
+    }
+
     bool Image::load(const std::string& filepath, ImageFormat format)
     {
         // TODO: On OpenGL side we need to flip?

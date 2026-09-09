@@ -102,6 +102,11 @@ namespace platypus
             uint32_t channelIndex
         ) const;
 
+        int getBrightnessAt(
+            uint32_t x,
+            uint32_t y
+        ) const;
+
         bool load(const std::string& filepath, ImageFormat format);
         bool reload(const std::string& newFilepath, ImageFormat format);
 
@@ -132,7 +137,7 @@ namespace platypus
         inline void setFilepath(const std::string& filepath) { _filepath = filepath; }
 
         inline ImageImpl* getImpl() { return _pImpl; }
-        inline const PE_ubyte* getData() const { return _pData; }
+        inline const unsigned char* getData() const { return _pData; }
         inline int getWidth() const { return _width; }
         inline int getHeight() const { return _height; }
         inline int getChannels() const { return _channels; }
