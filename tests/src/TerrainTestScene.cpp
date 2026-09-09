@@ -68,8 +68,9 @@ void TerrainTestScene::init()
     const size_t tilesPerRow = heightmapWidth - 1;
     const size_t heightmapArea = heightmapWidth * heightmapWidth;
     _heightmap.resize(heightmapArea);
-    memset(_heightmap.data(), 0, sizeof(float) * _heightmap.size());
-    _heightmap[31 + 31 * heightmapWidth] = 1.0f;
+    for (size_t i = 0; i < heightmapArea; ++i)
+        _heightmap[i] = static_cast<float>(std::rand() % 50) * 0.05f;
+
     _pTerrainMesh = pAssetManager->createTerrainMesh(tileSize, _heightmap, true, true, true);
 
     entityID_t terrainEntity = createEntity();
@@ -145,20 +146,6 @@ void TerrainTestScene::init()
 
     create_renderable3D(terrainEntity, _pTerrainMesh->getID(), _pTerrainMaterial->getID());
     Terrain* pTerrainComponent = create_terrain(terrainEntity, tileSize, heightmapWidth);
-
-    float testWorldX = 2.0f * 31.0f - 0.25f;
-    float testWorldZ = 2.0f * 31.0f - 0.25f;
-    float testHeight = get_terrain_height(
-        _pTerrainMesh,
-        pTerrainComponent,
-        pTerrainTransform,
-        testWorldX,
-        testWorldZ
-    );
-    Debug::log(
-        "___TEST___testPoint = (" + std::to_string(testWorldX) + ", " + std::to_string(testWorldZ) + ") height = " + std::to_string(testHeight)
-    );
-    PLATYPUS_ASSERT(false);
 
     _pMeshMaterial = createMeshMaterial(
         pAssetManager,
