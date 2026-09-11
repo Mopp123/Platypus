@@ -45,11 +45,18 @@ namespace platypus
     );
 
     float get_terrain_height(
-        Mesh* pTerrainMesh,
-        Terrain* pTerrainComponent,
-        Transform* pTerrainTransform,
+        const Mesh* pTerrainMesh,
+        const Terrain* pTerrainComponent,
+        const Transform* pTerrainTransform,
         float worldX,
         float worldZ
+    );
+
+    float get_terrain_vertex_height(
+        const Mesh* pTerrainMesh,
+        Vector2i gridPosition,
+        float tileSize,
+        size_t verticesPerRow
     );
 
     void set_terrain_height(

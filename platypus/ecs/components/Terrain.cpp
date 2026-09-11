@@ -66,9 +66,9 @@ namespace platypus
     }
 
     float get_terrain_height(
-        Mesh* pTerrainMesh,
-        Terrain* pTerrainComponent,
-        Transform* pTerrainTransform,
+        const Mesh* pTerrainMesh,
+        const Terrain* pTerrainComponent,
+        const Transform* pTerrainTransform,
         float worldX,
         float worldZ
     )
@@ -153,6 +153,37 @@ namespace platypus
                 Vector2f(tileSpaceX, tileSpaceZ)
             );
         }
+    }
+
+    float get_terrain_vertex_height(
+        const Mesh* pTerrainMesh,
+        Vector2i gridPosition,
+        float tileSize,
+        size_t verticesPerRow
+    )
+    {
+        if (gridPosition.x < 0 || gridPosition.x >= verticesPerRow ||
+            gridPosition.y < 0 || gridPosition.y >= verticesPerRow)
+        {
+            return 0.0f;
+        }
+
+        // NOTE: WARNING! This atm only works because all vertex buffers used for
+        // rendering has vertex positions first in the buffer!
+        const Buffer* pVertexBuffer = pTerrainMesh->getVertexBuffer();
+        const VertexBufferLayout& vertexBufferLayout = pTerrainMesh->getVertexBufferLayout();
+        const size_t stride = vertexBufferLayout.getStride();
+
+        const char* pBufferData = reinterpret_cast<const char*>(pVertexBuffer->getData());
+        size_t index = (gridPosition.x + gridPosition.y * verticesPerRow) * stride + sizeof(float);
+
+        float height = 0.0f;
+        memcpy(
+            &height,
+            pBufferData + index,
+            sizeof(float)
+        );
+        return height;
     }
 
     void set_terrain_height(
