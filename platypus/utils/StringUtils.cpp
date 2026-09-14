@@ -1,5 +1,6 @@
 #include "StringUtils.hpp"
 #include "platypus/core/Debug.hpp"
+#include <sstream>
 #include <utf8.h>
 
 
@@ -13,6 +14,17 @@ namespace platypus { namespace util { namespace str {
             target.erase(foundPos, 1);
             foundPos = target.find(" ");
         }
+    }
+
+    std::vector<std::string> split(const std::string& str, char delim)
+    {
+        std::vector<std::string> components;
+        std::istringstream in(str);
+        std::string s;
+        while (getline(in, s, delim))
+            components.push_back(s);
+
+        return components;
     }
 
     void append_utf8(uint32_t codepoint, std::string& target)

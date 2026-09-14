@@ -217,6 +217,7 @@ namespace platypus
         void addExternalAsset(Asset* pAsset);
 
         bool isPersistent(UUID_t assetID) const;
+        bool isDefault(UUID_t assetID) const;
 
         void addToDeserializationModelMeshUUIDQuery(
             UUID_t modelUUID,

@@ -1107,6 +1107,11 @@ namespace platypus
         return _persistentAssets.find(assetID) != _persistentAssets.end();
     }
 
+    bool AssetManager::isDefault(UUID_t assetID) const
+    {
+        return _defaultAssets.find(assetID) != _defaultAssets.end();
+    }
+
     void AssetManager::addToDeserializationModelMeshUUIDQuery(
         UUID_t modelUUID,
         const std::vector<UUID_t>& meshUUIDs

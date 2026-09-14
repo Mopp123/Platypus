@@ -9,6 +9,7 @@ namespace platypus { namespace util { namespace str {
 
     // NOTE: WARNING: Works only for strings containing 1 byte characters!!!
     void trim_spaces(std::string& target);
+    std::vector<std::string> split(const std::string& str, char delim);
 
     void append_utf8(uint32_t codepoint, std::string& target);
     void pop_back_utf8(std::string& target);
