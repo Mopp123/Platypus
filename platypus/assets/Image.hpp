@@ -63,6 +63,14 @@ namespace platypus
     bool is_color_format(ImageFormat format);
     ImageFormat srgb_format_to_unorm(ImageFormat srgb);
 
+    std::vector<unsigned char> scale_image_pixels(
+        int sourceWidth,
+        int sourceHeight,
+        int sourceChannels,
+        int targetWidth,
+        int targetHeight,
+        const unsigned char * const pSourcePixels
+    );
 
     struct ImageImpl;
     class Image : public Asset
