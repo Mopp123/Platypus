@@ -12,6 +12,8 @@
 #include "platypus/ecs/systems/TransformSystem.hpp"
 #include "platypus/ecs/systems/LightSystem.hpp"
 
+#include <filesystem>
+
 
 namespace platypus
 {
@@ -977,5 +979,31 @@ namespace platypus
         _parentComponentsToFinalize.clear();
         _childrenComponentsToFinalize.clear();
         Debug::log("___TEST___Scene deserialization finalization finished!");
+    }
+
+
+    // Validate that file doesn't already exist?
+    bool Scene::validate_filepath(
+        const std::string& absolutePath,
+        std::string& outError
+    )
+    {
+        const std::string sceneName = std::filesystem::path(absolutePath).filename().string();
+        const size_t sceneNameExtensionPos = sceneName.find(".");
+        if (sceneNameExtensionPos == std::string::npos)
+        {
+            outError = "No extension specified";
+            return false;
+        }
+
+        const std::string extension = sceneName.substr(sceneNameExtensionPos + 1, sceneName.size());
+        // TODO: Don't hardcode this here?
+        if (extension != "scene")
+        {
+            outError = "Invalid extension: " + extension;
+            return false;
+        }
+
+        return true;
     }
 }

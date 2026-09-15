@@ -144,6 +144,12 @@ namespace platypus
 
         void finalizeDeserialization();
 
+        // Validate that file doesn't already exist?
+        static bool validate_filepath(
+            const std::string& absolutePath,
+            std::string& outError
+        );
+
         virtual void init() = 0;
         virtual void update() = 0;
 
