@@ -85,11 +85,14 @@ namespace platypus
         float terrainSpaceX = worldX - terrainWorldX;
         float terrainSpaceZ = worldZ - terrainWorldZ;
 
-        Vector2i gridPos = to_terrain_mesh_coords(terrainSpaceX, terrainSpaceZ, tileSize, verticesPerRow);
+        Vector2i gridPos = to_terrain_mesh_coords(
+            terrainSpaceX,
+            terrainSpaceZ,
+            tileSize,
+            verticesPerRow
+        );
         if (gridPos.x < 0 || gridPos.x + 1 >= verticesPerRow || gridPos.y < 0 || gridPos.y + 1 >= verticesPerRow)
-        {
             return 0.0f;
-        }
 
         // Coordinates in relation to the current tile, in range 0 to 1
         float tileSpaceX = std::fmod(terrainSpaceX, tileSize) / tileSize;
@@ -104,7 +107,7 @@ namespace platypus
         const char* pBufferData = reinterpret_cast<const char*>(pVertexBuffer->getData());
         size_t currentIndex = (gridPos.x + gridPos.y * verticesPerRow) * stride + sizeof(float);
         size_t rightIndex = ((gridPos.x + 1) + gridPos.y * verticesPerRow) * stride + sizeof(float);
-        size_t bottomIndex = (gridPos.y + (gridPos.y + 1) * verticesPerRow) * stride + sizeof(float);
+        size_t bottomIndex = (gridPos.x + (gridPos.y + 1) * verticesPerRow) * stride + sizeof(float);
         size_t bottomRightIndex = ((gridPos.x + 1) + (gridPos.y + 1) * verticesPerRow) * stride + sizeof(float);
 
         float currentHeight = 0.0f;

@@ -230,27 +230,24 @@ namespace platypus
         float xScaleFactor = static_cast<float>(sourceWidth) / static_cast<float>(targetWidth);
         float yScaleFactor = static_cast<float>(sourceHeight) / static_cast<float>(targetHeight);
 
-        for (int targetY = 0; targetY < targetWidth; ++targetY)
+        for (int targetY = 0; targetY < targetHeight; ++targetY)
         {
             int sourceY = static_cast<int>(
                 static_cast<float>(targetY) * yScaleFactor
             );
-            for (int targetX = 0; targetX < targetHeight; ++targetX)
+            for (int targetX = 0; targetX < targetWidth; ++targetX)
             {
                 int sourceX = static_cast<int>(
-                    static_cast<float>(targetY) * xScaleFactor
+                    static_cast<float>(targetX) * xScaleFactor
                 );
 
                 for (int channel = 0; channel < sourceChannels; channel++)
                 {
-                    unsigned char sourceColor = pSourcePixels[(sourceX + sourceY * sourceWidth) + channel];
-                    result[(targetX + targetY * targetWidth) + channel] = sourceColor;
+                    unsigned char sourceColor = pSourcePixels[(sourceX + sourceY * sourceWidth) * sourceChannels + channel];
+                    result[(targetX + targetY * targetWidth) * sourceChannels + channel] = sourceColor;
                 }
             }
         }
-        // NOTE: NOT TESTED!!!
-        // TODO: TEST!
-        CONTINUE HERE!
         return result;
     }
 
@@ -405,34 +402,44 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return 0;
         }
-        if (x >= _width || y >= _height)
+
+        if (_channels <= 0)
         {
             Debug::log(
-                "@Image::getColorChannelValue "
-                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
-                "out of bounds of the image! "
-                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
+                "Invalid color channel count: " + std::to_string(_channels),
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
             return 0;
         }
-        unsigned char red = 0;
-        unsigned char green = 0;
-        unsigned char blue = 0;
 
-        if (_channels >= 1)
-            red = _pData[(x + y * _width) * _channels + 0];
-        if (_channels >= 2)
-            green = _pData[(x + y * _width) * _channels + 1];
-        if (_channels >= 3)
-            blue = _pData[(x + y * _width) * _channels + 2];
+        if (x < 0 || x > _width || y < 0 || y > _height)
+        {
+            Debug::log(
+                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
+                "out of bounds of the image! "
+                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return 0;
+        }
 
-        const float fR = static_cast<float>(red);
-        const float fG = static_cast<float>(green);
-        const float fB = static_cast<float>(blue);
+        float brightness = 0;
+        int colorChannels = _channels;
+        // Ignore alpha channel if exists
+        if (colorChannels >= 4)
+            colorChannels -= 1;
 
-        return static_cast<int>((fR + fG + fB) / 3.0f);
+        for (int channel = 0; channel < colorChannels; ++channel)
+        {
+            const size_t valueOffset = ((x + y * _width) * _channels) + channel;
+            PLATYPUS_ASSERT(valueOffset < _width * _height * _channels);
+            brightness += static_cast<float>(_pData[valueOffset]);
+        }
+        return static_cast<int>(brightness / static_cast<float>(_channels));
     }
 
     bool Image::load(const std::string& filepath, ImageFormat format)
