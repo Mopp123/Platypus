@@ -86,9 +86,6 @@ namespace platypus
 
             if (_pElement->_isCursorOver)
             {
-                if (_pElement->_pOnClick)
-                    (*_pElement->_pOnClick)(button, action, _pElement->_pOnClickUserData);
-
                 UIElement* pParent = _pElement->_pParent;
                 if (pParent)
                 {
@@ -98,6 +95,10 @@ namespace platypus
                             pGroupElement->setSelected(pGroupElement == _pElement);
                     }
                 }
+
+                if (_pElement->_pOnClick)
+                    (*_pElement->_pOnClick)(button, action, _pElement->_pOnClickUserData);
+
 
                 // If drag event -> get where the dragging begins..
                 if (_pElement->_pOnDrag && !_pElement->_dragged)
