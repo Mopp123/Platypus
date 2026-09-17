@@ -31,4 +31,6 @@ namespace platypus { namespace util { namespace str {
         const std::vector<std::string>& target,
         const std::vector<std::string>& strings
     );
+
+    bool to_float(const std::string& str, float& outValue);
 }}}

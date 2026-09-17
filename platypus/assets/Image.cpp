@@ -252,6 +252,92 @@ namespace platypus
     }
 
 
+    // NOTE: Not sure if this works that well atm...
+    std::vector<unsigned char> scale_image_pixels_antialiasing(
+        int sourceWidth,
+        int sourceHeight,
+        int sourceChannels,
+        int targetWidth,
+        int targetHeight,
+        const unsigned char * const pSourcePixels
+    )
+    {
+        if (!pSourcePixels)
+        {
+            Debug::log(
+                "pSourcePixels was nullptr!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (sourceWidth < 1 || sourceHeight < 1)
+        {
+            Debug::log(
+                "Invalid source image dimensions: " + std::to_string(sourceWidth) + "x" + std::to_string(sourceHeight),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (sourceChannels < 1)
+        {
+            Debug::log(
+                "Invalid source channels: " + std::to_string(sourceChannels),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        std::vector<unsigned char> result(targetWidth * targetHeight * sourceChannels);
+
+        float xScaleFactor = static_cast<float>(sourceWidth) / static_cast<float>(targetWidth);
+        float yScaleFactor = static_cast<float>(sourceHeight) / static_cast<float>(targetHeight);
+
+        for (int targetY = 0; targetY < targetHeight; ++targetY)
+        {
+            int sourceY = static_cast<int>(
+                static_cast<float>(targetY) * yScaleFactor
+            );
+            for (int targetX = 0; targetX < targetWidth; ++targetX)
+            {
+                int sourceX = static_cast<int>(
+                    static_cast<float>(targetX) * xScaleFactor
+                );
+
+                for (int channel = 0; channel < sourceChannels; channel++)
+                {
+                    float combinedColors = 0;
+                    float combinedCount = 0.0f;
+                    // Doesn't work?
+                    const int radius = 1;
+                    for (int surroundingX = sourceX - radius; surroundingX < sourceX + radius;  ++surroundingX)
+                    {
+                        for (int surroundingY = sourceY - radius; surroundingY < sourceY + radius;  ++surroundingY)
+                        {
+                            if (surroundingX >= 0 && surroundingX < sourceWidth && surroundingY >= 0 && surroundingY < sourceHeight)
+                            {
+                                unsigned char sourceColor = pSourcePixels[(surroundingX + surroundingY * sourceWidth) * sourceChannels + channel];
+                                combinedColors += static_cast<float>(sourceColor);
+                                combinedCount += 1.0f;
+                            }
+                        }
+                    }
+                    unsigned char combinedColor = static_cast<unsigned char>(
+                        combinedColors / combinedCount
+                    );
+
+                    result[(targetX + targetY * targetWidth) * sourceChannels + channel] = combinedColor;
+                }
+            }
+        }
+        return result;
+    }
+
+
     Image::Image(
         size_t uuidPool,
         PE_ubyte* pData,

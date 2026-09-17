@@ -247,7 +247,15 @@ namespace platypus
             catch (const std::invalid_argument& e)
             {
                 Debug::log(
-                    "Failed to convert " + content + " to int",
+                    "Failed to convert " + content + " to int (std::invalid_argument)",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+            catch (const std::out_of_range& e)
+            {
+                Debug::log(
+                    "Failed to convert " + content + " to int (std::out_of_range)",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -266,7 +274,15 @@ namespace platypus
             catch (const std::invalid_argument& e)
             {
                 Debug::log(
-                    "Failed to convert " + content + " to float",
+                    "Failed to convert " + content + " to float (std::invalid_argument)",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+            catch (const std::out_of_range& e)
+            {
+                Debug::log(
+                    "Failed to convert " + content + " to float (std::out_of_range)",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -292,7 +308,15 @@ namespace platypus
             catch (const std::invalid_argument& e)
             {
                 Debug::log(
-                    "Failed to convert " + content + " to Vector2f",
+                    "Failed to convert " + content + " to Vector2f (std::invalid_argument)",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+            }
+            catch (const std::out_of_range& e)
+            {
+                Debug::log(
+                    "Failed to convert " + content + " to Vector2f (std::out_of_range)",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );

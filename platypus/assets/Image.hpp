@@ -72,6 +72,15 @@ namespace platypus
         const unsigned char * const pSourcePixels
     );
 
+    std::vector<unsigned char> scale_image_pixels_antialiasing(
+        int sourceWidth,
+        int sourceHeight,
+        int sourceChannels,
+        int targetWidth,
+        int targetHeight,
+        const unsigned char * const pSourcePixels
+    );
+
     struct ImageImpl;
     class Image : public Asset
     {

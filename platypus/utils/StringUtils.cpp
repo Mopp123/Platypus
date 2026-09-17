@@ -2,6 +2,7 @@
 #include "platypus/core/Debug.hpp"
 #include <sstream>
 #include <utf8.h>
+#include <stdexcept>
 
 
 namespace platypus { namespace util { namespace str {
@@ -139,5 +140,23 @@ namespace platypus { namespace util { namespace str {
                 missing.emplace_back(s);
         }
         return missing;
+    }
+
+
+    bool to_float(const std::string& str, float& outValue)
+    {
+        try
+        {
+            outValue = std::stof(str);
+            return true;
+        }
+        catch (const std::invalid_argument& ex)
+        {
+            return false;
+        }
+        catch (const std::out_of_range& ex)
+        {
+            return false;
+        }
     }
 }}}
