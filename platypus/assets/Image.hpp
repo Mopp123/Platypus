@@ -2,6 +2,7 @@
 
 #include "platypus/Common.h"
 #include "Asset.hpp"
+#include "platypus/utils/Maths.hpp"
 #include <vector>
 
 #define PE_IMAGE_MAX_CHANNELS 4
@@ -81,6 +82,8 @@ namespace platypus
         const unsigned char * const pSourcePixels
     );
 
+    // NOTE: Stopped using ImageImpl ages ago?
+    // TODO: Remove?
     struct ImageImpl;
     class Image : public Asset
     {
@@ -112,6 +115,12 @@ namespace platypus
             size_t bufferPos
         );
         ~Image();
+
+        void setPixelColor(
+            int32_t x,
+            int32_t y,
+            Vector4f color
+        );
 
         int getColorChannelValue(
             uint32_t x,
@@ -153,6 +162,8 @@ namespace platypus
         inline const std::string& getFilepath() const { return _filepath; }
         inline void setFilepath(const std::string& filepath) { _filepath = filepath; }
 
+        // NOTE: Stopped using ImageImpl ages ago?
+        // TODO: Remove?
         inline ImageImpl* getImpl() { return _pImpl; }
         inline const unsigned char* getData() const { return _pData; }
         inline int getWidth() const { return _width; }

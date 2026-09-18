@@ -252,6 +252,16 @@ namespace platypus
         glDeleteTextures(1, &_pImpl->id);
     }
 
+    void Texture::update()
+    {
+        Debug::log(
+            "UNIMPLEMENTED!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+
     void Texture::create(const Image* pImage)
     {
         if (!_pImpl)

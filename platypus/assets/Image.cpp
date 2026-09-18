@@ -431,6 +431,33 @@ namespace platypus
             delete[] _pData;
     }
 
+    void Image::setPixelColor(
+        int32_t x,
+        int32_t y,
+        Vector4f color
+    )
+    {
+        if (x < 0 || x >= _width || y < 0 || y >= _height)
+        {
+            Debug::log(
+                "Invalid coordinates: " + std::to_string(x) + ", " + std::to_string(y) + " "
+                "Image dimensions are: " + std::to_string(_width) + "x" + std::to_string(_height),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        if (_channels >= 1)
+            _pData[(x + y * _width) * _channels] = static_cast<const unsigned char>(color.r * 255.0f);
+        if (_channels >= 2)
+            _pData[(x + y * _width) * _channels + 1] = static_cast<const unsigned char>(color.g * 255.0f);
+        if (_channels >= 3)
+            _pData[(x + y * _width) * _channels + 2] = static_cast<const unsigned char>(color.b * 255.0f);
+        if (_channels >= 4)
+            _pData[(x + y * _width) * _channels + 3] = static_cast<const unsigned char>(color.a * 255.0f);
+    }
+
     int Image::getColorChannelValue(
         uint32_t x,
         uint32_t y,

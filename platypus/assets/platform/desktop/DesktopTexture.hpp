@@ -32,5 +32,6 @@ namespace platypus
         VkImageView imageView = VK_NULL_HANDLE;
         VmaAllocation vmaAllocation = VK_NULL_HANDLE;
         VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        uint32_t mipLevelCount = 0;
     };
 }

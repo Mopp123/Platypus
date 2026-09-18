@@ -573,6 +573,55 @@ namespace platypus
             vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
     }
 
+    void Texture::update()
+    {
+        PLATYPUS_ASSERT(_pImpl);
+
+        const uint32_t imageWidth = static_cast<uint32_t>(_pImage->getWidth());
+        const uint32_t imageHeight = static_cast<uint32_t>(_pImage->getHeight());
+        const uint32_t mipLevelCount = _pImpl->mipLevelCount;
+
+        // TODO: Don't use stagin buffer here or make the staging buffer persistent
+        // if it's used frequently! DON'T DO IT LIKE THIS!!!
+        Buffer* pStagingBuffer = new Buffer(
+            reinterpret_cast<const void*>(_pImage->getData()),
+            1, // Single element size is 8 bit "pixel"
+            _pImage->getSize(),
+            BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
+        );
+
+        transition_image_layout_immediate(
+            this, // NOTE: Potential DANGER!
+            ImageLayout::TRANSFER_DST_OPTIMAL,
+            PipelineStage::TOP_OF_PIPE_BIT,
+            0,
+            PipelineStage::TRANSFER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
+            mipLevelCount
+        );
+
+        copy_buffer_to_image(
+            pStagingBuffer->getImpl()->handle,
+            _pImpl->image,
+            imageWidth,
+            imageHeight
+        );
+
+        transition_image_layout_immediate(
+            this, // NOTE: Potential DANGER!
+            ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            PipelineStage::TRANSFER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
+            PipelineStage::FRAGMENT_SHADER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
+            mipLevelCount
+        );
+
+        delete pStagingBuffer;
+    }
+
     void Texture::create(const Image* pImage)
     {
         if (!_pImpl)
@@ -652,6 +701,7 @@ namespace platypus
             )) + 1;
             imageUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         }
+        _pImpl->mipLevelCount = mipLevelCount;
 
         VkImageCreateInfo imageCreateInfo{};
         imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
