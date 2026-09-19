@@ -581,6 +581,9 @@ namespace platypus
         const uint32_t imageHeight = static_cast<uint32_t>(_pImage->getHeight());
         const uint32_t mipLevelCount = _pImpl->mipLevelCount;
 
+        // TODO: Review this!!
+        CONTINUE HERE!?
+
         // TODO: Don't use stagin buffer here or make the staging buffer persistent
         // if it's used frequently! DON'T DO IT LIKE THIS!!!
         Buffer* pStagingBuffer = new Buffer(
@@ -595,8 +598,11 @@ namespace platypus
         transition_image_layout_immediate(
             this, // NOTE: Potential DANGER!
             ImageLayout::TRANSFER_DST_OPTIMAL,
-            PipelineStage::TOP_OF_PIPE_BIT,
-            0,
+            PipelineStage::FRAGMENT_SHADER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
+            // *prev src stage and src access mask
+            //PipelineStage::TOP_OF_PIPE_BIT,
+            //0,
             PipelineStage::TRANSFER_BIT,
             MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
             mipLevelCount
@@ -609,15 +615,34 @@ namespace platypus
             imageHeight
         );
 
-        transition_image_layout_immediate(
-            this, // NOTE: Potential DANGER!
-            ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            PipelineStage::TRANSFER_BIT,
-            MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
-            PipelineStage::FRAGMENT_SHADER_BIT,
-            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
-            mipLevelCount
-        );
+        if (mipLevelCount > 1)
+        {
+            const Image* pImage = getImage();
+            VkFormat vkImageFormat = to_vk_format(pImage->getFormat());
+            generate_mipmaps(
+                _pImpl->image,
+                vkImageFormat,
+                imageWidth,
+                imageHeight,
+                mipLevelCount,
+                to_vk_sampler_filter_mode(_pSampler->getFilterMode())
+            );
+            // NOTE: JUST TESTING HERE ATM!
+            // TODO: Maybe provide the _pImpl to generate_mipmaps func and set this there?
+            _pImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+        else
+        {
+            transition_image_layout_immediate(
+                this, // NOTE: Potential DANGER!
+                ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                PipelineStage::TRANSFER_BIT,
+                MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
+                PipelineStage::FRAGMENT_SHADER_BIT,
+                MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
+                mipLevelCount
+            );
+        }
 
         delete pStagingBuffer;
     }
@@ -776,6 +801,9 @@ namespace platypus
                 mipLevelCount,
                 to_vk_sampler_filter_mode(_pSampler->getFilterMode())
             );
+            // NOTE: JUST TESTING HERE ATM!
+            // TODO: Maybe provide the _pImpl to generate_mipmaps func and set this there?
+            _pImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
         else
         {

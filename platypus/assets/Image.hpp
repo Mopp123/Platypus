@@ -116,6 +116,14 @@ namespace platypus
         );
         ~Image();
 
+        void set(
+            int width,
+            int height,
+            int channels,
+            ImageFormat format,
+            unsigned char* pData
+        );
+
         void setPixelColor(
             int32_t x,
             int32_t y,
@@ -126,6 +134,11 @@ namespace platypus
             uint32_t x,
             uint32_t y,
             uint32_t channelIndex
+        ) const;
+
+        Vector4f getColorAt(
+            uint32_t x,
+            uint32_t y
         ) const;
 
         int getBrightnessAt(

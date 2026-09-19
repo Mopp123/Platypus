@@ -131,6 +131,12 @@ namespace platypus
         return { x / l, y / l, z / l, w / l };
     }
 
+    Vector4f Vector4f::lerp(const Vector4f& other, float amount) const
+    {
+        const Vector4f& v = *this;
+        return v + ((other - v) * amount);
+    }
+
     Vector4f Vector4f::operator+(const Vector4f& other) const
     {
         return { x + other.x, y + other.y, z + other.z, w + other.w };

@@ -431,6 +431,45 @@ namespace platypus
             delete[] _pData;
     }
 
+    void Image::set(
+        int width,
+        int height,
+        int channels,
+        ImageFormat format,
+        unsigned char* pData
+    )
+    {
+        PLATYPUS_ASSERT(width > 0);
+        PLATYPUS_ASSERT(height > 0);
+        PLATYPUS_ASSERT(channels > 0);
+
+        if (width == _width && height == _height && channels == _channels && format == _format)
+        {
+            memcpy(_pData, pData, getSize());
+            return;
+        }
+
+        int formatChannels = get_image_format_channel_count(format);
+        if (channels != formatChannels)
+        {
+            Debug::log(
+                "Invalid color channel count: " + std::to_string(channels) + " for image format: " + image_format_to_string(format),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        _width = width;
+        _height = height;
+        _channels = channels;
+
+        delete[] _pData;
+        _pData = new unsigned char[getSize()];
+        memcpy(_pData, pData, getSize());
+    }
+
     void Image::setPixelColor(
         int32_t x,
         int32_t y,
@@ -498,6 +537,59 @@ namespace platypus
             return 0;
         }
         return _pData[(x + y * _width) * _channels + channelIndex];
+    }
+
+    Vector4f Image::getColorAt(
+        uint32_t x,
+        uint32_t y
+    ) const
+    {
+        Vector4f color;
+        if (!_pData)
+        {
+            Debug::log(
+                "Image data was nullptr!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return color;
+        }
+
+        if (_channels <= 0)
+        {
+            Debug::log(
+                "Invalid color channel count: " + std::to_string(_channels),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return color;
+        }
+
+        if (x < 0 || x > _width || y < 0 || y > _height)
+        {
+            Debug::log(
+                "Image coordinates(" + std::to_string(x) + ", " + std::to_string(y) + ") "
+                "out of bounds of the image! "
+                "Image dimensions: " + std::to_string(_width) + "x" + std::to_string(_height),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return color;
+        }
+
+        if (_channels >= 1)
+            color.r = _pData[((x + y * _width) * _channels) + 0];
+        if (_channels >= 2)
+            color.g = _pData[((x + y * _width) * _channels) + 1];
+        if (_channels >= 3)
+            color.b = _pData[((x + y * _width) * _channels) + 2];
+        if (_channels >= 4)
+            color.a = _pData[((x + y * _width) * _channels) + 3];
+
+        return color;
     }
 
     int Image::getBrightnessAt(

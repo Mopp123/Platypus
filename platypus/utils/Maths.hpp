@@ -110,6 +110,7 @@ namespace platypus
 
         float length() const;
         Vector4f normalize() const;
+        Vector4f lerp(const Vector4f& other, float amount) const;
 
         Vector4f operator+(const Vector4f& other) const;
         Vector4f operator-(const Vector4f& other) const;
