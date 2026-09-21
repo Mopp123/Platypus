@@ -95,6 +95,7 @@ namespace platypus
         int _channels = -1;
         ImageFormat _format;
         std::string _filepath;
+        bool _serializePixelData = false;
 
     public:
         // NOTE: pData gets copied here, ownership doesn't transfer!
@@ -184,5 +185,7 @@ namespace platypus
         inline int getChannels() const { return _channels; }
         inline size_t getSize() const { return _width * _height * _channels; }
         inline ImageFormat getFormat() const { return _format; }
+        inline void enablePixelDataSerialization(bool arg) { _serializePixelData = arg; }
+        inline bool isPixelDataSerializationEnabled() const { return _serializePixelData; }
     };
 }

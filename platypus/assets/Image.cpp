@@ -4,10 +4,13 @@
 #include "platypus/core/Debug.hpp"
 #include <cstring>
 
+#include <filesystem>
+
 // NOTE: When starting to use tinygltf we probably need to define STB_IMAGE_IMPLEMENTATION in the file
 // we handle model loading so we WILL NEED TO REMOVE THIS FROM HERE!
 //#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 
 namespace platypus
@@ -843,6 +846,39 @@ namespace platypus
         std::vector<char>& targetBuffer
     ) const
     {
+        if (_serializePixelData)
+        {
+            if (_filepath.empty())
+            {
+                Debug::log(
+                    "Attempting to serialize pixel data but Image's filepath was empty",
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+                return;
+            }
+
+            // Stride is size of row of pixels
+            const int stride = sizeof(unsigned char) * _channels * _width;
+            if (!stbi_write_png(
+                _filepath.c_str(),
+                _width,
+                _height,
+                _channels,
+                reinterpret_cast<const void*>(_pData),
+                stride
+            ))
+            {
+                Debug::log(
+                    "Failed to serialize edited image data to: " + _filepath,
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+        }
+
         const size_t prevSize = targetBuffer.size();
         const size_t serializedSize = getSerializedSize();
         targetBuffer.resize(prevSize + serializedSize);
