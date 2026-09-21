@@ -69,7 +69,9 @@ namespace platypus
         { GLFW_KEY_LEFT_CONTROL, KeyName::KEY_LCTRL     },
         { GLFW_KEY_LEFT_SHIFT,   KeyName::KEY_SHIFT     },
         { GLFW_KEY_TAB,          KeyName::KEY_TAB       },
-        { GLFW_KEY_ESCAPE,       KeyName::KEY_ESCAPE    }
+        { GLFW_KEY_ESCAPE,       KeyName::KEY_ESCAPE    },
+
+        { GLFW_KEY_LEFT_ALT,       KeyName::KEY_LALT    }
     };
 
     static std::unordered_map<int, MouseButtonName> s_glfwToMouseButtonMapping

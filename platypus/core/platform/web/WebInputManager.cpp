@@ -78,7 +78,10 @@ namespace platypus
         { "Control",     KeyName::KEY_LCTRL     },
         { "Shift",       KeyName::KEY_SHIFT     },
         { "Tab",         KeyName::KEY_TAB       },
-        { "Escape",      KeyName::KEY_ESCAPE    }
+        { "Escape",      KeyName::KEY_ESCAPE    },
+
+        // NOTE: This isn't tested yet, not sure if works!?!?
+        { "Alt",      KeyName::KEY_ESCAPE    }
     };
 
     static std::set<std::string> s_emscSpecialKeys{

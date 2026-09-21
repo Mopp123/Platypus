@@ -69,7 +69,9 @@ namespace platypus
         KEY_LCTRL,
         KEY_SHIFT,
         KEY_TAB,
-        KEY_ESCAPE
+        KEY_ESCAPE,
+
+        KEY_LALT,
     };
 
     enum class MouseButtonName
