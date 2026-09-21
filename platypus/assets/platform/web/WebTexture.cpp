@@ -247,21 +247,6 @@ namespace platypus
         }
     }
 
-    void Texture::destroy()
-    {
-        glDeleteTextures(1, &_pImpl->id);
-    }
-
-    void Texture::update()
-    {
-        Debug::log(
-            "UNIMPLEMENTED!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-    }
-
     void Texture::create(const Image* pImage)
     {
         if (!_pImpl)
@@ -388,6 +373,21 @@ namespace platypus
         GL_FUNC(glBindTexture(GL_TEXTURE_2D, 0));
 
         _pImpl->id = glTextureID;
+    }
+
+    void Texture::destroy()
+    {
+        glDeleteTextures(1, &_pImpl->id);
+    }
+
+    void Texture::update()
+    {
+        Debug::log(
+            "UNIMPLEMENTED!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
     }
 
 

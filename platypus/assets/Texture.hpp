@@ -105,15 +105,16 @@ namespace platypus
         ~Texture();
 
         // TODO: IMPORTANT! Add web implementations for:
-        //  *destroy
         //  *create
+        //  *destroy
         //  *recreate(1)
         //  *recreate(2)
+
+        void create(const Image* pImage);
 
         // TODO: Make destroy rather private and some public func to recreate with changed image?
         void destroy();
         void update();
-        void create(const Image* pImage);
 
         // calls destroy(), create(..), searches all Materials using this texture
         // and updates the Material's texture descriptors.

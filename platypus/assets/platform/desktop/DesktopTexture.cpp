@@ -237,14 +237,17 @@ namespace platypus
 
 
     static void generate_mipmaps(
-        VkImage imageHandle,
-        VkFormat imageFormat,
-        int imgWidth,
-        int imgHeight,
-        uint32_t mipLevelCount,
-        VkFilter filterMode
+        Texture* pTexture,
+        int32_t width,
+        int32_t height,
+        uint32_t mipLevelCount
     )
     {
+        TextureImpl* pImpl = pTexture->getImpl();
+        PLATYPUS_ASSERT(pImpl);
+        VkImage imageHandle = pImpl->image;
+        VkFilter filterMode = to_vk_sampler_filter_mode(pTexture->getTextureSampler()->getFilterMode());
+
         CommandBuffer commandBuffer = Device::get_command_pool()->allocCommandBuffers(
             1,
             CommandBufferLevel::PRIMARY_COMMAND_BUFFER
@@ -254,16 +257,13 @@ namespace platypus
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.image = imageHandle;
+        barrier.image = pImpl->image;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
         barrier.subresourceRange.levelCount = 1;
-
-        int32_t mipWidth = imgWidth;
-        int32_t mipHeight = imgHeight;
 
         for (uint32_t i = 1; i < mipLevelCount; ++i)
         {
@@ -285,14 +285,14 @@ namespace platypus
 
             VkImageBlit blit{};
             blit.srcOffsets[0] = { 0, 0, 0 };
-            blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+            blit.srcOffsets[1] = { width, height, 1 };
             blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             blit.srcSubresource.mipLevel = i - 1;
             blit.srcSubresource.baseArrayLayer = 0;
             blit.srcSubresource.layerCount = 1;
             blit.dstOffsets[0] = { 0, 0, 0 };
-            int32_t nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
-            int32_t nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+            int32_t nextMipWidth = width > 1 ? width / 2 : 1;
+            int32_t nextMipHeight = width > 1 ? height / 2 : 1;
             blit.dstOffsets[1] = { nextMipWidth, nextMipHeight, 1 };
             blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             blit.dstSubresource.mipLevel = i;
@@ -301,9 +301,12 @@ namespace platypus
 
             vkCmdBlitImage(
                 cmdBufferHandle,
-                imageHandle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                imageHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                1, &blit,
+                imageHandle,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                imageHandle,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1,
+                &blit,
                 filterMode
             );
 
@@ -321,11 +324,11 @@ namespace platypus
                 1, &barrier
             );
 
-            if (mipWidth > 1)
-                mipWidth /= 2;
+            if (width > 1)
+                width /= 2;
 
-            if (mipHeight > 1)
-                mipHeight /= 2;
+            if (height > 1)
+                height /= 2;
         }
 
         // Transition also the last mip level to readonlyoptimal
@@ -346,6 +349,7 @@ namespace platypus
         );
 
         commandBuffer.finishSingleUse();
+        pImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
 
@@ -564,89 +568,6 @@ namespace platypus
         }
     }
 
-    void Texture::destroy()
-    {
-        Device::wait_for_operations();
-        DeviceImpl* pDeviceImpl = Device::get_impl();
-        vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
-        if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
-            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
-    }
-
-    void Texture::update()
-    {
-        PLATYPUS_ASSERT(_pImpl);
-
-        const uint32_t imageWidth = static_cast<uint32_t>(_pImage->getWidth());
-        const uint32_t imageHeight = static_cast<uint32_t>(_pImage->getHeight());
-        const uint32_t mipLevelCount = _pImpl->mipLevelCount;
-
-        // TODO: Review this!!
-        CONTINUE HERE!?
-
-        // TODO: Don't use stagin buffer here or make the staging buffer persistent
-        // if it's used frequently! DON'T DO IT LIKE THIS!!!
-        Buffer* pStagingBuffer = new Buffer(
-            reinterpret_cast<const void*>(_pImage->getData()),
-            1, // Single element size is 8 bit "pixel"
-            _pImage->getSize(),
-            BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
-            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
-            false
-        );
-
-        transition_image_layout_immediate(
-            this, // NOTE: Potential DANGER!
-            ImageLayout::TRANSFER_DST_OPTIMAL,
-            PipelineStage::FRAGMENT_SHADER_BIT,
-            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
-            // *prev src stage and src access mask
-            //PipelineStage::TOP_OF_PIPE_BIT,
-            //0,
-            PipelineStage::TRANSFER_BIT,
-            MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
-            mipLevelCount
-        );
-
-        copy_buffer_to_image(
-            pStagingBuffer->getImpl()->handle,
-            _pImpl->image,
-            imageWidth,
-            imageHeight
-        );
-
-        if (mipLevelCount > 1)
-        {
-            const Image* pImage = getImage();
-            VkFormat vkImageFormat = to_vk_format(pImage->getFormat());
-            generate_mipmaps(
-                _pImpl->image,
-                vkImageFormat,
-                imageWidth,
-                imageHeight,
-                mipLevelCount,
-                to_vk_sampler_filter_mode(_pSampler->getFilterMode())
-            );
-            // NOTE: JUST TESTING HERE ATM!
-            // TODO: Maybe provide the _pImpl to generate_mipmaps func and set this there?
-            _pImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
-        else
-        {
-            transition_image_layout_immediate(
-                this, // NOTE: Potential DANGER!
-                ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-                PipelineStage::TRANSFER_BIT,
-                MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
-                PipelineStage::FRAGMENT_SHADER_BIT,
-                MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
-                mipLevelCount
-            );
-        }
-
-        delete pStagingBuffer;
-    }
-
     void Texture::create(const Image* pImage)
     {
         if (!_pImpl)
@@ -794,16 +715,11 @@ namespace platypus
         {
             PLATYPUS_ASSERT(_pImpl->imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             generate_mipmaps(
-                imageHandle,
-                vkImageFormat,
+                this,
                 imageWidth,
                 imageHeight,
-                mipLevelCount,
-                to_vk_sampler_filter_mode(_pSampler->getFilterMode())
+                mipLevelCount
             );
-            // NOTE: JUST TESTING HERE ATM!
-            // TODO: Maybe provide the _pImpl to generate_mipmaps func and set this there?
-            _pImpl->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
         else
         {
@@ -834,5 +750,81 @@ namespace platypus
         )[0];
 
         _pImpl->imageView = imageView;
+    }
+
+    void Texture::destroy()
+    {
+        Device::wait_for_operations();
+        DeviceImpl* pDeviceImpl = Device::get_impl();
+        vkDestroyImageView(pDeviceImpl->device, _pImpl->imageView, nullptr);
+        if (_pImpl->vmaAllocation != VK_NULL_HANDLE)
+            vmaDestroyImage(pDeviceImpl->vmaAllocator, _pImpl->image, _pImpl->vmaAllocation);
+    }
+
+    void Texture::update()
+    {
+        PLATYPUS_ASSERT(_pImpl);
+
+        const uint32_t imageWidth = static_cast<uint32_t>(_pImage->getWidth());
+        const uint32_t imageHeight = static_cast<uint32_t>(_pImage->getHeight());
+        const uint32_t mipLevelCount = _pImpl->mipLevelCount;
+
+        // TODO:
+        //     *Don't use staging buffer here or make the staging buffer persistent if
+        //     it's used frequently!
+        //     ->Don't heap allocate at each update!
+        //  DON'T DO IT LIKE THIS!!!
+        Buffer* pStagingBuffer = new Buffer(
+            reinterpret_cast<const void*>(_pImage->getData()),
+            1, // Single element size is 8 bit "pixel"
+            _pImage->getSize(),
+            BufferUsageFlagBits::BUFFER_USAGE_TRANSFER_SRC_BIT,
+            BufferUpdateFrequency::BUFFER_UPDATE_FREQUENCY_STATIC,
+            false
+        );
+
+        transition_image_layout_immediate(
+            this, // NOTE: Potential DANGER!
+            ImageLayout::TRANSFER_DST_OPTIMAL,
+            PipelineStage::FRAGMENT_SHADER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
+            // *prev src stage and src access mask
+            //PipelineStage::TOP_OF_PIPE_BIT,
+            //0,
+            PipelineStage::TRANSFER_BIT,
+            MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
+            mipLevelCount
+        );
+
+        copy_buffer_to_image(
+            pStagingBuffer->getImpl()->handle,
+            _pImpl->image,
+            imageWidth,
+            imageHeight
+        );
+
+        if (mipLevelCount > 1)
+        {
+            generate_mipmaps(
+                this,
+                imageWidth,
+                imageHeight,
+                mipLevelCount
+            );
+        }
+        else
+        {
+            transition_image_layout_immediate(
+                this, // NOTE: Potential DANGER!
+                ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                PipelineStage::TRANSFER_BIT,
+                MemoryAccessFlagBits::MEMORY_ACCESS_TRANSFER_WRITE_BIT,
+                PipelineStage::FRAGMENT_SHADER_BIT,
+                MemoryAccessFlagBits::MEMORY_ACCESS_SHADER_READ_BIT,
+                mipLevelCount
+            );
+        }
+
+        delete pStagingBuffer;
     }
 }
