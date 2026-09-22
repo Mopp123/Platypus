@@ -27,11 +27,16 @@ namespace platypus
         bool useExplicitComponentMask = false
     );
 
-    Vector2i to_terrain_mesh_coords(
+    Vector2i to_terrain_grid_coords(
         float terrainSpaceX,
         float terrainSpaceZ,
-        float tileSize,
-        size_t verticesPerRow
+        float tileSize
+    );
+
+    Vector2i to_terrain_vertex_coords(
+        float terrainSpaceX,
+        float terrainSpaceZ,
+        float tileSize
     );
 
     // NOTE: This can ofc be used for many other kinds of things than just

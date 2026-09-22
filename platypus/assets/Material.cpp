@@ -639,8 +639,8 @@ namespace platypus
         if (_blendmapTextureID == NULL_UUID)
         {
             Debug::log(
-                "@Material::getBlendmapTexture "
                 "blendmap texture asset ID was NULL_ID.",
+                PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             return nullptr;

@@ -713,6 +713,13 @@ namespace platypus
         {
             bool recreateMaterialShaderResources = false;
             Material* pMaterial = reinterpret_cast<Material*>(pAsset);
+            const Texture* pBlendmapTexture = pMaterial->getBlendmapTexture();
+            if (pBlendmapTexture)
+            {
+                if (pBlendmapTexture->getImage() == this)
+                    recreateMaterialShaderResources = true;
+            }
+
             const UUID_t* pDiffuseTexturesIDs = pMaterial->getDiffuseTextureIDs();
             const UUID_t* pSpecularTexturesIDs = pMaterial->getSpecularTextureIDs();
             const UUID_t* pNormalTexturesIDs = pMaterial->getNormalTextureIDs();

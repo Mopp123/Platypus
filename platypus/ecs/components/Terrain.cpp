@@ -38,16 +38,28 @@ namespace platypus
         return pTerrain;
     }
 
-    Vector2i to_terrain_mesh_coords(
+    Vector2i to_terrain_grid_coords(
         float terrainSpaceX,
         float terrainSpaceZ,
-        float tileSize,
-        size_t verticesPerRow
+        float tileSize
     )
     {
         return {
             static_cast<int>(std::floor(terrainSpaceX / tileSize)),
             static_cast<int>(std::floor(terrainSpaceZ / tileSize))
+        };
+    }
+
+    Vector2i to_terrain_vertex_coords(
+        float terrainSpaceX,
+        float terrainSpaceZ,
+        float tileSize
+    )
+    {
+        const float halfTileSize = tileSize * 0.5f;
+        return {
+            static_cast<int>(std::floor(terrainSpaceX / halfTileSize)),
+            static_cast<int>(std::floor(terrainSpaceZ / halfTileSize))
         };
     }
 
@@ -85,11 +97,10 @@ namespace platypus
         float terrainSpaceX = worldX - terrainWorldX;
         float terrainSpaceZ = worldZ - terrainWorldZ;
 
-        Vector2i gridPos = to_terrain_mesh_coords(
+        Vector2i gridPos = to_terrain_grid_coords(
             terrainSpaceX,
             terrainSpaceZ,
-            tileSize,
-            verticesPerRow
+            tileSize
         );
         if (gridPos.x < 0 || gridPos.x + 1 >= verticesPerRow || gridPos.y < 0 || gridPos.y + 1 >= verticesPerRow)
             return 0.0f;
