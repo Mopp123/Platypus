@@ -278,7 +278,10 @@ namespace platypus
                 const int32_t upVertexBufferOffset = (x + (z - 1) * signedVerticesPerRow) * signedStride + sizeof(float);
                 const int32_t downVertexBufferOffset = (x + (z + 1) * signedVerticesPerRow) * signedStride + sizeof(float);
 
-                if (leftVertexBufferOffset >= 0)
+                // TODO: Figure out what to do if x + 1 > verticesPerRow!
+                //  -> fucked up normals on the "right" edge atm
+                CONTINUE HERE!
+                if (x - 1 >= 0)
                 {
                     memcpy(
                         &leftVertexHeight,
@@ -286,7 +289,7 @@ namespace platypus
                         sizeof(float)
                     );
                 }
-                if (rightVertexBufferOffset < signedTotalBufferSize)
+                if (x + 1 < signedVerticesPerRow)
                 {
                     memcpy(
                         &rightVertexHeight,
@@ -295,7 +298,7 @@ namespace platypus
                     );
                 }
 
-                if (upVertexBufferOffset >= 0)
+                if (z - 1 >= 0)
                 {
                     memcpy(
                         &upVertexHeight,
@@ -303,7 +306,7 @@ namespace platypus
                         sizeof(float)
                     );
                 }
-                if (downVertexBufferOffset < signedTotalBufferSize)
+                if (z + 1 < signedVerticesPerRow)
                 {
                     memcpy(
                         &downVertexHeight,
