@@ -33,6 +33,7 @@ namespace platypus
         float tileSize
     );
 
+    // Returns which "terrain space coords" corresponds to which vertex grid indices
     Vector2i to_terrain_vertex_coords(
         float terrainSpaceX,
         float terrainSpaceZ,

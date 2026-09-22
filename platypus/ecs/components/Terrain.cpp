@@ -58,8 +58,8 @@ namespace platypus
     {
         const float halfTileSize = tileSize * 0.5f;
         return {
-            static_cast<int>(std::floor(terrainSpaceX / halfTileSize)),
-            static_cast<int>(std::floor(terrainSpaceZ / halfTileSize))
+            static_cast<int>(std::floor((terrainSpaceX + halfTileSize) / tileSize)) + 1,
+            static_cast<int>(std::floor((terrainSpaceZ + halfTileSize) / tileSize)) + 1
         };
     }
 
