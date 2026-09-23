@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Maths.hpp"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -9,6 +10,7 @@ namespace platypus { namespace util { namespace str {
 
     // NOTE: WARNING: Works only for strings containing 1 byte characters!!!
     void trim_spaces(std::string& target);
+    // NOTE: WARNING: Works only for strings containing 1 byte characters?
     std::vector<std::string> split(const std::string& str, char delim);
 
     void append_utf8(uint32_t codepoint, std::string& target);
@@ -33,4 +35,7 @@ namespace platypus { namespace util { namespace str {
     );
 
     bool to_float(const std::string& str, float& outValue);
+    bool to_Vector2f(const std::string& str, Vector2f& outValue);
+    bool to_Vector3f(const std::string& str, Vector3f& outValue);
+    bool to_Vector4f(const std::string& str, Vector4f& outValue);
 }}}

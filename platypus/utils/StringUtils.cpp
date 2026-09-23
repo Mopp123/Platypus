@@ -159,4 +159,76 @@ namespace platypus { namespace util { namespace str {
             return false;
         }
     }
+
+    bool to_Vector2f(const std::string& str, Vector2f& outValue)
+    {
+        std::string s = str;
+        util::str::trim_spaces(s);
+        std::vector<std::string> strComponents = util::str::split(str, ',');
+        const size_t requiredComponentCount = 2;
+        if (strComponents.size() != requiredComponentCount)
+        {
+            Debug::log(
+                "Invalid string: " + str,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        float* components[2] = { &outValue.x, &outValue.y };
+        for (size_t i = 0; i < requiredComponentCount; ++i)
+        {
+            if(!util::str::to_float(strComponents[i], *components[i]))
+                return false;
+        }
+        return true;
+    }
+
+    bool to_Vector3f(const std::string& str, Vector3f& outValue)
+    {
+        std::string s = str;
+        util::str::trim_spaces(s);
+        std::vector<std::string> strComponents = util::str::split(str, ',');
+        const size_t requiredComponentCount = 3;
+        if (strComponents.size() != requiredComponentCount)
+        {
+            Debug::log(
+                "Invalid string: " + str,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        float* components[3] = { &outValue.x, &outValue.y, &outValue.z };
+        for (size_t i = 0; i < requiredComponentCount; ++i)
+        {
+            if(!util::str::to_float(strComponents[i], *components[i]))
+                return false;
+        }
+        return true;
+    }
+
+    bool to_Vector4f(const std::string& str, Vector4f& outValue)
+    {
+        std::string s = str;
+        util::str::trim_spaces(s);
+        std::vector<std::string> strComponents = util::str::split(str, ',');
+        const size_t requiredComponentCount = 4;
+        if (strComponents.size() != requiredComponentCount)
+        {
+            Debug::log(
+                "Invalid string: " + str,
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+        float* components[4] = { &outValue.x, &outValue.y, &outValue.z, &outValue.w };
+        for (size_t i = 0; i < requiredComponentCount; ++i)
+        {
+            if(!util::str::to_float(strComponents[i], *components[i]))
+                return false;
+        }
+        return true;
+    }
 }}}

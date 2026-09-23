@@ -50,6 +50,7 @@ namespace platypus
         Vector2f() = default;
         Vector2f(float x, float y) : x(x), y(y) {}
         Vector2f(const Vector2f& other) = default;
+        Vector2f(const std::string& str);
 
         float dotp(const Vector2f& other) const;
         float length() const;
@@ -92,6 +93,7 @@ namespace platypus
         Vector3f operator*(float value) const;
 
         std::string toString() const;
+        std::string toStrippedString() const;
     };
 
 
@@ -121,6 +123,7 @@ namespace platypus
         bool operator!=(const Vector4f other) const;
 
         std::string toString() const;
+        std::string toStrippedString() const;
     };
 
 

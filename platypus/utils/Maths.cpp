@@ -1,5 +1,6 @@
 #include "Maths.hpp"
 #include "platypus/core/Debug.hpp"
+#include "StringUtils.hpp"
 #include <cstring>
 #include <cmath>
 
@@ -119,6 +120,11 @@ namespace platypus
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")";
     }
 
+    std::string Vector3f::toStrippedString() const
+    {
+        return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z);
+    }
+
 
     float Vector4f::length() const
     {
@@ -170,6 +176,11 @@ namespace platypus
     std::string Vector4f::toString() const
     {
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ", " + std::to_string(w) + ")";
+    }
+
+    std::string Vector4f::toStrippedString() const
+    {
+        return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + "," + std::to_string(w);
     }
 
 
