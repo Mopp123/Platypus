@@ -264,61 +264,64 @@ namespace platypus
 
         const int32_t signedVerticesPerRow = static_cast<int32_t>(verticesPerRow);
         const int32_t signedStride = static_cast<int32_t>(stride);
-        const int32_t signedTotalBufferSize = static_cast<size_t>(pVertexBuffer->getTotalSize());
         for (int32_t z = 0; z < signedVerticesPerRow; ++z)
         {
             for (int32_t x = 0; x < signedVerticesPerRow; ++x)
             {
-                float leftVertexHeight = 0;
-                float rightVertexHeight = 0;
-                float downVertexHeight = 0;
-                float upVertexHeight = 0;
-                const int32_t leftVertexBufferOffset = ((x - 1) + z * signedVerticesPerRow) * signedStride + sizeof(float);
-                const int32_t rightVertexBufferOffset = ((x + 1) + z * signedVerticesPerRow) * signedStride + sizeof(float);
-                const int32_t upVertexBufferOffset = (x + (z - 1) * signedVerticesPerRow) * signedStride + sizeof(float);
-                const int32_t downVertexBufferOffset = (x + (z + 1) * signedVerticesPerRow) * signedStride + sizeof(float);
+                const int32_t currentVertexBufferOffset = (x + z * signedVerticesPerRow) * signedStride;
+                Vector3f currentVertexPos;
+                memcpy(
+                    &currentVertexPos,
+                    pVertexBufferData + currentVertexBufferOffset,
+                    sizeof(Vector3f)
+                );
 
-                // TODO: Figure out what to do if x + 1 > verticesPerRow!
-                //  -> fucked up normals on the "right" edge atm
-                CONTINUE HERE!
+                Vector3f leftVertexPos = currentVertexPos;
+                Vector3f rightVertexPos = currentVertexPos;
+                Vector3f upVertexPos = currentVertexPos;
+                Vector3f downVertexPos = currentVertexPos;
+
+                const int32_t leftVertexBufferOffset = ((x - 1) + z * signedVerticesPerRow) * signedStride;
+                const int32_t rightVertexBufferOffset = ((x + 1) + z * signedVerticesPerRow) * signedStride;
+                const int32_t upVertexBufferOffset = (x + (z - 1) * signedVerticesPerRow) * signedStride;
+                const int32_t downVertexBufferOffset = (x + (z + 1) * signedVerticesPerRow) * signedStride;
+
                 if (x - 1 >= 0)
                 {
                     memcpy(
-                        &leftVertexHeight,
+                        &leftVertexPos,
                         pVertexBufferData + leftVertexBufferOffset,
-                        sizeof(float)
+                        sizeof(Vector3f)
                     );
                 }
-                if (x + 1 < signedVerticesPerRow)
+                if (x + 1 < verticesPerRow)
                 {
                     memcpy(
-                        &rightVertexHeight,
+                        &rightVertexPos,
                         pVertexBufferData + rightVertexBufferOffset,
-                        sizeof(float)
+                        sizeof(Vector3f)
                     );
                 }
-
                 if (z - 1 >= 0)
                 {
                     memcpy(
-                        &upVertexHeight,
+                        &upVertexPos,
                         pVertexBufferData + upVertexBufferOffset,
-                        sizeof(float)
+                        sizeof(Vector3f)
                     );
                 }
-                if (z + 1 < signedVerticesPerRow)
+                if (z + 1 < verticesPerRow)
                 {
                     memcpy(
-                        &downVertexHeight,
+                        &downVertexPos,
                         pVertexBufferData + downVertexBufferOffset,
-                        sizeof(float)
+                        sizeof(Vector3f)
                     );
                 }
-                Vector3f normal(
-                    (leftVertexHeight - rightVertexHeight),
-                    1.0f,
-                    (downVertexHeight - upVertexHeight)
-                ); // this is pretty dumb...
+
+                const Vector3f v1 = rightVertexPos - leftVertexPos;
+                const Vector3f v2 = upVertexPos - downVertexPos;
+                Vector3f normal = v1.cross(v2).normalize();
 
                 const size_t currentNormalBufferOffset = (static_cast<size_t>(x) + static_cast<size_t>(z) * verticesPerRow) * stride + normalBufferOffset;
                 PLATYPUS_ASSERT(currentNormalBufferOffset < pVertexBuffer->getTotalSize());

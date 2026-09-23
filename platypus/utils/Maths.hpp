@@ -47,9 +47,9 @@ namespace platypus
             };
         };
 
-        Vector2f() {}
+        Vector2f() = default;
         Vector2f(float x, float y) : x(x), y(y) {}
-        Vector2f(const Vector2f& other) : x(other.x), y(other.y) {}
+        Vector2f(const Vector2f& other) = default;
 
         float dotp(const Vector2f& other) const;
         float length() const;
@@ -76,9 +76,9 @@ namespace platypus
             float b;
         };
 
-        Vector3f() {}
+        Vector3f() = default;
         Vector3f(float x, float y, float z) : Vector2f(x, y), z(z) {}
-        Vector3f(const Vector3f& other) : Vector2f(other.x, other.y), z(other.z) {}
+        Vector3f(const Vector3f& other) = default;
 
         float dotp(const Vector3f& other) const;
         float length() const;
@@ -104,9 +104,9 @@ namespace platypus
             float a;
         };
 
-        Vector4f() {};
+        Vector4f() = default;
         Vector4f(float x, float y, float z, float w) : Vector3f(x, y, z), w(w) {}
-        Vector4f(const Vector4f& other) : Vector3f(other.x, other.y, other.z), w(other.w) {}
+        Vector4f(const Vector4f& other) = default;
 
         float length() const;
         Vector4f normalize() const;
