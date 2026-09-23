@@ -196,7 +196,8 @@ namespace platypus
             PLATYPUS_ASSERT(false);
         }
 
-        size_t verticesPerRow = sqrt(heightmapData.size());
+        const size_t verticesPerRow = sqrt(heightmapData.size());
+        const int iVerticesPerRow = static_cast<int>(verticesPerRow);
         size_t tilesPerRow = verticesPerRow - 1;
 
         const size_t vertexCount = verticesPerRow * verticesPerRow;
@@ -204,42 +205,56 @@ namespace platypus
         const size_t dataSize = verticesPerRow * verticesPerRow * stride;
         std::vector<PE_byte> vertexData(dataSize);
         size_t dataOffset = 0;
-        for (int z = 0; z < (int)verticesPerRow; ++z)
+        for (int z = 0; z < iVerticesPerRow; ++z)
         {
-            for (int x = 0; x < (int)verticesPerRow; ++x)
+            for (int x = 0; x < iVerticesPerRow; ++x)
             {
                 float height = heightmapData[x + z * verticesPerRow];
                 Vector3f position = { x * tileSize, height, z * tileSize };
 
-                /*
-                    const float tileSize = instanceData.meshProperties.x;
-                    const float verticesPerRow = instanceData.meshProperties.y;
-                    const float tilesPerRow = verticesPerRow - 1;
-                    var_texCoord = vec2(position.x / tileSize / tilesPerRow, position.z / tileSize / tilesPerRow);
-                */
                 Vector2f uv(
                     position.x / (float)tileSize / (float)tilesPerRow,
                     position.z / (float)tileSize / (float)tilesPerRow
                 );
 
-                float left = 0;
-                float right = 0;
-                float down = 0;
-                float up = 0;
+                // NOTE: Not actually sure should these be the current vertex pos by default?
+                // ...seems fine atm..
+                Vector3f leftVertexPos = position;
+                Vector3f rightVertexPos = position;
+                Vector3f upVertexPos = position;
+                Vector3f downVertexPos = position;
 
                 if (x - 1 >= 0)
-                    left = heightmapData[(x - 1) + z * verticesPerRow];
+                {
+                    leftVertexPos.x = (x - 1) * tileSize;
+                    leftVertexPos.y = heightmapData[(x - 1) + z * verticesPerRow];
+                    leftVertexPos.z = position.z;
+                }
 
-                if (x + 1 < (int)verticesPerRow)
-                    right = heightmapData[(x + 1) + z * verticesPerRow];
-
-                if (z + 1 < (int)verticesPerRow)
-                    up = heightmapData[x + (z + 1) * verticesPerRow];
+                if (x + 1 < iVerticesPerRow)
+                {
+                    rightVertexPos.x = (x + 1) * tileSize;
+                    rightVertexPos.y = heightmapData[(x + 1) + z * verticesPerRow];
+                    rightVertexPos.z = position.z;
+                }
 
                 if (z - 1 >= 0)
-                    down = heightmapData[x + (z - 1) * verticesPerRow];
+                {
+                    upVertexPos.x = position.x;
+                    upVertexPos.y = heightmapData[x + (z - 1) * verticesPerRow];
+                    upVertexPos.z = (z - 1) * tileSize;
+                }
 
-                Vector3f normal((left - right), 1.0f, (down - up)); // this is pretty dumb...
+                if (z + 1 < iVerticesPerRow)
+                {
+                    downVertexPos.x = position.x;
+                    downVertexPos.y = heightmapData[x + (z + 1) * verticesPerRow];
+                    downVertexPos.z = (z + 1) * tileSize;
+                }
+
+                const Vector3f v1 = rightVertexPos - leftVertexPos;
+                const Vector3f v2 = upVertexPos - downVertexPos;
+                Vector3f normal = v1.cross(v2).normalize();
 
                 PE_byte* pTarget = vertexData.data();
                 memcpy((void*)(pTarget + dataOffset), &position, sizeof(Vector3f));

@@ -276,6 +276,8 @@ namespace platypus
                     sizeof(Vector3f)
                 );
 
+                // NOTE: Not actually sure should these be the current vertex pos by default?
+                // ...seems fine atm..
                 Vector3f leftVertexPos = currentVertexPos;
                 Vector3f rightVertexPos = currentVertexPos;
                 Vector3f upVertexPos = currentVertexPos;
