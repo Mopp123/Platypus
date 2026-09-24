@@ -187,6 +187,8 @@ namespace platypus
             void triggerFullTreeUpdate();
 
             void fetchTreeElements(std::vector<UIElement*>& outElements);
+
+            void updateCursorOver();
             // Returns true if cursor is over any element in the tree starting from
             // the called element (obviously:D)
             bool isCursorOverTree() const;

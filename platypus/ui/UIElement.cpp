@@ -812,6 +812,81 @@ namespace platypus
                 pChild->fetchTreeElements(outElements);
         }
 
+        void UIElement::updateCursorOver()
+        {
+            Application* pApp = Application::get_instance();
+            const Scene* pScene = pApp->getSceneManager().getCurrentScene();
+
+            if (!pScene->isEntityActive(_entityID))
+                return;
+
+            const InputManager& inputManager = pApp->getInputManager();
+            const int cursorX = inputManager.getMouseX();
+            const int cursorY = inputManager.getMouseY();
+
+            const void* pTransformComponent = pScene->getComponent(
+                _entityID,
+                ComponentType::COMPONENT_TYPE_GUI_TRANSFORM
+            );
+
+            if (pTransformComponent)
+            {
+                const GUITransform* pTransform = reinterpret_cast<const GUITransform*>(pTransformComponent);
+                float fx = static_cast<float>(cursorX);
+                float fy = static_cast<float>(cursorY);
+                uint32_t elementAbsoluteLayer = getAbsoluteLayer();
+                if (fx >= pTransform->position.x && fx <= pTransform->position.x + pTransform->scale.x &&
+                    fy >= pTransform->position.y && fy <= pTransform->position.y + pTransform->scale.y)
+                {
+                    uint32_t currentHighestLayer = get_cursor_over_layer();
+                    add_to_cursor_over_layers(elementAbsoluteLayer, _entityID);
+
+                    // *if it already was mouse over, but picked higher layer
+                    //  -> mouse exit
+                    if (elementAbsoluteLayer < currentHighestLayer)
+                    {
+                        if (_isCursorOver)
+                        {
+                            remove_from_cursor_over_layers(elementAbsoluteLayer, _entityID);
+                            // NOTE: Not sure should we do this here or just set the _isCursorOver?
+                            //if (_pElement->_pOnMouseExit)
+                            //    _pElement->_pOnMouseExit(x, y, _pElement->_pOnMouseExitUserData);
+                        }
+                        _isCursorOver = false;
+                    }
+                    else
+                    {
+                        // NOTE: Not sure should we do this here or just set the _isCursorOver?
+                        //if (!_isCursorOver)
+                        //{
+                        //    if (_pOnMouseEnter)
+                        //        _pOnMouseEnter(x, y, _pOnMouseEnterUserData);
+                        //}
+                        //if (_pOnMouseOver)
+                        //    _pOnMouseOver(x, y, _pOnMouseOverUserData);
+
+                        _isCursorOver = true;
+                    }
+                }
+                else
+                {
+                    // NOTE: Not sure should we do this here or just set the _isCursorOver?
+                    //if (_isCursorOver)
+                    //{
+                    //    if (_pOnMouseExit)
+                    //        _pOnMouseExit(x, y, _pOnMouseExitUserData);
+                    //}
+                    _isCursorOver = false;
+                    remove_from_cursor_over_layers(elementAbsoluteLayer, getEntityID());
+                }
+            }
+
+            // NOTE: Below seems to fuck Editor's DropMenu...
+            //  -> this func currently seems to be enough... :D
+            //for (UIElement* pChild : _children)
+            //    pChild->updateCursorOver();
+        }
+
         bool UIElement::isCursorOverTree() const
         {
             if (_isCursorOver)
