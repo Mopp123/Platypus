@@ -11,8 +11,22 @@ namespace platypus
         const Window& window = Application::get_instance()->getWindow();
         float windowWidth = static_cast<float>(window.getWidth());
         float windowHeight = static_cast<float>(window.getHeight());
-        return { (screenX / windowWidth) * 2.0f - 1.0f,
-                (screenY / windowHeight) * 2.0f - 1.0f };
+        return {
+            (screenX / windowWidth) * 2.0f - 1.0f,
+            (screenY / windowHeight) * 2.0f - 1.0f
+        };
+    }
+
+    Vector2i ndc_to_screen(float ndcX, float ndcY)
+    {
+        const Window& window = Application::get_instance()->getWindow();
+        float windowWidth = static_cast<float>(window.getWidth());
+        float windowHeight = static_cast<float>(window.getHeight());
+
+        return {
+            static_cast<int>((ndcX + 1.0f) / 2.0f * windowWidth),
+            static_cast<int>((-ndcY + 1.0f) / 2.0f * windowHeight)
+        };
     }
 
 
@@ -57,6 +71,25 @@ namespace platypus
             normalizedWorldSpace.y,
             normalizedWorldSpace.z
         };
+    }
+
+
+    Vector2i world_to_screen_space(
+        Vector3f worldPosition,
+        const Matrix4f& projMat,
+        const Matrix4f& viewMat
+    )
+    {
+        Vector4f pos(worldPosition.x, worldPosition.y, worldPosition.z, 1.0f);
+        Vector4f eyeSpace = viewMat * pos;
+        Vector4f clipSpace = projMat * eyeSpace;
+        Vector3f ndcSpace(
+            clipSpace.x / clipSpace.w,
+            clipSpace.y / clipSpace.w,
+            clipSpace.z / clipSpace.w
+        );
+
+        return ndc_to_screen(ndcSpace.x, ndcSpace.y);
     }
 
 

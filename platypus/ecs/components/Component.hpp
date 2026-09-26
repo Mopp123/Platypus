@@ -9,6 +9,7 @@ namespace platypus
 {
     class Scene;
 
+    // TODO: Make this rather enum class?
     enum ComponentType : uint64_t
     {
         COMPONENT_TYPE_EMPTY            = 0x0,

@@ -201,9 +201,9 @@ namespace platypus
         return { sx, sy, sz };
     }
 
-    Vector3f get_transform_forward(Transform* pTransform)
+    Vector3f get_transform_forward(const Transform* pTransform)
     {
-        Matrix4f& m = pTransform->globalMatrix;
+        const Matrix4f& m = pTransform->globalMatrix;
         Vector3f backwards(
                 m[0 + 2 * 4],
                 m[1 + 2 * 4],
@@ -212,9 +212,9 @@ namespace platypus
         return backwards * -1.0f;
     }
 
-    Vector3f get_transform_up(Transform* pTransform)
+    Vector3f get_transform_up(const Transform* pTransform)
     {
-        Matrix4f& m = pTransform->globalMatrix;
+        const Matrix4f& m = pTransform->globalMatrix;
         return {
             m[0 + 1 * 4],
             m[1 + 1 * 4],
@@ -222,9 +222,9 @@ namespace platypus
         };
     }
 
-    Vector3f get_transform_right(Transform* pTransform)
+    Vector3f get_transform_right(const Transform* pTransform)
     {
-        Matrix4f& m = pTransform->globalMatrix;
+        const Matrix4f& m = pTransform->globalMatrix;
         return {
             m[0 + 0 * 4],
             m[1 + 0 * 4],

@@ -7,12 +7,19 @@ namespace platypus
 {
     // NOTE: Requires Application and window to exist!
     Vector2f screen_to_ndc(int screenX, int screenY);
+    Vector2i ndc_to_screen(float ndcX, float ndcY);
 
     // Converts screen coordinate to "3d world coordinate"
     // NOTE: Requires Application and window to exist!
     Vector3f screen_to_world_space(
         int screenX,
         int screenY,
+        const Matrix4f& projMat,
+        const Matrix4f& viewMat
+    );
+
+    Vector2i world_to_screen_space(
+        Vector3f worldPosition,
         const Matrix4f& projMat,
         const Matrix4f& viewMat
     );

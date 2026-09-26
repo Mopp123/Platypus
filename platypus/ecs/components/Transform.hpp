@@ -83,9 +83,9 @@ namespace platypus
     Vector3f get_transform_scale(const Transform* pTransform, bool hasParent);
 
     // NOTE: None of these are tested, might point to wrong directions!
-    Vector3f get_transform_forward(Transform* pTransform);
-    Vector3f get_transform_up(Transform* pTransform);
-    Vector3f get_transform_right(Transform* pTransform);
+    Vector3f get_transform_forward(const Transform* pTransform);
+    Vector3f get_transform_up(const Transform* pTransform);
+    Vector3f get_transform_right(const Transform* pTransform);
 
     Matrix4f get_global_rotation_matrix(const Transform* pTransform);
 
