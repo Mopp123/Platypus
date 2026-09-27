@@ -65,6 +65,8 @@ namespace platypus
         size_t verticesPerRow
     );
 
+    // TODO: Rename meshSpacePosition arg to what it actually is, don't remember was this
+    // supposed to be the terrain grid coord? (that's it propably?)
     void set_terrain_height(
         Mesh* pTerrainMesh,
         Vector2i meshSpacePosition,
