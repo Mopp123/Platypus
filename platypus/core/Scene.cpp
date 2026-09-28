@@ -764,7 +764,9 @@ namespace platypus
     entityID_t Scene::deserialize(
         const std::vector<char>& serializedData,
         size_t bufferReadPos,
-        size_t& bufferReadEndPos
+        size_t& bufferReadEndPos,
+        void(*pOnDeserializeFunc)(Entity&, void*),
+        void* pOnDeserializeUserData
     )
     {
         const char* pData = serializedData.data();
@@ -834,6 +836,10 @@ namespace platypus
             "bufferReadBeginPos = " + std::to_string(beginReadPos) + " "
             "BufferReadEndPos = " + std::to_string(bufferReadEndPos)
         );
+
+        if (pOnDeserializeFunc)
+            pOnDeserializeFunc(entity, pOnDeserializeUserData);
+
         return entity.id;
     }
 

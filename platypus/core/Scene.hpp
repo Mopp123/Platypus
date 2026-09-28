@@ -134,7 +134,9 @@ namespace platypus
         entityID_t deserialize(
             const std::vector<char>& serializedData,
             size_t bufferReadPos,
-            size_t& bufferReadEndPos
+            size_t& bufferReadEndPos,
+            void(*pOnDeserializeFunc)(Entity&, void*),
+            void* pOnDeserializeUserData
         );
 
         std::vector<entityID_t> deserialize(
