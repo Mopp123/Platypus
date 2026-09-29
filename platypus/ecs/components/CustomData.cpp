@@ -47,7 +47,7 @@ namespace platypus
     {
         Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
         PLATYPUS_ASSERT(false);
-        CONTINUE HERE!
+        //CONTINUE HERE!
     }
 
     size_t get_serialized_custom_data_value_size(const CustomDataValue * const pCustomDataValue)
