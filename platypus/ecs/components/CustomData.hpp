@@ -22,19 +22,18 @@ namespace platypus
 
     std::string custom_data_type_to_string(CustomDataType type);
 
-
-    struct CustomData
-    {
-        int32_t offset = -1;
-        uint32_t elementCount = 0;
-    };
-
     struct CustomDataValue
     {
         CustomDataType type;
         uint32_t usedDataSize = 0;
         uint32_t maxDataSize = 0;
         const void* pData = nullptr;
+    };
+
+    struct CustomData
+    {
+        int32_t offset = -1;
+        uint32_t elementCount = 0;
     };
 
     class Scene;
@@ -44,10 +43,10 @@ namespace platypus
         bool useExplicitComponentMask = false
     );
 
-    size_t get_serialized_custom_data_size(const CustomData * const pCustomData);
     size_t get_serialized_custom_data_value_size(const CustomDataValue * const pCustomDataValue);
-    std::vector<char> serialize(const CustomData * const pCustomData);
+    size_t get_serialized_custom_data_size(const CustomData * const pCustomData);
     std::vector<char> serialize(const CustomDataValue * const pCustomDataValue);
+    std::vector<char> serialize(const CustomData * const pCustomData);
 
     void deserialize(
         Scene* pScene,

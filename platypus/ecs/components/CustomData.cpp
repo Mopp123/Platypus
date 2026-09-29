@@ -43,17 +43,54 @@ namespace platypus
         return pCustomData;
     }
 
-    size_t get_serialized_custom_data_size(const CustomData * const pCustomData)
-    {
-        Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
-        PLATYPUS_ASSERT(false);
-        //CONTINUE HERE!
-    }
-
     size_t get_serialized_custom_data_value_size(const CustomDataValue * const pCustomDataValue)
     {
-        Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
-        PLATYPUS_ASSERT(false);
+        return sizeof(CustomDataType) +
+            sizeof(uint32_t) +
+            pCustomDataValue->usedDataSize;
+    }
+
+    size_t get_serialized_custom_data_size(const CustomData * const pCustomData)
+    {
+        // NOTE: WARNING! Issue if this func is used outside of the current scene!!!
+        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        CustomDataManager& customDataManager = pScene->getCustomDataManager();
+        std::vector<CustomDataValue> values = customDataManager.getValues(pCustomData->offset);
+
+        size_t serializedValuesSize = 0;
+        for (const CustomDataValue& value : values)
+            serializedValuesSize += get_serialized_custom_data_value_size(&value);
+
+        return sizeof(ComponentType) +
+            sizeof(uint32_t) + // value(element) count
+            serializedValuesSize;
+    }
+
+    /*
+        Serialized format:
+            CustomDataType type
+            uint32_t dataSize
+                *NOTE: this is the actual storage size(used size)
+                    -> doesn't make sense to serialize usedDataSize and maxDataSize separately!
+            uint8_t dataBuffer[dataSize]
+    */
+    std::vector<char> serialize(const CustomDataValue * const pCustomDataValue)
+    {
+        const size_t serializedSize = get_serialized_custom_data_value_size(pCustomDataValue);
+        std::vector<char> serializedData(serializedSize);
+        char* pBuf = serializedData.data();
+        memcpy(pBuf, &pCustomDataValue->type, sizeof(CustomDataType));
+        size_t offset = sizeof(CustomDataType);
+
+        const uint32_t serializedDataSize = pCustomDataValue->usedDataSize;
+        memcpy(pBuf + offset, &serializedDataSize, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        memcpy(pBuf + offset, pCustomDataValue->pData, serializedDataSize);
+        offset += serializedDataSize;
+        PLATYPUS_ASSERT(offset == serializedSize);
+
+        return serializedData;
     }
 
     /*
@@ -64,14 +101,32 @@ namespace platypus
     */
     std::vector<char> serialize(const CustomData * const pCustomData)
     {
-        Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
-        PLATYPUS_ASSERT(false);
-    }
+        // NOTE: WARNING! Issue if this func is used outside of the current scene!!!
+        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        CustomDataManager& customDataManager = pScene->getCustomDataManager();
 
-    std::vector<char> serialize(const CustomDataValue * const pCustomDataValue)
-    {
-        Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
-        PLATYPUS_ASSERT(false);
+        const size_t serializedSize = get_serialized_custom_data_size(pCustomData);
+        std::vector<char> serializedData(serializedSize);
+
+        char* pBuf = serializedData.data();
+        const ComponentType componentType = ComponentType::COMPONENT_TYPE_CUSTOM_DATA;
+        memcpy(pBuf, &componentType, sizeof(ComponentType));
+        size_t offset = sizeof(ComponentType);
+
+        memcpy(pBuf + offset, &pCustomData->elementCount, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        std::vector<CustomDataValue> values = customDataManager.getValues(pCustomData->offset);
+        std::vector<char> fullSerializedValuesData;
+        // NOTE: No idea does this work, did this quite tired..
+        for (const CustomDataValue& value : values)
+        {
+            std::vector<char> serializedValueData = serialize(&value);
+            memcpy(pBuf + offset, serializedValueData.data(), serializedValueData.size());
+            offset += serializedValueData.size();
+        }
+
+        return serializedData;
     }
 
     void deserialize(
@@ -82,6 +137,10 @@ namespace platypus
         const void* pData
     )
     {
+        const size_t baseSize = sizeof(ComponentType) +
+            sizeof(uint32_t); // elementCount(valueCount)
+
+        CONTINUE HERE!
         Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
         PLATYPUS_ASSERT(false);
     }
