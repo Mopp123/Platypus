@@ -30,6 +30,13 @@ namespace platypus
         const void* pData = nullptr;
     };
 
+    struct SerializedCustomDataValue
+    {
+        CustomDataType type;
+        uint32_t dataSize = 0;
+        std::vector<uint8_t> data;
+    };
+
     struct CustomData
     {
         int32_t offset = -1;

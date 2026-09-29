@@ -106,6 +106,7 @@ namespace platypus
         const std::unordered_map<UUID_t, std::vector<EntityError>>& getErrors();
         void clearErrors();
 
+        // TODO: Some more coherent way of dealing with this "special" deserialization shit!
         // These both are supposed to resolve all Parent and Children components' actual entityID_ts
         // after all entities have been deserialized!
         void addToDeserializationParentIDQuery(
@@ -146,6 +147,7 @@ namespace platypus
             size_t serializedDataPos
         );
 
+        // TODO: Make this shit more coherent... getting out of hand after the two special cases!
         void finalizeDeserialization();
 
         // Validate that file doesn't already exist?

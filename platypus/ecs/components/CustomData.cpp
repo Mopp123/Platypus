@@ -140,7 +140,53 @@ namespace platypus
         const size_t baseSize = sizeof(ComponentType) +
             sizeof(uint32_t); // elementCount(valueCount)
 
-        CONTINUE HERE!
+        PLATYPUS_ASSERT(dataSize > baseSize);
+
+        const uint8_t* pBuf = reinterpret_cast<const uint8_t*>(pData);
+
+        ComponentType componentType;
+        memcpy(&componentType, pBuf, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_TRANSFORM);
+        size_t offset = sizeof(ComponentType);
+
+        uint32_t elementCount;
+        memcpy(&elementCount, pBuf + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        std::vector<SerializedCustomDataValue> serializedValues(elementCount);
+        for (uint32_t i = 0; i < elementCount; ++i)
+        {
+            CustomDataType valueType;
+            memcpy(&valueType, pBuf + offset, sizeof(CustomDataType));
+            offset += sizeof(CustomDataType);
+
+            uint32_t valueSize;
+            memcpy(&valueSize, pBuf + offset, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+
+            std::vector<uint8_t> valueData(valueSize);
+            memcpy(valueData.data(), pBuf + offset, valueSize);
+            offset += valueSize;
+
+            serializedValues[i] = {
+                valueType,
+                valueSize,
+                valueData
+            };
+        }
+
+        // TODO:
+        // How the fuck assemble the actual CustomData components in Scene's "post deserialization"
+        // -> needed for constructing the actual component:
+        //  *elem count
+        //  *serialized value data
+
+        // NOTE: While adding this noticed that the Scene's deserialization "special cases" needs
+        // to be more streamlined and coherent!
+        // TODO: Make "special cases" of Scene's deserialization more streamlined
+        // *Additional note: don't make this an additional "hard coded deserialization case"
+        CONTINUE HERE + READ THE FUCKING COMMENTS ABOVE!
+
         Debug::log("UNIMPLEMENTED!", PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR);
         PLATYPUS_ASSERT(false);
     }
