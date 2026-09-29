@@ -5,6 +5,7 @@
 #include "SkeletalAnimation.hpp"
 #include "Transform.hpp"
 #include "Terrain.hpp"
+#include "CustomData.hpp"
 #include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 
@@ -24,7 +25,8 @@ namespace platypus
             ComponentType::COMPONENT_TYPE_PARENT,
             ComponentType::COMPONENT_TYPE_CHILDREN,
             ComponentType::COMPONENT_TYPE_JOINT,
-            ComponentType::COMPONENT_TYPE_TERRAIN
+            ComponentType::COMPONENT_TYPE_TERRAIN,
+            ComponentType::COMPONENT_TYPE_CUSTOM_DATA
         };
     }
 
@@ -44,6 +46,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_CHILDREN: return "Children";
             case ComponentType::COMPONENT_TYPE_JOINT: return "Joint";
             case ComponentType::COMPONENT_TYPE_TERRAIN: return "Terrain";
+            case ComponentType::COMPONENT_TYPE_CUSTOM_DATA: return "CustomData";
             default: return "Invalid Type";
         }
     }
@@ -63,6 +66,7 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_CHILDREN: return sizeof(Children);
             case ComponentType::COMPONENT_TYPE_JOINT: return sizeof(Joint);
             case ComponentType::COMPONENT_TYPE_TERRAIN: return sizeof(Terrain);
+            case ComponentType::COMPONENT_TYPE_CUSTOM_DATA: return sizeof(CustomData);
             default: return 0;
         }
     }

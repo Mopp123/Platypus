@@ -77,6 +77,11 @@ namespace platypus
             1,
             true
         );
+        _componentPools[ComponentType::COMPONENT_TYPE_CUSTOM_DATA] = new ComponentPool<CustomData>(
+            sizeof(CustomData),
+            1,
+            true
+        );
 
         _systems.push_back(new SkeletalAnimationSystem);
         _systems.push_back(new TransformSystem);

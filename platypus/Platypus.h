@@ -16,6 +16,7 @@
 #include "ecs/components/Camera.hpp"
 #include "ecs/components/Terrain.hpp"
 #include "ecs/components/Component.hpp"
+#include "ecs/components/CustomData.hpp"
 #include "ecs/components/Transform.hpp"
 #include "ecs/components/SkeletalAnimation.hpp"
 #include "ecs/components/Renderable.hpp"

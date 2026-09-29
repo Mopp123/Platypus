@@ -3,6 +3,7 @@
 #include "platypus/ecs/Entity.hpp"
 #include "Memory.hpp"
 #include "platypus/ecs/components/Component.hpp"
+#include "platypus/ecs/components/CustomData.hpp"
 #include "platypus/ecs/systems/System.hpp"
 #include "platypus/utils/Maths.hpp"
 
@@ -26,6 +27,7 @@ namespace platypus
     private:
         friend class SceneManager;
         EntityHierarchyManager _entityHierarchyManager;
+        CustomDataManager _customDataManager;
 
         uint32_t _entityUUIDPool = 0;
 
@@ -158,5 +160,7 @@ namespace platypus
         inline entityID_t getActiveCameraEntity() const { return _activeCameraEntity; }
         inline EntityHierarchyManager& getEntityHierarchyManager() { return _entityHierarchyManager; }
         inline const EntityHierarchyManager& getEntityHierarchyManager() const { return _entityHierarchyManager; }
+        inline CustomDataManager& getCustomDataManager() { return _customDataManager; }
+        inline const CustomDataManager& getCustomDataManager() const { return _customDataManager; }
     };
 }

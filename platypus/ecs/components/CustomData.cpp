@@ -1,9 +1,48 @@
 #include "CustomData.hpp"
+#include "platypus/core/Application.hpp"
+#include "platypus/core/Scene.hpp"
 #include "platypus/core/Debug.hpp"
 
 
 namespace platypus
 {
+    CustomData* create_custom_data(
+        entityID_t target,
+        Scene* pScene,
+        bool useExplicitComponentMask
+    )
+    {
+        Scene* pUseScene = pScene;
+        if (!pUseScene)
+            pUseScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+
+        if (!pUseScene->isValidEntity(target, "create_custom_data"))
+        {
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        ComponentType componentType = ComponentType::COMPONENT_TYPE_CUSTOM_DATA;
+        void* pComponent = pUseScene->allocateComponent(target, componentType);
+        if (!pComponent)
+        {
+            Debug::log(
+                "Failed to allocate Transform component for entity: " + std::to_string(target),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        if (!useExplicitComponentMask)
+            pUseScene->addToComponentMask(target, componentType);
+
+        CustomData* pCustomData = reinterpret_cast<CustomData*>(pComponent);
+        pCustomData->offset = -1;
+        pCustomData->elementCount = 0;
+
+        return pCustomData;
+    }
+
     std::string custom_data_type_to_string(CustomDataType type)
     {
         switch (type)
@@ -19,6 +58,62 @@ namespace platypus
         return "Invalid type";
     }
 
+
+    template<typename T>
+    void CustomDataManager::addNumericValue(CustomData* pCustomData, CustomDataType type, T value)
+    {
+        if (type == CustomDataType::STRING)
+        {
+            Debug::log(
+                "Attempted to add string as numeric value."
+                "You'll need to use addString member func to add string.",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (addElement(
+            pCustomData,
+            type,
+            get_data_type_size(type),
+            &value
+        ) == -1)
+        {
+            Debug::log(
+                "Failed to add " + custom_data_type_to_string(type),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+    }
+
+    template void CustomDataManager::addNumericValue<int32_t>(CustomData* pCustomData, CustomDataType type, int32_t value);
+    template void CustomDataManager::addNumericValue<uint32_t>(CustomData* pCustomData, CustomDataType type, uint32_t value);
+    template void CustomDataManager::addNumericValue<float>(CustomData* pCustomData, CustomDataType type, float value);
+    template void CustomDataManager::addNumericValue<Vector2f>(CustomData* pCustomData, CustomDataType type, Vector2f value);
+    template void CustomDataManager::addNumericValue<Vector3f>(CustomData* pCustomData, CustomDataType type, Vector3f value);
+    template void CustomDataManager::addNumericValue<Vector4f>(CustomData* pCustomData, CustomDataType type, Vector4f value);
+
+    void CustomDataManager::addStringValue(CustomData* pCustomData, const std::string& str)
+    {
+        if (addElement(
+            pCustomData,
+            CustomDataType::STRING,
+            str.size(),
+            reinterpret_cast<const void*>(str.data())
+        ) == -1)
+        {
+            Debug::log(
+                "Failed to add " + custom_data_type_to_string(CustomDataType::STRING),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+    }
+
     // _data layout:
     //  uint32_t elementCount
     //  CustomDataType[elementCount] types
@@ -29,28 +124,24 @@ namespace platypus
         CustomData* pCustomData,
         CustomDataType type,
         size_t valueDataSize,
-        void* pValueData
+        const void* pValueData
     )
     {
-        const size_t valueBaseSize = sizeof(CustomDataType) + sizeof(uint32_t);
-        size_t requiredValueSize = valueBaseSize + get_data_type_size(type);
+        const size_t valueBaseSize = sizeof(CustomDataType) + sizeof(uint32_t) * 2;
+        size_t storedValueSize = valueBaseSize + get_data_type_size(type);
         if (type == CustomDataType::STRING)
-            requiredValueSize = valueBaseSize + valueDataSize;
+            storedValueSize = valueBaseSize + valueDataSize;
 
         const uint32_t oldElementCount = pCustomData->elementCount;
         const uint32_t newElementCount = oldElementCount + 1;
-        std::vector<Value> values = getValues(pCustomData->offset);
-        values.push_back(
-            {
-                type,
-                static_cast<uint32_t>(requiredValueSize),
-                pValueData
-            }
-        );
-
         const int32_t oldOffset = pCustomData->offset;
         const size_t oldTotalSize = getTotalSize(pCustomData);
-        const size_t newTotalSize = oldTotalSize + requiredValueSize;
+        size_t newTotalSize = oldTotalSize + storedValueSize;
+
+        // If old size was 0 -> need to also add space for the elemCount
+        if (oldTotalSize == 0)
+            newTotalSize += sizeof(uint32_t);
+
         if (oldOffset >= 0)
             erase(oldOffset, oldTotalSize);
 
@@ -68,7 +159,9 @@ namespace platypus
                 //  ->just add the required additional space
                 if (freeRangeOffset + freeRangeSize == _data.size())
                 {
-                    _data.resize(_data.size() + requiredValueSize);
+                    std::vector<uint8_t> oldData = _data;
+                    _data.resize(_data.size() + storedValueSize);
+                    memcpy(_data.data(), oldData.data(), oldData.size());
                     newOffset = static_cast<int32_t>(freeRangeIt->first);
                     break;
                 }
@@ -82,23 +175,40 @@ namespace platypus
 
         if (newOffset == -1)
         {
+            std::vector<uint8_t> oldData = _data;
             // If offset was already at back
             //  ->just add the required additional space
-            if (oldOffset + oldTotalSize == _data.size())
+            const size_t uOldOffset = static_cast<size_t>(oldOffset);
+            if (oldOffset != -1 && uOldOffset + oldTotalSize == _data.size())
             {
-                _data.resize(_data.size() + requiredValueSize);
+                _data.resize(_data.size() + storedValueSize);
+                memcpy(_data.data(), oldData.data(), oldData.size());
                 newOffset = oldOffset;
             }
             else
             {
                 newOffset = _data.size();
                 _data.resize(_data.size() + newTotalSize);
+                memcpy(_data.data(), oldData.data(), oldData.size());
             }
         }
-        pCustomData->elementCount = newElementCount;
-        pCustomData->offset = newOffset;
 
-        size_t valueOffset = 0;
+        std::vector<Value> values = getValues(oldOffset);
+        values.push_back(
+            {
+                type,
+                static_cast<uint32_t>(valueDataSize),
+                static_cast<uint32_t>(valueDataSize),
+                pValueData
+            }
+        );
+
+        memcpy(
+            _data.data() + newOffset,
+            &newElementCount,
+            sizeof(uint32_t)
+        );
+        size_t valueOffset = sizeof(uint32_t);
         for (const Value& value : values)
         {
             memcpy(
@@ -107,21 +217,35 @@ namespace platypus
                 sizeof(CustomDataType)
             );
             valueOffset += sizeof(CustomDataType);
+            PLATYPUS_ASSERT(newOffset + valueOffset < _data.size());
 
             memcpy(
                 _data.data() + newOffset + valueOffset,
-                &value.dataSize,
+                &value.usedDataSize,
                 sizeof(uint32_t)
             );
             valueOffset += sizeof(uint32_t);
+            PLATYPUS_ASSERT(newOffset + valueOffset < _data.size());
 
             memcpy(
                 _data.data() + newOffset + valueOffset,
-                &value.pData,
-                value.dataSize
+                &value.maxDataSize,
+                sizeof(uint32_t)
             );
-            valueOffset += value.dataSize;
+            valueOffset += sizeof(uint32_t);
+            PLATYPUS_ASSERT(newOffset + valueOffset < _data.size());
+
+            memcpy(
+                _data.data() + newOffset + valueOffset,
+                value.pData,
+                value.maxDataSize
+            );
+            valueOffset += value.maxDataSize;
+            PLATYPUS_ASSERT(newOffset + valueOffset <= _data.size());
         }
+
+        pCustomData->elementCount = newElementCount;
+        pCustomData->offset = newOffset;
 
         return newOffset;
     }
@@ -129,32 +253,43 @@ namespace platypus
     void CustomDataManager::erase(size_t offset, size_t totalDataSize)
     {
         PLATYPUS_ASSERT(offset + totalDataSize <= _data.size());
-        memset(_data.data() + offset, 0, totalDataSize);
+        //memset(_data.data() + offset, 0, totalDataSize);
         _freeRanges[offset] = totalDataSize;
     }
 
     void CustomDataManager::updateElement(
         const CustomData * const pCustomData,
-        CustomDataType type,
         size_t valueOffset,
         size_t valueDataSize,
-        void* pValueData
+        const void* pValueData
     )
     {
         const size_t customDataOffset = static_cast<const size_t>(pCustomData->offset);
         PLATYPUS_ASSERT(pCustomData->offset + customDataOffset <= _data.size());
+
+        uint8_t* pData = reinterpret_cast<uint8_t*>(_data.data());
+        CustomDataType type;
+        memcpy(&type, pData + valueOffset, sizeof(CustomDataType));
+        valueOffset += sizeof(CustomDataType);
+        const uint32_t valSize = static_cast<uint32_t>(valueDataSize);
+
+        uint32_t maxValueSize = 0;
+        memcpy(&maxValueSize, pData + valueOffset + sizeof(uint32_t), sizeof(uint32_t));
+
         if (type == CustomDataType::STRING)
         {
-            uint32_t currentStrSize = 0;
-            memcpy(&currentStrSize, _data.data() + valueOffset, sizeof(uint32_t));
-            if (currentStrSize >= valueDataSize)
+            uint32_t usedStrSize = 0;
+            memcpy(&usedStrSize, pData + valueOffset, sizeof(uint32_t));
+            if (maxValueSize >= valueDataSize)
             {
-                memset(_data.data() + valueOffset, 0, currentStrSize);
+                memset(_data.data() + valueOffset + sizeof(uint32_t) * 2, 0, maxValueSize);
             }
             else
             {
+                // TODO: Allow resizing!
                 Debug::log(
-                    "Not enought size to update new string value. Resizing is required!",
+                    "Not enought size to update new string value. Resizing is required! "
+                    "TODO: Make resizing possible!",
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
@@ -174,14 +309,16 @@ namespace platypus
             }
         }
 
-        uint8_t* pData = reinterpret_cast<uint8_t*>(_data.data());
-        memcpy(pData + valueOffset, &type, sizeof(CustomDataType));
-        valueOffset += sizeof(CustomDataType);
-
-        const uint32_t valSize = static_cast<uint32_t>(valueDataSize);
         memcpy(
             pData + valueOffset,
             &valSize,
+            sizeof(uint32_t)
+        );
+        valueOffset += sizeof(uint32_t);
+
+        memcpy(
+            pData + valueOffset,
+            &maxValueSize,
             sizeof(uint32_t)
         );
         valueOffset += sizeof(uint32_t);
@@ -193,7 +330,7 @@ namespace platypus
         );
     }
 
-    bool CustomDataManager::isValueValid(CustomDataType dataType, size_t dataSize, void* pData)
+    bool CustomDataManager::isValueValid(CustomDataType dataType, size_t dataSize, const void* pData) const
     {
         if (dataType != CustomDataType::STRING)
             return dataSize == get_data_type_size(dataType);
@@ -201,7 +338,7 @@ namespace platypus
         return true;
     }
 
-    void CustomDataManager::validateValue(CustomDataType dataType, size_t dataSize, void* pData)
+    void CustomDataManager::validateValue(CustomDataType dataType, size_t dataSize, const void* pData) const
     {
         if (dataSize == 0)
         {
@@ -225,6 +362,432 @@ namespace platypus
                 PLATYPUS_ASSERT(false);
             }
         }
+    }
+
+    std::vector<CustomDataManager::Value> CustomDataManager::getValues(int32_t offset) const
+    {
+        if (offset == -1)
+            return { };
+
+        const size_t uOffset = static_cast<const size_t>(offset);
+        PLATYPUS_ASSERT(uOffset + sizeof(uint32_t) <= _data.size());
+        uint32_t elemCount = 0;
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(_data.data());
+        memcpy(&elemCount, pData + uOffset, sizeof(uint32_t));
+
+        const size_t valuesBeginOffset = uOffset + sizeof(uint32_t);
+        std::vector<Value> values(elemCount);
+        size_t valueOffset = valuesBeginOffset;
+        for (size_t i = 0; i < elemCount; ++i)
+        {
+            CustomDataType type;
+            memcpy(&type, pData + valueOffset, sizeof(CustomDataType));
+            valueOffset += sizeof(CustomDataType);
+
+            uint32_t valueSize = 0;
+            memcpy(&valueSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            uint32_t maxValueSize = 0;
+            memcpy(&maxValueSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            const void* pValueData = pData + valueOffset;
+            values[i] = { type, valueSize, maxValueSize, pValueData };
+
+            valueOffset += maxValueSize;
+        }
+        return values;
+    }
+
+    template<typename T>
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        T value
+    )
+    {
+        if (pCustomData->offset < 0)
+        {
+            Debug::log(
+                "pCustomData offset was -1",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (pCustomData->elementCount == 0)
+        {
+            Debug::log(
+                "pCustomData elementCount was 0",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        CustomDataType valueType;
+        size_t valueOffset = pCustomData->offset + sizeof(uint32_t);
+        uint32_t valueDataSize = 0;
+        uint8_t* pData = _data.data();
+        for (size_t i = 0; i < pCustomData->elementCount; ++i)
+        {
+            const size_t currentValueBaseOffset = valueOffset;
+
+            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
+            valueOffset += sizeof(CustomDataType);
+
+            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            uint32_t maxValueDataSize = 0;
+            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            PLATYPUS_ASSERT(valueDataSize == maxValueDataSize);
+
+            valueOffset += maxValueDataSize;
+
+            if (i == valueIndex)
+            {
+                if (valueType == CustomDataType::STRING)
+                {
+                    Debug::log(
+                        "Attempted to update string as numeric value!",
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+                valueOffset = currentValueBaseOffset;
+                break;
+            }
+
+        }
+        PLATYPUS_ASSERT(valueDataSize > 0);
+
+        updateElement(
+            pCustomData,
+            valueOffset,
+            valueDataSize,
+            &value
+        );
+    }
+
+    template
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        int32_t value
+    );
+
+    template
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        uint32_t value
+    );
+
+    template
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        float value
+    );
+
+    template
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        Vector2f value
+    );
+
+    template
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        Vector3f value
+    );
+
+    template
+    void CustomDataManager::updateNumericValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        Vector4f value
+    );
+
+    void CustomDataManager::updateStringValue(
+        CustomData* pCustomData,
+        size_t valueIndex,
+        const std::string& str
+    )
+    {
+        if (pCustomData->offset < 0)
+        {
+            Debug::log(
+                "pCustomData offset was -1",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (pCustomData->elementCount == 0)
+        {
+            Debug::log(
+                "pCustomData elementCount was 0",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        CustomDataType valueType;
+        size_t valueOffset = pCustomData->offset + sizeof(uint32_t);
+        uint32_t valueDataSize = 0;
+        uint8_t* pData = _data.data();
+        for (size_t i = 0; i < pCustomData->elementCount; ++i)
+        {
+            const size_t currentValueBaseOffset = valueOffset;
+
+            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
+            valueOffset += sizeof(CustomDataType);
+
+            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            uint32_t maxValueDataSize = 0;
+            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            PLATYPUS_ASSERT(valueDataSize <= maxValueDataSize);
+
+            valueOffset += maxValueDataSize;
+
+            if (i == valueIndex)
+            {
+                if (valueType != CustomDataType::STRING)
+                {
+                    Debug::log(
+                        "Value type was: " + custom_data_type_to_string(valueType),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                }
+                valueOffset = currentValueBaseOffset;
+                break;
+            }
+
+        }
+        PLATYPUS_ASSERT(valueDataSize > 0);
+
+        updateElement(
+            pCustomData,
+            valueOffset,
+            str.size(),
+            str.data()
+        );
+    }
+
+    template<typename T>
+    T CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const
+    {
+        if (pCustomData->offset < 0)
+        {
+            Debug::log(
+                "pCustomData offset was -1",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (pCustomData->elementCount == 0)
+        {
+            Debug::log(
+                "pCustomData elementCount was 0",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        T result;
+        size_t valueOffset = static_cast<size_t>(pCustomData->offset) + sizeof(uint32_t);
+        const uint8_t* pData = _data.data();
+        for (size_t i = 0; i < pCustomData->elementCount; ++i)
+        {
+            CustomDataType valueType;
+            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
+            valueOffset += sizeof(CustomDataType);
+
+            uint32_t valueDataSize;
+            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            uint32_t maxValueDataSize;
+            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            if (valueType != CustomDataType::STRING)
+            {
+                PLATYPUS_ASSERT(valueDataSize == maxValueDataSize);
+            }
+            else
+            {
+                PLATYPUS_ASSERT(valueDataSize <= maxValueDataSize);
+            }
+
+            if (i == valueIndex)
+            {
+                if (valueType == CustomDataType::STRING)
+                {
+                    Debug::log(
+                        "Attempted to get string as numeric value from index: " + std::to_string(i),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return result;
+                }
+                if (!isValueValid(valueType, valueDataSize, pData + valueOffset))
+                {
+                    Debug::log(
+                        "Invalid value for type: " + custom_data_type_to_string(valueType) + " "
+                        "at index: " + std::to_string(i),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return result;
+                }
+                memcpy(&result, pData + valueOffset, get_data_type_size(valueType));
+                return result;
+            }
+            valueOffset += maxValueDataSize;
+        }
+
+        Debug::log(
+            "Failed to find value at index: " + std::to_string(valueIndex),
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return result;
+    }
+
+    template int32_t CustomDataManager::getNumericValue<int32_t>(const CustomData * const pCustomData, size_t valueIndex) const;
+    template uint32_t CustomDataManager::getNumericValue<uint32_t>(const CustomData * const pCustomData, size_t valueIndex) const;
+    template float CustomDataManager::getNumericValue<float>(const CustomData * const pCustomData, size_t valueIndex) const;
+    template Vector2f CustomDataManager::getNumericValue<Vector2f>(const CustomData * const pCustomData, size_t valueIndex) const;
+    template Vector3f CustomDataManager::getNumericValue<Vector3f>(const CustomData * const pCustomData, size_t valueIndex) const;
+    template Vector4f CustomDataManager::getNumericValue<Vector4f>(const CustomData * const pCustomData, size_t valueIndex) const;
+
+    std::string CustomDataManager::getStringValue(const CustomData * const pCustomData, size_t valueIndex) const
+    {
+        if (pCustomData->offset < 0)
+        {
+            Debug::log(
+                "pCustomData offset was -1",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        if (pCustomData->elementCount == 0)
+        {
+            Debug::log(
+                "pCustomData elementCount was 0",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+        }
+
+        size_t valueOffset = static_cast<size_t>(pCustomData->offset) + sizeof(uint32_t);
+        const uint8_t* pData = _data.data();
+        for (size_t i = 0; i < pCustomData->elementCount; ++i)
+        {
+            CustomDataType valueType;
+            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
+            valueOffset += sizeof(CustomDataType);
+
+            uint32_t valueDataSize;
+            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            uint32_t maxValueDataSize;
+            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
+            valueOffset += sizeof(uint32_t);
+
+            PLATYPUS_ASSERT(valueDataSize <= maxValueDataSize);
+
+            if (i == valueIndex)
+            {
+                if (valueType != CustomDataType::STRING)
+                {
+                    Debug::log(
+                        "Attempted to get numeric value(type: " + custom_data_type_to_string(valueType) + ") "
+                        "as string from index: " + std::to_string(i),
+                        PLATYPUS_CURRENT_FUNC_NAME,
+                        Debug::MessageType::PLATYPUS_ERROR
+                    );
+                    PLATYPUS_ASSERT(false);
+                    return "";
+                }
+                return {
+                    reinterpret_cast<const char*>(pData + valueOffset),
+                    valueDataSize
+                };
+            }
+
+            valueOffset += maxValueDataSize;
+        }
+
+        Debug::log(
+            "Failed to find value at index: " + std::to_string(valueIndex),
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return "";
+    }
+
+    template<typename T>
+    T CustomDataManager::convert_numeric_value(const Value& value)
+    {
+        T retVal;
+        memcpy(&retVal, value.pData, value.maxDataSize);
+        return retVal;
+    }
+
+    template int32_t CustomDataManager::convert_numeric_value<int32_t>(const Value& value);
+    template uint32_t CustomDataManager::convert_numeric_value<uint32_t>(const Value& value);
+    template float CustomDataManager::convert_numeric_value<float>(const Value& value);
+    template Vector2f CustomDataManager::convert_numeric_value<Vector2f>(const Value& value);
+    template Vector3f CustomDataManager::convert_numeric_value<Vector3f>(const Value& value);
+    template Vector4f CustomDataManager::convert_numeric_value<Vector4f>(const Value& value);
+
+    std::string CustomDataManager::convert_string_value(const Value& value)
+    {
+        if (value.type != CustomDataType::STRING)
+        {
+            Debug::log(
+                "Invalid value type: " + custom_data_type_to_string(value.type),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return "Invalid value type";
+        }
+
+        return std::string(
+            reinterpret_cast<const char*>(value.pData),
+            static_cast<size_t>(value.usedDataSize)
+        );
     }
 
     size_t CustomDataManager::get_data_type_size(CustomDataType type)
@@ -267,40 +830,14 @@ namespace platypus
 
     size_t CustomDataManager::getTotalSize(const CustomData * const pCustomData) const
     {
-        size_t size = 0;
-        for (const Value& value : getValues(pCustomData))
-            size += value.dataSize;
+        if (pCustomData->elementCount == 0)
+            return 0;
+
+        size_t size = sizeof(uint32_t); // first the elem count
+        const size_t baseValueSize = sizeof(CustomDataType) + sizeof(uint32_t) * 2;
+        for (const Value& value : getValues(pCustomData->offset))
+            size += baseValueSize + value.maxDataSize;
 
         return size;
-    }
-
-    std::vector<CustomDataManager::Value> CustomDataManager::getValues(int32_t offset) const
-    {
-        PLATYPUS_ASSERT(offset != -1);
-        const size_t uOffset = static_cast<const size_t>(offset);
-        PLATYPUS_ASSERT(uOffset + sizeof(uint32_t) <= _data.size());
-        uint32_t elemCount = 0;
-        const uint8_t* pData = reinterpret_cast<const uint8_t*>(_data.data());
-        memcpy(&elemCount, pData + uOffset, sizeof(uint32_t));
-
-        const size_t valuesBeginOffset = uOffset + sizeof(uint32_t);
-        std::vector<Value> values(elemCount);
-        size_t valueOffset = valuesBeginOffset;
-        for (size_t i = 0; i < elemCount; ++i)
-        {
-            CustomDataType type;
-            memcpy(&type, pData + valueOffset, sizeof(CustomDataType));
-            valueOffset += sizeof(CustomDataType);
-
-            uint32_t valueSize = 0;
-            memcpy(&valueSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            const void* pValueData = pData + valueOffset;
-            values[i] = { type, valueSize, pValueData };
-
-            valueOffset += valueSize;
-        }
-        return values;
     }
 }

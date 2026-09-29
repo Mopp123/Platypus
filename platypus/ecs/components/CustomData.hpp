@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platypus/utils/Maths.hpp"
+#include "platypus/ecs/Entity.hpp"
 #include <cstdint>
 #include <vector>
 #include <map>
@@ -19,25 +20,35 @@ namespace platypus
         VECTOR4F
     };
 
+    std::string custom_data_type_to_string(CustomDataType type);
+
+
     struct CustomData
     {
         int32_t offset = -1;
-        uint32_t elementCount;
+        uint32_t elementCount = 0;
     };
 
-    CustomData* create_custom_data();
-    std::string custom_data_type_to_string(CustomDataType type);
+    class Scene;
+    CustomData* create_custom_data(
+        entityID_t target,
+        Scene* pScene = nullptr,
+        bool useExplicitComponentMask = false
+    );
 
 
     class CustomDataManager
     {
-    private:
+    public:
         struct Value
         {
             CustomDataType type;
-            uint32_t dataSize = 0;
+            uint32_t usedDataSize = 0;
+            uint32_t maxDataSize = 0;
             const void* pData = nullptr;
         };
+
+    private:
 
         // _data layout:
         //  uint32_t elementCount
@@ -45,11 +56,39 @@ namespace platypus
         //      NOTE:
         //      *Values are in same order as types, so u can get
         //      the correct type for the value from there.
-        std::vector<void*> _data;
+        std::vector<uint8_t> _data;
 
         std::map<size_t, size_t> _freeRanges;
 
     public:
+        template<typename T>
+        void addNumericValue(CustomData* pCustomData, CustomDataType type, T value);
+        void addStringValue(CustomData* pCustomData, const std::string& str);
+
+        std::vector<Value> getValues(int32_t offset) const;
+
+        template<typename T>
+        void updateNumericValue(
+            CustomData* pCustomData,
+            size_t valueIndex,
+            T value
+        );
+
+        void updateStringValue(
+            CustomData* pCustomData,
+            size_t valueIndex,
+            const std::string& str
+        );
+
+        template<typename T>
+        T getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
+
+        std::string getStringValue(const CustomData * const pCustomData, size_t valueIndex) const;
+
+        template<typename T>
+        static T convert_numeric_value(const Value& value);
+
+        static std::string convert_string_value(const Value& value);
 
         static size_t get_data_type_size(CustomDataType type);
     private:
@@ -58,25 +97,22 @@ namespace platypus
             CustomData* pCustomData,
             CustomDataType type,
             size_t valueDataSize,
-            void* pValueData
+            const void* pValueData
         );
 
         void erase(size_t offset, size_t totalDataSize);
 
         void updateElement(
             const CustomData * const pCustomData,
-            CustomDataType type,
             size_t valueOffset,
             size_t valueDataSize,
-            void* pValueData
+            const void* pValueData
         );
 
-        bool isValueValid(CustomDataType dataType, size_t dataSize, void* pData);
-        void validateValue(CustomDataType dataType, size_t dataSize, void* pData);
+        bool isValueValid(CustomDataType dataType, size_t dataSize, const void* pData) const;
+        void validateValue(CustomDataType dataType, size_t dataSize, const void* pData) const;
 
         size_t getAvailableOffset(size_t requiredSize) const;
         size_t getTotalSize(const CustomData * const pCustomData) const;
-
-        std::vector<Value> getValues(int32_t offset) const;
     };
 }
