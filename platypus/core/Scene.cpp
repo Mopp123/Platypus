@@ -662,7 +662,7 @@ namespace platypus
         _entityErrors.clear();
     }
 
-    void Scene::addToDeserializationParentIDQuery(
+    void Scene::addToParentComponentsToFinalize(
         entityID_t target,
         UUID_t parentEntityUUID
     )
@@ -680,7 +680,7 @@ namespace platypus
         _parentComponentsToFinalize[target] = parentEntityUUID;
     }
 
-    void Scene::addToDeserializationChildrenIDQuery(
+    void Scene::addToChildrenComponentsToFinalize(
         entityID_t target,
         const std::vector<UUID_t>& childUUIDs
     )

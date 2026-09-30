@@ -456,9 +456,13 @@ namespace platypus
     size_t get_serialized_children_size(const char* pSerializedData, size_t dataSize)
     {
         PLATYPUS_ASSERT(dataSize >= serialized_children_base_size);
-        size_t pos = sizeof(ComponentType);
+        ComponentType componentType;
+        memcpy(&componentType, pSerializedData, sizeof(ComponentType));
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_CHILDREN);
+        size_t offset = sizeof(ComponentType);
+
         uint32_t childCount = 0;
-        memcpy(&childCount, pSerializedData + pos, sizeof(uint32_t));
+        memcpy(&childCount, pSerializedData + offset, sizeof(uint32_t));
         const size_t totalSize = serialized_children_base_size + sizeof(UUID_t) * childCount;
         PLATYPUS_ASSERT(dataSize >= totalSize);
         return totalSize;
@@ -819,7 +823,7 @@ namespace platypus
         );
         entityID_t parentEntityID = pScene->getEntity(parentUUID).id;
         if (parentEntityID == NULL_ENTITY_ID)
-            pScene->addToDeserializationParentIDQuery(entityID, parentUUID);
+            pScene->addToParentComponentsToFinalize(entityID, parentUUID);
 
         *ppParent = create_parent(entityID, parentEntityID, pScene, true);
     }
@@ -865,7 +869,7 @@ namespace platypus
             pos += sizeof(UUID_t);
         }
 
-        pScene->addToDeserializationChildrenIDQuery(entityID, requestedChildEntityUUIDs);
+        pScene->addToChildrenComponentsToFinalize(entityID, requestedChildEntityUUIDs);
 
         std::vector<entityID_t> childEntityIDs(childCount);
         memset(childEntityIDs.data(), NULL_ENTITY_ID, sizeof(entityID_t) * childCount);

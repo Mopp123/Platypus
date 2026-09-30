@@ -55,7 +55,7 @@ namespace platypus
 
     std::string Vector2f::toString() const
     {
-        return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+        return "(" + to_string(x) + ", " + to_string(y) + ")";
     }
 
     std::string Vector2f::toStrippedString() const
@@ -117,12 +117,12 @@ namespace platypus
 
     std::string Vector3f::toString() const
     {
-        return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")";
+        return "(" + to_string(x) + ", " + to_string(y) + ", " + to_string(z) + ")";
     }
 
     std::string Vector3f::toStrippedString() const
     {
-        return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z);
+        return to_string(x) + "," + to_string(y) + "," + to_string(z);
     }
 
 
@@ -175,12 +175,12 @@ namespace platypus
 
     std::string Vector4f::toString() const
     {
-        return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ", " + std::to_string(w) + ")";
+        return "(" + to_string(x) + ", " + to_string(y) + ", " + to_string(z) + ", " + std::to_string(w) + ")";
     }
 
     std::string Vector4f::toStrippedString() const
     {
-        return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + "," + std::to_string(w);
+        return to_string(x) + "," + to_string(y) + "," + to_string(z) + "," + to_string(w);
     }
 
 

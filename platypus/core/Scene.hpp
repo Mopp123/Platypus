@@ -109,11 +109,11 @@ namespace platypus
         // TODO: Some more coherent way of dealing with this "special" deserialization shit!
         // These both are supposed to resolve all Parent and Children components' actual entityID_ts
         // after all entities have been deserialized!
-        void addToDeserializationParentIDQuery(
+        void addToParentComponentsToFinalize(
             entityID_t target,
             UUID_t parentEntityUUID
         );
-        void addToDeserializationChildrenIDQuery(
+        void addToChildrenComponentsToFinalize(
             entityID_t target,
             const std::vector<UUID_t>& childUUIDs
         );

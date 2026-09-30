@@ -121,6 +121,9 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_TERRAIN:
                 return serialize(reinterpret_cast<const Terrain*>(pData));
 
+            case ComponentType::COMPONENT_TYPE_CUSTOM_DATA:
+                return serialize(reinterpret_cast<const CustomData*>(pData));
+
             default: return { };
         }
     }
@@ -247,6 +250,16 @@ namespace platypus
                 );
                 break;
 
+            case ComponentType::COMPONENT_TYPE_CUSTOM_DATA:
+                deserialize(
+                    pScene,
+                    reinterpret_cast<CustomData**>(ppComponent),
+                    entityID,
+                    dataSize,
+                    pData
+                );
+                break;
+
             default:
             {
                 Debug::log(
@@ -279,6 +292,11 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
 
             case ComponentType::COMPONENT_TYPE_TERRAIN: return serialized_terrain_size;
+
+            case ComponentType::COMPONENT_TYPE_CUSTOM_DATA: {
+                const CustomData * const pCustomData = reinterpret_cast<const CustomData * const>(pComponent);
+                return get_serialized_custom_data_size(pCustomData);
+            }
 
             default: {
                 Debug::log(
@@ -313,6 +331,10 @@ namespace platypus
             case ComponentType::COMPONENT_TYPE_SKELETAL_ANIMATION: return serialized_skeletal_animation_size;
 
             case ComponentType::COMPONENT_TYPE_TERRAIN: return serialized_terrain_size;
+
+            case ComponentType::COMPONENT_TYPE_CUSTOM_DATA: {
+                return get_serialized_custom_data_size(pSerializedData, dataSize);
+            }
 
             default: {
                 Debug::log(
