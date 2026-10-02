@@ -74,6 +74,7 @@ namespace platypus
     class CustomDataManager
     {
     private:
+        const size_t _valueBaseSize = sizeof(uint32_t) * 3;
 
         // _data layout:
         //  uint32_t elementCount

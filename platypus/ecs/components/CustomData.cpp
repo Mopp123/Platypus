@@ -268,6 +268,11 @@ namespace platypus
         };
     }
 
+    // TODO: Redo this whole CustomDataManager shit!
+    //  -> Have some string pool and point there instead of storing the strings in the prev. way!
+    //  -> Should still maybe attempt to make all the stuff be in contiguous buffer
+    //  -> MAKE SURE U CAN RESIZE THE RANGE THE CustomData COMPONENT REQUIRES!
+    CONTINUE HERE!
 
     // _data layout:
     //  uint32_t elementCount
@@ -282,6 +287,153 @@ namespace platypus
         const void* pValueData
     )
     {
+        // Check if pCustomData offset != -1
+        //  -> if not
+        //      -> occupy first avaliable offset with enough size
+        //  -> otherwise
+        //      -> check is the space after last elem free
+        //          -> if it is
+        //              -> add or occupy the space after last elem
+        //          -> if not
+        //              -> attempt to find suitable range from _freeRanges
+        //                  -> if found
+        //                      -> put all the existing elements at the new offset
+        //                      -> add the new element there too
+        //                  -> if can't find
+        //                      -> add required space at the end of the _data
+        //                      -> put all the existing elements at the new offset
+        //                      -> add the new element there too
+        //              -> free the old range
+
+        const size_t newValueTotalSize = _valueBaseSize + valueDataSize;
+        int32_t newOffset = -1;
+        size_t currentTotalSize = getTotalSize(pCustomData);
+        if (currentTotalSize == 0)
+            currentTotalSize += sizeof(uint32_t);
+
+        const int32_t currentOffset = pCustomData->offset;
+        std::vector<CustomDataValue> currentValues = getValues(currentOffset);
+
+        const size_t currentStorageSize = _data.size();
+
+        std::map<size_t, size_t>::const_iterator suitableFreeRangeIt = _freeRanges.end();
+        if (currentOffset == -1)
+        {
+            const size_t requiredNewSize = currentTotalSize + newValueTotalSize;
+            if (!_freeRanges.empty())
+            {
+                for (suitableFreeRangeIt = _freeRanges.begin(); suitableFreeRangeIt != _freeRanges.end(); ++suitableFreeRangeIt)
+                {
+                    if (suitableFreeRangeIt->second >= requiredNewSize)
+                    {
+                        newOffset = static_cast<int32_t>(suitableFreeRangeIt->first);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                newOffset = currentStorageSize;
+                _data.resize(currentTotalSize + newValueTotalSize);
+            }
+        }
+        else
+        {
+            // check is pos after last elem available
+            size_t lastValueEndOffset = sizeof(uint32_t);
+            for (const CustomDataValue& existingValue : currentValues)
+            {
+                // NOTE: Not sure if need to add +1 here to get the next offset?
+                lastValueEndOffset += _valueBaseSize + existingValue.maxDataSize;
+            }
+            suitableFreeRangeIt = _freeRanges.find(lastValueEndOffset);
+            if (suitableFreeRangeIt != _freeRanges.end())
+            {
+                if (suitableFreeRangeIt->second >= newValueTotalSize)
+                    newOffset = currentOffset;
+            }
+
+            if (newOffset == -1)
+            {
+                if (lastValueEndOffset == _data.size())
+                {
+                    newOffset = currentOffset;
+                    _data.resize(currentStorageSize + newValueTotalSize);
+                }
+                else
+                {
+                    newOffset = currentStorageSize;
+                    _data.resize(currentStorageSize + currentTotalSize + newValueTotalSize);
+                }
+            }
+        }
+
+        currentValues.push_back(
+            {
+                type,
+                static_cast<uint32_t>(valueDataSize),
+                static_cast<uint32_t>(valueDataSize),
+                pValueData
+            }
+        );
+
+        const uint32_t newElementCount = static_cast<uint32_t>(currentValues.size());
+        memcpy(
+            _data.data() + newOffset,
+            &newElementCount,
+            sizeof(uint32_t)
+        );
+        size_t valueOffset = newOffset + sizeof(uint32_t);
+        for (const CustomDataValue& value : currentValues)
+        {
+            memcpy(
+                _data.data() + valueOffset,
+                &value.type,
+                sizeof(CustomDataType)
+            );
+            valueOffset += sizeof(CustomDataType);
+            PLATYPUS_ASSERT(valueOffset < _data.size());
+
+            memcpy(
+                _data.data() + valueOffset,
+                &value.usedDataSize,
+                sizeof(uint32_t)
+            );
+            valueOffset += sizeof(uint32_t);
+            PLATYPUS_ASSERT(valueOffset < _data.size());
+
+            memcpy(
+                _data.data() + valueOffset,
+                &value.maxDataSize,
+                sizeof(uint32_t)
+            );
+            valueOffset += sizeof(uint32_t);
+            PLATYPUS_ASSERT(valueOffset <= _data.size());
+
+            if (value.maxDataSize > 0)
+            {
+                memcpy(
+                    _data.data() + valueOffset,
+                    value.pData,
+                    value.maxDataSize
+                );
+                valueOffset += value.maxDataSize;
+            }
+            PLATYPUS_ASSERT(valueOffset <= _data.size());
+        }
+
+        if (suitableFreeRangeIt != _freeRanges.end())
+        {
+            _freeRanges.erase(suitableFreeRangeIt);
+        }
+
+
+        pCustomData->elementCount = newElementCount;
+        pCustomData->offset = newOffset;
+
+        return newOffset;
+
+        /*
         const size_t valueBaseSize = sizeof(CustomDataType) + sizeof(uint32_t) * 2;
         size_t storedValueSize = valueBaseSize + get_data_type_size(type);
         if (type == CustomDataType::STRING)
@@ -315,7 +467,12 @@ namespace platypus
                 if (freeRangeOffset + freeRangeSize == _data.size())
                 {
                     std::vector<uint8_t> oldData = _data;
-                    _data.resize(_data.size() + storedValueSize);
+                    const size_t  currentBufferSize = _data.size();
+                    if (freeRangeOffset + newTotalSize >= currentBufferSize)
+                    {
+                        const size_t newBufferSize = currentBufferSize + (newTotalSize - currentBufferSize);
+                        _data.resize(newBufferSize);
+                    }
                     memcpy(_data.data(), oldData.data(), oldData.size());
                     newOffset = static_cast<int32_t>(freeRangeIt->first);
                     break;
@@ -326,6 +483,9 @@ namespace platypus
                     break;
                 }
             }
+
+            if (freeRangeIt != _freeRanges.end())
+                _freeRanges.erase(freeRangeIt);
         }
 
         if (newOffset == -1)
@@ -407,6 +567,7 @@ namespace platypus
         pCustomData->offset = newOffset;
 
         return newOffset;
+        */
     }
 
     template<typename T>
@@ -479,7 +640,8 @@ namespace platypus
     )
     {
         Debug::log(
-            "___TEST___updating CustomData. current size = " + std::to_string(getTotalSize(pCustomData))
+            "___TEST___updating CustomData at valueOffset: " + std::to_string(valueOffset) + " "
+            "current size = " + std::to_string(getTotalSize(pCustomData))
         );
 
         const size_t customDataOffset = static_cast<const size_t>(pCustomData->offset);
@@ -607,7 +769,12 @@ namespace platypus
             uint32_t valueDataSize;
             memcpy(&valueDataSize, pData + offset, sizeof(uint32_t));
             offset += sizeof(uint32_t);
-            offset += valueDataSize;
+
+            uint32_t valueMaxDataSize;
+            memcpy(&valueMaxDataSize, pData + offset, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+
+            offset += valueMaxDataSize;
         }
 
         Debug::log(
