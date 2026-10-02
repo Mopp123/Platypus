@@ -119,6 +119,11 @@ namespace platypus
         static std::string convert_string_value(const CustomDataValue& value);
 
         static size_t get_data_type_size(CustomDataType type);
+
+        size_t getStorageSize(const CustomData * const pCustomData) const;
+        inline size_t getStorageSize() const { return _data.size(); }
+        // Returns the value element's base size without the actual data (like the header of the val)
+        inline size_t getValueBaseSize() const { return _valueBaseSize; }
     private:
         void erase(size_t offset, size_t totalDataSize);
 

@@ -18,95 +18,51 @@ void CustomDataTestScene::init()
 {
     initBase();
 
-    entityID_t customDataEntity = createEntity();
-    CustomData* pCustomDataComponent = create_custom_data(customDataEntity);
-
     CustomDataManager& customDataManager = getCustomDataManager();
-    customDataManager.addNumericValue<int32_t>(pCustomDataComponent, CustomDataType::INT, -4);
-    customDataManager.addNumericValue<int32_t>(pCustomDataComponent, CustomDataType::INT, 128);
-    customDataManager.addStringValue(pCustomDataComponent, "Test string here");
-    customDataManager.addNumericValue<Vector2f>(pCustomDataComponent, CustomDataType::VECTOR2F, { 22.1f, 841.2f });
-    customDataManager.addNumericValue<float>(pCustomDataComponent, CustomDataType::FLOAT, 54.12f);
-    customDataManager.addNumericValue<Vector3f>(pCustomDataComponent, CustomDataType::VECTOR3F, { 12.5f, 32.0f, 11.2f });
-    customDataManager.addNumericValue<Vector4f>(pCustomDataComponent, CustomDataType::VECTOR4F, { 98.0f, 76.26f, 10.2f, 89.123f });
 
-    //std::vector<CustomDataManager::Value> values = customDataManager.getValues(pCustomDataComponent->offset);
-    //PLATYPUS_ASSERT(values.size() == 7);
+    // Test adding values to a single existing CustomComponent
+    entityID_t customDataEntity1 = createEntity();
+    CustomData* pCustomDataComponent1 = create_custom_data(customDataEntity1);
 
-    int32_t val0 = customDataManager.getNumericValue<int32_t>(pCustomDataComponent, 0);
-    int32_t val1 = customDataManager.getNumericValue<int32_t>(pCustomDataComponent, 1);
-    std::string strVal1 = customDataManager.getStringValue(pCustomDataComponent, 2);
-    Vector2f val2 = customDataManager.getNumericValue<Vector2f>(pCustomDataComponent, 3);
-    float val3 = customDataManager.getNumericValue<float>(pCustomDataComponent, 4);
-    Vector3f val4 = customDataManager.getNumericValue<Vector3f>(pCustomDataComponent, 5);
-    Vector3f val5 = customDataManager.getNumericValue<Vector4f>(pCustomDataComponent, 6);
+    customDataManager.addNumericValue<Vector4f>(pCustomDataComponent1, CustomDataType::VECTOR4F, { 0.2f, 1.2f, 4.3f, 2.0f });
+    customDataManager.addNumericValue<int32_t>(pCustomDataComponent1, CustomDataType::INT, -4);
+    customDataManager.addNumericValue<float>(pCustomDataComponent1, CustomDataType::FLOAT, 1.24f);
+    customDataManager.addNumericValue<Vector2f>(pCustomDataComponent1, CustomDataType::VECTOR2F, { 1, 2 });
+    customDataManager.addNumericValue<uint32_t>(pCustomDataComponent1, CustomDataType::UINT, 32);
+    customDataManager.addNumericValue<Vector3f>(pCustomDataComponent1, CustomDataType::VECTOR3F, { 0.3f, 2.123f, 3.25f });
+    PLATYPUS_ASSERT(pCustomDataComponent1->offset == 0);
+    PLATYPUS_ASSERT(pCustomDataComponent1->elementCount == 6);
 
-    Debug::log(
-        "___TEST___Custom values:\n"
-        "   [0] = " + std::to_string(val0) + "\n"
-        "   [1] = " + std::to_string(val1) + "\n"
-        "   [2] = '" + strVal1 + "'\n"
-        "   [3] = " + val2.toString() + "\n"
-        "   [4] = " + std::to_string(val3) + "\n"
-        "   [5] = " + val4.toString() + "\n"
-        "   [6] = " + val5.toString() + "\n\n"
-    );
+    PLATYPUS_ASSERT(customDataManager.getNumericValue<Vector4f>(pCustomDataComponent1, 0) == Vector4f(0.2f, 1.2f, 4.3f, 2.0f));
+    PLATYPUS_ASSERT(customDataManager.getNumericValue<int32_t>(pCustomDataComponent1, 1) == -4);
+    PLATYPUS_ASSERT(customDataManager.getNumericValue<float>(pCustomDataComponent1, 2) == 1.24f);
+    PLATYPUS_ASSERT(customDataManager.getNumericValue<Vector2f>(pCustomDataComponent1, 3) == Vector2f(1, 2));
+    PLATYPUS_ASSERT(customDataManager.getNumericValue<uint32_t>(pCustomDataComponent1, 4) == 32);
+    PLATYPUS_ASSERT(customDataManager.getNumericValue<Vector3f>(pCustomDataComponent1, 5) == Vector3f(0.3f, 2.123f, 3.25f));
 
+    const size_t entity1StorageSize = customDataManager.getStorageSize(pCustomDataComponent1);
+    const size_t expectedEntity1StorageSize = sizeof(uint32_t) + // value count
+        customDataManager.getValueBaseSize() + sizeof(Vector4f) +
+        customDataManager.getValueBaseSize() + sizeof(int32_t) +
+        customDataManager.getValueBaseSize() + sizeof(float) +
+        customDataManager.getValueBaseSize() + sizeof(Vector2f) +
+        customDataManager.getValueBaseSize() + sizeof(uint32_t) +
+        customDataManager.getValueBaseSize() + sizeof(Vector3f);
 
-    customDataManager.updateNumericValue<int32_t>(
-        pCustomDataComponent,
-        0,
-        666
-    );
+    PLATYPUS_ASSERT(entity1StorageSize == expectedEntity1StorageSize);
 
-    customDataManager.updateNumericValue<Vector2f>(
-        pCustomDataComponent,
-        3,
-        { 333, 666 }
-    );
+    // Test adding another CustomData component for another entity
+    entityID_t customDataEntity2 = createEntity();
+    CustomData* pCustomDataComponent2 = create_custom_data(customDataEntity2);
+    // Wasn't originally supposed to call this for pCustomDataComponent1 (was supposed to call
+    // for pCustomDataComponent2) -> but this somehow fucks this shit up!?!???!!
+    CONTINUE HERE, SHIT's FUCKED!
+    customDataManager.addNumericValue<float>(pCustomDataComponent1, CustomDataType::FLOAT, 45.6f);
 
-    customDataManager.updateNumericValue<float>(
-        pCustomDataComponent,
-        4,
-        420.69f
-    );
+    PLATYPUS_ASSERT(pCustomDataComponent2->offset == entity1StorageSize);
 
-    customDataManager.updateNumericValue<Vector3f>(
-        pCustomDataComponent,
-        5,
-        { 32, 64, 128.5f }
-    );
-
-    customDataManager.updateNumericValue<Vector4f>(
-        pCustomDataComponent,
-        6,
-        { 0, 1.2f, 2.4f, 3.5f }
-    );
-
-    customDataManager.updateStringValue(
-        pCustomDataComponent,
-        2,
-        "Changed"
-    );
-
-    val0 = customDataManager.getNumericValue<int32_t>(pCustomDataComponent, 0);
-    val1 = customDataManager.getNumericValue<int32_t>(pCustomDataComponent, 1);
-    strVal1 = customDataManager.getStringValue(pCustomDataComponent, 2);
-    val2 = customDataManager.getNumericValue<Vector2f>(pCustomDataComponent, 3);
-    val3 = customDataManager.getNumericValue<float>(pCustomDataComponent, 4);
-    val4 = customDataManager.getNumericValue<Vector3f>(pCustomDataComponent, 5);
-    val5 = customDataManager.getNumericValue<Vector4f>(pCustomDataComponent, 6);
-
-    Debug::log(
-        "___TEST___Custom values:\n"
-        "   [0] = " + std::to_string(val0) + "\n"
-        "   [1] = " + std::to_string(val1) + "\n"
-        "   [2] = '" + strVal1 + "'\n"
-        "   [3] = " + val2.toString() + "\n"
-        "   [4] = " + std::to_string(val3) + "\n"
-        "   [5] = " + val4.toString() + "\n"
-        "   [6] = " + val5.toString() + "\n\n"
-    );
+    Debug::log("Test was successful!");
+    PLATYPUS_ASSERT(false);
 }
 
 void CustomDataTestScene::update()

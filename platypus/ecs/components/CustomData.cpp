@@ -272,7 +272,7 @@ namespace platypus
     //  -> Have some string pool and point there instead of storing the strings in the prev. way!
     //  -> Should still maybe attempt to make all the stuff be in contiguous buffer
     //  -> MAKE SURE U CAN RESIZE THE RANGE THE CustomData COMPONENT REQUIRES!
-    CONTINUE HERE!
+    //CONTINUE HERE!
 
     // _data layout:
     //  uint32_t elementCount
@@ -1260,6 +1260,17 @@ namespace platypus
             case CustomDataType::VECTOR4F: return sizeof(Vector4f);
         }
         return 0;
+    }
+
+    size_t CustomDataManager::getStorageSize(const CustomData * const pCustomData) const
+    {
+        PLATYPUS_ASSERT(pCustomData->offset >= 0);
+
+        size_t size = sizeof(uint32_t); // the value count
+        for (const CustomDataValue& value : getValues(pCustomData->offset))
+            size += _valueBaseSize + value.maxDataSize;
+
+        return size;
     }
 
     size_t CustomDataManager::getAvailableOffset(size_t requiredSize) const
