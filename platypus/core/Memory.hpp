@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <set>
+#include <vector>
+#include <map>
 
 
 namespace platypus
@@ -13,7 +15,7 @@ namespace platypus
         DOUBLE
     };
 
-    class MemoryPool
+    class StaticElementSizeMemoryPool
     {
     protected:
         size_t _elementSize = 0;
@@ -32,15 +34,15 @@ namespace platypus
         std::set<size_t> _freeIndices;
 
     public:
-        MemoryPool() {}
-        MemoryPool(
+        StaticElementSizeMemoryPool() {}
+        StaticElementSizeMemoryPool(
             size_t elementSize,
             size_t maxLength,
             bool allowResize,
             MemoryPoolResizeType resizeType = MemoryPoolResizeType::INCREMENT
         );
-        MemoryPool(const MemoryPool& other);
-        virtual ~MemoryPool();
+        StaticElementSizeMemoryPool(const StaticElementSizeMemoryPool& other);
+        virtual ~StaticElementSizeMemoryPool();
 
         virtual int32_t userDataToIndex(void* pUserData) const = 0;
         virtual void constructElement(size_t index, void* pData, void* pUserData) = 0;
@@ -88,5 +90,61 @@ namespace platypus
         // Returns previous occupied index from index
         // Returns -1 if no previous occupied index found
         int32_t findPreviousOccupiedIndex(size_t index);
+    };
+
+
+    class DynamicElementSizeMemoryPool
+    {
+    private:
+        std::vector<uint8_t> _data;
+        // key = offset, value = count
+        std::map<size_t, size_t> _freeRanges;
+
+        // args:
+        // *offset
+        // *size
+        // *pUserData
+        void (*_pFreeRangeFunc)(size_t, size_t, void*) = nullptr;
+        void* _pFreeRangeFuncUserData = nullptr;
+
+        bool (*_pValidateFreeRangeFunc)(size_t, size_t, void*) = nullptr;
+        void* _pValidateFreeRangeFuncUserData = nullptr;
+
+    public:
+        DynamicElementSizeMemoryPool(
+            void (*pFreeStorageFunc)(size_t, size_t, void*),
+            void* pFreeStorageFuncUserData,
+            bool (*pValidateFreeRangeFunc)(size_t, size_t, void*),
+            void* pValidateFreeRangeFuncUserData
+        );
+
+        // Returns the offset where child entities begin in _childrenContainer or
+        // -1 if fails to occupy
+        int32_t occupyRange(size_t dataSize, const void* pData);
+        void freeRange(int32_t offset, size_t size);
+
+        // Changes the previously used offset and returns it
+        // TODO: add helper func for Children component that sets the new offset and child count
+        int32_t add(int32_t baseOffset, size_t currentSize, size_t addedDataSize, const void* pData);
+
+        // NOTE: Shouldn't be needed since having freeRange func!
+        // TODO: Remove?
+        // TODO: add helper func for Children component that decreases the child count
+        //void remove(int32_t elementOffset, size_t elementSize);
+
+        const void* accessData(int32_t offset, size_t size) const;
+        std::vector<uint8_t> copyData(int32_t offset, size_t size) const;
+
+        // NOTE: Not tested after latest changes! MIGHT NOT WORK PROPERLY!!
+        // NOTE: this is too complicated, inefficient and dumb
+        // TODO: Improve, optimize ..or something...
+        void packFreeRanges();
+
+        inline std::vector<uint8_t>& accessStorage() { return _data; }
+        inline std::map<size_t, size_t>& accessFreeRanges() { return _freeRanges; }
+
+    private:
+        int32_t findFreeRange(size_t requiredSize);
+        bool validateFreeRange(size_t offset, size_t size) const;
     };
 }

@@ -225,171 +225,78 @@ namespace platypus
 
 
     EntityHierarchyManager::EntityHierarchyManager(Scene* pScene) :
+        _memoryPool(
+            free_range_func,
+            this,
+            validate_range_func,
+            this
+        ),
         _pScene(pScene)
     {
     }
 
-    int32_t EntityHierarchyManager::occupyRange(const std::vector<entityID_t>& childEntities)
+    void EntityHierarchyManager::addChild(Children* pChildrenComponent, entityID_t childEntityID)
     {
-        // Check first if suitable free range already exists
-        int32_t offset = findFreeRange(childEntities.size());
-        const size_t childCount = childEntities.size();
-
-        if (offset == -1)
-        {
-            const size_t prevSize = _childrenContainer.size();
-            _childrenContainer.resize(prevSize + childCount);
-            memcpy(
-                _childrenContainer.data() + prevSize,
-                childEntities.data(),
-                sizeof(entityID_t) * childCount
-            );
-            offset = prevSize;
-        }
-        else
-        {
-            #ifdef PLATYPUS_DEBUG
-            if (!validateFreeRange(offset, childCount))
-            {
-                Debug::log(
-                    "Free range validation failed using offset: " + std::to_string(offset) + " and count: " + std::to_string(childCount) + " "
-                    "Current container length is " + std::to_string(_childrenContainer.size()),
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            #endif
-            memcpy(
-                _childrenContainer.data() + offset,
-                childEntities.data(),
-                sizeof(entityID_t) * childCount
-            );
-            _freeRanges.erase(offset);
-        }
-
-        return offset;
+        const int32_t baseOffset = pChildrenComponent->offset;
+        const int32_t newOffset = _memoryPool.add(
+            baseOffset,
+            getComponentStorageSize(pChildrenComponent->count),
+            _elementSize,
+            &childEntityID
+        );
+        PLATYPUS_ASSERT(newOffset != -1);
+        pChildrenComponent->offset = newOffset;
+        ++pChildrenComponent->count;
     }
 
-    void EntityHierarchyManager::freeRange(int32_t offset, size_t count)
+    void EntityHierarchyManager::removeChild(Children* pChildrenComponent, entityID_t childEntityID)
     {
-        PLATYPUS_ASSERT(offset >= 0);
-        if (offset + count > _childrenContainer.size())
-        {
-            Debug::log(
-                "Children component's range (offset = " + std::to_string(offset) + " count = " + std::to_string(count) + ") "
-                "out of bounds! EntityHierarchyManager's children container's length is " + std::to_string(_childrenContainer.size()),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
-        }
-
-        const size_t unsignedOffset = static_cast<size_t>(offset);
-        for (size_t i = unsignedOffset; i < unsignedOffset + count; ++i)
-            _childrenContainer[i] = NULL_ENTITY_ID;
-
-        _freeRanges[unsignedOffset] = count;
-
-        packFreeRanges();
-    }
-
-    int32_t EntityHierarchyManager::addChild(
-        const Children * const pChildren,
-        entityID_t childEntityID
-    )
-    {
-        const int32_t currentOffset = pChildren->offset;
-        const size_t currentCount = pChildren->count;
-
-        if (currentOffset == -1)
-            return occupyRange({ childEntityID });
-
-        // Quickly return using same offset if just adding at the back of the container
-        if (currentOffset + currentCount == _childrenContainer.size())
-        {
-            _childrenContainer.push_back(childEntityID);
-            return currentOffset;
-        }
-
-        // Quickly return using same offset if can add at empty pos after current range
-        // NOTE: BELOW QUITE COMPLICATED, NOT TESTED MIGHT BE FUCKED!!
-        // TODO: TEST PROPERLY!
-        if (currentCount > 0)
-        {
-            const size_t nextOffset = currentOffset + currentCount;
-            std::map<size_t, size_t>::const_iterator freeIt = _freeRanges.find(nextOffset);
-            // Can add at least one more if found from _freeRanges
-            if (freeIt != _freeRanges.end())
-            {
-                PLATYPUS_ASSERT(freeIt->first < _childrenContainer.size());
-                PLATYPUS_ASSERT(_childrenContainer[nextOffset] == NULL_ENTITY_ID);
-                _childrenContainer[nextOffset] = childEntityID;
-
-                _freeRanges.erase(nextOffset);
-                // Update the free offsets
-                // If theres more space after the old free offset, "push the cursor forward"
-                // with the new free count
-                const size_t newFreeCount = freeIt->second - 1;
-                if (newFreeCount > 0)
-                {
-                    const size_t newFreeOffset = nextOffset + 1;
-                    if (newFreeOffset < _childrenContainer.size())
-                        _freeRanges[nextOffset] = newFreeCount;
-                }
-
-                return currentOffset;
-            }
-        }
-
-        PLATYPUS_ASSERT(currentOffset >= 0);
-
-        const size_t newCount = currentCount + 1;
-        std::vector<entityID_t> currentChildren(newCount);
-        const entityID_t* pCurrentChildren = getChildEntities(pChildren);
-        memcpy(currentChildren.data(), pCurrentChildren, sizeof(entityID_t) * currentCount);
-
-        freeRange(currentOffset, currentCount);
-        currentChildren[currentCount] = childEntityID;
-
-        return occupyRange(currentChildren);
-    }
-
-    void EntityHierarchyManager::removeChild(
-        const Children * const pChildren,
-        entityID_t childEntityID
-    )
-    {
-        const int32_t currentOffset = pChildren->offset;
-        const size_t currentCount = pChildren->count;
+        const int32_t currentOffset = pChildrenComponent->offset;
+        const size_t currentCount = pChildrenComponent->count;
         PLATYPUS_ASSERT(currentOffset >= 0);
 
         const size_t unsignedCurrentOffset = static_cast<const size_t>(currentOffset);
-        const size_t end = unsignedCurrentOffset + currentCount;
-        PLATYPUS_ASSERT(end <= _childrenContainer.size());
-        for (size_t i = unsignedCurrentOffset; i < end; ++i)
+        const size_t end = unsignedCurrentOffset + getComponentStorageSize(currentCount);
+        std::vector<uint8_t> storage = _memoryPool.accessStorage();
+        uint8_t* pStorage = storage.data();
+        PLATYPUS_ASSERT(end <= storage.size());
+
+        for (size_t offset = unsignedCurrentOffset; offset < end; offset += _elementSize)
         {
-            const entityID_t entityID = _childrenContainer[i];
+            entityID_t entityID = NULL_ENTITY_ID;
+            memcpy(&entityID, pStorage + offset, _elementSize);
             if (entityID == childEntityID)
             {
-                _childrenContainer[i] = NULL_ENTITY_ID;
-                if (i == _childrenContainer.size() - 1)
+                //_childrenContainer[i] = NULL_ENTITY_ID;
+                memset(pStorage + offset, NULL_ENTITY_ID, _elementSize);
+
+                if (offset == storage.size() - _elementSize)
                 {
-                    _childrenContainer.pop_back();
+                    // WTF?
+                    PLATYPUS_ASSERT(storage.size() >= _elementSize);
+
+                    //_childrenContainer.pop_back();
+                    storage.resize(storage.size() - _elementSize);
                     return;
                 }
 
                 // Make all the rest of the child entities IDs be contiguous
-                for (size_t j = i; j < end; ++j)
+                for (size_t remainingOffset = offset; remainingOffset < end; remainingOffset += _elementSize)
                 {
-                    if (j + 1 >= end)
+                    if (remainingOffset + _elementSize >= end)
                         break;
 
-                    _childrenContainer[j] = _childrenContainer[j + 1];
+                    entityID_t nextEntityID = NULL_ENTITY_ID;
+                    memcpy(&nextEntityID, pStorage + remainingOffset, _elementSize);
+                    const size_t nextOffset = remainingOffset + _elementSize;
+                    memcpy(pStorage + nextOffset, &nextEntityID, _elementSize);
+                    //_childrenContainer[j] = _childrenContainer[j + 1];
+
                 }
-                _freeRanges[end - 1] = 1;
-                packFreeRanges();
+                // TODO: Make sure this never happens!
+                PLATYPUS_ASSERT(end >= _elementSize);
+                _memoryPool.accessFreeRanges()[end - _elementSize] = _elementSize;
+                _memoryPool.packFreeRanges();
                 return;
             }
         }
@@ -403,102 +310,52 @@ namespace platypus
         PLATYPUS_ASSERT(false);
     }
 
-    const entityID_t* EntityHierarchyManager::getChildEntities(const Children * const pChildren) const
+    const entityID_t* EntityHierarchyManager::getChildEntityIDs(const Children * const pChildrenComponent) const
     {
-        const size_t offset = pChildren->offset;
-        const size_t count = pChildren->count;
-        if (offset + count > _childrenContainer.size())
+        PLATYPUS_ASSERT(pChildrenComponent->offset != -1);
+        return reinterpret_cast<const entityID_t*>(
+            _memoryPool.accessData(
+                pChildrenComponent->offset,
+                getComponentStorageSize(pChildrenComponent->count)
+            )
+        );
+    }
+
+    void EntityHierarchyManager::free_range_func(size_t offset, size_t size, void* pUserData)
+    {
+        EntityHierarchyManager* pEntityHierarchyManager = reinterpret_cast<EntityHierarchyManager*>(pUserData);
+        const size_t elemSize = pEntityHierarchyManager->_elementSize;
+        size_t count = size / elemSize;
+        PLATYPUS_ASSERT(count >= 0);
+
+        for (size_t useOffset = offset; useOffset < offset + size; useOffset += elemSize)
         {
-            Debug::log(
-                "Children component's range (offset = " + std::to_string(offset) + " count = " + std::to_string(count) + ") "
-                "out of bounds! EntityHierarchyManager's children container's length is " + std::to_string(_childrenContainer.size()),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
+            memset(
+                pEntityHierarchyManager->_memoryPool.accessStorage().data() + useOffset,
+                NULL_ENTITY_ID,
+                elemSize
             );
-            PLATYPUS_ASSERT(false);
-            return nullptr;
         }
-        return _childrenContainer.data() + offset;
     }
 
-    int32_t EntityHierarchyManager::findFreeRange(size_t requiredCount)
+    bool EntityHierarchyManager::validate_free_range_func(size_t offset, size_t size, void* pUserData)
     {
-        std::map<size_t, size_t>::const_iterator it;
-        for (it = _freeRanges.begin(); it != _freeRanges.end(); ++it)
-        {
-            if (it->second >= requiredCount)
-                return it->first;
-        }
-        return -1;
-    }
+        EntityHierarchyManager* pEntityHierarchyManager = reinterpret_cast<EntityHierarchyManager*>(pUserData);
+        const size_t elemSize = pEntityHierarchyManager->_elementSize;
+        size_t count = size / elemSize;
+        PLATYPUS_ASSERT(count >= 0);
 
-    bool EntityHierarchyManager::validateFreeRange(size_t offset, size_t count) const
-    {
-        if (offset + count > _childrenContainer.size())
-            return false;
-
-        for (size_t i = offset; i < offset + count; ++i)
+        for (size_t useOffset = offset; useOffset < offset + size; useOffset += elemSize)
         {
-            if (_childrenContainer[i] != NULL_ENTITY_ID)
+            entityID_t entityID = NULL_ENTITY_ID;
+            memcpy(
+                &entityID,
+                pEntityHierarchyManager->_memoryPool.accessStorage().data() + useOffset,
+                elemSize
+            );
+            if (entityID != NULL_ENTITY_ID)
                 return false;
         }
         return true;
-    }
-
-    void EntityHierarchyManager::packChildren(size_t beginOffset, size_t freeOffset, size_t count)
-    {
-        const size_t endOffset = beginOffset + count;
-        for (size_t i = freeOffset; i <= endOffset; ++i)
-        {
-            _childrenContainer[i] = _childrenContainer[i + 1];
-        }
-    }
-
-    void EntityHierarchyManager::packFreeRanges()
-    {
-        // TODO: get the test.cpp thing here!
-        if (_freeRanges.empty())
-            return;
-
-        std::map<size_t, size_t> result;
-        std::map<size_t, size_t>::iterator currentIt = _freeRanges.begin();
-        std::map<size_t, size_t>::iterator nextIt = currentIt;
-
-        size_t currentOffset = currentIt->first;
-        size_t currentCount = currentIt->second;
-        size_t currentLastOffset = currentOffset + currentCount - 1;
-        size_t nextIterIncr = 1;
-        while (true)
-        {
-            ++nextIt;
-            if (nextIt == _freeRanges.end())
-                break;
-
-            const size_t nextOffset = nextIt->first;
-            const size_t nextCount = nextIt->second;
-            // If next beginst right after current
-            //  -> merge the next to the current
-            if (currentLastOffset + 1 == nextOffset)
-            {
-                const size_t newCount = currentCount + nextCount;
-                result[currentIt->first] = newCount;
-                currentCount = newCount;
-                currentLastOffset = currentOffset + currentCount - 1;
-                ++nextIterIncr;
-            }
-            else
-            {
-                result[currentIt->first] = currentCount;
-                result[nextIt->first] = nextCount;
-                for (size_t i = 0; i < nextIterIncr; ++i)
-                    ++currentIt;
-
-                nextIterIncr = 1;
-                currentOffset = currentIt->first;
-                currentCount = currentIt->second;
-                currentLastOffset = currentOffset + currentCount - 1;
-            }
-        }
-        _freeRanges = result;
     }
 }

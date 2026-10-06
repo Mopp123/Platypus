@@ -1,8 +1,8 @@
 #pragma once
 #include "platypus/utils/UUID.hpp"
 #include "platypus/assets/Asset.hpp"
+#include "platypus/core/Memory.hpp"
 #include <vector>
-#include <map>
 #include <cstdint>
 
 #define NULL_ENTITY_ID -1
@@ -76,47 +76,26 @@ namespace platypus
     );
 
 
-    class Scene;
     struct Children;
     class EntityHierarchyManager
     {
     private:
+        DynamicElementSizeMemoryPool _memoryPool;
         Scene* _pScene = nullptr;
-        // This contains every Children component's used child entityID_ts
-        std::vector<entityID_t> _childrenContainer;
-        // key = offset, value = count
-        std::map<size_t, size_t> _freeRanges;
+        const size_t _elementSize = sizeof(entityID_t);
 
     public:
         EntityHierarchyManager(Scene* pScene);
 
-        // Returns the offset where child entities begin in _childrenContainer or
-        // -1 if fails to occupy
-        int32_t occupyRange(const std::vector<entityID_t>& childEntities);
+        void addChild(Children* pChildrenComponent, entityID_t childEntityID);
+        void removeChild(Children* pChildrenComponent, entityID_t childEntityID);
 
-        void freeRange(int32_t offset, size_t count);
-
-        // Changes the previously used offset and returns it
-        int32_t addChild(
-            const Children * const pChildren,
-            entityID_t childEntityID
-        );
-
-        void removeChild(
-            const Children * const pChildren,
-            entityID_t childEntityID
-        );
-
-        const entityID_t* getChildEntities(const Children * const pChildren) const;
+        const entityID_t* getChildEntityIDs(const Children * const pChildrenComponent) const;
 
     private:
-        int32_t findFreeRange(size_t requiredCount);
-        bool validateFreeRange(size_t offset, size_t count) const;
+        inline size_t getComponentStorageSize(size_t count) const { return count * _elementSize; }
 
-        // Makes all children to be contiguous
-        void packChildren(size_t beginOffset, size_t freeOffset, size_t count);
-        // NOTE: this is too complicated, inefficient and dumb
-        // TODO: Improve, optimize ..or something...
-        void packFreeRanges();
+        static void free_range_func(size_t offset, size_t size, void* pUserData);
+        static bool validate_free_range_func(size_t offset, size_t size, void* pUserData);
     };
 }

@@ -90,7 +90,7 @@ namespace platypus
 
     Scene::~Scene()
     {
-        std::unordered_map<ComponentType, MemoryPool*>::iterator poolIterator;
+        std::unordered_map<ComponentType, StaticElementSizeMemoryPool*>::iterator poolIterator;
         for (poolIterator = _componentPools.begin(); poolIterator != _componentPools.end(); ++poolIterator)
             poolIterator->second->freeStorage();
 
@@ -319,13 +319,13 @@ namespace platypus
         if (pChildrenComponent)
         {
             // NOTE: POSSIBLE DANGER!
-            // *This works atm because earlier calling the remove_child which packs the pChildren
-            // child IDs so that they are always contiguous starting from 0 index and
+            // *This works atm because earlier in this func calling the remove_child which packs
+            // the pChildren child IDs so that they are always contiguous starting from 0 index and
             // it also decreases the child count -> so destroy the the child entity[0] until count
             // goes to 0
             //  -> Probably fuck stuff up in the future because u forget this:D
             Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
-            const entityID_t* pChildEntityIDs = _entityHierarchyManager.getChildEntities(pChildren);
+            const entityID_t* pChildEntityIDs = _entityHierarchyManager.getChildEntityIDs(pChildren);
             PLATYPUS_ASSERT(pChildEntityIDs);
             std::vector<entityID_t> childEntityIDs(pChildren->count);
             memcpy(childEntityIDs.data(), pChildEntityIDs, sizeof(entityID_t) * pChildren->count);
@@ -337,7 +337,7 @@ namespace platypus
         }
 
         // Destroy/free all this entity's components
-        std::unordered_map<ComponentType, MemoryPool*>::iterator poolsIt;
+        std::unordered_map<ComponentType, StaticElementSizeMemoryPool*>::iterator poolsIt;
         for (poolsIt = _componentPools.begin(); poolsIt != _componentPools.end(); ++poolsIt)
         {
             if (_entities[entityID].componentMask & poolsIt->first)
@@ -364,7 +364,7 @@ namespace platypus
         if (pChildrenComponent)
         {
             Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
-            const entityID_t* pChildIDs = _entityHierarchyManager.getChildEntities(pChildren);
+            const entityID_t* pChildIDs = _entityHierarchyManager.getChildEntityIDs(pChildren);
             for (size_t i = 0; i < pChildren->count; ++i)
                 destroyEntityHierarchy(*(pChildIDs + i));
         }
@@ -427,7 +427,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        std::unordered_map<ComponentType, MemoryPool*>::const_iterator it = _componentPools.find(type);
+        std::unordered_map<ComponentType, StaticElementSizeMemoryPool*>::const_iterator it = _componentPools.find(type);
         if (it->second->getOccupiedCount() == 0)
         {
             if (enableWarning)
@@ -499,7 +499,7 @@ namespace platypus
             PLATYPUS_ASSERT(false);
             return nullptr;
         }
-        std::unordered_map<ComponentType, MemoryPool*>::const_iterator poolIt = _componentPools.find(type);
+        std::unordered_map<ComponentType, StaticElementSizeMemoryPool*>::const_iterator poolIt = _componentPools.find(type);
         if (poolIt == _componentPools.end())
         {
             Debug::log(
@@ -975,6 +975,10 @@ namespace platypus
                 }
                 childEntityIDs[i] = childEntity.id;
             }
+
+            // TODO: Make this possible, etc
+            CONTINUE HERE!
+
             int32_t offset = _entityHierarchyManager.occupyRange(childEntityIDs);
             if (offset == -1)
             {

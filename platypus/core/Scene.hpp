@@ -38,7 +38,7 @@ namespace platypus
 
         std::queue<entityID_t> _freeEntityIDs;
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
-        std::unordered_map<ComponentType, MemoryPool*> _componentPools;
+        std::unordered_map<ComponentType, StaticElementSizeMemoryPool*> _componentPools;
 
         std::unordered_map<UUID_t, std::vector<EntityError>> _entityErrors;
         const std::unordered_map<EntityErrorType, void(*)(Scene*, EntityError)> _entityErrorFixMapping = {
