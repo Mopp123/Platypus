@@ -228,7 +228,7 @@ namespace platypus
         _memoryPool(
             free_range_func,
             this,
-            validate_range_func,
+            validate_free_range_func,
             this
         ),
         _pScene(pScene)
@@ -249,6 +249,47 @@ namespace platypus
         ++pChildrenComponent->count;
     }
 
+    // NOTE: Not tested, might not work!
+    void EntityHierarchyManager::setChildren(Children* pChildrenComponent, std::vector<entityID_t> childEntityIDs)
+    {
+        if (pChildrenComponent->offset != -1)
+        {
+            Debug::log(
+                "Children component already had a valid offset(" + std::to_string(pChildrenComponent->offset) + ") "
+                "Using this requires you to remove the already existing children!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+        // TODO: Make this less dumb
+        if (pChildrenComponent->count != childEntityIDs.size())
+        {
+            Debug::log(
+                "Children component is specified to have " + std::to_string(pChildrenComponent->count) + " "
+                "but provided " + std::to_string(childEntityIDs.size()) + " child entity IDs!",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        const int32_t baseOffset = pChildrenComponent->offset;
+        const size_t currentSize = getComponentStorageSize(pChildrenComponent->count);
+        const size_t addedSize = getComponentStorageSize(childEntityIDs.size());
+        const int32_t newOffset = _memoryPool.add(
+            baseOffset,
+            currentSize,
+            addedSize,
+            childEntityIDs.data()
+        );
+        PLATYPUS_ASSERT(newOffset != -1);
+        pChildrenComponent->offset = newOffset;
+        pChildrenComponent->count = childEntityIDs.size();
+    }
+
     void EntityHierarchyManager::removeChild(Children* pChildrenComponent, entityID_t childEntityID)
     {
         const int32_t currentOffset = pChildrenComponent->offset;
@@ -257,7 +298,7 @@ namespace platypus
 
         const size_t unsignedCurrentOffset = static_cast<const size_t>(currentOffset);
         const size_t end = unsignedCurrentOffset + getComponentStorageSize(currentCount);
-        std::vector<uint8_t> storage = _memoryPool.accessStorage();
+        std::vector<uint8_t>& storage = _memoryPool.accessStorage();
         uint8_t* pStorage = storage.data();
         PLATYPUS_ASSERT(end <= storage.size());
 
@@ -277,26 +318,23 @@ namespace platypus
 
                     //_childrenContainer.pop_back();
                     storage.resize(storage.size() - _elementSize);
+                    --pChildrenComponent->count;
                     return;
                 }
 
                 // Make all the rest of the child entities IDs be contiguous
-                for (size_t remainingOffset = offset; remainingOffset < end; remainingOffset += _elementSize)
+                for (size_t remainingOffset = offset + _elementSize; remainingOffset < end; remainingOffset += _elementSize)
                 {
-                    if (remainingOffset + _elementSize >= end)
-                        break;
-
                     entityID_t nextEntityID = NULL_ENTITY_ID;
                     memcpy(&nextEntityID, pStorage + remainingOffset, _elementSize);
-                    const size_t nextOffset = remainingOffset + _elementSize;
-                    memcpy(pStorage + nextOffset, &nextEntityID, _elementSize);
+                    memcpy(pStorage + offset, &nextEntityID, _elementSize);
                     //_childrenContainer[j] = _childrenContainer[j + 1];
-
                 }
                 // TODO: Make sure this never happens!
                 PLATYPUS_ASSERT(end >= _elementSize);
                 _memoryPool.accessFreeRanges()[end - _elementSize] = _elementSize;
                 _memoryPool.packFreeRanges();
+                --pChildrenComponent->count;
                 return;
             }
         }

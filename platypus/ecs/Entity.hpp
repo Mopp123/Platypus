@@ -88,6 +88,7 @@ namespace platypus
         EntityHierarchyManager(Scene* pScene);
 
         void addChild(Children* pChildrenComponent, entityID_t childEntityID);
+        void setChildren(Children* pChildrenComponent, std::vector<entityID_t> childEntityIDs);
         void removeChild(Children* pChildrenComponent, entityID_t childEntityID);
 
         const entityID_t* getChildEntityIDs(const Children * const pChildrenComponent) const;

@@ -437,11 +437,7 @@ namespace platypus
         if (!childIDs.empty())
         {
             if (childIDs[0] != NULL_ENTITY_ID)
-            {
-                const int32_t offset = pUseScene->getEntityHierarchyManager().occupyRange(childIDs);
-                PLATYPUS_ASSERT(offset != -1);
-                pChildren->offset = offset;
-            }
+                pUseScene->getEntityHierarchyManager().setChildren(pChildren, childIDs);
         }
         return pChildren;
     }
@@ -508,12 +504,11 @@ namespace platypus
             pChildren = (Children*)pChildrenComponent;
             pChildren->offset = -1;
             pChildren->count = 0;
-            memset((void*)pChildren, 0, sizeof(Children));
+            //memset((void*)pChildren, 0, sizeof(Children));
         }
 
-        pChildren->offset = pUseScene->getEntityHierarchyManager().addChild(pChildren, child);
+        pUseScene->getEntityHierarchyManager().addChild(pChildren, child);
         PLATYPUS_ASSERT(pChildren->offset >= 0);
-        ++pChildren->count;
 
         // Also create Parent component for the child
         void* pParentComponent = pUseScene->allocateComponent(
@@ -564,7 +559,6 @@ namespace platypus
         Children* pChildren = reinterpret_cast<Children*>(pChildrenComponent);
 
         pUseScene->getEntityHierarchyManager().removeChild(pChildren, child);
-        --pChildren->count;
     }
 
 
@@ -660,7 +654,7 @@ namespace platypus
     {
         const Scene* pScene = Application::get_instance()->getSceneManager().getCurrentScene();
         const EntityHierarchyManager& hierarchyManager = pScene->getEntityHierarchyManager();
-        const entityID_t* pChildrenBuf = hierarchyManager.getChildEntities(pChildren);
+        const entityID_t* pChildrenBuf = hierarchyManager.getChildEntityIDs(pChildren);
         std::vector<UUID_t> childUUIDs(pChildren->count);
         for (size_t i = 0; i < pChildren->count; ++i)
         {

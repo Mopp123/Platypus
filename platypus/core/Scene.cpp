@@ -976,20 +976,7 @@ namespace platypus
                 childEntityIDs[i] = childEntity.id;
             }
 
-            // TODO: Make this possible, etc
-            CONTINUE HERE!
-
-            int32_t offset = _entityHierarchyManager.occupyRange(childEntityIDs);
-            if (offset == -1)
-            {
-                Debug::log(
-                    "Failed to occupy valid range in _entityHierarchyManager",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-            pChildren->offset = offset;
+            _entityHierarchyManager.setChildren(pChildren, childEntityIDs);
         }
         _parentComponentsToFinalize.clear();
         _childrenComponentsToFinalize.clear();
