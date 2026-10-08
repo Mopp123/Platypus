@@ -6,6 +6,50 @@
 
 namespace platypus
 {
+    size_t get_custom_data_type_size(CustomDataType type)
+    {
+        switch (type)
+        {
+            case CustomDataType::INT: return sizeof(int32_t);
+            case CustomDataType::UINT: return sizeof(uint32_t);
+            case CustomDataType::FLOAT: return sizeof(float);
+            case CustomDataType::STRING: return sizeof(uint32_t);
+            case CustomDataType::VECTOR2F: return sizeof(Vector2f);
+            case CustomDataType::VECTOR3F: return sizeof(Vector3f);
+            case CustomDataType::VECTOR4F: return sizeof(Vector4f);
+        }
+        return 0;
+    }
+
+    std::string custom_data_type_to_string(CustomDataType type)
+    {
+        switch (type)
+        {
+            case CustomDataType::INT: return "INT";
+            case CustomDataType::UINT: return "UINT";
+            case CustomDataType::FLOAT: return "FLOAT";
+            case CustomDataType::STRING: return "STRING";
+            case CustomDataType::VECTOR2F: return "VECTOR2F";
+            case CustomDataType::VECTOR3F: return "VECTOR3F";
+            case CustomDataType::VECTOR4F: return "VECTOR4F";
+        }
+        return "Invalid type";
+    }
+
+    std::vector<CustomDataType> get_available_custom_data_types()
+    {
+        return {
+            CustomDataType::INT,
+            CustomDataType::UINT,
+            CustomDataType::FLOAT,
+            CustomDataType::STRING,
+            CustomDataType::VECTOR2F,
+            CustomDataType::VECTOR3F,
+            CustomDataType::VECTOR4F
+        };
+    }
+
+
     CustomData* create_custom_data(
         entityID_t target,
         const std::vector<SerializedCustomDataValue>& values,
@@ -240,1073 +284,186 @@ namespace platypus
         );
     }
 
-    std::string custom_data_type_to_string(CustomDataType type)
+
+    int32_t CustomDataManager::add(
+        CustomData* pCustomData,
+        CustomDataType type,
+        size_t dataSize,
+        const void* pData
+    )
     {
-        switch (type)
+        const size_t dataTypeSize = get_custom_data_type_size(type);
+        if (dataSize != dataTypeSize)
         {
-            case CustomDataType::INT: return "INT";
-            case CustomDataType::UINT: return "UINT";
-            case CustomDataType::FLOAT: return "FLOAT";
-            case CustomDataType::STRING: return "STRING";
-            case CustomDataType::VECTOR2F: return "VECTOR2F";
-            case CustomDataType::VECTOR3F: return "VECTOR3F";
-            case CustomDataType::VECTOR4F: return "VECTOR4F";
+            Debug::log(
+                "Invalid dataSize(" + std::to_string(dataSize) + ") for type: " + custom_data_type_to_string(type),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return -1;
         }
-        return "Invalid type";
+
+        if ((pCustomData->offset == -1 && pCustomData->elementCount != 0) ||
+            (pCustomData->offset != -1 && pCustomData->elementCount == 0))
+        {
+            Debug::log(
+                "If pCustomData->offset == -1 elementCount must be 0 and vice versa",
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return -1;
+        }
+
+        if (pCustomData->offset == -1 && pCustomData->elementCount == 0)
+        {
+            std::vector<uint8_t> toAdd(sizeof(uint32_t) + sizeof(CustomDataType) + dataSize);
+            const uint32_t elemCount = 1;
+            memcpy(toAdd.data(), &elemCount, sizeof(uint32_t));
+            memcpy(toAdd.data() + sizeof(uint32_t), &type, sizeof(CustomDataType));
+            memcpy(toAdd.data() + sizeof(uint32_t) + sizeof(CustomDataType), pData, dataSize);
+            const int32_t newOffset = _memoryPool.add(
+                -1,
+                0,
+                toAdd.size(),
+                toAdd.data()
+            );
+            PLATYPUS_ASSERT(newOffset != -1);
+            pCustomData->offset = newOffset;
+            ++pCustomData->elementCount;
+            return newOffset;
+        }
+
+        std::vector<StoredCustomDataValue> currentValues = copyValues(pCustomData->offset);
+        StoredCustomDataValue newValue = { type };
+        newValue.data.resize(dataSize);
+        memcpy(newValue.data.data(), pData, dataSize);
+        currentValues.push_back(newValue);
+
+        const uint32_t newElemCount = pCustomData->elementCount + 1;
+        PLATYPUS_ASSERT(newElemCount == currentValues.size());
+
+        // DynamicElementSizeMemoryPool should handle this well enough?
+        // NOT: NOT TESTED!
+        // TODO: Make sure the mem is used efficiently enought with this in all cases!
+        //
+        // TODO: TOP PRIO!
+        // *if the mem pool has free offsets at the end of the storage but the size isn't enough
+        //  ->use those free offsets(should only have one at the end since packing) and add the
+        //  remaining required size!!
+
+        const uint8_t* pStorage = _memoryPool.getStorage().data();
+        const size_t currentOffset = static_cast<const size_t>(pCustomData->offset);
+        uint32_t currentSize = 0;
+        memcpy(&currentSize, pStorage + currentOffset, sizeof(uint32_t));
+
+        _memoryPool.freeRange(pCustomData->offset, currentSize);
+
+        std::vector<uint8_t> toAdd(sizeof(uint32_t));
+        memcpy(toAdd.data(), &newElemCount, sizeof(uint32_t));
+        for (size_t i = 0; i < newElemCount; ++i)
+        {
+            const StoredCustomDataValue valueToAdd = currentValues[i];
+            size_t valueSize = get_custom_data_type_size(valueToAdd.type);
+            size_t prevToAddSize = toAdd.size();
+            toAdd.resize(prevToAddSize + sizeof(CustomDataType) + valueSize);
+            memcpy(
+                toAdd.data() + prevToAddSize,
+                &valueToAdd.type,
+                sizeof(CustomDataType)
+            );
+            memcpy(
+                toAdd.data() + prevToAddSize + sizeof(CustomDataType),
+                valueToAdd.data.data(),
+                valueToAdd.data.size()
+            );
+        }
+
+        int32_t newOffset = _memoryPool.add(
+            -1,
+            0,
+            toAdd.size(),
+            toAdd.data()
+        );
+        PLATYPUS_ASSERT(newOffset != -1);
+        pCustomData->elementCount = newElemCount;
+        pCustomData->offset = newOffset;
+        return newOffset;
     }
 
-    std::vector<CustomDataType> get_available_custom_data_types()
+    CustomDataManager::StoredCustomDataValue CustomDataManager::toStoredCustomDataValue(
+        int32_t offset
+    ) const
     {
+        const size_t totalStorageSize = _memoryPool.getTotalSize();
+        if (!validateOffset(offset))
+        {
+            Debug::log(
+                "Invalid offset " + std::to_string(offset) + " "
+                "MemoryPool size is " + std::to_string(totalStorageSize),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return { };
+        }
+
+        const uint8_t* pStorage = _memoryPool.getStorage().data();
+
+        CustomDataType type;
+        memcpy(&type, pStorage + offset, sizeof(CustomDataType));
+        offset += sizeof(CustomDataType);
+        PLATYPUS_ASSERT(offset <= totalStorageSize);
+
+        const size_t dataSize = get_custom_data_type_size(type);
+        PLATYPUS_ASSERT(dataSize > 0);
+
+        std::vector<uint8_t> data(dataSize);
+        memcpy(data.data(), pStorage + offset, dataSize);
+
         return {
-            CustomDataType::INT,
-            CustomDataType::UINT,
-            CustomDataType::FLOAT,
-            CustomDataType::STRING,
-            CustomDataType::VECTOR2F,
-            CustomDataType::VECTOR3F,
-            CustomDataType::VECTOR4F
+            type,
+            data
         };
     }
 
-    // TODO: Redo this whole CustomDataManager shit!
-    //  -> Have some string pool and point there instead of storing the strings in the prev. way!
-    //  -> Should still maybe attempt to make all the stuff be in contiguous buffer
-    //  -> MAKE SURE U CAN RESIZE THE RANGE THE CustomData COMPONENT REQUIRES!
-    //CONTINUE HERE!
-
-    // _data layout:
-    //  uint32_t elementCount
-    //  CustomDataType[elementCount] types
-    //  values[elementCount]
-    //      NOTE: Values are in same order as types, so u can get
-    //      the correct type for the value from there.
-    int32_t CustomDataManager::addElement(
-        CustomData* pCustomData,
-        CustomDataType type,
-        size_t valueDataSize,
-        const void* pValueData
-    )
+    std::vector<CustomDataManager::StoredCustomDataValue> CustomDataManager::copyValues(
+        int32_t offset
+    ) const
     {
-        // Check if pCustomData offset != -1
-        //  -> if not
-        //      -> occupy first avaliable offset with enough size
-        //  -> otherwise
-        //      -> check is the space after last elem free
-        //          -> if it is
-        //              -> add or occupy the space after last elem
-        //          -> if not
-        //              -> attempt to find suitable range from _freeRanges
-        //                  -> if found
-        //                      -> put all the existing elements at the new offset
-        //                      -> add the new element there too
-        //                  -> if can't find
-        //                      -> add required space at the end of the _data
-        //                      -> put all the existing elements at the new offset
-        //                      -> add the new element there too
-        //              -> free the old range
-
-        const size_t newValueTotalSize = _valueBaseSize + valueDataSize;
-        int32_t newOffset = -1;
-        size_t currentTotalSize = getTotalSize(pCustomData);
-        if (currentTotalSize == 0)
-            currentTotalSize += sizeof(uint32_t);
-
-        const int32_t currentOffset = pCustomData->offset;
-        std::vector<CustomDataValue> currentValues = getValues(currentOffset);
-
-        const size_t currentStorageSize = _data.size();
-
-        std::map<size_t, size_t>::const_iterator suitableFreeRangeIt = _freeRanges.end();
-        if (currentOffset == -1)
-        {
-            const size_t requiredNewSize = currentTotalSize + newValueTotalSize;
-            if (!_freeRanges.empty())
-            {
-                for (suitableFreeRangeIt = _freeRanges.begin(); suitableFreeRangeIt != _freeRanges.end(); ++suitableFreeRangeIt)
-                {
-                    if (suitableFreeRangeIt->second >= requiredNewSize)
-                    {
-                        newOffset = static_cast<int32_t>(suitableFreeRangeIt->first);
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                newOffset = currentStorageSize;
-                _data.resize(currentTotalSize + newValueTotalSize);
-            }
-        }
-        else
-        {
-            // check is pos after last elem available
-            size_t lastValueEndOffset = sizeof(uint32_t);
-            for (const CustomDataValue& existingValue : currentValues)
-            {
-                // NOTE: Not sure if need to add +1 here to get the next offset?
-                lastValueEndOffset += _valueBaseSize + existingValue.maxDataSize;
-            }
-            suitableFreeRangeIt = _freeRanges.find(lastValueEndOffset);
-            if (suitableFreeRangeIt != _freeRanges.end())
-            {
-                if (suitableFreeRangeIt->second >= newValueTotalSize)
-                    newOffset = currentOffset;
-            }
-
-            if (newOffset == -1)
-            {
-                if (lastValueEndOffset == _data.size())
-                {
-                    newOffset = currentOffset;
-                    _data.resize(currentStorageSize + newValueTotalSize);
-                }
-                else
-                {
-                    newOffset = currentStorageSize;
-                    _data.resize(currentStorageSize + currentTotalSize + newValueTotalSize);
-                }
-            }
-        }
-
-        currentValues.push_back(
-            {
-                type,
-                static_cast<uint32_t>(valueDataSize),
-                static_cast<uint32_t>(valueDataSize),
-                pValueData
-            }
-        );
-
-        const uint32_t newElementCount = static_cast<uint32_t>(currentValues.size());
-        memcpy(
-            _data.data() + newOffset,
-            &newElementCount,
-            sizeof(uint32_t)
-        );
-        size_t valueOffset = newOffset + sizeof(uint32_t);
-        for (const CustomDataValue& value : currentValues)
-        {
-            memcpy(
-                _data.data() + valueOffset,
-                &value.type,
-                sizeof(CustomDataType)
-            );
-            valueOffset += sizeof(CustomDataType);
-            PLATYPUS_ASSERT(valueOffset < _data.size());
-
-            memcpy(
-                _data.data() + valueOffset,
-                &value.usedDataSize,
-                sizeof(uint32_t)
-            );
-            valueOffset += sizeof(uint32_t);
-            PLATYPUS_ASSERT(valueOffset < _data.size());
-
-            memcpy(
-                _data.data() + valueOffset,
-                &value.maxDataSize,
-                sizeof(uint32_t)
-            );
-            valueOffset += sizeof(uint32_t);
-            PLATYPUS_ASSERT(valueOffset <= _data.size());
-
-            if (value.maxDataSize > 0)
-            {
-                memcpy(
-                    _data.data() + valueOffset,
-                    value.pData,
-                    value.maxDataSize
-                );
-                valueOffset += value.maxDataSize;
-            }
-            PLATYPUS_ASSERT(valueOffset <= _data.size());
-        }
-
-        if (suitableFreeRangeIt != _freeRanges.end())
-        {
-            _freeRanges.erase(suitableFreeRangeIt);
-        }
-
-
-        pCustomData->elementCount = newElementCount;
-        pCustomData->offset = newOffset;
-
-        return newOffset;
-
-        /*
-        const size_t valueBaseSize = sizeof(CustomDataType) + sizeof(uint32_t) * 2;
-        size_t storedValueSize = valueBaseSize + get_data_type_size(type);
-        if (type == CustomDataType::STRING)
-            storedValueSize = valueBaseSize + valueDataSize;
-
-        const uint32_t oldElementCount = pCustomData->elementCount;
-        const uint32_t newElementCount = oldElementCount + 1;
-        const int32_t oldOffset = pCustomData->offset;
-        const size_t oldTotalSize = getTotalSize(pCustomData);
-        size_t newTotalSize = oldTotalSize + storedValueSize;
-
-        // If old size was 0 -> need to also add space for the elemCount
-        if (oldTotalSize == 0)
-            newTotalSize += sizeof(uint32_t);
-
-        if (oldOffset >= 0)
-            erase(oldOffset, oldTotalSize);
-
-        int32_t newOffset = -1;
-        // TODO:
-        // Figure out how to alloc new space if that's needed
-        if (!_freeRanges.empty())
-        {
-            std::map<size_t, size_t>::const_iterator freeRangeIt;
-            for (freeRangeIt = _freeRanges.begin(); freeRangeIt != _freeRanges.end(); ++freeRangeIt)
-            {
-                const size_t freeRangeOffset = freeRangeIt->first;
-                const size_t freeRangeSize = freeRangeIt->second;
-                // If free range offset was already at back
-                //  ->just add the required additional space
-                if (freeRangeOffset + freeRangeSize == _data.size())
-                {
-                    std::vector<uint8_t> oldData = _data;
-                    const size_t  currentBufferSize = _data.size();
-                    if (freeRangeOffset + newTotalSize >= currentBufferSize)
-                    {
-                        const size_t newBufferSize = currentBufferSize + (newTotalSize - currentBufferSize);
-                        _data.resize(newBufferSize);
-                    }
-                    memcpy(_data.data(), oldData.data(), oldData.size());
-                    newOffset = static_cast<int32_t>(freeRangeIt->first);
-                    break;
-                }
-                else if (freeRangeSize >= newTotalSize)
-                {
-                    newOffset = static_cast<int32_t>(freeRangeIt->first);
-                    break;
-                }
-            }
-
-            if (freeRangeIt != _freeRanges.end())
-                _freeRanges.erase(freeRangeIt);
-        }
-
-        if (newOffset == -1)
-        {
-            std::vector<uint8_t> oldData = _data;
-            // If offset was already at back
-            //  ->just add the required additional space
-            const size_t uOldOffset = static_cast<size_t>(oldOffset);
-            if (oldOffset != -1 && uOldOffset + oldTotalSize == _data.size())
-            {
-                _data.resize(_data.size() + storedValueSize);
-                memcpy(_data.data(), oldData.data(), oldData.size());
-                newOffset = oldOffset;
-            }
-            else
-            {
-                newOffset = _data.size();
-                _data.resize(_data.size() + newTotalSize);
-                memcpy(_data.data(), oldData.data(), oldData.size());
-            }
-        }
-
-        std::vector<CustomDataValue> values = getValues(oldOffset);
-        values.push_back(
-            {
-                type,
-                static_cast<uint32_t>(valueDataSize),
-                static_cast<uint32_t>(valueDataSize),
-                pValueData
-            }
-        );
-
-        memcpy(
-            _data.data() + newOffset,
-            &newElementCount,
-            sizeof(uint32_t)
-        );
-        size_t valueOffset = sizeof(uint32_t);
-        for (const CustomDataValue& value : values)
-        {
-            Debug::log("___TEST___adding new val at offset: " + std::to_string(valueOffset));
-            memcpy(
-                _data.data() + newOffset + valueOffset,
-                &value.type,
-                sizeof(CustomDataType)
-            );
-            valueOffset += sizeof(CustomDataType);
-            PLATYPUS_ASSERT(newOffset + valueOffset < _data.size());
-
-            memcpy(
-                _data.data() + newOffset + valueOffset,
-                &value.usedDataSize,
-                sizeof(uint32_t)
-            );
-            valueOffset += sizeof(uint32_t);
-            PLATYPUS_ASSERT(newOffset + valueOffset < _data.size());
-
-            memcpy(
-                _data.data() + newOffset + valueOffset,
-                &value.maxDataSize,
-                sizeof(uint32_t)
-            );
-            valueOffset += sizeof(uint32_t);
-            PLATYPUS_ASSERT(newOffset + valueOffset <= _data.size());
-
-            if (value.maxDataSize > 0)
-            {
-                memcpy(
-                    _data.data() + newOffset + valueOffset,
-                    value.pData,
-                    value.maxDataSize
-                );
-                valueOffset += value.maxDataSize;
-            }
-            PLATYPUS_ASSERT(newOffset + valueOffset <= _data.size());
-        }
-
-        pCustomData->elementCount = newElementCount;
-        pCustomData->offset = newOffset;
-
-        return newOffset;
-        */
-    }
-
-    template<typename T>
-    void CustomDataManager::addNumericValue(CustomData* pCustomData, CustomDataType type, T value)
-    {
-        if (type == CustomDataType::STRING)
+        const size_t totalStorageSize = _memoryPool.getTotalSize();
+        if (!validateOffset(offset))
         {
             Debug::log(
-                "Attempted to add string as numeric value."
-                "You'll need to use addString member func to add string.",
+                "Invalid offset " + std::to_string(offset) + " "
+                "MemoryPool size is " + std::to_string(totalStorageSize),
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
             PLATYPUS_ASSERT(false);
-        }
-
-        if (addElement(
-            pCustomData,
-            type,
-            get_data_type_size(type),
-            &value
-        ) == -1)
-        {
-            Debug::log(
-                "Failed to add " + custom_data_type_to_string(type),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-    }
-
-    template void CustomDataManager::addNumericValue<int32_t>(CustomData* pCustomData, CustomDataType type, int32_t value);
-    template void CustomDataManager::addNumericValue<uint32_t>(CustomData* pCustomData, CustomDataType type, uint32_t value);
-    template void CustomDataManager::addNumericValue<float>(CustomData* pCustomData, CustomDataType type, float value);
-    template void CustomDataManager::addNumericValue<Vector2f>(CustomData* pCustomData, CustomDataType type, Vector2f value);
-    template void CustomDataManager::addNumericValue<Vector3f>(CustomData* pCustomData, CustomDataType type, Vector3f value);
-    template void CustomDataManager::addNumericValue<Vector4f>(CustomData* pCustomData, CustomDataType type, Vector4f value);
-
-    void CustomDataManager::addStringValue(CustomData* pCustomData, const std::string& str)
-    {
-        if (addElement(
-            pCustomData,
-            CustomDataType::STRING,
-            str.size(),
-            reinterpret_cast<const void*>(str.data())
-        ) == -1)
-        {
-            Debug::log(
-                "Failed to add " + custom_data_type_to_string(CustomDataType::STRING),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-    }
-
-    void CustomDataManager::erase(size_t offset, size_t totalDataSize)
-    {
-        PLATYPUS_ASSERT(offset + totalDataSize <= _data.size());
-        //memset(_data.data() + offset, 0, totalDataSize);
-        _freeRanges[offset] = totalDataSize;
-    }
-
-    void CustomDataManager::updateElement(
-        CustomData* pCustomData,
-        size_t valueOffset,
-        size_t valueDataSize,
-        const void* pValueData
-    )
-    {
-        Debug::log(
-            "___TEST___updating CustomData at valueOffset: " + std::to_string(valueOffset) + " "
-            "current size = " + std::to_string(getTotalSize(pCustomData))
-        );
-
-        const size_t customDataOffset = static_cast<const size_t>(pCustomData->offset);
-        PLATYPUS_ASSERT(pCustomData->offset + customDataOffset <= _data.size());
-
-        const size_t valueIndex = valueOffsetToIndex(
-            customDataOffset,
-            pCustomData->elementCount,
-            valueOffset
-        );
-
-        uint8_t* pData = reinterpret_cast<uint8_t*>(_data.data());
-        CustomDataType type;
-        memcpy(&type, pData + valueOffset, sizeof(CustomDataType));
-        valueOffset += sizeof(CustomDataType);
-        const uint32_t valSize = static_cast<uint32_t>(valueDataSize);
-
-        uint32_t maxValueSize = 0;
-        memcpy(&maxValueSize, pData + valueOffset + sizeof(uint32_t), sizeof(uint32_t));
-
-        if (type == CustomDataType::STRING)
-        {
-            uint32_t usedStrSize = 0;
-            memcpy(&usedStrSize, pData + valueOffset, sizeof(uint32_t));
-            if (maxValueSize >= valueDataSize)
-            {
-                memset(_data.data() + valueOffset + sizeof(uint32_t) * 2, 0, maxValueSize);
-            }
-            else
-            {
-                // TESTING
-                std::vector<CustomDataValue> values = getValues(pCustomData->offset);
-                erase(pCustomData->offset, getTotalSize(pCustomData));
-                pCustomData->offset = -1;
-                pCustomData->elementCount = 0;
-                for (size_t i = 0; i < values.size(); ++i)
-                {
-                    const CustomDataValue& value = values[i];
-                    if (i == valueIndex)
-                    {
-                        pCustomData->offset = addElement(
-                            pCustomData,
-                            type,
-                            valueDataSize,
-                            pValueData
-                        );
-                    }
-                    else
-                    {
-                        pCustomData->offset = addElement(
-                            pCustomData,
-                            value.type,
-                            value.maxDataSize,
-                            value.pData
-                        );
-                    }
-                }
-                Debug::log(
-                    "___TEST___updated string value. New base offset = " + std::to_string(pCustomData->offset)
-                );
-                return;
-
-                // TODO: Allow resizing!
-                Debug::log(
-                    "Not enought size to update new string value. Resizing is required! "
-                    "TODO: Make resizing possible!",
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-        }
-        else
-        {
-            if (!isValueValid(type, valueDataSize, pValueData))
-            {
-                Debug::log(
-                    "Invalid value(type = " + custom_data_type_to_string(type) + " size = " + std::to_string(valueDataSize),
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-        }
-
-        memcpy(
-            pData + valueOffset,
-            &valSize,
-            sizeof(uint32_t)
-        );
-        valueOffset += sizeof(uint32_t);
-
-        memcpy(
-            pData + valueOffset,
-            &maxValueSize,
-            sizeof(uint32_t)
-        );
-        valueOffset += sizeof(uint32_t);
-
-        memcpy(
-            pData + valueOffset,
-            pValueData,
-            valueDataSize
-        );
-    }
-
-    size_t CustomDataManager::valueOffsetToIndex(
-        size_t customDataOffset,
-        size_t elementCount,
-        size_t valueOffset
-    )
-    {
-        PLATYPUS_ASSERT(customDataOffset + valueOffset < _data.size());
-        size_t offset = customDataOffset + sizeof(uint32_t);
-        const uint8_t* pData = _data.data();
-        for (size_t i = 0; i < elementCount; ++i)
-        {
-            if (offset == valueOffset)
-                return i;
-
-            CustomDataType valueType;
-            memcpy(&valueType, pData + offset, sizeof(CustomDataType));
-            offset += sizeof(CustomDataType);
-
-            uint32_t valueDataSize;
-            memcpy(&valueDataSize, pData + offset, sizeof(uint32_t));
-            offset += sizeof(uint32_t);
-
-            uint32_t valueMaxDataSize;
-            memcpy(&valueMaxDataSize, pData + offset, sizeof(uint32_t));
-            offset += sizeof(uint32_t);
-
-            offset += valueMaxDataSize;
-        }
-
-        Debug::log(
-            "Failed to find value offset: " + std::to_string(valueOffset),
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return 0;
-    }
-
-    bool CustomDataManager::isValueValid(CustomDataType dataType, size_t dataSize, const void* pData) const
-    {
-        if (dataType != CustomDataType::STRING)
-            return dataSize == get_data_type_size(dataType);
-
-        return true;
-    }
-
-    void CustomDataManager::validateValue(CustomDataType dataType, size_t dataSize, const void* pData) const
-    {
-        if (dataSize == 0)
-        {
-            Debug::log(
-                "CustomDataValue size was 0",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        if (dataType != CustomDataType::STRING)
-        {
-            if (!isValueValid(dataType, dataSize, pData))
-            {
-                Debug::log(
-                    "Invalid value(type = " + custom_data_type_to_string(dataType) + " size = " + std::to_string(dataSize),
-                    PLATYPUS_CURRENT_FUNC_NAME,
-                    Debug::MessageType::PLATYPUS_ERROR
-                );
-                PLATYPUS_ASSERT(false);
-            }
-        }
-    }
-
-    std::vector<CustomDataValue> CustomDataManager::getValues(int32_t offset) const
-    {
-        if (offset == -1)
             return { };
-
-        const size_t uOffset = static_cast<const size_t>(offset);
-        PLATYPUS_ASSERT(uOffset + sizeof(uint32_t) <= _data.size());
-        uint32_t elemCount = 0;
-        const uint8_t* pData = reinterpret_cast<const uint8_t*>(_data.data());
-        memcpy(&elemCount, pData + uOffset, sizeof(uint32_t));
-
-        const size_t valuesBeginOffset = uOffset + sizeof(uint32_t);
-        std::vector<CustomDataValue> values(elemCount);
-        size_t valueOffset = valuesBeginOffset;
-        for (size_t i = 0; i < elemCount; ++i)
-        {
-            CustomDataType type;
-            memcpy(&type, pData + valueOffset, sizeof(CustomDataType));
-            valueOffset += sizeof(CustomDataType);
-
-            uint32_t valueSize = 0;
-            memcpy(&valueSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            uint32_t maxValueSize = 0;
-            memcpy(&maxValueSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            const void* pValueData = pData + valueOffset;
-            values[i] = { type, valueSize, maxValueSize, pValueData };
-
-            valueOffset += maxValueSize;
-        }
-        return values;
-    }
-
-    template<typename T>
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        T value
-    )
-    {
-        if (pCustomData->offset < 0)
-        {
-            Debug::log(
-                "pCustomData offset was -1",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
         }
 
-        if (valueIndex >= pCustomData->elementCount)
+        const uint8_t* pStorage = _memoryPool.getStorage().data();
+
+        uint32_t count = 0;
+        memcpy(&count, pStorage + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        PLATYPUS_ASSERT(offset <= totalStorageSize);
+
+        std::vector<StoredCustomDataValue> result(static_cast<size_t>(count));
+        for (uint32_t i = 0; i < count; ++i)
         {
-            Debug::log(
-                "Value index: " + std::to_string(valueIndex) + " out of bounds! "
-                "Inputted pCustomData component has " + std::to_string(pCustomData->elementCount) + " values",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return;
+            PLATYPUS_ASSERT(offset < totalStorageSize);
+            result[i] = toStoredCustomDataValue(offset);
+            offset += sizeof(CustomDataType) + result[i].data.size();
         }
-
-        CustomDataType valueType;
-        size_t valueOffset = pCustomData->offset + sizeof(uint32_t);
-        uint32_t valueDataSize = 0;
-        uint8_t* pData = _data.data();
-        for (size_t i = 0; i < pCustomData->elementCount; ++i)
-        {
-            const size_t currentValueBaseOffset = valueOffset;
-
-            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
-            valueOffset += sizeof(CustomDataType);
-
-            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            uint32_t maxValueDataSize = 0;
-            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            PLATYPUS_ASSERT(valueDataSize == maxValueDataSize);
-
-            valueOffset += maxValueDataSize;
-
-            if (i == valueIndex)
-            {
-                if (valueType == CustomDataType::STRING)
-                {
-                    Debug::log(
-                        "Attempted to update string as numeric value!",
-                        PLATYPUS_CURRENT_FUNC_NAME,
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                }
-                valueOffset = currentValueBaseOffset;
-                break;
-            }
-
-        }
-        PLATYPUS_ASSERT(valueDataSize > 0);
-
-        updateElement(
-            pCustomData,
-            valueOffset,
-            valueDataSize,
-            &value
-        );
-    }
-
-    template
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        int32_t value
-    );
-
-    template
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        uint32_t value
-    );
-
-    template
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        float value
-    );
-
-    template
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        Vector2f value
-    );
-
-    template
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        Vector3f value
-    );
-
-    template
-    void CustomDataManager::updateNumericValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        Vector4f value
-    );
-
-    void CustomDataManager::updateStringValue(
-        CustomData* pCustomData,
-        size_t valueIndex,
-        const std::string& str
-    )
-    {
-        if (pCustomData->offset < 0)
-        {
-            Debug::log(
-                "pCustomData offset was -1",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        if (pCustomData->elementCount == 0)
-        {
-            Debug::log(
-                "pCustomData elementCount was 0",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        CustomDataType valueType;
-        size_t valueOffset = pCustomData->offset + sizeof(uint32_t);
-        uint32_t valueDataSize = 0;
-        uint8_t* pData = _data.data();
-        for (size_t i = 0; i < pCustomData->elementCount; ++i)
-        {
-            const size_t currentValueBaseOffset = valueOffset;
-
-            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
-            valueOffset += sizeof(CustomDataType);
-
-            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            uint32_t maxValueDataSize = 0;
-            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            PLATYPUS_ASSERT(valueDataSize <= maxValueDataSize);
-
-            valueOffset += maxValueDataSize;
-
-            if (i == valueIndex)
-            {
-                if (valueType != CustomDataType::STRING)
-                {
-                    Debug::log(
-                        "CustomDataValue type was: " + custom_data_type_to_string(valueType),
-                        PLATYPUS_CURRENT_FUNC_NAME,
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                }
-                valueOffset = currentValueBaseOffset;
-                break;
-            }
-
-        }
-
-        updateElement(
-            pCustomData,
-            valueOffset,
-            str.size(),
-            str.data()
-        );
-    }
-
-    template<typename T>
-    T CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const
-    {
-        if (pCustomData->offset < 0)
-        {
-            Debug::log(
-                "pCustomData offset was -1",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        if (pCustomData->elementCount == 0)
-        {
-            Debug::log(
-                "pCustomData elementCount was 0",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        T result;
-        size_t valueOffset = static_cast<size_t>(pCustomData->offset) + sizeof(uint32_t);
-        const uint8_t* pData = _data.data();
-        for (size_t i = 0; i < pCustomData->elementCount; ++i)
-        {
-            CustomDataType valueType;
-            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
-            valueOffset += sizeof(CustomDataType);
-
-            uint32_t valueDataSize;
-            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            uint32_t maxValueDataSize;
-            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            if (valueType != CustomDataType::STRING)
-            {
-                PLATYPUS_ASSERT(valueDataSize == maxValueDataSize);
-            }
-            else
-            {
-                PLATYPUS_ASSERT(valueDataSize <= maxValueDataSize);
-            }
-
-            if (i == valueIndex)
-            {
-                if (valueType == CustomDataType::STRING)
-                {
-                    Debug::log(
-                        "Attempted to get string as numeric value from index: " + std::to_string(i),
-                        PLATYPUS_CURRENT_FUNC_NAME,
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                    return result;
-                }
-                if (!isValueValid(valueType, valueDataSize, pData + valueOffset))
-                {
-                    Debug::log(
-                        "Invalid value for type: " + custom_data_type_to_string(valueType) + " "
-                        "at index: " + std::to_string(i),
-                        PLATYPUS_CURRENT_FUNC_NAME,
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                    return result;
-                }
-                memcpy(&result, pData + valueOffset, get_data_type_size(valueType));
-                return result;
-            }
-            valueOffset += maxValueDataSize;
-        }
-
-        Debug::log(
-            "Failed to find value at index: " + std::to_string(valueIndex),
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
         return result;
     }
 
-    template int32_t CustomDataManager::getNumericValue<int32_t>(const CustomData * const pCustomData, size_t valueIndex) const;
-    template uint32_t CustomDataManager::getNumericValue<uint32_t>(const CustomData * const pCustomData, size_t valueIndex) const;
-    template float CustomDataManager::getNumericValue<float>(const CustomData * const pCustomData, size_t valueIndex) const;
-    template Vector2f CustomDataManager::getNumericValue<Vector2f>(const CustomData * const pCustomData, size_t valueIndex) const;
-    template Vector3f CustomDataManager::getNumericValue<Vector3f>(const CustomData * const pCustomData, size_t valueIndex) const;
-    template Vector4f CustomDataManager::getNumericValue<Vector4f>(const CustomData * const pCustomData, size_t valueIndex) const;
-
-    std::string CustomDataManager::getStringValue(const CustomData * const pCustomData, size_t valueIndex) const
+    bool CustomDataManager::validateOffset(int32_t offset) const
     {
-        if (pCustomData->offset < 0)
-        {
-            Debug::log(
-                "pCustomData offset was -1",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        if (pCustomData->elementCount == 0)
-        {
-            Debug::log(
-                "pCustomData elementCount was 0",
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-        }
-
-        size_t valueOffset = static_cast<size_t>(pCustomData->offset) + sizeof(uint32_t);
-        const uint8_t* pData = _data.data();
-        for (size_t i = 0; i < pCustomData->elementCount; ++i)
-        {
-            CustomDataType valueType;
-            memcpy(&valueType, pData + valueOffset, sizeof(CustomDataType));
-            valueOffset += sizeof(CustomDataType);
-
-            uint32_t valueDataSize;
-            memcpy(&valueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            uint32_t maxValueDataSize;
-            memcpy(&maxValueDataSize, pData + valueOffset, sizeof(uint32_t));
-            valueOffset += sizeof(uint32_t);
-
-            PLATYPUS_ASSERT(valueDataSize <= maxValueDataSize);
-
-            if (i == valueIndex)
-            {
-                if (valueType != CustomDataType::STRING)
-                {
-                    Debug::log(
-                        "Attempted to get numeric value(type: " + custom_data_type_to_string(valueType) + ") "
-                        "as string from index: " + std::to_string(i),
-                        PLATYPUS_CURRENT_FUNC_NAME,
-                        Debug::MessageType::PLATYPUS_ERROR
-                    );
-                    PLATYPUS_ASSERT(false);
-                    return "";
-                }
-                return {
-                    reinterpret_cast<const char*>(pData + valueOffset),
-                    valueDataSize
-                };
-            }
-
-            valueOffset += maxValueDataSize;
-        }
-
-        Debug::log(
-            "Failed to find value at index: " + std::to_string(valueIndex),
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return "";
-    }
-
-    template<typename T>
-    T CustomDataManager::convert_numeric_value(const CustomDataValue& value)
-    {
-        T retVal;
-        memcpy(&retVal, value.pData, value.maxDataSize);
-        return retVal;
-    }
-
-    template int32_t CustomDataManager::convert_numeric_value<int32_t>(const CustomDataValue& value);
-    template uint32_t CustomDataManager::convert_numeric_value<uint32_t>(const CustomDataValue& value);
-    template float CustomDataManager::convert_numeric_value<float>(const CustomDataValue& value);
-    template Vector2f CustomDataManager::convert_numeric_value<Vector2f>(const CustomDataValue& value);
-    template Vector3f CustomDataManager::convert_numeric_value<Vector3f>(const CustomDataValue& value);
-    template Vector4f CustomDataManager::convert_numeric_value<Vector4f>(const CustomDataValue& value);
-
-    std::string CustomDataManager::convert_string_value(const CustomDataValue& value)
-    {
-        if (value.type != CustomDataType::STRING)
-        {
-            Debug::log(
-                "Invalid value type: " + custom_data_type_to_string(value.type),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return "Invalid value type";
-        }
-
-        return std::string(
-            reinterpret_cast<const char*>(value.pData),
-            static_cast<size_t>(value.usedDataSize)
-        );
-    }
-
-    size_t CustomDataManager::get_data_type_size(CustomDataType type)
-    {
-        switch (type)
-        {
-            case CustomDataType::INT: return sizeof(int32_t);
-            case CustomDataType::UINT: return sizeof(uint32_t);
-            case CustomDataType::FLOAT: return sizeof(float);
-            case CustomDataType::VECTOR2F: return sizeof(Vector2f);
-            case CustomDataType::VECTOR3F: return sizeof(Vector3f);
-            case CustomDataType::VECTOR4F: return sizeof(Vector4f);
-        }
-        return 0;
-    }
-
-    size_t CustomDataManager::getStorageSize(const CustomData * const pCustomData) const
-    {
-        PLATYPUS_ASSERT(pCustomData->offset >= 0);
-
-        size_t size = sizeof(uint32_t); // the value count
-        for (const CustomDataValue& value : getValues(pCustomData->offset))
-            size += _valueBaseSize + value.maxDataSize;
-
-        return size;
-    }
-
-    size_t CustomDataManager::getAvailableOffset(size_t requiredSize) const
-    {
-        if (_freeRanges.empty())
-            return _data.size();
-
-        std::map<size_t, size_t>::const_iterator it;
-        for (it = _freeRanges.begin(); it != _freeRanges.end(); ++it)
-        {
-            const size_t freeRangeSize = it->second;
-            if (freeRangeSize >= requiredSize)
-                return it->first;
-        }
-
-        // We should never get here!
-        Debug::log(
-            "Failed to find available offset!",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-
-        return 0;
-    }
-
-    size_t CustomDataManager::getTotalSize(const CustomData * const pCustomData) const
-    {
-        if (pCustomData->elementCount == 0)
-            return 0;
-
-        size_t size = sizeof(uint32_t); // first the elem count
-        const size_t baseValueSize = sizeof(CustomDataType) + sizeof(uint32_t) * 2;
-        for (const CustomDataValue& value : getValues(pCustomData->offset))
-            size += baseValueSize + value.maxDataSize;
-
-        return size;
+        return (offset != -1) && (offset < _memoryPool.getTotalSize());
     }
 }

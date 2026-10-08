@@ -2,6 +2,7 @@
 
 #include "platypus/ecs/Entity.hpp"
 #include "Memory.hpp"
+#include "StringPool.hpp"
 #include "platypus/ecs/components/Component.hpp"
 #include "platypus/ecs/components/CustomData.hpp"
 #include "platypus/ecs/systems/System.hpp"
@@ -27,6 +28,7 @@ namespace platypus
     private:
         friend class SceneManager;
         EntityHierarchyManager _entityHierarchyManager;
+        StringPool _stringPool;
         CustomDataManager _customDataManager;
 
         uint32_t _entityUUIDPool = 0;

@@ -3,9 +3,9 @@
 #include "platypus/utils/Maths.hpp"
 #include "platypus/ecs/Entity.hpp"
 #include "Component.hpp"
+#include "platypus/core/Memory.hpp"
 #include <cstdint>
 #include <vector>
-#include <map>
 
 
 namespace platypus
@@ -21,6 +21,7 @@ namespace platypus
         VECTOR4F
     };
 
+    size_t get_custom_data_type_size(CustomDataType type);
     std::string custom_data_type_to_string(CustomDataType type);
     std::vector<CustomDataType> get_available_custom_data_types();
 
@@ -74,76 +75,41 @@ namespace platypus
     class CustomDataManager
     {
     private:
-        const size_t _valueBaseSize = sizeof(uint32_t) * 3;
+        // Mem layout:
+        //  CustomDataType type
+        //  data[size of type]
+        struct StoredCustomDataValue
+        {
+            CustomDataType type;
+            std::vector<uint8_t> data;
+        };
 
-        // _data layout:
-        //  uint32_t elementCount
-        //  values[elementCount]
-        std::vector<uint8_t> _data;
-
-        std::map<size_t, size_t> _freeRanges;
+        // Mem layout:
+        //  uint32_t elemCount
+        //  values[elemCount]
+        DynamicElementSizeMemoryPool _memoryPool;
 
     public:
-        // Returns occupied offset or -1 if fails to occupy offset
-        int32_t addElement(
+        int32_t add(
             CustomData* pCustomData,
             CustomDataType type,
-            size_t valueDataSize,
-            const void* pValueData
+            size_t dataSize,
+            const void* pData
         );
+        int32_t update(int32_t offset, const std::string& newStr);
+        void remove(int32_t offset);
 
-        template<typename T>
-        void addNumericValue(CustomData* pCustomData, CustomDataType type, T value);
-        void addStringValue(CustomData* pCustomData, const std::string& str);
-
-        std::vector<CustomDataValue> getValues(int32_t offset) const;
-
-        template<typename T>
-        void updateNumericValue(
-            CustomData* pCustomData,
-            size_t valueIndex,
-            T value
-        );
-        void updateStringValue(
-            CustomData* pCustomData,
-            size_t valueIndex,
-            const std::string& str
-        );
-
-        template<typename T>
-        T getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
-        std::string getStringValue(const CustomData * const pCustomData, size_t valueIndex) const;
-
-        template<typename T>
-        static T convert_numeric_value(const CustomDataValue& value);
-        static std::string convert_string_value(const CustomDataValue& value);
-
-        static size_t get_data_type_size(CustomDataType type);
-
-        size_t getStorageSize(const CustomData * const pCustomData) const;
-        inline size_t getStorageSize() const { return _data.size(); }
-        // Returns the value element's base size without the actual data (like the header of the val)
-        inline size_t getValueBaseSize() const { return _valueBaseSize; }
     private:
-        void erase(size_t offset, size_t totalDataSize);
+        StoredCustomDataValue toStoredCustomDataValue(
+            int32_t offset
+        ) const;
 
-        void updateElement(
-            CustomData* pCustomData,
-            size_t valueOffset,
-            size_t valueDataSize,
-            const void* pValueData
-        );
+        std::vector<StoredCustomDataValue> copyValues(
+            int32_t offset
+        ) const;
 
-        size_t valueOffsetToIndex(
-            size_t customDataOffset,
-            size_t elementCount,
-            size_t valueOffset
-        );
+        bool validateOffset(int32_t offset) const;
 
-        bool isValueValid(CustomDataType dataType, size_t dataSize, const void* pData) const;
-        void validateValue(CustomDataType dataType, size_t dataSize, const void* pData) const;
-
-        size_t getAvailableOffset(size_t requiredSize) const;
-        size_t getTotalSize(const CustomData * const pCustomData) const;
+        inline size_t getTotalStoredValueSize(const StoredCustomDataValue& value) const { return sizeof(CustomDataType) + value.data.size(); }
     };
 }

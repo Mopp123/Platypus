@@ -15,6 +15,7 @@
     #define PLATYPUS_CURRENT_FUNC_NAME "<FAILED TO GET FUNC NAME>"
 #endif
 
+#define PLATYPUS_UNIMPLEMENTED Debug::log("Unimplemented!, PLATYPUS_CURRENT_FUNC_NAME, Debug::MessageType::PLATYPUS_ERROR"); PLATYPUS_ASSERT(false);
 
 namespace platypus
 {

@@ -502,7 +502,12 @@ namespace platypus
         packFreeRanges();
     }
 
-    int32_t DynamicElementSizeMemoryPool::add(int32_t baseOffset, size_t currentSize, size_t addedDataSize, const void* pData)
+    int32_t DynamicElementSizeMemoryPool::add(
+        int32_t baseOffset,
+        size_t currentSize,
+        size_t addedDataSize,
+        const void* pData
+    )
     {
         if (baseOffset == -1)
             return occupyRange(addedDataSize, pData);
@@ -527,6 +532,12 @@ namespace platypus
             if (freeIt != _freeRanges.end())
             {
                 const size_t freeSize = freeIt->second;
+                // TODO:
+                //  *If free range found at the end of the storage but the storage's and free
+                //  range's size isn't enough, use the free offset and alloc the remaining
+                //  required space!
+                //  *Test that!
+                CONTINUE HERE
                 if (freeSize >= addedDataSize)
                 {
                     PLATYPUS_ASSERT(freeIt->first < _data.size());

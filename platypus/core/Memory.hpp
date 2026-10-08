@@ -125,7 +125,12 @@ namespace platypus
 
         // Changes the previously used offset and returns it
         // TODO: add helper func for Children component that sets the new offset and child count
-        int32_t add(int32_t baseOffset, size_t currentSize, size_t addedDataSize, const void* pData);
+        int32_t add(
+            int32_t baseOffset,
+            size_t currentSize,
+            size_t addedDataSize,
+            const void* pData
+        );
 
         // NOTE: Shouldn't be needed since having freeRange func!
         // TODO: Remove?
@@ -141,7 +146,10 @@ namespace platypus
         void packFreeRanges();
 
         inline std::vector<uint8_t>& accessStorage() { return _data; }
+        inline const std::vector<uint8_t>& getStorage() const { return _data; }
         inline std::map<size_t, size_t>& accessFreeRanges() { return _freeRanges; }
+
+        inline size_t getTotalSize() const { return _data.size(); }
 
     private:
         int32_t findFreeRange(size_t requiredSize);
