@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #include "platypus/Platypus.h"
 #include "BaseScene.hpp"

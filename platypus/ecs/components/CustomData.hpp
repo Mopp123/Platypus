@@ -12,6 +12,7 @@ namespace platypus
 {
     enum class CustomDataType : uint32_t
     {
+        NONE = 0,
         INT,
         UINT,
         FLOAT,
@@ -90,6 +91,7 @@ namespace platypus
         DynamicElementSizeMemoryPool _memoryPool;
 
     public:
+        CustomDataManager();
         int32_t add(
             CustomData* pCustomData,
             CustomDataType type,
@@ -98,6 +100,7 @@ namespace platypus
         );
         int32_t update(int32_t offset, const std::string& newStr);
         void remove(int32_t offset);
+        std::vector<CustomDataValue> getValues(int32_t offset) const;
 
     private:
         StoredCustomDataValue toStoredCustomDataValue(
@@ -109,6 +112,9 @@ namespace platypus
         ) const;
 
         bool validateOffset(int32_t offset) const;
+
+        static void free_storage_func(size_t offset, size_t size, void* pUserData);
+        static bool validate_free_range_func(size_t offset, size_t size, void* pUserData);
 
         inline size_t getTotalStoredValueSize(const StoredCustomDataValue& value) const { return sizeof(CustomDataType) + value.data.size(); }
     };

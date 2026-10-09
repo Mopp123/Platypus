@@ -10,6 +10,7 @@ namespace platypus
     {
         switch (type)
         {
+            case CustomDataType::NONE: return 0;
             case CustomDataType::INT: return sizeof(int32_t);
             case CustomDataType::UINT: return sizeof(uint32_t);
             case CustomDataType::FLOAT: return sizeof(float);
@@ -25,6 +26,7 @@ namespace platypus
     {
         switch (type)
         {
+            case CustomDataType::NONE: return "NONE";
             case CustomDataType::INT: return "INT";
             case CustomDataType::UINT: return "UINT";
             case CustomDataType::FLOAT: return "FLOAT";
@@ -87,7 +89,7 @@ namespace platypus
         int32_t offset = -1;
         for (const SerializedCustomDataValue& value : values)
         {
-            offset = customDataManager.addElement(
+            offset = customDataManager.add(
                 pCustomData,
                 value.type,
                 value.dataSize,
@@ -285,6 +287,16 @@ namespace platypus
     }
 
 
+    CustomDataManager::CustomDataManager() :
+        _memoryPool(
+            free_storage_func,
+            this,
+            validate_free_range_func,
+            this
+        )
+    {
+    }
+
     int32_t CustomDataManager::add(
         CustomData* pCustomData,
         CustomDataType type,
@@ -392,6 +404,23 @@ namespace platypus
         return newOffset;
     }
 
+    int32_t CustomDataManager::update(int32_t offset, const std::string& newStr)
+    {
+        PLATYPUS_UNIMPLEMENTED;
+        return -1;
+    }
+
+    void CustomDataManager::remove(int32_t offset)
+    {
+        PLATYPUS_UNIMPLEMENTED;
+    }
+
+    std::vector<CustomDataValue> CustomDataManager::getValues(int32_t offset) const
+    {
+        PLATYPUS_UNIMPLEMENTED;
+        return { };
+    }
+
     CustomDataManager::StoredCustomDataValue CustomDataManager::toStoredCustomDataValue(
         int32_t offset
     ) const
@@ -465,5 +494,23 @@ namespace platypus
     bool CustomDataManager::validateOffset(int32_t offset) const
     {
         return (offset != -1) && (offset < _memoryPool.getTotalSize());
+    }
+
+    void CustomDataManager::free_storage_func(size_t offset, size_t size, void* pUserData)
+    {
+        CustomDataManager* pCustomDataManager = reinterpret_cast<CustomDataManager*>(pUserData);
+        DynamicElementSizeMemoryPool& memoryPool = pCustomDataManager->_memoryPool;
+        PLATYPUS_ASSERT(offset + size <= memoryPool.getTotalSize());
+        memset(memoryPool.accessStorage().data() + offset, 0, size);
+    }
+
+    bool CustomDataManager::validate_free_range_func(size_t offset, size_t size, void* pUserData)
+    {
+        const CustomDataManager* pCustomDataManager = reinterpret_cast<const CustomDataManager*>(pUserData);
+        const DynamicElementSizeMemoryPool& memoryPool = pCustomDataManager->_memoryPool;
+        PLATYPUS_ASSERT(offset + size <= memoryPool.getTotalSize());
+        std::vector<uint8_t> emptyBytes(size);
+        memset(emptyBytes.data(), 0, size);
+        return memcmp(memoryPool.getStorage().data() + offset, emptyBytes.data(), size) == 0;
     }
 }

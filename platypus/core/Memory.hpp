@@ -148,11 +148,12 @@ namespace platypus
         inline std::vector<uint8_t>& accessStorage() { return _data; }
         inline const std::vector<uint8_t>& getStorage() const { return _data; }
         inline std::map<size_t, size_t>& accessFreeRanges() { return _freeRanges; }
+        inline const std::map<size_t, size_t>& getFreeRanges() const { return _freeRanges; }
 
         inline size_t getTotalSize() const { return _data.size(); }
 
     private:
-        int32_t findFreeRange(size_t requiredSize);
+        int32_t findFreeRange(size_t requiredSize, size_t& outAvailableSize);
         bool validateFreeRange(size_t offset, size_t size) const;
     };
 }

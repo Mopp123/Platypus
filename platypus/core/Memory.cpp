@@ -438,7 +438,8 @@ namespace platypus
     int32_t DynamicElementSizeMemoryPool::occupyRange(size_t dataSize, const void* pData)
     {
         // Check first if suitable free range already exists
-        int32_t offset = findFreeRange(dataSize);
+        size_t freeAvailableSize = 0;
+        int32_t offset = findFreeRange(dataSize, freeAvailableSize);
 
         if (offset == -1)
         {
@@ -468,9 +469,20 @@ namespace platypus
             memcpy(
                 _data.data() + offset,
                 pData,
-                sizeof(entityID_t) * dataSize
+                dataSize
             );
+
+            // If using less space than the freeRange offers, erase the old freeRange offset
+            // and add a new one using the offset starting after the required space
             _freeRanges.erase(offset);
+            if (freeAvailableSize > dataSize)
+            {
+                const size_t remainingFreeSize = freeAvailableSize - dataSize;
+                const size_t nextFreeOffset = offset + dataSize;
+                // *This should never happen?
+                PLATYPUS_ASSERT(_freeRanges.find(nextFreeOffset) == _freeRanges.end());
+                _freeRanges[nextFreeOffset] = remainingFreeSize;
+            }
         }
 
         return offset;
@@ -494,11 +506,7 @@ namespace platypus
         const size_t unsignedOffset = static_cast<size_t>(offset);
         PLATYPUS_ASSERT(_pFreeRangeFunc);
         _pFreeRangeFunc(offset, size, _pFreeRangeFuncUserData);
-        //for (size_t i = unsignedOffset; i < unsignedOffset + count; ++i)
-        //    _childrenContainer[i] = NULL_ENTITY_ID;
-
         _freeRanges[unsignedOffset] = size;
-
         packFreeRanges();
     }
 
@@ -531,24 +539,21 @@ namespace platypus
             // Can add at least one more if found from _freeRanges
             if (freeIt != _freeRanges.end())
             {
+                const size_t freeOffset = freeIt->first;
                 const size_t freeSize = freeIt->second;
                 // TODO:
-                //  *If free range found at the end of the storage but the storage's and free
-                //  range's size isn't enough, use the free offset and alloc the remaining
-                //  required space!
                 //  *Test that!
-                CONTINUE HERE
                 if (freeSize >= addedDataSize)
                 {
-                    PLATYPUS_ASSERT(freeIt->first < _data.size());
+                    PLATYPUS_ASSERT(freeOffset < _data.size());
+
                     // TODO: Make this kind of "null elem check" possible
                     //PLATYPUS_ASSERT(_childrenContainer[nextOffset] == NULL_ENTITY_ID);
-                    //_childrenContainer[nextOffset] = childEntityID;
                     memcpy(_data.data() + nextOffset, pData, addedDataSize);
 
                     _freeRanges.erase(nextOffset);
                     // Update the free offsets
-                    // If theres more space after the old free baseOffset, "push the cursor forward"
+                    // ->If theres more space after the free offset, "push the cursor forward"
                     // with the new free count
                     if (freeSize > addedDataSize)
                     {
@@ -558,7 +563,20 @@ namespace platypus
                             _freeRanges[newFreeOffset] = newFreeSize;
                     }
 
-                    return baseOffset;
+                    return freeOffset;
+                }
+                //  *If free range found at the end of the storage but the storage's and free
+                //  range's size isn't enough, use the free offset and alloc the remaining
+                //  required space!
+                else if (freeOffset + freeSize == _data.size())
+                {
+                    const size_t requiredAdditionalSize = addedDataSize - freeSize;
+                    const size_t prevSize = _data.size();
+                    _data.resize(prevSize + requiredAdditionalSize);
+                    PLATYPUS_ASSERT((freeOffset + addedDataSize) == _data.size());
+                    memcpy(_data.data() + freeOffset, pData, addedDataSize);
+                    _freeRanges.erase(freeOffset);
+                    return freeOffset;
                 }
             }
         }
@@ -650,7 +668,7 @@ namespace platypus
     // NOTE: Not tested after latest changes! MIGHT NOT WORK PROPERLY!!
     void DynamicElementSizeMemoryPool::packFreeRanges()
     {
-        if (_freeRanges.empty())
+        if (_freeRanges.size() <= 1)
             return;
 
         std::map<size_t, size_t> result;
@@ -663,6 +681,10 @@ namespace platypus
         size_t nextIterIncr = 1;
         while (true)
         {
+            // NOTE: WARNING!
+            // Possible issue:
+            //  *If there's single free range at the back, the new _freeRanges becomes empty
+            //  because of this!!
             ++nextIt;
             if (nextIt == _freeRanges.end())
                 break;
@@ -695,14 +717,18 @@ namespace platypus
         _freeRanges = result;
     }
 
-    int32_t DynamicElementSizeMemoryPool::findFreeRange(size_t requiredCount)
+    int32_t DynamicElementSizeMemoryPool::findFreeRange(size_t requiredSize, size_t& outAvailableSize)
     {
         std::map<size_t, size_t>::const_iterator it;
         for (it = _freeRanges.begin(); it != _freeRanges.end(); ++it)
         {
-            if (it->second >= requiredCount)
+            if (it->second >= requiredSize)
+            {
+                outAvailableSize = it->second;
                 return it->first;
+            }
         }
+        outAvailableSize = 0;
         return -1;
     }
 

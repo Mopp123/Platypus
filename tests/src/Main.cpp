@@ -1,4 +1,4 @@
-#include "SkinnedMeshTestScene.hpp"
+#include "CustomDataTestScene.hpp"
 #include <iostream>
 
 
@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
         768,
         true,
         windowMode,
-        new SkinnedMeshTestScene
+        new CustomDataTestScene
     );
     app.run();
     return 0;
