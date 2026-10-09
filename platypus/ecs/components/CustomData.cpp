@@ -111,7 +111,7 @@ namespace platypus
     {
         return sizeof(CustomDataType) +
             sizeof(uint32_t) +
-            pCustomDataValue->usedDataSize;
+            pCustomDataValue->dataSize;
     }
 
     size_t get_serialized_custom_data_size(const CustomData * const pCustomData)
@@ -161,8 +161,6 @@ namespace platypus
         Serialized format:
             CustomDataType type
             uint32_t dataSize
-                *NOTE: this is the actual storage size(used size)
-                    -> doesn't make sense to serialize usedDataSize and maxDataSize separately!
             uint8_t dataBuffer[dataSize]
     */
     std::vector<char> serialize(const CustomDataValue * const pCustomDataValue)
@@ -173,7 +171,7 @@ namespace platypus
         memcpy(pBuf, &pCustomDataValue->type, sizeof(CustomDataType));
         size_t offset = sizeof(CustomDataType);
 
-        const uint32_t serializedDataSize = pCustomDataValue->usedDataSize;
+        const uint32_t serializedDataSize = pCustomDataValue->dataSize;
         memcpy(pBuf + offset, &serializedDataSize, sizeof(uint32_t));
         offset += sizeof(uint32_t);
 
@@ -330,11 +328,19 @@ namespace platypus
 
         if (pCustomData->offset == -1 && pCustomData->elementCount == 0)
         {
-            std::vector<uint8_t> toAdd(sizeof(uint32_t) + sizeof(CustomDataType) + dataSize);
-            const uint32_t elemCount = 1;
-            memcpy(toAdd.data(), &elemCount, sizeof(uint32_t));
+            const size_t totalSize =
+                sizeof(uint32_t) + // elem count
+                sizeof(CustomDataType) +
+                sizeof(uint32_t) + // data size
+                dataSize;
+
+            std::vector<uint8_t> toAdd(totalSize);
+            const uint32_t uTotalSize = static_cast<const uint32_t>(totalSize);
+            const uint32_t addedDataSize = static_cast<const uint32_t>(dataSize);
+            memcpy(toAdd.data(), &uTotalSize, sizeof(uint32_t));
             memcpy(toAdd.data() + sizeof(uint32_t), &type, sizeof(CustomDataType));
-            memcpy(toAdd.data() + sizeof(uint32_t) + sizeof(CustomDataType), pData, dataSize);
+            memcpy(toAdd.data() + sizeof(uint32_t) + sizeof(CustomDataType), &addedDataSize, sizeof(uint32_t));
+            memcpy(toAdd.data() + sizeof(uint32_t) * 2 + sizeof(CustomDataType), pData, dataSize);
             const int32_t newOffset = _memoryPool.add(
                 -1,
                 0,
@@ -359,37 +365,37 @@ namespace platypus
         // DynamicElementSizeMemoryPool should handle this well enough?
         // NOT: NOT TESTED!
         // TODO: Make sure the mem is used efficiently enought with this in all cases!
-        //
-        // TODO: TOP PRIO!
-        // *if the mem pool has free offsets at the end of the storage but the size isn't enough
-        //  ->use those free offsets(should only have one at the end since packing) and add the
-        //  remaining required size!!
-
         const uint8_t* pStorage = _memoryPool.getStorage().data();
         const size_t currentOffset = static_cast<const size_t>(pCustomData->offset);
         uint32_t currentSize = 0;
         memcpy(&currentSize, pStorage + currentOffset, sizeof(uint32_t));
+        const uint32_t newSize = currentSize + dataSize;
 
         _memoryPool.freeRange(pCustomData->offset, currentSize);
 
-        std::vector<uint8_t> toAdd(sizeof(uint32_t));
-        memcpy(toAdd.data(), &newElemCount, sizeof(uint32_t));
+        std::vector<uint8_t> toAdd(static_cast<size_t>(newSize));
+        memcpy(toAdd.data(), &newSize, sizeof(uint32_t));
+        size_t toAddOffset = sizeof(uint32_t);
         for (size_t i = 0; i < newElemCount; ++i)
         {
             const StoredCustomDataValue valueToAdd = currentValues[i];
-            size_t valueSize = get_custom_data_type_size(valueToAdd.type);
-            size_t prevToAddSize = toAdd.size();
-            toAdd.resize(prevToAddSize + sizeof(CustomDataType) + valueSize);
+            const size_t requiredValueSize = get_custom_data_type_size(valueToAdd.type);
+            const size_t valueSize = valueToAdd.data.size();
+            PLATYPUS_ASSERT(requiredValueSize == valueSize);
+
             memcpy(
-                toAdd.data() + prevToAddSize,
+                toAdd.data() + toAddOffset,
                 &valueToAdd.type,
                 sizeof(CustomDataType)
             );
+            toAddOffset += sizeof(CustomDataType);
+
             memcpy(
-                toAdd.data() + prevToAddSize + sizeof(CustomDataType),
+                toAdd.data() + toAddOffset,
                 valueToAdd.data.data(),
-                valueToAdd.data.size()
+                valueSize
             );
+            toAddOffset += valueSize;
         }
 
         int32_t newOffset = _memoryPool.add(
@@ -406,19 +412,56 @@ namespace platypus
 
     int32_t CustomDataManager::update(int32_t offset, const std::string& newStr)
     {
+        CONTINUE HERE!
         PLATYPUS_UNIMPLEMENTED;
         return -1;
     }
 
     void CustomDataManager::remove(int32_t offset)
     {
+        CONTINUE HERE!
         PLATYPUS_UNIMPLEMENTED;
     }
 
     std::vector<CustomDataValue> CustomDataManager::getValues(int32_t offset) const
     {
-        PLATYPUS_UNIMPLEMENTED;
-        return { };
+        const size_t storageSize = _memoryPool.getTotalSize();
+        PLATYPUS_ASSERT(offset + sizeof(uint32_t) <= storageSize);
+        const std::vector<uint8_t>& storage = _memoryPool.getStorage();
+        const uint8_t* pStorage = storage.data();
+
+        uint32_t size = 0;
+        memcpy(&size, pStorage + offset, sizeof(uint32_t));
+        PLATYPUS_ASSERT(size >= sizeof(uint32_t));
+
+        if (size == 0)
+            return { };
+
+        std::vector<CustomDataValue> values;
+        size_t dataOffset = static_cast<size_t>(offset) + sizeof(uint32_t);
+        while (dataOffset < offset + size)
+        {
+            CustomDataType type = CustomDataType::NONE;
+            memcpy(&type, pStorage + dataOffset, sizeof(CustomDataType));
+            PLATYPUS_ASSERT(type != CustomDataType::NONE);
+            dataOffset += sizeof(CustomDataType);
+            PLATYPUS_ASSERT(dataOffset < storageSize);
+
+            uint32_t dataSize = 0;
+            memcpy(&dataSize, pStorage + dataOffset, sizeof(uint32_t));
+            PLATYPUS_ASSERT(dataSize > 0);
+            dataOffset += sizeof(uint32_t);
+            PLATYPUS_ASSERT(dataOffset < storageSize);
+
+            values.push_back({
+                type,
+                dataSize,
+                pStorage + dataOffset
+            });
+            dataOffset += dataSize;
+        }
+
+        return values;
     }
 
     CustomDataManager::StoredCustomDataValue CustomDataManager::toStoredCustomDataValue(

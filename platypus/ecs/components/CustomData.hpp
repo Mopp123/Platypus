@@ -32,9 +32,8 @@ namespace platypus
 
     struct CustomDataValue
     {
-        CustomDataType type;
-        uint32_t usedDataSize = 0;
-        uint32_t maxDataSize = 0;
+        CustomDataType type = CustomDataType::NONE;
+        uint32_t dataSize = 0;
         const void* pData = nullptr;
     };
 
@@ -81,13 +80,13 @@ namespace platypus
         //  data[size of type]
         struct StoredCustomDataValue
         {
-            CustomDataType type;
+            CustomDataType type = CustomDataType::NONE;
             std::vector<uint8_t> data;
         };
 
         // Mem layout:
-        //  uint32_t elemCount
-        //  values[elemCount]
+        //  uint32_t size (the whole size for all the used elements + the uint32_t that holds that size)
+        //  uint8_t valuesBuffer[size]
         DynamicElementSizeMemoryPool _memoryPool;
 
     public:
