@@ -58,27 +58,6 @@ namespace platypus
             return { };
         }
 
-        /*
-        const uint8_t* pStorage = _memoryPool.getStorage().data();
-
-        uint32_t totalStoredSize = 0;
-        size_t dataOffset = static_cast<size_t>(offset);
-        memcpy(&totalStoredSize, pStorage + dataOffset, sizeof(uint32_t));
-        dataOffset += sizeof(uint32_t);
-        PLATYPUS_ASSERT(dataOffset < totalStorageSize);
-
-        uint32_t dataSize = 0;
-        memcpy(&dataSize, pStorage + dataOffset, sizeof(uint32_t));
-        dataOffset += sizeof(uint32_t);
-        PLATYPUS_ASSERT(dataOffset < totalStorageSize);
-        PLATYPUS_ASSERT(dataOffset + dataSize <= totalStorageSize);
-
-        std::string strCpy = std::string(
-            reinterpret_cast<const char*>(pStorage + dataOffset),
-            static_cast<size_t>(dataSize)
-        );
-        */
-
         remove(offset);
         return add(newStr);
     }

@@ -37,6 +37,8 @@ namespace platypus
         const void* pData = nullptr;
     };
 
+    std::string custom_data_value_to_string(const CustomDataValue& value);
+
     struct SerializedCustomDataValue
     {
         CustomDataType type;
@@ -75,9 +77,6 @@ namespace platypus
     class CustomDataManager
     {
     private:
-        // Mem layout:
-        //  CustomDataType type
-        //  data[size of type]
         struct StoredCustomDataValue
         {
             CustomDataType type = CustomDataType::NONE;
@@ -97,14 +96,23 @@ namespace platypus
             size_t dataSize,
             const void* pData
         );
-        int32_t update(int32_t offset, const std::string& newStr);
-        void remove(int32_t offset);
+        void update(
+            int32_t offset,
+            size_t valueIndex,
+            size_t valueSize,
+            CustomDataType valueType,
+            const void* pValueData
+        );
+        void remove(const CustomData * const pCustomData, size_t valueIndex);
         std::vector<CustomDataValue> getValues(int32_t offset) const;
 
+        inline size_t getStorageSize() const { return _memoryPool.getTotalSize(); }
+
     private:
-        StoredCustomDataValue toStoredCustomDataValue(
-            int32_t offset
-        ) const;
+        // TODO: Delete?
+        //StoredCustomDataValue toStoredCustomDataValue(
+        //    int32_t offset
+        //) const;
 
         std::vector<StoredCustomDataValue> copyValues(
             int32_t offset
