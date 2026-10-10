@@ -549,9 +549,6 @@ namespace platypus
         memcpy(&size, pStorage + offset, sizeof(uint32_t));
         PLATYPUS_ASSERT(size >= sizeof(uint32_t));
 
-        if (size == 0)
-            return { };
-
         std::vector<CustomDataValue> values;
         size_t dataOffset = static_cast<size_t>(offset) + sizeof(uint32_t);
         while (dataOffset < offset + size)
@@ -572,6 +569,61 @@ namespace platypus
         }
 
         return values;
+    }
+
+    // TODO: Template this stuff?
+    CONTINUE HERE!
+    Vector3f CustomDataManager::getVector3f(const CustomData * const pCustomData, size_t valueIndex) const
+    {
+        Vector3f value;
+        const void* pValueData = getValueData(
+            pCustomData->offset,
+            sizeof(Vector3f),
+            valueIndex
+        );
+        memcpy(&value, pValueData, sizeof(Vector3f));
+        return value;
+    }
+
+    const void* CustomDataManager::getValueData(
+        size_t baseOffset,
+        size_t valueSize,
+        size_t valueIndex
+    ) const
+    {
+        const size_t storageSize = _memoryPool.getTotalSize();
+        PLATYPUS_ASSERT(baseOffset + sizeof(uint32_t) <= storageSize);
+        const std::vector<uint8_t>& storage = _memoryPool.getStorage();
+        const uint8_t* pStorage = storage.data();
+
+        uint32_t size = 0;
+        memcpy(&size, pStorage + baseOffset, sizeof(uint32_t));
+        PLATYPUS_ASSERT(size >= sizeof(uint32_t));
+
+        size_t dataOffset = static_cast<size_t>(baseOffset) + sizeof(uint32_t);
+        size_t currentIndex = 0;
+        while (dataOffset < baseOffset + size)
+        {
+            CustomDataType storedType = CustomDataType::NONE;
+            memcpy(&storedType, pStorage + dataOffset, sizeof(CustomDataType));
+            PLATYPUS_ASSERT(storedType != CustomDataType::NONE);
+            dataOffset += sizeof(CustomDataType);
+            PLATYPUS_ASSERT(dataOffset < storageSize);
+            const size_t storedDataSize = get_custom_data_type_size(storedType);
+
+            if (currentIndex == valueIndex)
+            {
+                PLATYPUS_ASSERT(storedDataSize == valueSize);
+                return pStorage + dataOffset;
+            }
+
+            dataOffset += storedDataSize;
+            ++currentIndex;
+        }
+
+        //  Never supposed to get here!
+        PLATYPUS_ASSERT(false);
+        return nullptr;
     }
 
     // TODO: Delete?

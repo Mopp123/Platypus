@@ -74,6 +74,16 @@ void CustomDataTestScene::init()
         &val5
     );
 
+
+    Vector3f TEST = customDataManager.getVector3f(
+        pCustomDataComponent1,
+        4
+    );
+
+    Debug::log("___TEST___TEST VAL = " + TEST.toString());
+    Debug::log("Test success!");
+    PLATYPUS_ASSERT(false);
+
     Vector4f val6(5.5f, 2.0f, 10.9f, 11.6f);
     customDataManager.add(
         pCustomDataComponent1,

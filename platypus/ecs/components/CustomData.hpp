@@ -106,6 +106,10 @@ namespace platypus
         void remove(const CustomData * const pCustomData, size_t valueIndex);
         std::vector<CustomDataValue> getValues(int32_t offset) const;
 
+        // TODO: Template this stuff?
+        CONTINUE HERE!
+        Vector3f getVector3f(const CustomData * const pCustomData, size_t valueIndex) const;
+
         inline size_t getStorageSize() const { return _memoryPool.getTotalSize(); }
 
     private:
@@ -113,6 +117,12 @@ namespace platypus
         //StoredCustomDataValue toStoredCustomDataValue(
         //    int32_t offset
         //) const;
+
+        const void* getValueData(
+            size_t baseOffset,
+            size_t valueSize,
+            size_t valueIndex
+        ) const;
 
         std::vector<StoredCustomDataValue> copyValues(
             int32_t offset
