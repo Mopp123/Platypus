@@ -28,7 +28,7 @@ static void print_custom_data(
     {
         const CustomDataValue& value = values[i];
         std::string valueStr = "";
-        Debug::log("    [" + std::to_string(i) + "] " + custom_data_value_to_string(value));
+        Debug::log("    [" + std::to_string(i) + "] " + customDataManager.valueToString(value));
     }
 }
 
@@ -131,16 +131,20 @@ void CustomDataTestScene::init()
         &entity2Val2
     );
 
-    // Need to refresh pCustomDataComponent1 since addded new component
-    //  ->the storage gets resized and the prev ptr is invalid!
-    pCustomDataComponent1 = reinterpret_cast<CustomData*>(
-        getComponent(
-            customDataEntity1,
-            ComponentType::COMPONENT_TYPE_CUSTOM_DATA
-        )
+    // Test adding string value to entity2
+    std::string entity2String = "Test string";
+    customDataManager.addString(
+        pCustomDataComponent2,
+        entity2String
     );
-
     print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
+
+    // TODO:
+    // *Test updating string values
+    // *Test removing string values
+    // *Test readding string values
+    CONTINUE HERE!
+
 
     Debug::log("Test success!");
     PLATYPUS_ASSERT(false);

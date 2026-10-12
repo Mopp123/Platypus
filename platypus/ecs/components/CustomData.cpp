@@ -14,7 +14,7 @@ namespace platypus
             case CustomDataType::INT: return sizeof(int32_t);
             case CustomDataType::UINT: return sizeof(uint32_t);
             case CustomDataType::FLOAT: return sizeof(float);
-            case CustomDataType::STRING: return sizeof(uint32_t);
+            case CustomDataType::STRING: return sizeof(int32_t);
             case CustomDataType::VECTOR2F: return sizeof(Vector2f);
             case CustomDataType::VECTOR3F: return sizeof(Vector3f);
             case CustomDataType::VECTOR4F: return sizeof(Vector4f);
@@ -49,56 +49,6 @@ namespace platypus
             CustomDataType::VECTOR3F,
             CustomDataType::VECTOR4F
         };
-    }
-
-    std::string custom_data_value_to_string(const CustomDataValue& value)
-    {
-        if (value.type == CustomDataType::INT)
-        {
-            PLATYPUS_ASSERT(value.dataSize == sizeof(int32_t));
-            return std::to_string(*reinterpret_cast<const int32_t*>(value.pData));
-        }
-        else if (value.type == CustomDataType::UINT)
-        {
-            PLATYPUS_ASSERT(value.dataSize == sizeof(uint32_t));
-            return std::to_string(*reinterpret_cast<const uint32_t*>(value.pData));
-        }
-        else if (value.type == CustomDataType::FLOAT)
-        {
-            PLATYPUS_ASSERT(value.dataSize == sizeof(float));
-            float fVal = 0.0f;
-            memcpy(&fVal, value.pData, sizeof(float));
-            return std::to_string(fVal);
-        }
-        else if (value.type == CustomDataType::VECTOR2F)
-        {
-            PLATYPUS_ASSERT(value.dataSize == sizeof(Vector2f));
-            Vector2f vec;
-            memcpy(&vec, value.pData, sizeof(Vector2f));
-            return vec.toString();
-        }
-        else if (value.type == CustomDataType::VECTOR3F)
-        {
-            PLATYPUS_ASSERT(value.dataSize == sizeof(Vector3f));
-            Vector3f vec;
-            memcpy(&vec, value.pData, sizeof(Vector3f));
-            return vec.toString();
-        }
-        else if (value.type == CustomDataType::VECTOR4F)
-        {
-            PLATYPUS_ASSERT(value.dataSize == sizeof(Vector4f));
-            Vector4f vec;
-            memcpy(&vec, value.pData, sizeof(Vector4f));
-            return vec.toString();
-        }
-
-        Debug::log(
-            "Invalid type: " + custom_data_type_to_string(value.type),
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return "";
     }
 
 
@@ -334,7 +284,8 @@ namespace platypus
     }
 
 
-    CustomDataManager::CustomDataManager() :
+    CustomDataManager::CustomDataManager(StringPool& stringPool) :
+        _stringPoolRef(stringPool),
         _memoryPool(
             free_storage_func,
             this,
@@ -444,6 +395,21 @@ namespace platypus
         return newOffset;
     }
 
+    // NOTE: Just testing atm!
+    int32_t CustomDataManager::addString(
+        CustomData* pCustomData,
+        const std::string& str
+    )
+    {
+        int32_t stringPoolOffset = _stringPoolRef.add(str);
+        PLATYPUS_ASSERT(stringPoolOffset != -1);
+        return add(
+            pCustomData,
+            CustomDataType::STRING,
+            &stringPoolOffset
+        );
+    }
+
     void CustomDataManager::update(
         int32_t offset,
         size_t valueIndex,
@@ -514,6 +480,13 @@ namespace platypus
             size_t currentValueDataSize = get_custom_data_type_size(currentValueType);
             if (valueIndex == currentValueIndex)
             {
+                if (currentValueType == CustomDataType::STRING)
+                {
+                    int32_t stringPoolOffset = -1;
+                    memcpy(&stringPoolOffset, pStorage + dataOffset, sizeof(int32_t));
+                    _stringPoolRef.remove(stringPoolOffset);
+                }
+
                 // Pack the remaining values so those are contiguous + change the values size
                 const size_t currentValueTotalSize = sizeof(CustomDataType) + currentValueDataSize;
                 const uint32_t newTotalSize = storedSize - currentValueTotalSize;
@@ -605,6 +578,70 @@ namespace platypus
     template Vector3f CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
     template Vector4f CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
 
+
+    std::string CustomDataManager::valueToString(const CustomDataValue& value) const
+    {
+        if (value.type == CustomDataType::INT)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(int32_t));
+            return std::to_string(*reinterpret_cast<const int32_t*>(value.pData));
+        }
+        else if (value.type == CustomDataType::UINT)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(uint32_t));
+            return std::to_string(*reinterpret_cast<const uint32_t*>(value.pData));
+        }
+        else if (value.type == CustomDataType::FLOAT)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(float));
+            float fVal = 0.0f;
+            memcpy(&fVal, value.pData, sizeof(float));
+            return std::to_string(fVal);
+        }
+        else if (value.type == CustomDataType::VECTOR2F)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(Vector2f));
+            Vector2f vec;
+            memcpy(&vec, value.pData, sizeof(Vector2f));
+            return vec.toString();
+        }
+        else if (value.type == CustomDataType::VECTOR3F)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(Vector3f));
+            Vector3f vec;
+            memcpy(&vec, value.pData, sizeof(Vector3f));
+            return vec.toString();
+        }
+        else if (value.type == CustomDataType::VECTOR4F)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(Vector4f));
+            Vector4f vec;
+            memcpy(&vec, value.pData, sizeof(Vector4f));
+            return vec.toString();
+        }
+        else if (value.type == CustomDataType::STRING)
+        {
+            PLATYPUS_ASSERT(value.dataSize == sizeof(int32_t));
+            int32_t stringPoolOffset = -1;
+            memcpy(&stringPoolOffset, value.pData, sizeof(int32_t));
+            return _stringPoolRef.get(stringPoolOffset);
+        }
+
+        Debug::log(
+            "Invalid type: " + custom_data_type_to_string(value.type),
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return "";
+    }
+
+    std::string CustomDataManager::getStringValue(const CustomData * const pCustomData, size_t valueIndex) const
+    {
+        const int32_t stringPoolOffset = getNumericValue<int32_t>(pCustomData, valueIndex);
+        return _stringPoolRef.get(stringPoolOffset);
+    }
+
     const void* CustomDataManager::getValueData(
         size_t baseOffset,
         size_t valueSize,
@@ -651,45 +688,6 @@ namespace platypus
         PLATYPUS_ASSERT(false);
         return nullptr;
     }
-
-    // TODO: Delete?
-    /*
-    CustomDataManager::StoredCustomDataValue CustomDataManager::toStoredCustomDataValue(
-        int32_t offset
-    ) const
-    {
-        const size_t totalStorageSize = _memoryPool.getTotalSize();
-        if (!validateOffset(offset))
-        {
-            Debug::log(
-                "Invalid offset " + std::to_string(offset) + " "
-                "MemoryPool size is " + std::to_string(totalStorageSize),
-                PLATYPUS_CURRENT_FUNC_NAME,
-                Debug::MessageType::PLATYPUS_ERROR
-            );
-            PLATYPUS_ASSERT(false);
-            return { };
-        }
-
-        const uint8_t* pStorage = _memoryPool.getStorage().data();
-
-        CustomDataType type;
-        memcpy(&type, pStorage + offset, sizeof(CustomDataType));
-        offset += sizeof(CustomDataType);
-        PLATYPUS_ASSERT(offset <= totalStorageSize);
-
-        const size_t dataSize = get_custom_data_type_size(type);
-        PLATYPUS_ASSERT(dataSize > 0);
-
-        std::vector<uint8_t> data(dataSize);
-        memcpy(data.data(), pStorage + offset, dataSize);
-
-        return {
-            type,
-            data
-        };
-    }
-    */
 
     std::vector<CustomDataManager::StoredCustomDataValue> CustomDataManager::copyValues(
         int32_t offset

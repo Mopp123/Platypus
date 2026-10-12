@@ -4,6 +4,7 @@
 #include "platypus/ecs/Entity.hpp"
 #include "Component.hpp"
 #include "platypus/core/Memory.hpp"
+#include "platypus/core/StringPool.hpp"
 #include <cstdint>
 #include <vector>
 
@@ -36,8 +37,6 @@ namespace platypus
         uint32_t dataSize = 0;
         const void* pData = nullptr;
     };
-
-    std::string custom_data_value_to_string(const CustomDataValue& value);
 
     struct SerializedCustomDataValue
     {
@@ -83,18 +82,27 @@ namespace platypus
             std::vector<uint8_t> data;
         };
 
+        StringPool& _stringPoolRef;
+
         // Mem layout:
         //  uint32_t size (the whole size for all the used elements + the uint32_t that holds that size)
         //  uint8_t valuesBuffer[size]
         DynamicElementSizeMemoryPool _memoryPool;
 
     public:
-        CustomDataManager();
+        CustomDataManager(StringPool& stringPool);
         int32_t add(
             CustomData* pCustomData,
             CustomDataType type,
             const void* pData
         );
+
+        // NOTE: Just testing atm!
+        int32_t addString(
+            CustomData* pCustomData,
+            const std::string& str
+        );
+
         void update(
             int32_t offset,
             size_t valueIndex,
@@ -107,15 +115,13 @@ namespace platypus
         // TODO: Template this stuff?
         template<typename T>
         T getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
+        std::string getStringValue(const CustomData * const pCustomData, size_t valueIndex) const;
+
+        std::string valueToString(const CustomDataValue& value) const;
 
         inline size_t getStorageSize() const { return _memoryPool.getTotalSize(); }
 
     private:
-        // TODO: Delete?
-        //StoredCustomDataValue toStoredCustomDataValue(
-        //    int32_t offset
-        //) const;
-
         const void* getValueData(
             size_t baseOffset,
             size_t valueSize,

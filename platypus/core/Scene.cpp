@@ -18,7 +18,8 @@
 namespace platypus
 {
     Scene::Scene() :
-        _entityHierarchyManager(this)
+        _entityHierarchyManager(this),
+        _customDataManager(_stringPool)
     {
         _entityUUIDPool = UUID::occupy_pool();
         size_t maxPoolLength = 10000;

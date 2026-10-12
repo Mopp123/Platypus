@@ -164,6 +164,7 @@ namespace platypus
         inline entityID_t getActiveCameraEntity() const { return _activeCameraEntity; }
         inline EntityHierarchyManager& getEntityHierarchyManager() { return _entityHierarchyManager; }
         inline const EntityHierarchyManager& getEntityHierarchyManager() const { return _entityHierarchyManager; }
+        inline StringPool& getStringPool() { return _stringPool; }
         inline CustomDataManager& getCustomDataManager() { return _customDataManager; }
         inline const CustomDataManager& getCustomDataManager() const { return _customDataManager; }
     };
