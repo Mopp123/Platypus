@@ -13,10 +13,17 @@ CustomDataTestScene::~CustomDataTestScene()
 {
 }
 
-static void print_custom_data(const CustomData * const pCustomData, const CustomDataManager& customDataManager)
+static void print_custom_data(
+    const std::string& entityName,
+    const CustomData * const pCustomData,
+    const CustomDataManager& customDataManager
+)
 {
     std::vector<CustomDataValue> values = customDataManager.getValues(pCustomData->offset);
-    Debug::log("CustomData (total pool size: " + std::to_string(customDataManager.getStorageSize()) + " bytes) ");
+    Debug::log(
+        "Entity: " + entityName + " (base offset = " + std::to_string(pCustomData->offset) + ") "
+        "(total pool size: " + std::to_string(customDataManager.getStorageSize()) + " bytes) "
+    );
     for (size_t i = 0; i < values.size(); ++i)
     {
         const CustomDataValue& value = values[i];
@@ -32,21 +39,20 @@ void CustomDataTestScene::init()
     CustomDataManager& customDataManager = getCustomDataManager();
 
     // Test adding values to a single existing CustomComponent
-    entityID_t customDataEntity1 = createEntity();
+    const std::string entityName1 = "Entity1";
+    entityID_t customDataEntity1 = createEntity(entityName1);
     CustomData* pCustomDataComponent1 = create_custom_data(customDataEntity1);
 
     int32_t val = -6;
     customDataManager.add(
         pCustomDataComponent1,
         CustomDataType::INT,
-        sizeof(int32_t),
         &val
     );
     uint32_t val2 = 32;
     customDataManager.add(
         pCustomDataComponent1,
         CustomDataType::UINT,
-        sizeof(uint32_t),
         &val2
     );
 
@@ -54,7 +60,6 @@ void CustomDataTestScene::init()
     customDataManager.add(
         pCustomDataComponent1,
         CustomDataType::FLOAT,
-        sizeof(float),
         &val3
     );
 
@@ -62,7 +67,6 @@ void CustomDataTestScene::init()
     customDataManager.add(
         pCustomDataComponent1,
         CustomDataType::VECTOR2F,
-        sizeof(Vector2f),
         &val4
     );
 
@@ -70,45 +74,73 @@ void CustomDataTestScene::init()
     customDataManager.add(
         pCustomDataComponent1,
         CustomDataType::VECTOR3F,
-        sizeof(Vector3f),
         &val5
     );
-
-
-    Vector3f TEST = customDataManager.getVector3f(
-        pCustomDataComponent1,
-        4
-    );
-
-    Debug::log("___TEST___TEST VAL = " + TEST.toString());
-    Debug::log("Test success!");
-    PLATYPUS_ASSERT(false);
 
     Vector4f val6(5.5f, 2.0f, 10.9f, 11.6f);
     customDataManager.add(
         pCustomDataComponent1,
         CustomDataType::VECTOR4F,
-        sizeof(Vector4f),
         &val6
     );
 
+
     std::vector<CustomDataValue> values = customDataManager.getValues(pCustomDataComponent1->offset);
     PLATYPUS_ASSERT(values.size() == 6);
-    print_custom_data(pCustomDataComponent1, customDataManager);
+    print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
 
     // Test updating single value
     uint32_t newVal = 666;
     customDataManager.update(
         pCustomDataComponent1->offset,
         1,
-        sizeof(uint32_t),
         CustomDataType::UINT,
         &newVal
     );
 
-    print_custom_data(pCustomDataComponent1, customDataManager);
+    print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
 
-    // TODO: More tests and easier way to access CustomData values
+    // Test removing the last value
+    customDataManager.remove(pCustomDataComponent1, 5);
+    print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
+
+    // Test removing entity1 first value
+    customDataManager.remove(pCustomDataComponent1, 0);
+    print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
+
+    // Test removing entity1 second to last
+    customDataManager.remove(pCustomDataComponent1, 2);
+    print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
+
+    // Test adding values for another entity
+    const std::string entityName2 = "Entity2";
+    entityID_t customDataEntity2 = createEntity(entityName2);
+    CustomData* pCustomDataComponent2 = create_custom_data(customDataEntity2);
+
+    Vector4f entity2Val1(3, 4, 5, 12);
+    customDataManager.add(
+        pCustomDataComponent2,
+        CustomDataType::VECTOR4F,
+        &entity2Val1
+    );
+
+    uint32_t entity2Val2 = 671;
+    customDataManager.add(
+        pCustomDataComponent2,
+        CustomDataType::INT,
+        &entity2Val2
+    );
+
+    // Need to refresh pCustomDataComponent1 since addded new component
+    //  ->the storage gets resized and the prev ptr is invalid!
+    pCustomDataComponent1 = reinterpret_cast<CustomData*>(
+        getComponent(
+            customDataEntity1,
+            ComponentType::COMPONENT_TYPE_CUSTOM_DATA
+        )
+    );
+
+    print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
 
     Debug::log("Test success!");
     PLATYPUS_ASSERT(false);

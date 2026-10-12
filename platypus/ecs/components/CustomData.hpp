@@ -93,13 +93,11 @@ namespace platypus
         int32_t add(
             CustomData* pCustomData,
             CustomDataType type,
-            size_t dataSize,
             const void* pData
         );
         void update(
             int32_t offset,
             size_t valueIndex,
-            size_t valueSize,
             CustomDataType valueType,
             const void* pValueData
         );
@@ -107,8 +105,8 @@ namespace platypus
         std::vector<CustomDataValue> getValues(int32_t offset) const;
 
         // TODO: Template this stuff?
-        CONTINUE HERE!
-        Vector3f getVector3f(const CustomData * const pCustomData, size_t valueIndex) const;
+        template<typename T>
+        T getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
 
         inline size_t getStorageSize() const { return _memoryPool.getTotalSize(); }
 

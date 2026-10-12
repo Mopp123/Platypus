@@ -175,7 +175,7 @@ namespace platypus
 
     std::string Vector4f::toString() const
     {
-        return "(" + to_string(x) + ", " + to_string(y) + ", " + to_string(z) + ", " + std::to_string(w) + ")";
+        return "(" + to_string(x) + ", " + to_string(y) + ", " + to_string(z) + ", " + to_string(w) + ")";
     }
 
     std::string Vector4f::toStrippedString() const

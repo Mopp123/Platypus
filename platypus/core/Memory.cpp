@@ -444,13 +444,35 @@ namespace platypus
         if (offset == -1)
         {
             const size_t prevSize = _data.size();
-            _data.resize(prevSize + dataSize);
+            size_t newSize = prevSize + dataSize;
+            // If no free offset found with enough space
+            //  -> check if the last free range is at the back of the _data
+            //      -> if it is, use that offset and add the additional required space
+            if (!_freeRanges.empty())
+            {
+                std::map<size_t, size_t>::const_reverse_iterator it = _freeRanges.rbegin();
+                const size_t freeOffset = it->first;
+                const size_t freeSpace = it->second;
+                if (freeOffset + freeSpace >= _data.size())
+                {
+                    PLATYPUS_ASSERT(dataSize > freeSpace);
+                    const size_t requiredAdditionalSpace = dataSize - freeSpace;
+                    newSize = prevSize + requiredAdditionalSpace;
+                    _freeRanges.erase(freeOffset);
+                    offset = freeOffset;
+                }
+            }
+            else
+            {
+                offset = prevSize;
+            }
+
+            _data.resize(newSize);
             memcpy(
-                _data.data() + prevSize,
+                _data.data() + offset,
                 pData,
                 dataSize
             );
-            offset = prevSize;
         }
         else
         {
