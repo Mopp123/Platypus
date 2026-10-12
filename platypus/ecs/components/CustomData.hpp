@@ -91,30 +91,37 @@ namespace platypus
 
     public:
         CustomDataManager(StringPool& stringPool);
-        int32_t add(
+        int32_t addNumber(
             CustomData* pCustomData,
             CustomDataType type,
             const void* pData
         );
 
-        // NOTE: Just testing atm!
         int32_t addString(
             CustomData* pCustomData,
             const std::string& str
         );
 
-        void update(
+        // TODO: Make safer?
+        // *More informative error if accidentally attempt to update value of wrong type/wrong index?
+        void updateNumber(
             int32_t offset,
             size_t valueIndex,
             CustomDataType valueType,
             const void* pValueData
         );
-        void remove(const CustomData * const pCustomData, size_t valueIndex);
+
+        void updateString(
+            int32_t offset,
+            size_t valueIndex,
+            const std::string& str
+        );
+
+        void remove(CustomData* pCustomData, size_t valueIndex);
         std::vector<CustomDataValue> getValues(int32_t offset) const;
 
-        // TODO: Template this stuff?
         template<typename T>
-        T getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
+        T getNumericValue(int32_t offset, size_t valueIndex) const;
         std::string getStringValue(const CustomData * const pCustomData, size_t valueIndex) const;
 
         std::string valueToString(const CustomDataValue& value) const;

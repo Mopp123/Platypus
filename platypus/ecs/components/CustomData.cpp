@@ -87,16 +87,20 @@ namespace platypus
 
         CustomDataManager& customDataManager = pScene->getCustomDataManager();
         int32_t offset = -1;
-        for (const SerializedCustomDataValue& value : values)
-        {
-            offset = customDataManager.add(
-                pCustomData,
-                value.type,
-                value.data.data()
-            );
-        }
+
+        // TODO: Figure out what to do if adding string values initially?
+        //  -> how to handle deserialization?
+        //for (const SerializedCustomDataValue& value : values)
+        //{
+        //    offset = customDataManager.add(
+        //        pCustomData,
+        //        value.type,
+        //        value.data.data()
+        //    );
+        //}
         if (!values.empty())
         {
+            PLATYPUS_UNIMPLEMENTED;
             PLATYPUS_ASSERT(offset != -1);
         }
 
@@ -161,7 +165,12 @@ namespace platypus
             CustomDataType type
             uint32_t dataSize
             uint8_t dataBuffer[dataSize]
+
+        NOTE: IMPORTANT!
+            *If value is string, the whole string is serialized (not the int32_t stringPoolOffset)!
+                ->When deserializing this, it allocs the string from the pool automatically
     */
+    CONTINUE HERE + READ ABOVE NOTE!!
     std::vector<char> serialize(const CustomDataValue * const pCustomDataValue)
     {
         const size_t serializedSize = get_serialized_custom_data_value_size(pCustomDataValue);
@@ -295,7 +304,7 @@ namespace platypus
     {
     }
 
-    int32_t CustomDataManager::add(
+    int32_t CustomDataManager::addNumber(
         CustomData* pCustomData,
         CustomDataType type,
         const void* pData
@@ -403,14 +412,14 @@ namespace platypus
     {
         int32_t stringPoolOffset = _stringPoolRef.add(str);
         PLATYPUS_ASSERT(stringPoolOffset != -1);
-        return add(
+        return addNumber(
             pCustomData,
             CustomDataType::STRING,
             &stringPoolOffset
         );
     }
 
-    void CustomDataManager::update(
+    void CustomDataManager::updateNumber(
         int32_t offset,
         size_t valueIndex,
         CustomDataType valueType,
@@ -457,7 +466,20 @@ namespace platypus
         PLATYPUS_ASSERT(false);
     }
 
-    void CustomDataManager::remove(const CustomData * const pCustomData, size_t valueIndex)
+    void CustomDataManager::updateString(
+        int32_t offset,
+        size_t valueIndex,
+        const std::string& str
+    )
+    {
+        PLATYPUS_ASSERT(offset <= _memoryPool.getTotalSize());
+        const int32_t stringPoolOffset = getNumericValue<int32_t>(offset, valueIndex);
+        PLATYPUS_ASSERT(stringPoolOffset != -1);
+        const int32_t newStringPoolOffset = _stringPoolRef.update(stringPoolOffset, str);
+        updateNumber(offset, valueIndex, CustomDataType::STRING, &newStringPoolOffset);
+    }
+
+    void CustomDataManager::remove(CustomData* pCustomData, size_t valueIndex)
     {
         PLATYPUS_ASSERT(pCustomData->offset != -1);
         const size_t baseOffset = static_cast<const size_t>(pCustomData->offset);
@@ -506,8 +528,9 @@ namespace platypus
                 _memoryPool.accessFreeRanges()[lastOffset] = currentValueTotalSize;
                 _memoryPool.packFreeRanges();
 
-                // Update the changed total size
+                // Update the changed total size and count
                 memcpy(pStorage + baseOffset, &newTotalSize, sizeof(uint32_t));
+                --pCustomData->elementCount;
 
                 return;
             }
@@ -559,11 +582,11 @@ namespace platypus
     }
 
     template<typename T>
-    T CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const
+    T CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const
     {
         T value;
         const void* pValueData = getValueData(
-            pCustomData->offset,
+            offset,
             sizeof(T),
             valueIndex
         );
@@ -571,12 +594,12 @@ namespace platypus
         return value;
     }
 
-    template int32_t CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
-    template uint32_t CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
-    template float CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
-    template Vector2f CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
-    template Vector3f CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
-    template Vector4f CustomDataManager::getNumericValue(const CustomData * const pCustomData, size_t valueIndex) const;
+    template int32_t    CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
+    template uint32_t   CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
+    template float      CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
+    template Vector2f   CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
+    template Vector3f   CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
+    template Vector4f   CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
 
 
     std::string CustomDataManager::valueToString(const CustomDataValue& value) const
@@ -638,7 +661,7 @@ namespace platypus
 
     std::string CustomDataManager::getStringValue(const CustomData * const pCustomData, size_t valueIndex) const
     {
-        const int32_t stringPoolOffset = getNumericValue<int32_t>(pCustomData, valueIndex);
+        const int32_t stringPoolOffset = getNumericValue<int32_t>(pCustomData->offset, valueIndex);
         return _stringPoolRef.get(stringPoolOffset);
     }
 

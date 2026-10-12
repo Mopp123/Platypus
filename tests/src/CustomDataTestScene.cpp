@@ -44,54 +44,66 @@ void CustomDataTestScene::init()
     CustomData* pCustomDataComponent1 = create_custom_data(customDataEntity1);
 
     int32_t val = -6;
-    customDataManager.add(
+    customDataManager.addNumber(
         pCustomDataComponent1,
         CustomDataType::INT,
         &val
     );
     uint32_t val2 = 32;
-    customDataManager.add(
+    customDataManager.addNumber(
         pCustomDataComponent1,
         CustomDataType::UINT,
         &val2
     );
 
-    float val3 = 12.47f;
-    customDataManager.add(
+    std::string val3 = "Good morning!";
+    customDataManager.addString(
         pCustomDataComponent1,
-        CustomDataType::FLOAT,
-        &val3
+        val3
     );
 
     Vector2f val4(1, 2);
-    customDataManager.add(
+    customDataManager.addNumber(
         pCustomDataComponent1,
         CustomDataType::VECTOR2F,
         &val4
     );
 
-    Vector3f val5(4.2f, 10.5f, 7.25f);
-    customDataManager.add(
+    std::string val5 = "Asd a bit longer string here...";
+    customDataManager.addString(
         pCustomDataComponent1,
-        CustomDataType::VECTOR3F,
-        &val5
+        val5
     );
 
-    Vector4f val6(5.5f, 2.0f, 10.9f, 11.6f);
-    customDataManager.add(
+    Vector3f val6(4.2f, 10.5f, 7.25f);
+    customDataManager.addNumber(
+        pCustomDataComponent1,
+        CustomDataType::VECTOR3F,
+        &val6
+    );
+
+    Vector3f val7(4.2f, 10.5f, 7.25f);
+    customDataManager.addNumber(
+        pCustomDataComponent1,
+        CustomDataType::VECTOR3F,
+        &val7
+    );
+
+    Vector4f val8(5.5f, 2.0f, 10.9f, 11.6f);
+    customDataManager.addNumber(
         pCustomDataComponent1,
         CustomDataType::VECTOR4F,
-        &val6
+        &val8
     );
 
 
     std::vector<CustomDataValue> values = customDataManager.getValues(pCustomDataComponent1->offset);
-    PLATYPUS_ASSERT(values.size() == 6);
+    PLATYPUS_ASSERT(values.size() == 8);
     print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
 
     // Test updating single value
     uint32_t newVal = 666;
-    customDataManager.update(
+    customDataManager.updateNumber(
         pCustomDataComponent1->offset,
         1,
         CustomDataType::UINT,
@@ -100,7 +112,7 @@ void CustomDataTestScene::init()
 
     print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
 
-    // Test removing the last value
+    // Test removing entity1 last value
     customDataManager.remove(pCustomDataComponent1, 5);
     print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
 
@@ -112,38 +124,62 @@ void CustomDataTestScene::init()
     customDataManager.remove(pCustomDataComponent1, 2);
     print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
 
+    // Test removing entity1 first string
+    customDataManager.remove(pCustomDataComponent1, 1);
+    print_custom_data(entityName1, pCustomDataComponent1, customDataManager);
+
     // Test adding values for another entity
     const std::string entityName2 = "Entity2";
     entityID_t customDataEntity2 = createEntity(entityName2);
     CustomData* pCustomDataComponent2 = create_custom_data(customDataEntity2);
 
     Vector4f entity2Val1(3, 4, 5, 12);
-    customDataManager.add(
+    customDataManager.addNumber(
         pCustomDataComponent2,
         CustomDataType::VECTOR4F,
         &entity2Val1
     );
 
     uint32_t entity2Val2 = 671;
-    customDataManager.add(
+    customDataManager.addNumber(
         pCustomDataComponent2,
         CustomDataType::INT,
         &entity2Val2
     );
 
     // Test adding string value to entity2
-    std::string entity2String = "Test string";
+    std::string entity2String = "";
     customDataManager.addString(
         pCustomDataComponent2,
-        entity2String
+        "Entity2 test string"
+    );
+    print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
+
+    // Test updating entity2 string
+    customDataManager.updateString(
+        pCustomDataComponent2->offset,
+        2,
+        "Changed string value here"
+    );
+    print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
+
+    // Test readding string value to entity2
+    customDataManager.remove(
+        pCustomDataComponent2,
+        2
+    );
+    print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
+
+    customDataManager.addString(
+        pCustomDataComponent2,
+        "Readded string value"
     );
     print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
 
     // TODO:
     // *Test updating string values
-    // *Test removing string values
     // *Test readding string values
-    CONTINUE HERE!
+    //CONTINUE HERE!
 
 
     Debug::log("Test success!");

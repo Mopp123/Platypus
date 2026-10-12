@@ -445,6 +445,7 @@ namespace platypus
         {
             const size_t prevSize = _data.size();
             size_t newSize = prevSize + dataSize;
+            offset = prevSize;
             // If no free offset found with enough space
             //  -> check if the last free range is at the back of the _data
             //      -> if it is, use that offset and add the additional required space
@@ -461,10 +462,6 @@ namespace platypus
                     _freeRanges.erase(freeOffset);
                     offset = freeOffset;
                 }
-            }
-            else
-            {
-                offset = prevSize;
             }
 
             _data.resize(newSize);
