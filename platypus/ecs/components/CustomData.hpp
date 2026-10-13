@@ -38,6 +38,7 @@ namespace platypus
         const void* pData = nullptr;
     };
 
+    // NOTE: If the type == STRING, this holds the actual string, NOT THE STRING POOL OFFSET!
     struct SerializedCustomDataValue
     {
         CustomDataType type;

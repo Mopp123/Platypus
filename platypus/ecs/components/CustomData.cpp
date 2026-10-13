@@ -88,19 +88,32 @@ namespace platypus
         CustomDataManager& customDataManager = pScene->getCustomDataManager();
         int32_t offset = -1;
 
-        // TODO: Figure out what to do if adding string values initially?
-        //  -> how to handle deserialization?
-        //for (const SerializedCustomDataValue& value : values)
-        //{
-        //    offset = customDataManager.add(
-        //        pCustomData,
-        //        value.type,
-        //        value.data.data()
-        //    );
-        //}
+        for (const SerializedCustomDataValue& value : values)
+        {
+            PLATYPUS_ASSERT(!value.data.empty());
+            // TODO: Add func to add multiple values at once, instead of this!
+            if (value.type == CustomDataType::STRING)
+            {
+                std::string tempStr = std::string(
+                    reinterpret_cast<const char*>(value.data.data()),
+                    value.data.size()
+                );
+                offset = customDataManager.addString(
+                    pCustomData,
+                    tempStr
+                );
+            }
+            else
+            {
+                offset = customDataManager.addNumber(
+                    pCustomData,
+                    value.type,
+                    value.data.data()
+                );
+            }
+        }
         if (!values.empty())
         {
-            PLATYPUS_UNIMPLEMENTED;
             PLATYPUS_ASSERT(offset != -1);
         }
 
@@ -112,9 +125,23 @@ namespace platypus
 
     size_t get_serialized_custom_data_value_size(const CustomDataValue * const pCustomDataValue)
     {
+        if (pCustomDataValue->type != CustomDataType::STRING)
+        {
+            return sizeof(CustomDataType) +
+                sizeof(uint32_t) +
+                pCustomDataValue->dataSize;
+        }
+        PLATYPUS_ASSERT(pCustomDataValue->dataSize == sizeof(int32_t));
+        Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+        const StringPool& stringPool = pScene->getStringPool();
+
+        int32_t stringPoolOffset = -1;
+        memcpy(&stringPoolOffset, pCustomDataValue->pData, sizeof(int32_t));
+        const std::string strValue = stringPool.get(stringPoolOffset);
+
         return sizeof(CustomDataType) +
             sizeof(uint32_t) +
-            pCustomDataValue->dataSize;
+            strValue.size();
     }
 
     size_t get_serialized_custom_data_size(const CustomData * const pCustomData)
@@ -153,8 +180,10 @@ namespace platypus
             uint32_t valueDataSize = 0;
             memcpy(&valueDataSize, pSerializedData + valueOffset, sizeof(uint32_t));
             totalSize += sizeof(CustomDataType) +
-                sizeof(uint32_t) + // element count
-                static_cast<size_t>(valueDataSize); // value data size
+                sizeof(uint32_t) + // value data size
+                static_cast<size_t>(valueDataSize); // value data
+
+            valueOffset += sizeof(uint32_t) + static_cast<size_t>(valueDataSize);
         }
 
         return totalSize;
@@ -167,25 +196,45 @@ namespace platypus
             uint8_t dataBuffer[dataSize]
 
         NOTE: IMPORTANT!
-            *If value is string, the whole string is serialized (not the int32_t stringPoolOffset)!
+            *IF VALUE IS STRING, the whole string is serialized (not the int32_t stringPoolOffset)!
                 ->When deserializing this, it allocs the string from the pool automatically
     */
-    CONTINUE HERE + READ ABOVE NOTE!!
     std::vector<char> serialize(const CustomDataValue * const pCustomDataValue)
     {
-        const size_t serializedSize = get_serialized_custom_data_value_size(pCustomDataValue);
-        std::vector<char> serializedData(serializedSize);
+        const size_t totalSerializedSize = get_serialized_custom_data_value_size(pCustomDataValue);
+        std::vector<char> serializedData(totalSerializedSize);
         char* pBuf = serializedData.data();
         memcpy(pBuf, &pCustomDataValue->type, sizeof(CustomDataType));
         size_t offset = sizeof(CustomDataType);
 
-        const uint32_t serializedDataSize = pCustomDataValue->dataSize;
-        memcpy(pBuf + offset, &serializedDataSize, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
+        if (pCustomDataValue->type == CustomDataType::STRING)
+        {
+            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const StringPool& stringPool = pScene->getStringPool();
+            int32_t stringPoolOffset = -1;
+            PLATYPUS_ASSERT(pCustomDataValue->dataSize == sizeof(int32_t));
+            memcpy(&stringPoolOffset, pCustomDataValue->pData, sizeof(int32_t));
+            PLATYPUS_ASSERT(stringPoolOffset != -1);
+            const std::string strValue = stringPool.get(stringPoolOffset);
 
-        memcpy(pBuf + offset, pCustomDataValue->pData, serializedDataSize);
-        offset += serializedDataSize;
-        PLATYPUS_ASSERT(offset == serializedSize);
+            const uint32_t serializedDataSize = strValue.size();
+            memcpy(pBuf + offset, &serializedDataSize, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+
+            memcpy(pBuf + offset, strValue.data(), serializedDataSize);
+            offset += serializedDataSize;
+        }
+        else
+        {
+            const uint32_t serializedDataSize = pCustomDataValue->dataSize;
+            memcpy(pBuf + offset, &serializedDataSize, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+
+            memcpy(pBuf + offset, pCustomDataValue->pData, serializedDataSize);
+            offset += serializedDataSize;
+        }
+
+        PLATYPUS_ASSERT(offset == totalSerializedSize);
 
         return serializedData;
     }
@@ -202,8 +251,8 @@ namespace platypus
         Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
         CustomDataManager& customDataManager = pScene->getCustomDataManager();
 
-        const size_t serializedSize = get_serialized_custom_data_size(pCustomData);
-        std::vector<char> serializedData(serializedSize);
+        const size_t totalSerializedSize = get_serialized_custom_data_size(pCustomData);
+        std::vector<char> serializedData(totalSerializedSize);
 
         char* pBuf = serializedData.data();
         const ComponentType componentType = ComponentType::COMPONENT_TYPE_CUSTOM_DATA;
@@ -243,7 +292,7 @@ namespace platypus
 
         ComponentType componentType;
         memcpy(&componentType, pBuf, sizeof(ComponentType));
-        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_TRANSFORM);
+        PLATYPUS_ASSERT(componentType == ComponentType::COMPONENT_TYPE_CUSTOM_DATA);
         size_t offset = sizeof(ComponentType);
 
         uint32_t elementCount;
@@ -272,17 +321,11 @@ namespace platypus
             };
         }
 
-        // TODO:
-        // How the fuck assemble the actual CustomData components in Scene's "post deserialization"
-        // -> needed for constructing the actual component:
-        //  *elem count
-        //  *serialized value data
-
-        // NOTE: While adding this noticed that the Scene's deserialization "special cases" needs
-        // to be more streamlined and coherent!
+        // NOTE: While adding this noticed that the Scene's deserialization "special cases"(deserialization
+        // finalization) needs to be more streamlined and coherent!
         // TODO: Make "special cases" of Scene's deserialization more streamlined
         // *Additional note: don't make this an additional "hard coded deserialization case"
-        //CONTINUE HERE + READ THE FUCKING COMMENTS ABOVE!
+        //CONTINUE HERE
 
         *ppCustomData = create_custom_data(
             entityID,

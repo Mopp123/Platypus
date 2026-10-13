@@ -38,6 +38,7 @@ void CustomDataTestScene::init()
 
     CustomDataManager& customDataManager = getCustomDataManager();
 
+    /*
     // Test adding values to a single existing CustomComponent
     const std::string entityName1 = "Entity1";
     entityID_t customDataEntity1 = createEntity(entityName1);
@@ -176,11 +177,29 @@ void CustomDataTestScene::init()
     );
     print_custom_data(entityName2, pCustomDataComponent2, customDataManager);
 
-    // TODO:
-    // *Test updating string values
-    // *Test readding string values
-    //CONTINUE HERE!
+    // Test serialization
+    std::vector<char> serializedData = serialize({ customDataEntity1, customDataEntity2 });
+    write_file("assets/scenes/CustomDataTest.scene", serializedData);
+    */
 
+    // Test deserialization
+    std::vector<char> serializedData = read_file("assets/scenes/CustomDataTest.scene");
+    PLATYPUS_ASSERT(!serializedData.empty());
+    std::vector<entityID_t> deserializedEntities = deserialize(serializedData, 0);
+    PLATYPUS_ASSERT(deserializedEntities.size() == 2);
+    for (entityID_t entityID : deserializedEntities)
+    {
+        std::string entityName = getEntityName(entityID);
+        PLATYPUS_ASSERT(!entityName.empty());
+        void* pCustomDataComponent = getComponent(entityID, ComponentType::COMPONENT_TYPE_CUSTOM_DATA);
+        PLATYPUS_ASSERT(pCustomDataComponent);
+        CustomData* pCustomData = reinterpret_cast<CustomData*>(pCustomDataComponent);
+        print_custom_data(
+            entityName,
+            pCustomData,
+            customDataManager
+        );
+    }
 
     Debug::log("Test success!");
     PLATYPUS_ASSERT(false);
