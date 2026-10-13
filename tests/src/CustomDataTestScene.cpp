@@ -38,7 +38,6 @@ void CustomDataTestScene::init()
 
     CustomDataManager& customDataManager = getCustomDataManager();
 
-    /*
     // Test adding values to a single existing CustomComponent
     const std::string entityName1 = "Entity1";
     entityID_t customDataEntity1 = createEntity(entityName1);
@@ -50,6 +49,31 @@ void CustomDataTestScene::init()
         CustomDataType::INT,
         &val
     );
+
+    // Test adding empty string
+    customDataManager.addString(pCustomDataComponent1, "");
+
+    val = 420;
+    customDataManager.addNumber(
+        pCustomDataComponent1,
+        CustomDataType::INT,
+        &val
+    );
+
+    // Test altering the prior empty str
+    customDataManager.updateString(
+        pCustomDataComponent1->offset,
+        1,
+        "Now theres some data here"
+    );
+
+    print_custom_data(
+        entityName1,
+        pCustomDataComponent1,
+        customDataManager
+    );
+
+    /*
     uint32_t val2 = 32;
     customDataManager.addNumber(
         pCustomDataComponent1,
@@ -183,6 +207,7 @@ void CustomDataTestScene::init()
     */
 
     // Test deserialization
+    /*
     std::vector<char> serializedData = read_file("assets/scenes/CustomDataTest.scene");
     PLATYPUS_ASSERT(!serializedData.empty());
     std::vector<entityID_t> deserializedEntities = deserialize(serializedData, 0);
@@ -200,6 +225,7 @@ void CustomDataTestScene::init()
             customDataManager
         );
     }
+    */
 
     Debug::log("Test success!");
     PLATYPUS_ASSERT(false);

@@ -133,6 +133,9 @@ namespace platypus
 
         uint32_t dataSize = 0;
         memcpy(&dataSize, pStorage + offset, sizeof(uint32_t));
+        if (dataSize == 0)
+            return "";
+
         offset += sizeof(uint32_t);
         PLATYPUS_ASSERT(offset < totalStorageSize);
         PLATYPUS_ASSERT(offset + dataSize <= totalStorageSize);
@@ -175,15 +178,20 @@ namespace platypus
 
             uint32_t strSize = 0;
             memcpy(&strSize, pStorage + offset, sizeof(uint32_t));
-            PLATYPUS_ASSERT(strSize > 0);
             offset += sizeof(uint32_t);
-            PLATYPUS_ASSERT(offset < totalStorageSize);
-
-            std::string str = std::string(
-                reinterpret_cast<const char*>(pStorage + offset),
-                strSize
-            );
-            result.push_back(str);
+            if (strSize == 0)
+            {
+                result.push_back("");
+            }
+            else
+            {
+                PLATYPUS_ASSERT(offset < totalStorageSize);
+                std::string str = std::string(
+                    reinterpret_cast<const char*>(pStorage + offset),
+                    strSize
+                );
+                result.push_back(str);
+            }
             offset += strSize;
         }
         return result;
