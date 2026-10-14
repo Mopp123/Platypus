@@ -119,7 +119,13 @@ namespace platypus
         );
 
         void remove(CustomData* pCustomData, size_t valueIndex);
+        void remove(CustomData* pCustomData);
         std::vector<CustomDataValue> getValues(int32_t offset) const;
+
+        CustomDataValue getValue(
+            size_t baseOffset,
+            size_t valueIndex
+        ) const;
 
         template<typename T>
         T getNumericValue(int32_t offset, size_t valueIndex) const;
@@ -128,14 +134,9 @@ namespace platypus
         std::string valueToString(const CustomDataValue& value) const;
 
         inline size_t getStorageSize() const { return _memoryPool.getTotalSize(); }
+        inline size_t getFreeSize() const { return _memoryPool.getFreeSize(); }
 
     private:
-        const void* getValueData(
-            size_t baseOffset,
-            size_t valueSize,
-            size_t valueIndex
-        ) const;
-
         std::vector<StoredCustomDataValue> copyValues(
             int32_t offset
         ) const;

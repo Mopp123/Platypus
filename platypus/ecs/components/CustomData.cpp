@@ -286,7 +286,7 @@ namespace platypus
         const size_t baseSize = sizeof(ComponentType) +
             sizeof(uint32_t); // elementCount(valueCount)
 
-        PLATYPUS_ASSERT(dataSize > baseSize);
+        PLATYPUS_ASSERT(dataSize >= baseSize);
 
         const uint8_t* pBuf = reinterpret_cast<const uint8_t*>(pData);
 
@@ -522,6 +522,39 @@ namespace platypus
         updateNumber(offset, valueIndex, CustomDataType::STRING, &newStringPoolOffset);
     }
 
+    void CustomDataManager::remove(CustomData* pCustomData)
+    {
+        PLATYPUS_ASSERT(pCustomData->offset != -1);
+        const size_t baseOffset = static_cast<const size_t>(pCustomData->offset);
+        const size_t totalStorageSize = _memoryPool.getTotalSize();
+        uint8_t* pStorage = _memoryPool.accessStorage().data();
+        PLATYPUS_ASSERT(baseOffset < totalStorageSize);
+
+        uint32_t storedSize = 0;
+        memcpy(&storedSize, pStorage + baseOffset, sizeof(uint32_t));
+        size_t dataOffset = baseOffset + sizeof(uint32_t);
+        PLATYPUS_ASSERT(dataOffset < totalStorageSize);
+
+        while (dataOffset < baseOffset + storedSize)
+        {
+            CustomDataType currentValueType = CustomDataType::NONE;
+            memcpy(&currentValueType, pStorage + dataOffset, sizeof(CustomDataType));
+            dataOffset += sizeof(CustomDataType);
+            size_t currentValueDataSize = get_custom_data_type_size(currentValueType);
+            if (currentValueType == CustomDataType::STRING)
+            {
+                int32_t stringPoolOffset = -1;
+                memcpy(&stringPoolOffset, pStorage + dataOffset, sizeof(int32_t));
+                _stringPoolRef.remove(stringPoolOffset);
+            }
+            dataOffset += currentValueDataSize;
+        }
+        _memoryPool.freeRange(pCustomData->offset, storedSize);
+        _memoryPool.packFreeRanges();
+        pCustomData->offset = -1;
+        pCustomData->elementCount = 0;
+    }
+
     void CustomDataManager::remove(CustomData* pCustomData, size_t valueIndex)
     {
         PLATYPUS_ASSERT(pCustomData->offset != -1);
@@ -593,6 +626,9 @@ namespace platypus
 
     std::vector<CustomDataValue> CustomDataManager::getValues(int32_t offset) const
     {
+        if (offset < 0)
+            return { };
+
         const size_t storageSize = _memoryPool.getTotalSize();
         PLATYPUS_ASSERT(offset + sizeof(uint32_t) <= storageSize);
         const std::vector<uint8_t>& storage = _memoryPool.getStorage();
@@ -600,7 +636,8 @@ namespace platypus
 
         uint32_t size = 0;
         memcpy(&size, pStorage + offset, sizeof(uint32_t));
-        PLATYPUS_ASSERT(size >= sizeof(uint32_t));
+        if (size == 0)
+            return { };
 
         std::vector<CustomDataValue> values;
         size_t dataOffset = static_cast<size_t>(offset) + sizeof(uint32_t);
@@ -624,17 +661,66 @@ namespace platypus
         return values;
     }
 
+    CustomDataValue CustomDataManager::getValue(
+        size_t baseOffset,
+        size_t valueIndex
+    ) const
+    {
+        const size_t storageSize = _memoryPool.getTotalSize();
+        PLATYPUS_ASSERT(baseOffset + sizeof(uint32_t) <= storageSize);
+        const std::vector<uint8_t>& storage = _memoryPool.getStorage();
+        const uint8_t* pStorage = storage.data();
+
+        uint32_t size = 0;
+        memcpy(&size, pStorage + baseOffset, sizeof(uint32_t));
+        PLATYPUS_ASSERT(size >= sizeof(uint32_t));
+
+        size_t dataOffset = static_cast<size_t>(baseOffset) + sizeof(uint32_t);
+        size_t currentIndex = 0;
+        while (dataOffset < baseOffset + size)
+        {
+            CustomDataType storedType = CustomDataType::NONE;
+            memcpy(&storedType, pStorage + dataOffset, sizeof(CustomDataType));
+            PLATYPUS_ASSERT(storedType != CustomDataType::NONE);
+            dataOffset += sizeof(CustomDataType);
+            PLATYPUS_ASSERT(dataOffset < storageSize);
+            const size_t storedDataSize = get_custom_data_type_size(storedType);
+
+            if (currentIndex == valueIndex)
+            {
+                return {
+                    storedType,
+                    static_cast<uint32_t>(storedDataSize),
+                    pStorage + dataOffset
+                };
+            }
+
+            dataOffset += storedDataSize;
+            ++currentIndex;
+        }
+
+        //  Never supposed to get here!
+        Debug::log(
+            "Value index " + std::to_string(valueIndex) + " out of bounds. "
+            "Offset " + std::to_string(baseOffset) + " has " + std::to_string(currentIndex) + " values.",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+        return { };
+    }
+
     template<typename T>
     T CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const
     {
-        T value;
-        const void* pValueData = getValueData(
+        CustomDataValue value = getValue(
             offset,
-            sizeof(T),
             valueIndex
         );
-        memcpy(&value, pValueData, sizeof(T));
-        return value;
+        PLATYPUS_ASSERT(value.dataSize == sizeof(T));
+        T retVal;
+        memcpy(&retVal, value.pData, sizeof(T));
+        return retVal;
     }
 
     template int32_t    CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
@@ -644,6 +730,11 @@ namespace platypus
     template Vector3f   CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
     template Vector4f   CustomDataManager::getNumericValue(int32_t offset, size_t valueIndex) const;
 
+    std::string CustomDataManager::getStringValue(const CustomData * const pCustomData, size_t valueIndex) const
+    {
+        const int32_t stringPoolOffset = getNumericValue<int32_t>(pCustomData->offset, valueIndex);
+        return _stringPoolRef.get(stringPoolOffset);
+    }
 
     std::string CustomDataManager::valueToString(const CustomDataValue& value) const
     {
@@ -662,7 +753,7 @@ namespace platypus
             PLATYPUS_ASSERT(value.dataSize == sizeof(float));
             float fVal = 0.0f;
             memcpy(&fVal, value.pData, sizeof(float));
-            return std::to_string(fVal);
+            return to_string(fVal);
         }
         else if (value.type == CustomDataType::VECTOR2F)
         {
@@ -700,59 +791,6 @@ namespace platypus
         );
         PLATYPUS_ASSERT(false);
         return "";
-    }
-
-    std::string CustomDataManager::getStringValue(const CustomData * const pCustomData, size_t valueIndex) const
-    {
-        const int32_t stringPoolOffset = getNumericValue<int32_t>(pCustomData->offset, valueIndex);
-        return _stringPoolRef.get(stringPoolOffset);
-    }
-
-    const void* CustomDataManager::getValueData(
-        size_t baseOffset,
-        size_t valueSize,
-        size_t valueIndex
-    ) const
-    {
-        const size_t storageSize = _memoryPool.getTotalSize();
-        PLATYPUS_ASSERT(baseOffset + sizeof(uint32_t) <= storageSize);
-        const std::vector<uint8_t>& storage = _memoryPool.getStorage();
-        const uint8_t* pStorage = storage.data();
-
-        uint32_t size = 0;
-        memcpy(&size, pStorage + baseOffset, sizeof(uint32_t));
-        PLATYPUS_ASSERT(size >= sizeof(uint32_t));
-
-        size_t dataOffset = static_cast<size_t>(baseOffset) + sizeof(uint32_t);
-        size_t currentIndex = 0;
-        while (dataOffset < baseOffset + size)
-        {
-            CustomDataType storedType = CustomDataType::NONE;
-            memcpy(&storedType, pStorage + dataOffset, sizeof(CustomDataType));
-            PLATYPUS_ASSERT(storedType != CustomDataType::NONE);
-            dataOffset += sizeof(CustomDataType);
-            PLATYPUS_ASSERT(dataOffset < storageSize);
-            const size_t storedDataSize = get_custom_data_type_size(storedType);
-
-            if (currentIndex == valueIndex)
-            {
-                PLATYPUS_ASSERT(storedDataSize == valueSize);
-                return pStorage + dataOffset;
-            }
-
-            dataOffset += storedDataSize;
-            ++currentIndex;
-        }
-
-        //  Never supposed to get here!
-        Debug::log(
-            "Value index " + std::to_string(valueIndex) + " out of bounds. "
-            "Offset " + std::to_string(baseOffset) + " has " + std::to_string(currentIndex) + " values.",
-            PLATYPUS_CURRENT_FUNC_NAME,
-            Debug::MessageType::PLATYPUS_ERROR
-        );
-        PLATYPUS_ASSERT(false);
-        return nullptr;
     }
 
     std::vector<CustomDataManager::StoredCustomDataValue> CustomDataManager::copyValues(

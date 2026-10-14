@@ -145,6 +145,8 @@ namespace platypus
         // TODO: Improve, optimize ..or something...
         void packFreeRanges();
 
+        size_t getFreeSize() const;
+
         inline std::vector<uint8_t>& accessStorage() { return _data; }
         inline const std::vector<uint8_t>& getStorage() const { return _data; }
         inline std::map<size_t, size_t>& accessFreeRanges() { return _freeRanges; }

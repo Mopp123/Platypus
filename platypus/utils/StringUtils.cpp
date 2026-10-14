@@ -28,6 +28,33 @@ namespace platypus { namespace util { namespace str {
         return components;
     }
 
+    std::vector<std::string> split_args(const std::string& str)
+    {
+        std::string totalStr = str;
+        std::vector<std::string> result;
+        while (true)
+        {
+            size_t bracketBegin = totalStr.find('(');
+            size_t bracketEnd = totalStr.find(')');
+            if (bracketBegin == std::string::npos || bracketEnd == std::string::npos ||
+                bracketBegin > bracketEnd
+            )
+            {
+                if (result.empty())
+                    return { str };
+
+                return result;
+            }
+
+            const size_t argBegin = bracketBegin + 1;
+            size_t argsSize = bracketEnd - argBegin;
+            std::string currentArgs = totalStr.substr(argBegin, argsSize);
+            result.push_back(currentArgs);
+            totalStr = totalStr.erase(0, bracketEnd + 1);
+        }
+        return result;
+    }
+
     void append_utf8(uint32_t codepoint, std::string& target)
     {
         utf8::append(codepoint, target);
@@ -162,9 +189,13 @@ namespace platypus { namespace util { namespace str {
 
     bool to_Vector2f(const std::string& str, Vector2f& outValue)
     {
-        std::string s = str;
+        std::vector<std::string> strings = split_args(str);
+        if (strings.size() != 1)
+            return false;
+
+        std::string s = strings[0];
         util::str::trim_spaces(s);
-        std::vector<std::string> strComponents = util::str::split(str, ',');
+        std::vector<std::string> strComponents = util::str::split(s, ',');
         const size_t requiredComponentCount = 2;
         if (strComponents.size() != requiredComponentCount)
         {
@@ -173,7 +204,7 @@ namespace platypus { namespace util { namespace str {
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
+            return false;
         }
         float* components[2] = { &outValue.x, &outValue.y };
         for (size_t i = 0; i < requiredComponentCount; ++i)
@@ -186,9 +217,13 @@ namespace platypus { namespace util { namespace str {
 
     bool to_Vector3f(const std::string& str, Vector3f& outValue)
     {
-        std::string s = str;
+        std::vector<std::string> strings = split_args(str);
+        if (strings.size() != 1)
+            return false;
+
+        std::string s = strings[0];
         util::str::trim_spaces(s);
-        std::vector<std::string> strComponents = util::str::split(str, ',');
+        std::vector<std::string> strComponents = util::str::split(s, ',');
         const size_t requiredComponentCount = 3;
         if (strComponents.size() != requiredComponentCount)
         {
@@ -197,7 +232,7 @@ namespace platypus { namespace util { namespace str {
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
+            return false;
         }
         float* components[3] = { &outValue.x, &outValue.y, &outValue.z };
         for (size_t i = 0; i < requiredComponentCount; ++i)
@@ -210,9 +245,13 @@ namespace platypus { namespace util { namespace str {
 
     bool to_Vector4f(const std::string& str, Vector4f& outValue)
     {
-        std::string s = str;
+        std::vector<std::string> strings = split_args(str);
+        if (strings.size() != 1)
+            return false;
+
+        std::string s = strings[0];
         util::str::trim_spaces(s);
-        std::vector<std::string> strComponents = util::str::split(str, ',');
+        std::vector<std::string> strComponents = util::str::split(s, ',');
         const size_t requiredComponentCount = 4;
         if (strComponents.size() != requiredComponentCount)
         {
@@ -221,7 +260,7 @@ namespace platypus { namespace util { namespace str {
                 PLATYPUS_CURRENT_FUNC_NAME,
                 Debug::MessageType::PLATYPUS_ERROR
             );
-            PLATYPUS_ASSERT(false);
+            return false;
         }
         float* components[4] = { &outValue.x, &outValue.y, &outValue.z, &outValue.w };
         for (size_t i = 0; i < requiredComponentCount; ++i)

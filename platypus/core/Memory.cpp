@@ -736,6 +736,16 @@ namespace platypus
         _freeRanges = result;
     }
 
+    size_t DynamicElementSizeMemoryPool::getFreeSize() const
+    {
+        size_t freeSize = 0;
+        std::map<size_t, size_t>::const_iterator it;
+        for (it = _freeRanges.begin(); it != _freeRanges.end(); ++it)
+            freeSize += it->second;
+
+        return freeSize;
+    }
+
     int32_t DynamicElementSizeMemoryPool::findFreeRange(size_t requiredSize, size_t& outAvailableSize)
     {
         std::map<size_t, size_t>::const_iterator it;

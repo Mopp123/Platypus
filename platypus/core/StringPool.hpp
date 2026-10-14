@@ -25,6 +25,7 @@ namespace platypus
         std::vector<std::string> getAll() const;
 
         inline size_t getStorageSize() const { return _memoryPool.getTotalSize(); }
+        inline size_t getFreeSize() const { return _memoryPool.getFreeSize(); }
 
     private:
         static void free_storage_func(size_t offset, size_t size, void* pUserData);
