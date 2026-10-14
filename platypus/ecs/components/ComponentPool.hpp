@@ -12,7 +12,7 @@
 namespace platypus
 {
     template <typename T>
-    class ComponentPool : public MemoryPool
+    class ComponentPool : public StaticElementSizeMemoryPool
     {
     private:
         // Actual index for entity in the pool
@@ -25,11 +25,11 @@ namespace platypus
             size_t maxLength,
             bool allowResize
         ) :
-            MemoryPool(componentSize, maxLength, allowResize)
+            StaticElementSizeMemoryPool(componentSize, maxLength, allowResize)
         {}
 
         ComponentPool(const ComponentPool& other) :
-            MemoryPool(other), // NOTE: Not sure is this fine?
+            StaticElementSizeMemoryPool(other), // NOTE: Not sure is this fine?
             _entityIndexMapping(other._entityIndexMapping)
         {}
 

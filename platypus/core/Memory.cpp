@@ -8,7 +8,7 @@
 
 namespace platypus
 {
-    MemoryPool::MemoryPool(
+    StaticElementSizeMemoryPool::StaticElementSizeMemoryPool(
         size_t elementSize,
         size_t maxLength,
         bool allowResize,
@@ -38,7 +38,7 @@ namespace platypus
     }
 
     // NOTE: Don't remember why I allowed copying?
-    MemoryPool::MemoryPool(const MemoryPool& other) :
+    StaticElementSizeMemoryPool::StaticElementSizeMemoryPool(const StaticElementSizeMemoryPool& other) :
         _elementSize(other._elementSize),
         _totalLength(other._totalLength),
         _occupiedCount(other._occupiedCount),
@@ -54,11 +54,11 @@ namespace platypus
         PLATYPUS_ASSERT(false);
     }
 
-    MemoryPool::~MemoryPool()
+    StaticElementSizeMemoryPool::~StaticElementSizeMemoryPool()
     {
     }
 
-    void* MemoryPool::occupy(void* pUserData)
+    void* StaticElementSizeMemoryPool::occupy(void* pUserData)
     {
         if (_occupiedCount >= _totalLength)
         {
@@ -116,7 +116,7 @@ namespace platypus
 
     // NOTE: Changed a bit after some fuckery...
     // NOT TESTED! USE THE OTHER ONE INSTEAD IF POSSIBLE!
-    void MemoryPool::clearStorage(size_t index, void* pUserData)
+    void StaticElementSizeMemoryPool::clearStorage(size_t index, void* pUserData)
     {
         if (index >= _totalLength)
         {
@@ -163,7 +163,7 @@ namespace platypus
         --_occupiedCount;
     }
 
-    void MemoryPool::clearStorage(void* pUserData)
+    void StaticElementSizeMemoryPool::clearStorage(void* pUserData)
     {
         int32_t signedIndex = userDataToIndex(pUserData);
         if (signedIndex == -1)
@@ -223,7 +223,7 @@ namespace platypus
         --_occupiedCount;
     }
 
-    void MemoryPool::clearStorage()
+    void StaticElementSizeMemoryPool::clearStorage()
     {
         if (_occupiedCount == 0)
         {
@@ -254,7 +254,7 @@ namespace platypus
         _occupiedCount = 0;
     }
 
-    void MemoryPool::freeStorage()
+    void StaticElementSizeMemoryPool::freeStorage()
     {
         if (_highestOccupiedIndex != -1)
         {
@@ -287,7 +287,7 @@ namespace platypus
     }
 
     // NOTE: Not sure if this works legally with the updated pool!
-    void MemoryPool::addSpace(size_t newLength)
+    void StaticElementSizeMemoryPool::addSpace(size_t newLength)
     {
         if (newLength < _totalLength)
         {
@@ -310,7 +310,7 @@ namespace platypus
         _totalLength = newLength;
     }
 
-    void* MemoryPool::getElement(void* pUserData)
+    void* StaticElementSizeMemoryPool::getElement(void* pUserData)
     {
         int32_t signedIndex = userDataToIndex(pUserData);
         if (signedIndex == -1)
@@ -347,7 +347,7 @@ namespace platypus
         return reinterpret_cast<void*>(ptr);
     }
 
-    const void* MemoryPool::getElement(void* pUserData) const
+    const void* StaticElementSizeMemoryPool::getElement(void* pUserData) const
     {
         int32_t signedIndex = userDataToIndex(pUserData);
         if (signedIndex == -1)
@@ -381,7 +381,7 @@ namespace platypus
         return reinterpret_cast<const void*>(ptr);
     }
 
-    void* MemoryPool::any()
+    void* StaticElementSizeMemoryPool::any()
     {
         if (_highestOccupiedIndex == -1)
         {
@@ -398,7 +398,7 @@ namespace platypus
         );
     }
 
-    int32_t MemoryPool::findPreviousOccupiedIndex(size_t index)
+    int32_t StaticElementSizeMemoryPool::findPreviousOccupiedIndex(size_t index)
     {
         if (index > _totalLength)
         {
@@ -419,5 +419,354 @@ namespace platypus
                 return currentIndex;
         }
         return -1;
+    }
+
+
+    DynamicElementSizeMemoryPool::DynamicElementSizeMemoryPool(
+        void (*pFreeRangeFunc)(size_t, size_t, void*),
+        void* pFreeRangeFuncUserData,
+        bool (*pValidateFreeRangeFunc)(size_t, size_t, void*),
+        void* pValidateFreeRangeFuncUserData
+    ) :
+        _pFreeRangeFunc(pFreeRangeFunc),
+        _pFreeRangeFuncUserData(pFreeRangeFuncUserData),
+        _pValidateFreeRangeFunc(pValidateFreeRangeFunc),
+        _pValidateFreeRangeFuncUserData(pValidateFreeRangeFuncUserData)
+    {
+    }
+
+    int32_t DynamicElementSizeMemoryPool::occupyRange(size_t dataSize, const void* pData)
+    {
+        // Check first if suitable free range already exists
+        size_t freeAvailableSize = 0;
+        int32_t offset = findFreeRange(dataSize, freeAvailableSize);
+
+        if (offset == -1)
+        {
+            const size_t prevSize = _data.size();
+            size_t newSize = prevSize + dataSize;
+            offset = prevSize;
+            // If no free offset found with enough space
+            //  -> check if the last free range is at the back of the _data
+            //      -> if it is, use that offset and add the additional required space
+            if (!_freeRanges.empty())
+            {
+                std::map<size_t, size_t>::const_reverse_iterator it = _freeRanges.rbegin();
+                const size_t freeOffset = it->first;
+                const size_t freeSpace = it->second;
+                if (freeOffset + freeSpace >= _data.size())
+                {
+                    PLATYPUS_ASSERT(dataSize > freeSpace);
+                    const size_t requiredAdditionalSpace = dataSize - freeSpace;
+                    newSize = prevSize + requiredAdditionalSpace;
+                    _freeRanges.erase(freeOffset);
+                    offset = freeOffset;
+                }
+            }
+
+            _data.resize(newSize);
+            memcpy(
+                _data.data() + offset,
+                pData,
+                dataSize
+            );
+        }
+        else
+        {
+            #ifdef PLATYPUS_DEBUG
+            if (!validateFreeRange(offset, dataSize))
+            {
+                Debug::log(
+                    "Free range validation failed using offset: " + std::to_string(offset) + " and size: " + std::to_string(dataSize) + " "
+                    "Storage size is " + std::to_string(_data.size()),
+                    PLATYPUS_CURRENT_FUNC_NAME,
+                    Debug::MessageType::PLATYPUS_ERROR
+                );
+                PLATYPUS_ASSERT(false);
+            }
+            #endif
+            memcpy(
+                _data.data() + offset,
+                pData,
+                dataSize
+            );
+
+            // If using less space than the freeRange offers, erase the old freeRange offset
+            // and add a new one using the offset starting after the required space
+            _freeRanges.erase(offset);
+            if (freeAvailableSize > dataSize)
+            {
+                const size_t remainingFreeSize = freeAvailableSize - dataSize;
+                const size_t nextFreeOffset = offset + dataSize;
+                // *This should never happen?
+                PLATYPUS_ASSERT(_freeRanges.find(nextFreeOffset) == _freeRanges.end());
+                _freeRanges[nextFreeOffset] = remainingFreeSize;
+            }
+        }
+
+        return offset;
+    }
+
+    void DynamicElementSizeMemoryPool::freeRange(int32_t offset, size_t size)
+    {
+        PLATYPUS_ASSERT(offset >= 0);
+        if (offset + size > _data.size())
+        {
+            Debug::log(
+                "Range (offset = " + std::to_string(offset) + " size = " + std::to_string(size) + ") "
+                "out of bounds! Storage size is " + std::to_string(_data.size()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return;
+        }
+
+        const size_t unsignedOffset = static_cast<size_t>(offset);
+        PLATYPUS_ASSERT(_pFreeRangeFunc);
+        _pFreeRangeFunc(offset, size, _pFreeRangeFuncUserData);
+        _freeRanges[unsignedOffset] = size;
+        packFreeRanges();
+    }
+
+    int32_t DynamicElementSizeMemoryPool::add(
+        int32_t baseOffset,
+        size_t currentSize,
+        size_t addedDataSize,
+        const void* pData
+    )
+    {
+        if (baseOffset == -1)
+            return occupyRange(addedDataSize, pData);
+
+        // Quickly return using same baseOffset if just adding at the back of the container
+        if (baseOffset + currentSize == _data.size())
+        {
+            const size_t prevSize = _data.size();
+            _data.resize(prevSize + addedDataSize);
+            memcpy(_data.data() + baseOffset + currentSize, pData, addedDataSize);
+            return baseOffset;
+        }
+
+        // Quickly return using same baseOffset if can add at empty pos after current range
+        // NOTE: BELOW QUITE COMPLICATED, NOT TESTED MIGHT BE FUCKED!!
+        // TODO: TEST PROPERLY!
+        if (currentSize > 0)
+        {
+            const size_t nextOffset = baseOffset + currentSize;
+            std::map<size_t, size_t>::const_iterator freeIt = _freeRanges.find(nextOffset);
+            // Can add at least one more if found from _freeRanges
+            if (freeIt != _freeRanges.end())
+            {
+                const size_t freeOffset = freeIt->first;
+                const size_t freeSize = freeIt->second;
+                // TODO:
+                //  *Test that!
+                if (freeSize >= addedDataSize)
+                {
+                    PLATYPUS_ASSERT(freeOffset < _data.size());
+
+                    // TODO: Make this kind of "null elem check" possible
+                    //PLATYPUS_ASSERT(_childrenContainer[nextOffset] == NULL_ENTITY_ID);
+                    memcpy(_data.data() + nextOffset, pData, addedDataSize);
+
+                    _freeRanges.erase(nextOffset);
+                    // Update the free offsets
+                    // ->If theres more space after the free offset, "push the cursor forward"
+                    // with the new free count
+                    if (freeSize > addedDataSize)
+                    {
+                        const size_t newFreeSize = freeSize - addedDataSize;
+                        const size_t newFreeOffset = nextOffset + addedDataSize;
+                        if (newFreeOffset < _data.size())
+                            _freeRanges[newFreeOffset] = newFreeSize;
+                    }
+
+                    return freeOffset;
+                }
+                //  *If free range found at the end of the storage but the storage's and free
+                //  range's size isn't enough, use the free offset and alloc the remaining
+                //  required space!
+                else if (freeOffset + freeSize == _data.size())
+                {
+                    const size_t requiredAdditionalSize = addedDataSize - freeSize;
+                    const size_t prevSize = _data.size();
+                    _data.resize(prevSize + requiredAdditionalSize);
+                    PLATYPUS_ASSERT((freeOffset + addedDataSize) == _data.size());
+                    memcpy(_data.data() + freeOffset, pData, addedDataSize);
+                    _freeRanges.erase(freeOffset);
+                    return freeOffset;
+                }
+            }
+        }
+
+        PLATYPUS_ASSERT(baseOffset >= 0);
+
+        std::vector<uint8_t> currentData = copyData(baseOffset, currentSize);
+        freeRange(baseOffset, currentSize);
+        currentData.resize(currentSize + addedDataSize);
+        memcpy(currentData.data() + currentSize, pData, addedDataSize);
+
+        return occupyRange(currentData.size(), currentData.data());
+    }
+
+    // TODO: Remove?
+    /*
+    void DynamicElementSizeMemoryPool::remove(int32_t elementOffset, size_t elementSize)
+    {
+        const int32_t currentOffset = pChildren->offset;
+        const size_t currentCount = pChildren->count;
+        PLATYPUS_ASSERT(currentOffset >= 0);
+
+        const size_t unsignedCurrentOffset = static_cast<const size_t>(currentOffset);
+        const size_t end = unsignedCurrentOffset + currentCount;
+        PLATYPUS_ASSERT(end <= _childrenContainer.size());
+        for (size_t i = unsignedCurrentOffset; i < end; ++i)
+        {
+            const entityID_t entityID = _childrenContainer[i];
+            if (entityID == childEntityID)
+            {
+                _childrenContainer[i] = NULL_ENTITY_ID;
+                if (i == _childrenContainer.size() - 1)
+                {
+                    _childrenContainer.pop_back();
+                    return;
+                }
+
+                // Make all the rest of the child entities IDs be contiguous
+                for (size_t j = i; j < end; ++j)
+                {
+                    if (j + 1 >= end)
+                        break;
+
+                    _childrenContainer[j] = _childrenContainer[j + 1];
+                }
+                _freeRanges[end - 1] = 1;
+                packFreeRanges();
+                return;
+            }
+        }
+
+        Debug::log(
+            "Failed to find entityID " + std::to_string(childEntityID) + " "
+            "from range: " + std::to_string(currentOffset) + " to " + std::to_string(currentOffset + currentCount),
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+    }
+    */
+
+    const void* DynamicElementSizeMemoryPool::accessData(int32_t offset, size_t size) const
+    {
+        if (offset + size > _data.size())
+        {
+            Debug::log(
+                "Range (offset = " + std::to_string(offset) + " size = " + std::to_string(size) + ") "
+                "out of bounds! Storage size is " + std::to_string(_data.size()),
+                PLATYPUS_CURRENT_FUNC_NAME,
+                Debug::MessageType::PLATYPUS_ERROR
+            );
+            PLATYPUS_ASSERT(false);
+            return nullptr;
+        }
+        return _data.data() + offset;
+    }
+
+    std::vector<uint8_t> DynamicElementSizeMemoryPool::copyData(int32_t offset, size_t size) const
+    {
+        const void* pData = accessData(offset, size);
+        if (!pData)
+            return { };
+
+        std::vector<uint8_t> data(size);
+        memcpy(data.data(), pData, size);
+        return data;
+    }
+
+    // NOTE: Not tested after latest changes! MIGHT NOT WORK PROPERLY!!
+    void DynamicElementSizeMemoryPool::packFreeRanges()
+    {
+        if (_freeRanges.size() <= 1)
+            return;
+
+        std::map<size_t, size_t> result;
+        std::map<size_t, size_t>::iterator currentIt = _freeRanges.begin();
+        std::map<size_t, size_t>::iterator nextIt = currentIt;
+
+        size_t currentOffset = currentIt->first;
+        size_t currentSize = currentIt->second;
+        size_t currentEndOffset = currentOffset + currentSize; // *past the last offset
+        size_t nextIterIncr = 1;
+        while (true)
+        {
+            // NOTE: WARNING!
+            // Possible issue:
+            //  *If there's single free range at the back, the new _freeRanges becomes empty
+            //  because of this!!
+            ++nextIt;
+            if (nextIt == _freeRanges.end())
+                break;
+
+            const size_t nextOffset = nextIt->first;
+            const size_t nextSize = nextIt->second;
+            // If next beginst right after current
+            //  -> merge the next to the current
+            if (currentEndOffset == nextOffset)
+            {
+                const size_t newSize = currentSize + nextSize;
+                result[currentIt->first] = newSize;
+                currentSize = newSize;
+                currentEndOffset = currentOffset + currentSize;
+                ++nextIterIncr;
+            }
+            else
+            {
+                result[currentIt->first] = currentSize;
+                result[nextIt->first] = nextSize;
+                for (size_t i = 0; i < nextIterIncr; ++i)
+                    ++currentIt;
+
+                nextIterIncr = 1;
+                currentOffset = currentIt->first;
+                currentSize = currentIt->second;
+                currentEndOffset = currentOffset + currentSize;
+            }
+        }
+        _freeRanges = result;
+    }
+
+    size_t DynamicElementSizeMemoryPool::getFreeSize() const
+    {
+        size_t freeSize = 0;
+        std::map<size_t, size_t>::const_iterator it;
+        for (it = _freeRanges.begin(); it != _freeRanges.end(); ++it)
+            freeSize += it->second;
+
+        return freeSize;
+    }
+
+    int32_t DynamicElementSizeMemoryPool::findFreeRange(size_t requiredSize, size_t& outAvailableSize)
+    {
+        std::map<size_t, size_t>::const_iterator it;
+        for (it = _freeRanges.begin(); it != _freeRanges.end(); ++it)
+        {
+            if (it->second >= requiredSize)
+            {
+                outAvailableSize = it->second;
+                return it->first;
+            }
+        }
+        outAvailableSize = 0;
+        return -1;
+    }
+
+    bool DynamicElementSizeMemoryPool::validateFreeRange(size_t offset, size_t size) const
+    {
+        if (offset + size > _data.size())
+            return false;
+
+        PLATYPUS_ASSERT(_pValidateFreeRangeFunc);
+        return _pValidateFreeRangeFunc(offset, size, _pValidateFreeRangeFuncUserData);
     }
 }

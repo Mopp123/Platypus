@@ -23,7 +23,8 @@ namespace platypus
         COMPONENT_TYPE_PARENT           = 0x1 << 8,
         COMPONENT_TYPE_CHILDREN         = 0x1 << 9,
         COMPONENT_TYPE_JOINT            = 0x1 << 10,
-        COMPONENT_TYPE_TERRAIN          = 0x1 << 11
+        COMPONENT_TYPE_TERRAIN          = 0x1 << 11,
+        COMPONENT_TYPE_CUSTOM_DATA      = 0x1 << 12
     };
     std::vector<ComponentType> get_all_component_types();
 

@@ -2,7 +2,9 @@
 
 #include "platypus/ecs/Entity.hpp"
 #include "Memory.hpp"
+#include "StringPool.hpp"
 #include "platypus/ecs/components/Component.hpp"
+#include "platypus/ecs/components/CustomData.hpp"
 #include "platypus/ecs/systems/System.hpp"
 #include "platypus/utils/Maths.hpp"
 
@@ -26,6 +28,8 @@ namespace platypus
     private:
         friend class SceneManager;
         EntityHierarchyManager _entityHierarchyManager;
+        StringPool _stringPool;
+        CustomDataManager _customDataManager;
 
         uint32_t _entityUUIDPool = 0;
 
@@ -36,7 +40,7 @@ namespace platypus
 
         std::queue<entityID_t> _freeEntityIDs;
         // NOTE: I don't like these being heap allocated, but want to get this just working for now...
-        std::unordered_map<ComponentType, MemoryPool*> _componentPools;
+        std::unordered_map<ComponentType, StaticElementSizeMemoryPool*> _componentPools;
 
         std::unordered_map<UUID_t, std::vector<EntityError>> _entityErrors;
         const std::unordered_map<EntityErrorType, void(*)(Scene*, EntityError)> _entityErrorFixMapping = {
@@ -104,13 +108,14 @@ namespace platypus
         const std::unordered_map<UUID_t, std::vector<EntityError>>& getErrors();
         void clearErrors();
 
+        // TODO: Some more coherent way of dealing with this "special" deserialization shit!
         // These both are supposed to resolve all Parent and Children components' actual entityID_ts
         // after all entities have been deserialized!
-        void addToDeserializationParentIDQuery(
+        void addToParentComponentsToFinalize(
             entityID_t target,
             UUID_t parentEntityUUID
         );
-        void addToDeserializationChildrenIDQuery(
+        void addToChildrenComponentsToFinalize(
             entityID_t target,
             const std::vector<UUID_t>& childUUIDs
         );
@@ -144,6 +149,7 @@ namespace platypus
             size_t serializedDataPos
         );
 
+        // TODO: Make this shit more coherent... getting out of hand after the two special cases!
         void finalizeDeserialization();
 
         // Validate that file doesn't already exist?
@@ -158,5 +164,8 @@ namespace platypus
         inline entityID_t getActiveCameraEntity() const { return _activeCameraEntity; }
         inline EntityHierarchyManager& getEntityHierarchyManager() { return _entityHierarchyManager; }
         inline const EntityHierarchyManager& getEntityHierarchyManager() const { return _entityHierarchyManager; }
+        inline StringPool& getStringPool() { return _stringPool; }
+        inline CustomDataManager& getCustomDataManager() { return _customDataManager; }
+        inline const CustomDataManager& getCustomDataManager() const { return _customDataManager; }
     };
 }
