@@ -6,15 +6,6 @@ namespace platypus
 {
     namespace ui
     {
-        static void on_click_checkbox(MouseButtonName button, InputAction action, void* pUserData)
-        {
-            if (button == MouseButtonName::MOUSE_LEFT && action == InputAction::PRESS)
-            {
-                Checkbox* pCheckbox = reinterpret_cast<Checkbox*>(pUserData);
-                pCheckbox->setChecked(!pCheckbox->isChecked());
-            }
-        }
-
         Checkbox::Checkbox(
             UIManager& uiManager,
             UIElement* pParent,
@@ -23,7 +14,9 @@ namespace platypus
             const Layout* pButtonBoxLayout,
             const Layout* pButtonTextLayout,
             const std::string& text,
-            const Font* pFont
+            const Font* pFont,
+            void(*pOnCheck)(bool, void*),
+            void* pOnCheckUserData
         ) :
             UIElement(
                 uiManager,
@@ -32,10 +25,12 @@ namespace platypus
                 false,
                 NULL_UUID,
                 nullptr,
-                nullptr, // pOnClick
-                nullptr, // pOnClickUserData
+                nullptr, // pOnClick,
+                nullptr, // pOnClickUserData,
                 false // ignore input?
-            )
+            ),
+            _pOnCheck(pOnCheck),
+            _pOnCheckUserData(pOnCheckUserData)
         {
             _pText = uiManager.createText(
                 this,
@@ -50,7 +45,7 @@ namespace platypus
                 pButtonTextLayout,
                 "",
                 pFont,
-                &on_click_checkbox,
+                &on_click,
                 this
             );
             triggerFullTreeUpdate();
@@ -65,6 +60,18 @@ namespace platypus
         bool Checkbox::isChecked() const
         {
             return _pButton->isSelected();
+        }
+
+        void Checkbox::on_click(MouseButtonName button, InputAction action, void* pUserData)
+        {
+            if (button == MouseButtonName::MOUSE_LEFT && action == InputAction::PRESS)
+            {
+                Checkbox* pCheckbox = reinterpret_cast<Checkbox*>(pUserData);
+                bool checkStatus = !pCheckbox->isChecked();
+                pCheckbox->setChecked(checkStatus);
+                if (pCheckbox->_pOnCheck)
+                    pCheckbox->_pOnCheck(checkStatus, pCheckbox->_pOnCheckUserData);
+            }
         }
     }
 }

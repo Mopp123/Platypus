@@ -152,13 +152,17 @@ namespace platypus
                 const Layout* pButtonLayout,
                 const Layout* pButtonTextLayout,
                 const std::string& text,
-                const Font* pFont
+                const Font* pFont,
+                void(*pOnCheck)(bool, void*) = nullptr,
+                void* pOnCheckUserData = nullptr
             );
 
             Checkbox* createCheckbox(
                 UIElement* pParent,
                 const std::string& text,
-                const Font* pFont
+                const Font* pFont,
+                void(*pOnCheck)(bool, void*) = nullptr,
+                void* pOnCheckUserData = nullptr
             );
 
             InputField* createInputField(

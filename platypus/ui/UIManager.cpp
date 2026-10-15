@@ -331,7 +331,9 @@ namespace platypus
             const Layout* pButtonLayout,
             const Layout* pButtonTextLayout,
             const std::string& text,
-            const Font* pFont
+            const Font* pFont,
+            void(*pOnCheck)(bool, void*),
+            void* pOnCheckUserData
         )
         {
             Checkbox* pCheckbox = new Checkbox(
@@ -342,7 +344,9 @@ namespace platypus
                 pButtonLayout,
                 pButtonTextLayout,
                 text,
-                pFont
+                pFont,
+                pOnCheck,
+                pOnCheckUserData
             );
 
             if (!pParent)
@@ -356,7 +360,9 @@ namespace platypus
         Checkbox* UIManager::createCheckbox(
             UIElement* pParent,
             const std::string& text,
-            const Font* pFont
+            const Font* pFont,
+            void(*pOnCheck)(bool, void*),
+            void* pOnCheckUserData
         )
         {
             return createCheckbox(
@@ -366,7 +372,9 @@ namespace platypus
                 _pDefaultCheckboxBoxLayout,
                 _pDefaultButtonTextLayout,
                 text,
-                pFont
+                pFont,
+                pOnCheck,
+                pOnCheckUserData
             );
         }
 
