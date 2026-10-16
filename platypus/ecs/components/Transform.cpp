@@ -111,6 +111,24 @@ namespace platypus
 	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
     }
 
+    void set_transform_rotation(Transform* pTransform, const Matrix4f& rotationMatrix, bool hasParent)
+    {
+        Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+
+        Matrix4f currentTranslationMatrix(1.0f);
+        currentTranslationMatrix[0 + 3 * 4] = m[0 + 3 * 4];
+        currentTranslationMatrix[1 + 3 * 4] = m[1 + 3 * 4];
+        currentTranslationMatrix[2 + 3 * 4] = m[2 + 3 * 4];
+
+        const Vector3f currentScale = get_transform_scale(pTransform, hasParent);
+        Matrix4f currentScaleMatrix(1.0f);
+        currentScaleMatrix[0 + 0 * 4] = currentScale.x;
+        currentScaleMatrix[1 + 1 * 4] = currentScale.y;
+        currentScaleMatrix[2 + 2 * 4] = currentScale.z;
+
+        m = currentTranslationMatrix * rotationMatrix * currentScaleMatrix;
+    }
+
     void rotate_transform(Transform* pTransform, float pAmount, float yAmount, float rAmount, bool hasParent)
     {
         Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
@@ -192,15 +210,6 @@ namespace platypus
         return { pitch, yaw, roll };
     }
 
-    Vector3f get_transform_scale(const Transform* pTransform, bool hasParent)
-    {
-        const Matrix4f m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
-        float sx = Vector3f(m[0 + 0 * 4], m[1 + 0 * 4], m[2 + 0 * 4]).length();
-        float sy = Vector3f(m[0 + 1 * 4], m[1 + 1 * 4], m[2 + 1 * 4]).length();
-        float sz = Vector3f(m[0 + 2 * 4], m[1 + 2 * 4], m[2 + 2 * 4]).length();
-        return { sx, sy, sz };
-    }
-
     Matrix4f get_transform_rotation_matrix(const Matrix4f& transformationMatrix)
     {
         float sx = Vector3f(
@@ -233,6 +242,16 @@ namespace platypus
         rotationMatrix[2 + 2 * 4] = transformationMatrix[2 + 2 * 4] / sz;
 
         return rotationMatrix;
+    }
+
+
+    Vector3f get_transform_scale(const Transform* pTransform, bool hasParent)
+    {
+        const Matrix4f m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
+        float sx = Vector3f(m[0 + 0 * 4], m[1 + 0 * 4], m[2 + 0 * 4]).length();
+        float sy = Vector3f(m[0 + 1 * 4], m[1 + 1 * 4], m[2 + 1 * 4]).length();
+        float sz = Vector3f(m[0 + 2 * 4], m[1 + 2 * 4], m[2 + 2 * 4]).length();
+        return { sx, sy, sz };
     }
 
     Vector3f get_transform_forward(const Transform* pTransform)

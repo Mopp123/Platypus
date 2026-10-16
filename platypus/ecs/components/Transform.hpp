@@ -74,15 +74,15 @@ namespace platypus
     void set_transform_position(Transform* pTransform, const Vector3f& position, bool hasParent);
     void set_transform_rotation(Transform* pTransform, float pitch, float yaw, float roll, bool hasParent);
     void set_transform_rotation(Transform* pTransform, const Quaternion& rotation, bool hasParent);
+    void set_transform_rotation(Transform* pTransform, const Matrix4f& rotationMatrix, bool hasParent);
     void rotate_transform(Transform* pTransform, float pAmount, float yAmount, float rAmount, bool hasParent);
     void set_transform_scale(Transform* pTransform, const Vector3f& scale, bool hasParent);
 
     Vector3f get_transform_position(const Transform* pTransform, bool hasParent);
     Vector3f get_transform_euler_rotation(const Transform* pTransform, bool hasParent);
+    Matrix4f get_transform_rotation_matrix(const Matrix4f& transformationMatrix);
     // NOTE: NOT TESTED -> might be fucked!
     Vector3f get_transform_scale(const Transform* pTransform, bool hasParent);
-
-    Matrix4f get_transform_rotation_matrix(const Matrix4f& transformationMatrix);
 
     // NOTE: None of these are tested, might point to wrong directions!
     Vector3f get_transform_forward(const Transform* pTransform);
