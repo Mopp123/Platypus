@@ -201,6 +201,40 @@ namespace platypus
         return { sx, sy, sz };
     }
 
+    Matrix4f get_transform_rotation_matrix(const Matrix4f& transformationMatrix)
+    {
+        float sx = Vector3f(
+            transformationMatrix[0 + 0 * 4],
+            transformationMatrix[1 + 0 * 4],
+            transformationMatrix[2 + 0 * 4]
+        ).length();
+        float sy = Vector3f(
+            transformationMatrix[0 + 1 * 4],
+            transformationMatrix[1 + 1 * 4],
+            transformationMatrix[2 + 1 * 4]
+        ).length();
+        float sz = Vector3f(
+            transformationMatrix[0 + 2 * 4],
+            transformationMatrix[1 + 2 * 4],
+            transformationMatrix[2 + 2 * 4]
+        ).length();
+
+        Matrix4f rotationMatrix(1.0f);
+        rotationMatrix[0 + 0 * 4] = transformationMatrix[0 + 0 * 4] / sx;
+        rotationMatrix[1 + 0 * 4] = transformationMatrix[1 + 0 * 4] / sx;
+        rotationMatrix[2 + 0 * 4] = transformationMatrix[2 + 0 * 4] / sx;
+
+        rotationMatrix[0 + 1 * 4] = transformationMatrix[0 + 1 * 4] / sy;
+        rotationMatrix[1 + 1 * 4] = transformationMatrix[1 + 1 * 4] / sy;
+        rotationMatrix[2 + 1 * 4] = transformationMatrix[2 + 1 * 4] / sy;
+
+        rotationMatrix[0 + 2 * 4] = transformationMatrix[0 + 2 * 4] / sz;
+        rotationMatrix[1 + 2 * 4] = transformationMatrix[1 + 2 * 4] / sz;
+        rotationMatrix[2 + 2 * 4] = transformationMatrix[2 + 2 * 4] / sz;
+
+        return rotationMatrix;
+    }
+
     Vector3f get_transform_forward(const Transform* pTransform)
     {
         const Matrix4f& m = pTransform->globalMatrix;

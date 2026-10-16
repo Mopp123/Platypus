@@ -82,6 +82,8 @@ namespace platypus
     // NOTE: NOT TESTED -> might be fucked!
     Vector3f get_transform_scale(const Transform* pTransform, bool hasParent);
 
+    Matrix4f get_transform_rotation_matrix(const Matrix4f& transformationMatrix);
+
     // NOTE: None of these are tested, might point to wrong directions!
     Vector3f get_transform_forward(const Transform* pTransform);
     Vector3f get_transform_up(const Transform* pTransform);
