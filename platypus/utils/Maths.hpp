@@ -28,6 +28,7 @@ namespace platypus
         Vector2i() {}
         Vector2i(int32_t x, int32_t y) : x(x), y(y) {}
         Vector2i(const Vector2i& other) : x(other.x), y(other.y) {}
+        std::string toString() const;
     };
 
     class Vector2f

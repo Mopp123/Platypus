@@ -7,6 +7,12 @@
 
 namespace platypus
 {
+    std::string Vector2i::toString() const
+    {
+        return "(" + std::to_string(x) + ", " + std::to_string(y) +  ")";
+    }
+
+
     float Vector2f::dotp(const Vector2f& other) const
     {
         return (x * other.x) + (y * other.y);
