@@ -195,6 +195,16 @@ namespace platypus
         memset(_data, 0, sizeof(float) * 16);
     }
 
+    Matrix4f::Matrix4f(const std::vector<float>& data)
+    {
+        PLATYPUS_ASSERT(data.size() == 16);
+        for (size_t j = 0; j < 4; ++j)
+        {
+            for (size_t i = 0; i < 4; ++i)
+                _data[j + i * 4] = data[i + j * 4];
+        }
+    }
+
     Matrix4f::Matrix4f(float diag)
     {
         memset(_data, 0, sizeof(float) * 16);

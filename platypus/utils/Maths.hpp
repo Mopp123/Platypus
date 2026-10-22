@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstring>
+#include <vector>
 
 #define PLATY_MATH_PI 3.14159265358979323846
 
@@ -135,6 +136,13 @@ namespace platypus
 
     public:
         Matrix4f();
+        // NOTE: Converts the given rowMajorData into the column major _data!
+        //  -> reason: It's nice to give the matrix like for example:
+        //      1, 0, 0, 2,
+        //      0, 1, 0, 3,
+        //      0, 0, 1, 4,
+        //      0, 0, 0, 1
+        Matrix4f(const std::vector<float>& rowMajorData);
         Matrix4f(float diag);
         void setIdentity();
         Matrix4f inverse() const;

@@ -73,6 +73,14 @@ namespace platypus
 
     void set_transform_rotation(Transform* pTransform, float pitch, float yaw, float roll, bool hasParent)
     {
+        Debug::log(
+            "Doesn't work atm the way u intended! This ignores transformation matrix's scale! "
+            "TODO: Make this work the same way as set_transform_rotation(Transform*, const Quaternion&, bool)!",
+            PLATYPUS_CURRENT_FUNC_NAME,
+            Debug::MessageType::PLATYPUS_ERROR
+        );
+        PLATYPUS_ASSERT(false);
+
         Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
         Matrix4f rotationMatrix = create_rotation_matrix(pitch, yaw, roll);
 	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
@@ -94,37 +102,49 @@ namespace platypus
     void set_transform_rotation(Transform* pTransform, const Quaternion& rotation, bool hasParent)
     {
         Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
-        Matrix4f rotationMatrix = rotation.toRotationMatrix();
-	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
-	    m[1 + 2 * 4] = rotationMatrix[1 + 2 * 4];
-	    m[2 + 1 * 4] = rotationMatrix[2 + 1 * 4];
-	    m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
+        const Matrix4f translationMatrix = get_transform_translation_matrix(m);
+        const Matrix4f rotationMatrix = rotation.toRotationMatrix();
+        const Matrix4f scaleMatrix = get_transform_scale_matrix(m);
+        m = translationMatrix * rotationMatrix * scaleMatrix;
+        // Old below... not sure why did this earlier...
+	    //m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
+	    //m[1 + 2 * 4] = rotationMatrix[1 + 2 * 4];
+	    //m[2 + 1 * 4] = rotationMatrix[2 + 1 * 4];
+	    //m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
 
-	    m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
-	    m[0 + 2 * 4] = rotationMatrix[0 + 2 * 4];
-	    m[2 + 0 * 4] = rotationMatrix[2 + 0 * 4];
-	    m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
+	    //m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
+	    //m[0 + 2 * 4] = rotationMatrix[0 + 2 * 4];
+	    //m[2 + 0 * 4] = rotationMatrix[2 + 0 * 4];
+	    //m[2 + 2 * 4] = rotationMatrix[2 + 2 * 4];
 
-	    m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
-	    m[0 + 1 * 4] = rotationMatrix[0 + 1 * 4];
-	    m[1 + 0 * 4] = rotationMatrix[1 + 0 * 4];
-	    m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
+	    //m[0 + 0 * 4] = rotationMatrix[0 + 0 * 4];
+	    //m[0 + 1 * 4] = rotationMatrix[0 + 1 * 4];
+	    //m[1 + 0 * 4] = rotationMatrix[1 + 0 * 4];
+	    //m[1 + 1 * 4] = rotationMatrix[1 + 1 * 4];
     }
 
     void set_transform_rotation(Transform* pTransform, const Matrix4f& rotationMatrix, bool hasParent)
     {
         Matrix4f& m = hasParent ? pTransform->localMatrix : pTransform->globalMatrix;
 
-        Matrix4f currentTranslationMatrix(1.0f);
-        currentTranslationMatrix[0 + 3 * 4] = m[0 + 3 * 4];
-        currentTranslationMatrix[1 + 3 * 4] = m[1 + 3 * 4];
-        currentTranslationMatrix[2 + 3 * 4] = m[2 + 3 * 4];
+        Matrix4f currentTranslationMatrix(
+            {
+                1, 0, 0, m[0 + 3 * 4],
+                0, 1, 0, m[1 + 3 * 4],
+                0, 0, 1, m[2 + 3 * 4],
+                0, 0, 0, 1
+            }
+        );
 
         const Vector3f currentScale = get_transform_scale(pTransform, hasParent);
-        Matrix4f currentScaleMatrix(1.0f);
-        currentScaleMatrix[0 + 0 * 4] = currentScale.x;
-        currentScaleMatrix[1 + 1 * 4] = currentScale.y;
-        currentScaleMatrix[2 + 2 * 4] = currentScale.z;
+        Matrix4f currentScaleMatrix(
+            {
+                currentScale.x, 0, 0, 0,
+                0, currentScale.y, 0, 0,
+                0, 0, currentScale.z, 0,
+                0, 0, 0, 1
+            }
+        );
 
         m = currentTranslationMatrix * rotationMatrix * currentScaleMatrix;
     }
@@ -210,19 +230,31 @@ namespace platypus
         return { pitch, yaw, roll };
     }
 
+    Matrix4f get_transform_translation_matrix(const Matrix4f& transformationMatrix)
+    {
+        return {
+            {
+                1, 0, 0, transformationMatrix[0 + 3 * 4],
+                0, 1, 0, transformationMatrix[1 + 3 * 4],
+                0, 0, 1, transformationMatrix[2 + 3 * 4],
+                0, 0, 0, 1
+            }
+        };
+    }
+
     Matrix4f get_transform_rotation_matrix(const Matrix4f& transformationMatrix)
     {
-        float sx = Vector3f(
+        const float sx = Vector3f(
             transformationMatrix[0 + 0 * 4],
             transformationMatrix[1 + 0 * 4],
             transformationMatrix[2 + 0 * 4]
         ).length();
-        float sy = Vector3f(
+        const float sy = Vector3f(
             transformationMatrix[0 + 1 * 4],
             transformationMatrix[1 + 1 * 4],
             transformationMatrix[2 + 1 * 4]
         ).length();
-        float sz = Vector3f(
+        const float sz = Vector3f(
             transformationMatrix[0 + 2 * 4],
             transformationMatrix[1 + 2 * 4],
             transformationMatrix[2 + 2 * 4]
@@ -242,6 +274,36 @@ namespace platypus
         rotationMatrix[2 + 2 * 4] = transformationMatrix[2 + 2 * 4] / sz;
 
         return rotationMatrix;
+    }
+
+    Matrix4f get_transform_scale_matrix(const Matrix4f& transformationMatrix)
+    {
+        const float sx = Vector3f(
+            transformationMatrix[0 + 0 * 4],
+            transformationMatrix[1 + 0 * 4],
+            transformationMatrix[2 + 0 * 4]
+        ).length();
+
+        const float sy = Vector3f(
+            transformationMatrix[0 + 1 * 4],
+            transformationMatrix[1 + 1 * 4],
+            transformationMatrix[2 + 1 * 4]
+        ).length();
+
+        const float sz = Vector3f(
+            transformationMatrix[0 + 2 * 4],
+            transformationMatrix[1 + 2 * 4],
+            transformationMatrix[2 + 2 * 4]
+        ).length();
+
+        return {
+            {
+                sx, 0, 0, 0,
+                0, sy, 0, 0,
+                0, 0, sz, 0,
+                0, 0, 0, 1
+            }
+        };
     }
 
 
