@@ -709,6 +709,37 @@ namespace platypus
     }
 
 
+    Matrix4f to_rotation_matrix(
+        const Vector3f& right,
+        const Vector3f& up,
+        const Vector3f& forward
+    )
+    {
+        //Vector3f xaxis = up.cross(direction).normalize();
+        //Vector3f yaxis = direction.cross(xaxis).normalize();
+
+        //column1.x = xaxis.x;
+        //column1.y = yaxis.x;
+        //column1.z = direction.x;
+
+        //column2.x = xaxis.y;
+        //column2.y = yaxis.y;
+        //column2.z = direction.y;
+
+        //column3.x = xaxis.z;
+        //column3.y = yaxis.z;
+        //column3.z = direction.z;
+
+        return {
+            {
+                right.x,     right.y,     right.z,     0,
+                up.x,     up.y,     up.z,     0,
+                forward.x, forward.y, forward.z, 0,
+                          0,           0,           0, 1
+            }
+        };
+    }
+
     std::string to_string(float value)
     {
         std::string result = std::to_string(value);

@@ -224,5 +224,11 @@ namespace platypus
         float zNear, float zFar
     );
 
+    Matrix4f to_rotation_matrix(
+        const Vector3f& right,
+        const Vector3f& up,
+        const Vector3f& forward
+    );
+
     std::string to_string(float value);
 }
