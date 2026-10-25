@@ -219,7 +219,6 @@ namespace platypus
         float borderThickness,
         Vector2f textureOffset,
         uint32_t layer,
-        bool isText,
         std::string text,
         Scene* pScene
     )
@@ -255,22 +254,12 @@ namespace platypus
         pRenderable->textureOffset = textureOffset;
         pRenderable->layer = layer;
 
-        // UPDATE to below: Started calling Component constructors and destructors with
-        // the new MemoryPool system, which should have fixed below issue!
-        //  -> Still some kind of StringPool should probably be concidered for components that needs
-        //  string members!
-        //
-        // NOTE: pRenderable was zero initialized
-        // -> need some way to "allocate" the text
-        // THIS IS CURRENTLY UNDEFINED BEHAVIOUR even it seems to work.
-        // TODO: Some StringPool system for components to use that needs strings!
-        //if (text.size() <= 32)
-        //    pRenderable->text.resize(32);
-        //else
-        //    pRenderable->text.resize(text.size());
 
-        pRenderable->isText = isText;
-        pRenderable->text = text;
+        if (!text.empty())
+        {
+            StringPool& stringPool = pUseScene->getStringPool();
+            pRenderable->stringPoolOffset = stringPool.add(text);
+        }
 
         return pRenderable;
     }
@@ -291,7 +280,6 @@ namespace platypus
             0.0f, // border thickness
             { 0, 0 },
             0,
-            false,
             "",
             pScene
         );
@@ -313,7 +301,6 @@ namespace platypus
             0.0f, // border thickness
             { 0, 0 },
             0,
-            false,
             "",
             pScene
         );

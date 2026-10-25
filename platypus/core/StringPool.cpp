@@ -35,7 +35,7 @@ namespace platypus
 
     int32_t StringPool::update(int32_t offset, const std::string& newStr)
     {
-        if (offset == - 1)
+        if (offset == -1)
         {
             Debug::log(
                 "Offset was -1",
@@ -65,7 +65,7 @@ namespace platypus
 
     void StringPool::remove(int32_t offset)
     {
-        if (offset == - 1)
+        if (offset == -1)
         {
             Debug::log(
                 "Offset was -1",

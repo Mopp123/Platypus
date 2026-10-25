@@ -77,10 +77,7 @@ namespace platypus
                 if (key == KeyName::KEY_BACKSPACE && action != InputAction::RELEASE)
                 {
                     util::str::pop_back_utf8(str);
-                    pText->set(
-                        _inputFieldRef._pButton,
-                        str
-                    );
+                    pText->set(str);
 
                     // NOTE: WARNING!
                     //  THIS IS ABSOLUTELY DISGUSTING AND INEFFICIENT TO DO THE THING I
@@ -104,10 +101,7 @@ namespace platypus
                 Text* pText = _inputFieldRef._pButton->getText();
                 std::string str = pText->getFullStr();
                 util::str::append_utf8(codepoint, str);
-                pText->set(
-                    _inputFieldRef._pButton,
-                    str
-                );
+                pText->set(str);
 
                 // NOTE: WARNING!
                 //  THIS IS ABSOLUTELY DISGUSTING AND INEFFICIENT TO DO THE THING I

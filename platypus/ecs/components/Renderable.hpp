@@ -44,9 +44,6 @@ namespace platypus
         const Material* pMaterial
     );
 
-    // NOTE: When adding strings, make sure to take into accout
-    // the move constructor thing when allocating from component pool!
-    // -> if using std::string it's underlying mem is nullptr initially!
     struct GUIRenderable
     {
         UUID_t textureID = NULL_UUID;
@@ -57,12 +54,7 @@ namespace platypus
         Vector2f textureOffset = Vector2f(0, 0);
         uint32_t layer = 0;
 
-        // TODO: When serializing, need to replace bool with uint8_t
-        // and some way to handle the text string!
-        bool isText = false;
-        // NOTE: Warning when initially allocating from component pool!
-        // -> needs to be explicitly resized to have any space!
-        std::string text;
+        int32_t stringPoolOffset = -1;
     };
 
     Renderable3D* create_renderable3D(
@@ -83,7 +75,6 @@ namespace platypus
         float borderThickness,
         Vector2f textureOffset,
         uint32_t layer,
-        bool isText,
         std::string text,
         Scene* pScene = nullptr
     );
