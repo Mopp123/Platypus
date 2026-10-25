@@ -145,6 +145,7 @@ namespace platypus
         // (Done guaranteed by findExistingBatchIndex and findFreeBatchIndex)
         void addToFontBatch(
             BatchData& batchData,
+            const std::string& text,
             const GUIRenderable* pRenderable,
             const GUITransform* pTransform
         );

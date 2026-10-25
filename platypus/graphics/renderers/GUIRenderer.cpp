@@ -229,6 +229,9 @@ namespace platypus
         _textureDescriptorSets.clear();
     }
 
+    // quick hack to prevent new heap allocation on each submit
+    // even if not submitting text...
+    static std::string s_stringToSubmit = "";
     void GUIRenderer::submit(const Scene* pScene, entityID_t entity)
     {
         const GUIRenderable* pRenderable = (const GUIRenderable*)pScene->getComponent(
@@ -236,9 +239,11 @@ namespace platypus
         );
 
         size_t requiredBatchElements = 1;
-        if (pRenderable->isText)
+
+        if (pRenderable->stringPoolOffset != -1)
         {
-            requiredBatchElements = util::str::length_utf8(pRenderable->text);
+            s_stringToSubmit = pScene->getStringPool().get(pRenderable->stringPoolOffset);
+            requiredBatchElements = util::str::length_utf8(s_stringToSubmit);
             // TODO: Maybe set the text renderable inactive completely if its str == empty
             //  -> doesn't need to come all the way here fuckin' around...
             if (requiredBatchElements == 0)
@@ -273,6 +278,7 @@ namespace platypus
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
+                s_stringToSubmit.clear();
                 return;
             }
             if (!occupyBatch(
@@ -286,6 +292,7 @@ namespace platypus
                     PLATYPUS_CURRENT_FUNC_NAME,
                     Debug::MessageType::PLATYPUS_ERROR
                 );
+                s_stringToSubmit.clear();
                 return;
             }
         }
@@ -295,12 +302,13 @@ namespace platypus
 
         if (pRenderable->fontID != NULL_UUID)
         {
-            addToFontBatch(_batches[batchIndex], pRenderable, pTransform);
+            addToFontBatch(_batches[batchIndex], s_stringToSubmit, pRenderable, pTransform);
         }
         else
         {
             addToImageBatch(_batches[batchIndex], pRenderable, pTransform);
         }
+        s_stringToSubmit.clear();
     }
 
     const CommandBuffer& GUIRenderer::recordCommandBuffer(
@@ -506,6 +514,7 @@ namespace platypus
 
     void GUIRenderer::addToFontBatch(
         BatchData& batchData,
+        const std::string& text,
         const GUIRenderable* pRenderable,
         const GUITransform* pTransform
     )
@@ -530,8 +539,8 @@ namespace platypus
 
         // TODO: Optimize -> fucked up to copy the string here!
         // (can't use const_iterator here to use the utf8::next)
-        const size_t textSize = pRenderable->text.size();
-        const char* pTextData = reinterpret_cast<const char*>(pRenderable->text.data());
+        const size_t textSize = text.size();
+        const char* pTextData = reinterpret_cast<const char*>(text.data());
         utf8::iterator charIt(pTextData, pTextData, pTextData + textSize);
         utf8::iterator charEndIt(pTextData + textSize, pTextData, pTextData + textSize);
         while (charIt != charEndIt)

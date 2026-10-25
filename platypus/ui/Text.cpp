@@ -91,66 +91,8 @@ namespace platypus
                 0.0f, // border thickness
                 { 0, 0 }, // texture offset
                 0, // layer
-                true, // isText?
                 finalText
             );
-            triggerFullTreeUpdate();
-        }
-
-        // TODO: Replace this with the new one!
-        void Text::set(
-            UIElement* pParentElement,
-            const std::string& text
-        )
-        {
-            PLATYPUS_ASSERT(pParentElement);
-            _fullStr = text;
-
-            // TODO: Make App, SceneManager and Scene accessing safer here!
-            Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
-            const Layout* pParentLayout = pParentElement->getLayout();
-            float charHeight = static_cast<float>(_pFont->getFittingHeight());
-            float maxLineWidth = 0.0f;
-            size_t lineCount = 1;
-
-            std::string finalText;
-            if (pParentLayout->wordWrap == WordWrap::NONE)
-            {
-                if (pParentLayout->textOverflow == TextOverflow::NONE)
-                {
-                    maxLineWidth = get_text_scale(text, _pFont).x;
-                    finalText = text;
-                }
-                else
-                {
-                    finalText = strip_text_overflow_ellipsis(
-                        pParentElement,
-                        _pFont,
-                        "", // header... which shouldn't probably be used anymore...
-                        text,
-                        pParentLayout->textOverflow,
-                        &maxLineWidth
-                    );
-                }
-            }
-            else if (pParentLayout->wordWrap == WordWrap::NORMAL)
-            {
-                finalText = wrap_text(
-                    text,
-                    _pFont,
-                    pParentElement,
-                    maxLineWidth,
-                    lineCount
-                );
-            }
-
-            GUIRenderable* pRenderable = (GUIRenderable*)pScene->getComponent(
-                _entityID,
-                ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
-            );
-            pRenderable->text = finalText;
-
-            overrideScale({ maxLineWidth, charHeight * lineCount });
             triggerFullTreeUpdate();
         }
 
@@ -201,7 +143,15 @@ namespace platypus
                 _entityID,
                 ComponentType::COMPONENT_TYPE_GUI_RENDERABLE
             );
-            pRenderable->text = finalText;
+
+            StringPool& stringPool = pScene->getStringPool();
+            // TODO: Should we just remove the text from pool, if finalText is empty?
+            if (pRenderable->stringPoolOffset == -1)
+                pRenderable->stringPoolOffset = stringPool.add(finalText);
+            else
+                pRenderable->stringPoolOffset = stringPool.update(pRenderable->stringPoolOffset, finalText);
+
+            PLATYPUS_ASSERT(pRenderable->stringPoolOffset != -1);
 
             overrideScale({ maxLineWidth, charHeight * lineCount });
             triggerFullTreeUpdate();
@@ -211,7 +161,12 @@ namespace platypus
         {
             const GUIRenderable* pRenderable = getRenderable();
             PLATYPUS_ASSERT(pRenderable);
-            return pRenderable->text;
+            if (pRenderable->stringPoolOffset == -1)
+                return "";
+
+            const Scene* pScene = Application::get_instance()->getSceneManager().accessCurrentScene();
+            const StringPool& stringPool = pScene->getStringPool();
+            return stringPool.get(pRenderable->stringPoolOffset);
         }
 
 

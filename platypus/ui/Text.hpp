@@ -32,11 +32,6 @@ namespace platypus
             ~Text() { }
 
         public:
-            void set(
-                UIElement* pParentElement,
-                const std::string& text
-            );
-            // TODO: replace above with below!
             void set(const std::string& text);
 
             std::string getVisualStr() const;
